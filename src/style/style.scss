@@ -1,0 +1,200 @@
+@import "~antd/dist/antd.css";
+
+$backgroundColorFirst: #0c0d16;
+$colorFirst: #fde82b;
+
+body {
+  background: $backgroundColorFirst;
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: $backgroundColorFirst;
+  }
+  &::-webkit-slider-thumb {
+    background: $colorFirst;
+  }
+}
+.app.night {
+  max-width: 1200px;
+  margin: auto;
+
+  .playerpage {
+    .third-row {
+      &__left {
+        padding-right: 20px;
+
+        &__title {
+          text-transform: uppercase;
+          font-weight: 700;
+          font-size: 18px;
+          color: #fff;
+          letter-spacing: 1px;
+          font-style: italic;
+          margin-bottom: 10px;
+        }
+        &__block {
+          height: 200px;
+          border: 1px $colorFirst solid;
+        }
+      }
+      &__right {
+        &__title {
+          text-transform: uppercase;
+          font-weight: 700;
+          font-size: 18px;
+          color: #fff;
+          letter-spacing: 1px;
+          font-style: italic;
+          margin-bottom: 10px;
+        }
+        &__rank {
+          height: 70px;
+          border: 1px $colorFirst solid;
+          border-radius: 15px;
+          margin: 15px 0;
+        }
+      }
+    }
+
+    .first-row {
+      justify-content: space-between;
+      margin: 20px 0;
+      &__left {
+        display: flex;
+        img {
+          height: 100px;
+          border-radius: 0;
+          border: 1px $colorFirst solid;
+          border-radius: 4px;
+        }
+        &__profile {
+          display: flex;
+          margin-left: 25px;
+          flex-direction: column;
+          width: 100%;
+          padding-right: 60px;
+          &__nickname {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 0.4;
+            margin-bottom: 15px;
+          }
+          &__reward {
+            .ant-progress-steps-item {
+              width: 30% !important;
+              height: 10px;
+              &-active {
+                background: $colorFirst;
+              }
+            }
+
+            &__label {
+              display: flex;
+              justify-content: space-between;
+              color: #9697b0;
+            }
+            span {
+              padding-right: 28px;
+            }
+          }
+        }
+        .ant-progress-bg {
+          background: $colorFirst;
+        }
+      }
+      &__right {
+        display: flex;
+        justify-content: space-between;
+        > div {
+          display: flex;
+          flex-direction: column;
+          text-align: center;
+          font-style: 20px;
+          font-weight: 700;
+          color: #fff;
+          span {
+            color: #9697b0;
+            font-weight: 500;
+            font-style: 16px;
+          }
+        }
+      }
+    }
+    .second-row {
+      justify-content: space-between;
+      margin: 20px 0;
+      &__block {
+        height: 80px;
+        border-radius: 15px;
+        border: 1px $colorFirst solid;
+      }
+    }
+  }
+  .navbar {
+    border-bottom: 1px solid #78f7a8;
+    display: flex;
+    align-items: center;
+    position: relative;
+    justify-content: space-between;
+
+    &__logo {
+      color: $colorFirst;
+      display: flex;
+      flex-direction: column;
+      line-height: 0.9;
+      font-size: 32px;
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 1px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 8px 15px;
+      background: $colorFirst;
+      border-radius: 15px;
+    }
+    &__lang {
+      position: absolute;
+      right: 35px;
+    }
+  }
+  .ant-menu-light {
+    background: transparent;
+    border-bottom: 0;
+    padding: 30px 20px;
+    margin: 0px -10px;
+    width: 450px;
+    .ant-menu-title-content {
+      color: #4f5058;
+      font-weight: 700;
+    }
+
+    .ant-menu-item {
+      &::after {
+        content: "";
+        border-bottom: 4px solid transparent;
+        border-radius: 20px;
+        width: 0px;
+        transition: 0.3s all;
+      }
+    }
+
+    .ant-menu-item-selected {
+      &::after {
+        border-bottom: 4px solid rgb(19, 216, 1);
+        width: 30px;
+      }
+      .ant-menu-title-content {
+        color: #fff;
+      }
+    }
+  }
+}
+.ant-col-4 {
+  display: block;
+  flex: 0 0 16.66666667%;
+  max-width: 15.9%;
+}
