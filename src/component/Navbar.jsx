@@ -4,13 +4,19 @@ import React from "react";
 
 const { SubMenu } = Menu;
 
+const langmenu = (
+  <Menu>
+    <Menu.Item key="1">EN</Menu.Item>
+    <Menu.Item key="2">RU</Menu.Item>
+  </Menu>
+);
+
 class Navbar extends React.Component {
   state = {
-    current: "mail",
+    current: "home",
   };
 
   handleClick = (e) => {
-    console.log("click ", e);
     this.setState({ current: e.key });
   };
 
@@ -26,10 +32,19 @@ class Navbar extends React.Component {
           <Menu.Item key="home">Home</Menu.Item>
           <Menu.Item key="leaderboard">Leaderboard</Menu.Item>
           <Menu.Item key="about">About</Menu.Item>
-          <Menu.Item key="help"> Help</Menu.Item>
-          <Menu.Item key="satel" icon={<SettingOutlined />}>
-            Satel
-          </Menu.Item>
+        </Menu>
+        <div className="navbar__logo">
+          <span>CS</span>
+          <span>TV</span>
+        </div>
+        <Menu
+          onClick={this.handleClick}
+          selectedKeys={[current]}
+          mode="horizontal"
+        >
+          <Menu.Item key="favorites"> Favorites</Menu.Item>
+          <Menu.Item key="distribution"> Distribution</Menu.Item>
+          <Menu.Item key="overlay"> OBS overlay</Menu.Item>
         </Menu>
       </div>
     );

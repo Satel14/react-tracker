@@ -25,9 +25,10 @@ const Home = (props) => (
             <Radio.Button value="steam">Steam</Radio.Button>
           </Radio.Group>
           <Input size="large" placeholder="Enter name, id or url" />
+        
 
           <div className="homepage_left__stats">
-            <div className="homepage_stats__seasonend">
+            <div className="homepage_left__stats__seasonend">
               <FieldTimeOutlined />
               <div>
                 Season 3

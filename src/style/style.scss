@@ -2,7 +2,7 @@
 
 $backgroundColorFirst: #0c0d16;
 $colorFirst: #fde82b;
-
+$colorSecond: #78f7a8;
 body {
   background: $backgroundColorFirst;
   &::-webkit-scrollbar {
@@ -89,7 +89,6 @@ body {
                 background: $colorFirst;
               }
             }
-
             &__label {
               display: flex;
               justify-content: space-between;
@@ -128,7 +127,18 @@ body {
       &__block {
         height: 80px;
         border-radius: 15px;
-        border: 1px $colorFirst solid;
+        // border: 1px $colorFirst solid;
+        box-shadow: inset 2px 2px 20px #00000059, 3px 3px 0px 0px $colorSecond;
+        color: #9697b0;
+        font-size: 15px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        span{
+          color: #fff;
+          font-size: 20px;
+          font-weight: 700;
+        }
       }
     }
   }
@@ -140,7 +150,7 @@ body {
     justify-content: space-between;
 
     &__logo {
-      color: $colorFirst;
+      color: $backgroundColorFirst;
       display: flex;
       flex-direction: column;
       line-height: 0.9;
@@ -153,7 +163,7 @@ body {
       left: 50%;
       transform: translate(-50%, -50%);
       padding: 8px 15px;
-      background: $colorFirst;
+      background: #78f7a8;
       border-radius: 15px;
     }
     &__lang {
@@ -197,4 +207,104 @@ body {
   display: block;
   flex: 0 0 16.66666667%;
   max-width: 15.9%;
+}
+.footer {
+  border-top: 1px solid $colorSecond;
+  padding-top: 20px;
+  color: #ffffff;
+  font-size: 15px;
+  margin: 40px 0;
+}
+
+.radiostyle {
+  .ant-radio-button-wrapper {
+    background: transparent;
+    color: #ffffff;
+    border-radius: 10px;
+    border-bottom: 0;
+    border-color: $colorSecond;
+    &-checked {
+      color: #222222;
+    }
+    .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disable)::before {
+      background-color: transparent;
+    }
+    .ant-radio-button-checked {
+      background: $colorSecond;
+      border-color: $colorSecond;
+      span {
+        border-color: $colorSecond;
+        color: #222;
+      }
+    }
+  }
+}
+
+.homepage {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  .ant-row {
+    width: 100%;
+  }
+  &_left {
+    input {
+      margin: 0;
+      background: transparent;
+      border: 2px $colorSecond solid;
+      text-align: center;
+      color: #fff;
+    }
+    &__text {
+      color: #fff;
+      font-size: 36px;
+      text-transform: uppercase;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 35px;
+      span {
+        display: block;
+        color: #3c5058;
+        font-size: 19px;
+        text-transform: none;
+      }
+    }
+    &__stats {
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      padding-top: 20px;
+      .anti-icon {
+        font-size: 34px;
+        margin-right: 20px;
+        color: $colorSecond;
+      }
+      &__seasonend,
+      &__playeronline {
+        font-size: 30px;
+        display: flex;
+        align-items: center;
+        margin-right: 40px;
+        font-size: 18px;
+        > div {
+          display: flex;
+          flex-direction: column;
+          line-height: 1.25;
+          color: #3c5058;
+          font-size: 14px;
+          span {
+            font-size: 18px;
+            color: #fff;
+          }
+          span {
+            font-size: 17px;
+            color: $colorSecond;
+            font-weight: 700;
+          }
+        }
+      }
+    }
+  }
 }
