@@ -1,6 +1,7 @@
 import { Menu } from "antd";
 import { SettingOutlined } from "@ant-design/icons";
 import React from "react";
+import { Link } from "react-router-dom";
 
 const { SubMenu } = Menu;
 
@@ -20,6 +21,7 @@ class Navbar extends React.Component {
     this.setState({ current: e.key });
   };
 
+  
   render() {
     const { current } = this.state;
     return (
@@ -29,7 +31,7 @@ class Navbar extends React.Component {
           selectedKeys={[current]}
           mode="horizontal"
         >
-          <Menu.Item key="home">Home</Menu.Item>
+          <Menu.Item as={Link} to='/playerpage' key="home">Home</Menu.Item>
           <Menu.Item key="leaderboard">Leaderboard</Menu.Item>
           <Menu.Item key="about">About</Menu.Item>
         </Menu>

@@ -16,9 +16,9 @@ const CookieRule = (props) => {
       {cookiesogl == null && show && (
         <div className="site-cookie">
           <div className="site-cookie-block">
-            <div>{t("other.coolie.text")}</div>
-            <Button type="primary" onClick={toggle}>
-              {t("other.cookie.accept")}
+            <div>{t("We use cookies on our website to save searched players history, and for page Favorites. By clicking 'Accept', you consent to the use All the cookies")}</div>
+            <Button type="primary" className="button-accept" onClick={toggle}>
+              {t("Accept")}
             </Button>
           </div>
         </div>
