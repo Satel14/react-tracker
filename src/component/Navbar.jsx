@@ -1,7 +1,10 @@
-import { Menu } from "antd";
-import { SettingOutlined } from "@ant-design/icons";
 import React from "react";
+import { Menu } from "antd";
+import { HomeOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
+import { SetLanguage } from "react-switch-lang";
+import PropTypes from 'prop-types';
+import CookieRule from "./CookieRule";
 
 const { SubMenu } = Menu;
 
@@ -21,9 +24,10 @@ class Navbar extends React.Component {
     this.setState({ current: e.key });
   };
 
-  
+
   render() {
     const { current } = this.state;
+    const { t } = this.props;
     return (
       <div className="navbar">
         <Menu
@@ -31,7 +35,10 @@ class Navbar extends React.Component {
           selectedKeys={[current]}
           mode="horizontal"
         >
-          <Menu.Item as={Link} to='/playerpage' key="home">Home</Menu.Item>
+          <Menu.Item key="main" icon={<HomeOutlined />}>
+            <Link to="/">{t("menu.main")}</Link>
+            Home
+          </Menu.Item>
           <Menu.Item key="leaderboard">Leaderboard</Menu.Item>
           <Menu.Item key="about">About</Menu.Item>
         </Menu>
@@ -42,15 +49,24 @@ class Navbar extends React.Component {
         <Menu
           onClick={this.handleClick}
           selectedKeys={[current]}
-          mode="horizontal"
+          mode="horizontal" 
+          className="right-menu"
         >
           <Menu.Item key="favorites"> Favorites</Menu.Item>
           <Menu.Item key="distribution"> Distribution</Menu.Item>
           <Menu.Item key="overlay"> OBS overlay</Menu.Item>
         </Menu>
+        <div className="navbar_lang">
+          <SetLanguage />
+        </div>
       </div>
     );
   }
 }
+
+Navbar.propTypes = {
+  t: PropTypes.func.isRequired,
+};
+
 
 export default Navbar;

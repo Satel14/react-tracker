@@ -90,7 +90,9 @@ class PlayerPage extends React.Component {
 
             <div className="third-row__right__title">Unranked</div>
 
-            <div className="third-row__right__rank"></div>
+            <div className="third-row__right__rank">
+              {player.data.segments[0].stats.deaths.displayValue}
+            </div>
           </Col>
         </Row>
       </div>

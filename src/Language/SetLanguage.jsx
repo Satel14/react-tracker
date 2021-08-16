@@ -12,18 +12,24 @@ import en from ".en/json";
 import ru from ".ru/json";
 
 const languages = ["en", "ru"];
+
+
 setTranslations({ en, ru });
-setDefaultlanguage("en ");
+setDefaultlanguage("en");
 
 class SomeComponent extends React.Component {
   constructor(props) {
     super(props);
+
     this.state = {
       currentLang: "en",
     };
   }
+
+
   handleSetLanguage = (key) => () => {
     setLanguage(key);
+    localStorage.setItem("lang",key);
     this.setState({
       currentLang: key,
     });
@@ -35,6 +41,8 @@ class SomeComponent extends React.Component {
     if (!localLanguage) {
       return;
     }
+
+
     if (languages.includes(localLanguage)) {
       setLanguage(localLanguage);
       this.setState({
@@ -42,6 +50,7 @@ class SomeComponent extends React.Component {
       });
     }
   }
+
   render() {
     const langmenu = (
       <Menu>
@@ -54,8 +63,9 @@ class SomeComponent extends React.Component {
         </Menu.Item>
         <Menu.Item
           key="ru"
-          className={this.state.currentLang === "ru" && "dropdown-lang-active"}
           onClick={this.handleSetLanguage("ru")}
+          className={this.state.currentLang === "ru" && "dropdown-lang-active"}
+          
         >
           RU
         </Menu.Item>
