@@ -14,7 +14,7 @@ const App = (props) => {
   return (
     <Router>
       <div className="app night">
-        <Navbar />
+      <Navbar/>
         {props.children}
         <Switch>
           <Route path="/home" >
@@ -29,6 +29,7 @@ const App = (props) => {
           </Route>
           <Route path="error">
             <ErrorPage/>
+            <CookieRules/>
           </Route>
         </Switch>
       </div>

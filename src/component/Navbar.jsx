@@ -1,29 +1,57 @@
 import React from "react";
-import { Menu } from "antd";
-import { HomeOutlined } from "@ant-design/icons";
+import PropTypes from "prop-types";
+import { Menu, Badge } from "antd";
+import { translate } from "react-switch-lang";
+import {
+  HomeOutlined,
+  ProjectOutlined,
+  QuestionCircleOutlined,
+} from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { SetLanguage } from "react-switch-lang";
-import PropTypes from 'prop-types';
-import CookieRule from "./CookieRule";
+import SetLanguage from "../language/SetLanguage";
+import { withRouter } from "react-router";
 
-const { SubMenu } = Menu;
-
-const langmenu = (
-  <Menu>
-    <Menu.Item key="1">EN</Menu.Item>
-    <Menu.Item key="2">RU</Menu.Item>
-  </Menu>
-);
+const componentRoutes = ["/", "/leaderboards", "/favorites", "/help"];
 
 class Navbar extends React.Component {
   state = {
     current: "home",
   };
-
   handleClick = (e) => {
     this.setState({ current: e.key });
   };
 
+  handleClickMenu = (e) => {
+    console.log(e.key);
+    this.props.history.push(e);
+  };
+
+
+  componentDidMount() {
+    const url = window.location.pathname;
+    console.log(url);
+    if (componentRoutes.includes(url)) {
+      this.setState({
+        current: url === "/" ? "main" : url.replace("/", ""),
+      });
+    }
+  }
+  componentDidUpdate(prevProps) {
+    if (this.props.location !== prevProps.location) {
+      this.onRoutesChanges();
+    }
+  }
+
+  onRoutesChanges() {
+    const url = this.props.location?.pathname;
+    if (url) {
+      if (!componentRoutes.includes(url)) {
+        this.setState({
+          current: "",
+        });
+      }
+    }
+  }
 
   render() {
     const { current } = this.state;
@@ -35,27 +63,45 @@ class Navbar extends React.Component {
           selectedKeys={[current]}
           mode="horizontal"
         >
-          <Menu.Item key="main" icon={<HomeOutlined />}>
-            <Link to="/">{t("menu.main")}</Link>
-            Home
+          <Menu.Item
+            key="main"
+            icon={<HomeOutlined />}
+            onClick={() => this.handleClickMenu("/home")}
+          >
+            <Link to="/home">{t("menu.main")}</Link>
           </Menu.Item>
-          <Menu.Item key="leaderboard">Leaderboard</Menu.Item>
-          <Menu.Item key="about">About</Menu.Item>
+
+          <Menu.Item
+            key="favorites"
+            icon={<ProjectOutlined />}
+            onClick={() => this.handleClickMenu("/favorites")}
+          >
+            <Badge count={10}>
+              <Link to="/favorites">{t("menu.favorites")}</Link>
+            </Badge>
+          </Menu.Item>
         </Menu>
+
         <div className="navbar__logo">
           <span>CS</span>
           <span>TV</span>
         </div>
+
         <Menu
           onClick={this.handleClick}
           selectedKeys={[current]}
-          mode="horizontal" 
+          mode="horizontal"
           className="right-menu"
         >
-          <Menu.Item key="favorites"> Favorites</Menu.Item>
-          <Menu.Item key="distribution"> Distribution</Menu.Item>
-          <Menu.Item key="overlay"> OBS overlay</Menu.Item>
+          <Menu.Item 
+          key="help" 
+          icon={<QuestionCircleOutlined />}
+          onClick={() => this.handleClickMenu("/help")}
+          >
+            <Link to="/help">{t("menu.help")}</Link>
+          </Menu.Item>
         </Menu>
+
         <div className="navbar_lang">
           <SetLanguage />
         </div>
@@ -68,5 +114,4 @@ Navbar.propTypes = {
   t: PropTypes.func.isRequired,
 };
 
-
-export default Navbar;
+export default withRouter(translate(Navbar));

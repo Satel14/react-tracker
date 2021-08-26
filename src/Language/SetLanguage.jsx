@@ -4,23 +4,24 @@ import { Menu, Dropdown } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import {
   setTranslations,
-  setDefaultlanguage,
+  setDefaultLanguage,
   setLanguage,
   translate,
 } from 'react-switch-lang';
-import en from ".en/json";
-import ru from ".ru/json";
+import en from "./en.json"
+import ru from "./ru.json"
 
 const languages = ["en", "ru"];
 
 
 setTranslations({ en, ru });
-setDefaultlanguage("en");
+setDefaultLanguage("en");
 
 class SomeComponent extends React.Component {
   constructor(props) {
     super(props);
 
+    
     this.state = {
       currentLang: "en",
     };
@@ -71,6 +72,7 @@ class SomeComponent extends React.Component {
         </Menu.Item>
       </Menu>
     );
+
     return (
         <Dropdown overlay={langmenu} className="dropdown-lang">
             <span>
@@ -86,3 +88,4 @@ SomeComponent.propTypes = {
 };
  
 export default translate(SomeComponent);
+

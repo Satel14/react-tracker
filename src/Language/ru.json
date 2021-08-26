@@ -13,10 +13,12 @@
             "searchingHistory": "История поиска"
         },
         "player": {
-            "seasonsRewardLevel": "Сезонная награда",
+            "seasonRewardLevel": "Сезонная награда",
             "mini": {
                 "wins": "Победы",
                 "saves": "Спасение",
+                "deaths" : "Смерти",
+                "shotsAccuracy": "Точность выстрелов",
                 "assists": "Пасы",
                 "mvps": "МВП",
                 "shots": "Удары",
@@ -27,7 +29,8 @@
                 "hoursPlayed": "Наиграно часов"
             },
             "ratingProgression": "Прогресс рейтинга",
-            "competetive": "Соревновательный",
+            "compotetive": "Соревновательный",
+            "extraMods": "Дополнительные моды",
             "playlists": {
                 "Duel 1v1": "Дуель 1v1",
                 "Doubles 2v2": "Дуплеты 2v2",
@@ -37,7 +40,7 @@
                 "Rumble": "Грохот",
                 "Dropshot": "Дропшот",
                 "Snowday": "Снежный",
-                "Un Ranked": "Обычный"
+                "UnRanked": "Обычный"
             },
             "division": "Дивизион",
             "streak": {
@@ -59,7 +62,7 @@
         "words": {
             "season": "Сезон",
             "endsIn": "До конца",
-            "leftDays": "ид {days} дней",
+            "leftDays": " {days} дней",
             "lastHour": "Часов",
             "playersOnline": "Игроков онлайн",
             "rating": "Рейтинг",
