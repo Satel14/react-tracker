@@ -1,4 +1,4 @@
-const data = {
+module.exports= {
     "data": {
       "platformInfo": {
         "platformSlug": "steam",
@@ -335,5 +335,3 @@ const data = {
       "expiryDate": "2021-07-27T16:21:13.0219795+00:00"
     }
   }
-
-  export default data;

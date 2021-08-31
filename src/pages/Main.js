@@ -1,5 +1,9 @@
 import React, { useState } from "react";
-import { FieldTimeOutlined, TeamOutlined } from "@ant-design/icons";
+import {
+  EnterOutlined,
+  FieldTimeOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
 import CountUp from "react-countup";
 import { Row, Col, Radio, Input } from "antd";
 import { translate } from "react-switch-lang";
@@ -7,7 +11,14 @@ import { Fade } from "react-reveal/Fade";
 import { withRouter } from "react-router";
 const Main = (props) => {
   const [platform, setPlatform] = useState("steam");
+  const [text, setText] = useState("");
   const { t } = props;
+
+  function handleClick() {
+    const url = "/" + platform + "/" + text;
+    console.log(url);
+    props.history.push(url);
+  }
   return (
     <div className="homepage">
       <Row style={{ justifyContent: "center" }}>
@@ -24,29 +35,38 @@ const Main = (props) => {
             >
               <Radio.Button value="steam">Steam</Radio.Button>
             </Radio.Group>
-            <Input size="large" placeholder="Enter name, id or url" />
+            <Input
+              size="large"
+              placeholder="Enter name, id or url"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onPressEnter={() => this.handleClick()}
+            />
+            <div className="enter-search" onClick={() => this.handleClick()}>
+              <EnterOutlined />
+            </div>
 
             <div className="homepage_left__stats">
-                <div className="homepage_left__stats__seasonend">
-                  <FieldTimeOutlined />
-                  <div>
-                    {t("other.words.season")} 3
-                    <span>
-                      {t("other.words.endsIn")}: {""}
-                      <span>{t("other.words.leftDays", { days: 14 })}</span>
-                    </span>
-                  </div>
+              <div className="homepage_left__stats__seasonend">
+                <FieldTimeOutlined />
+                <div>
+                  {t("other.words.season")} 3
+                  <span>
+                    {t("other.words.endsIn")}: {""}
+                    <span>{t("other.words.leftDays", { days: 14 })}</span>
+                  </span>
                 </div>
-                <div className="homepage_left__stats__playeronline">
-                  <TeamOutlined />
-                  <div>
-                    {t("other.words.lastHour")}
-                    <span>
-                      {t("other.words.playersOnline")} : 
-                      <CountUp separator="," end={213989} />
-                    </span>
-                  </div>
+              </div>
+              <div className="homepage_left__stats__playeronline">
+                <TeamOutlined />
+                <div>
+                  {t("other.words.lastHour")}
+                  <span>
+                    {t("other.words.playersOnline")} :{" "}
+                    <CountUp separator="," end={213989} />
+                  </span>
                 </div>
+              </div>
             </div>
           </div>
         </Col>

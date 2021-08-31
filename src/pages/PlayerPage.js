@@ -1,14 +1,65 @@
 import React from "react";
-import { Row, Col, Progress } from "antd";
+import { Row, Col, Progress, Button } from "antd";
 import player from "../data/player";
 import { translate } from "react-switch-lang";
 import CountUp from "react-countup";
+import { SyncOutlined, HeartOutlined } from "@ant-design/icons";
 
 class PlayerPage extends React.Component {
+  state = {
+    loading: [],
+  };
+
+  // componentDidMount() {
+  //   this.getData();
+  // }
+
+  enterLoading = (index) => {
+    this.setState(({ loadings }) => {
+      const newLoadings = [...loadings];
+      newLoadings[index] = true;
+
+      return {
+        loadings: newLoadings,
+      };
+    });
+    setTimeout(() => {
+      this.setState(({ loadings }) => {
+        const newLoadings = [...loadings];
+        newLoadings[index] = true;
+
+        return {
+          loadings: newLoadings,
+        };
+      });
+    }, 6000);
+  };
+
   render() {
     const { t } = this.props;
+    const { loading } = this.state;
     return (
       <div className="playerpage">
+        <div className="playerpage-buttons">
+          <Button
+            type="link"
+            icon={<SyncOutlined />}
+            loading={loading[1]}
+            size="small"
+            onClick={() => this.enterLoading(1)}
+          >
+            {loading[1] ? "Updating" : "Update"}
+          </Button>
+          <Button
+            type="link"
+            icon={<HeartOutlined />}
+            loading={loading[1]}
+            size="small"
+            onClick={() => this.enterLoading(1)}
+          >
+            {"Favorite"}
+          </Button>
+        </div>
         <Row className="first-row">
           <Col
             style={{ height: "100px" }}
@@ -54,9 +105,9 @@ class PlayerPage extends React.Component {
           >
             <div>
               <span>{t("pages.player.seasonRewardLevel.mini.wins")}</span>
-              <CountUp 
-              separator=","
-              end={player.data.segments[0].stats.wins.displayValue}
+              <CountUp
+                separator=","
+                end={player.data.segments[0].stats.wins.displayValue}
               />
             </div>
             <div>
@@ -85,22 +136,23 @@ class PlayerPage extends React.Component {
             <span>2000</span>
           </Col>
           <Col span={4} className="second-row__block">
-          {t("pages.player.mini.goalShot")}<span>71%</span>
+            {t("pages.player.mini.goalShot")}
+            <span>71%</span>
           </Col>
           <Col span={4} className="second-row__block">
-          {t("pages.player.mini.favoriteMode")}
-          <span>5v5</span>
+            {t("pages.player.mini.favoriteMode")}
+            <span>5v5</span>
           </Col>
           <Col span={4} className="second-row__block">
-          {t("pages.player.mini.worldPlace")}
-          <span>39040</span>
+            {t("pages.player.mini.worldPlace")}
+            <span>39040</span>
           </Col>
           <Col span={4} className="second-row__block">
-          {t("pages.player.mini.hoursPlayed")}
-          <span>1020</span>
+            {t("pages.player.mini.hoursPlayed")}
+            <span>1020</span>
           </Col>
           <Col span={4} className="second-row__block">
-          {t("pages.player.mini.assists")} <span>590</span>
+            {t("pages.player.mini.assists")} <span>590</span>
           </Col>
         </Row>
         <Row className="third-row">
