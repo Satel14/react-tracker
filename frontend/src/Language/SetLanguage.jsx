@@ -9,12 +9,12 @@ import {
   translate,
 } from 'react-switch-lang';
 import en from "./en.json"
-import ru from "./ru.json"
+import ua from "./ua.json"
 
-const languages = ["en", "ru"];
+const languages = ["en", "ua"];
 
 
-setTranslations({ en, ru });
+setTranslations({ en, ua });
 setDefaultLanguage("en");
 
 class SomeComponent extends React.Component {
@@ -63,12 +63,12 @@ class SomeComponent extends React.Component {
           EN
         </Menu.Item>
         <Menu.Item
-          key="ru"
-          onClick={this.handleSetLanguage("ru")}
-          className={this.state.currentLang === "ru" && "dropdown-lang-active"}
+          key="ua"
+          onClick={this.handleSetLanguage("ua")}
+          className={this.state.currentLang === "ua" && "dropdown-lang-active"}
           
         >
-          RU
+          UA
         </Menu.Item>
       </Menu>
     );

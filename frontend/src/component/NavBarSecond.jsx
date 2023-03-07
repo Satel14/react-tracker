@@ -4,20 +4,20 @@ import { DownOutlined } from "@ant-design/icons";
 
 
 const langmenu = (
-    <Menu>
+  <Menu>
     <Menu.Item key="1">EN</Menu.Item>
-    <Menu.Item key="2">RU</Menu.Item>
-    </Menu>
+    <Menu.Item key="2">UA</Menu.Item>
+  </Menu>
 );
 
 class Navbar extends React.Component {
-    state = {
-        current: "home",
-      };
-    handleClick = (e) => {
-        this.setState({ current: e.key });
-      };
-      
+  state = {
+    current: "home",
+  };
+  handleClick = (e) => {
+    this.setState({ current: e.key });
+  };
+
   render() {
     const { current } = this.state;
     return (

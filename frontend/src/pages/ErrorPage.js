@@ -11,7 +11,7 @@ const getMainPage = (props) => {
 const ErrorPage = (props) => {
   <div className="errorpage">
     <Button type="primary" onClick={() => getMainPage(props)}>
-      Вернутся на главную
+      Повернуться на головну
     </Button>
   </div>;
 };

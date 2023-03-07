@@ -133,26 +133,27 @@ class PlayerPage extends React.Component {
         <Row className="second-row">
           <Col span={4} className="second-row__block">
             {t("pages.player.mini.seasonMatches")}
-            <span>2000</span>
+            <span>{player.data.segments[0].stats.matchesPlayed.displayValue}</span>
           </Col>
           <Col span={4} className="second-row__block">
-            {t("pages.player.mini.goalShot")}
-            <span>71%</span>
+            {t("pages.player.mini.roundsPlayed")}
+            <span>{player.data.segments[0].stats.roundsPlayed.displayValue}</span>
           </Col>
           <Col span={4} className="second-row__block">
-            {t("pages.player.mini.favoriteMode")}
-            <span>5v5</span>
+            {t("pages.player.mini.wlPercentage")}
+            <span>{player.data.segments[0].stats.wlPercentage.displayValue}</span>
           </Col>
           <Col span={4} className="second-row__block">
-            {t("pages.player.mini.worldPlace")}
-            <span>39040</span>
+            {t("pages.player.mini.damage")}
+            <span>{player.data.segments[0].stats.damage.displayValue}</span>
           </Col>
           <Col span={4} className="second-row__block">
             {t("pages.player.mini.hoursPlayed")}
-            <span>1020</span>
+            <span>{player.data.segments[0].stats.timePlayed.displayValue}</span>
           </Col>
           <Col span={4} className="second-row__block">
-            {t("pages.player.mini.assists")} <span>590</span>
+            {t("pages.player.mini.bombsDefused")}
+            <span>{player.data.segments[0].stats.bombsDefused.displayValue}</span>
           </Col>
         </Row>
         <Row className="third-row">

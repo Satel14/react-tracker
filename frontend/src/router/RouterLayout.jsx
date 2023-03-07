@@ -16,9 +16,9 @@
 //                 key={index}
 //                 path={route.path}
 //                 exact={route.exact}
-//                 component={(props) => ( 
+//                 component={(props) => (
 //                   //eslint-disable-next-line react/jsx-props-no-spreading 
-//                 <route.component {...props} />
+//                   <route.component {...props} />
 //                 )}
 //               />
 //             ))}

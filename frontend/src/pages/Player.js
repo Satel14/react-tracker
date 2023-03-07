@@ -10,15 +10,14 @@ const Player = (props) => (
       <Col span={12}>
         <div className="homepage_left">
           <div className="homepage_left__text">
-            ROCKET LEAGUE STATS
-            <span>Check detailed Rocket League Stats and Leaderboards</span>
+          Counter-Strike STATS
+            <span>Check detailed Counter-Strike and Leaderboards</span>
           </div>
           <Radio.Group
             defaultValue="epic"
             buttonStyle="solid"
             className="radiostyle"
           >
-            <Radio.Button value="epic">Epic</Radio.Button>
             <Radio.Button value="steam">Steam</Radio.Button>
             <Radio.Button value="xbox">Xbox</Radio.Button>
             <Radio.Button value="psn">PSN</Radio.Button>

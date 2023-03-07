@@ -8,7 +8,7 @@ import {
   QuestionCircleOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import SetLanguage from "../language/SetLanguage";
+import SetLanguage from "../Language/SetLanguage";
 import { withRouter } from "react-router";
 
 const componentRoutes = ["/", "/leaderboards", "/favorites", "/help"];
@@ -80,6 +80,14 @@ class Navbar extends React.Component {
               <Link to="/favorites">{t("menu.favorites")}</Link>
             </Badge>
           </Menu.Item>
+
+          <Menu.Item
+            key="help"
+            icon={<QuestionCircleOutlined />}
+            onClick={() => this.handleClickMenu("/help")}
+          >
+            <Link to="/help">{t("menu.help")}</Link>
+          </Menu.Item>
         </Menu>
 
         <div className="navbar__logo">
@@ -92,15 +100,7 @@ class Navbar extends React.Component {
           selectedKeys={[current]}
           mode="horizontal"
           className="right-menu"
-        >
-          <Menu.Item 
-          key="help" 
-          icon={<QuestionCircleOutlined />}
-          onClick={() => this.handleClickMenu("/help")}
-          >
-            <Link to="/help">{t("menu.help")}</Link>
-          </Menu.Item>
-        </Menu>
+        ></Menu>
 
         <div className="navbar_lang">
           <SetLanguage />

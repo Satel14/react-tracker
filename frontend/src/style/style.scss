@@ -1,11 +1,13 @@
 @import "~antd/dist/antd.css";
+@import "mixins.scss";
 
 $backgroundColorFirst: #0c0d16;
 $colorFirst: #fde82b;
 $colorSecond: #78f7a8;
 
 body {
-  background: url(../img/back.jpg) no-repeat center center fixed;
+  // background: url(../img/back.jpg) no-repeat center center fixed;
+  background-color: $backgroundColorFirst;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -22,7 +24,7 @@ body {
   margin: auto;
 
   .playerpage {
-    &-buttons{
+    &-buttons {
       align-items: center;
       display: flex;
       justify-content: flex-end;
@@ -181,13 +183,11 @@ body {
             font-weight: 300;
             opacity: 0.6;
             font-weight: 700;
-            text-shadow: 2px 8px 6px rgba(0, 0, 0, 0.2),
-              0px -5px 35px rgba(255, 255, 255, 0.7);
+            text-shadow: 2px 8px 6px rgba(0, 0, 0, 0.2), 0px -5px 35px rgba(255, 255, 255, 0.7);
           }
         }
       }
     }
-
 
     .second-row {
       justify-content: space-between;
@@ -225,7 +225,7 @@ body {
     align-items: center;
     position: relative;
     justify-content: space-between;
-    
+
     &__logo {
       color: $backgroundColorFirst;
       display: flex;
@@ -243,9 +243,17 @@ body {
       background: #78f7a8;
       border-radius: 15px;
     }
-    &__lang {
+    &_lang {
       position: absolute;
       right: 35px;
+      span{
+        color: #fff;
+        font-weight: 700;
+        text-transform: uppercase;
+        &:hover{
+          cursor: pointer;
+        }
+      }
     }
   }
   .ant-menu-light {
@@ -253,13 +261,42 @@ body {
     border-bottom: 0;
     padding: 30px 20px;
     margin: 0px -10px;
-    width: 450px;
+    position: relative;
+    .ant-badge-count {
+      position: absolute;
+      right: -9px;
+      padding: 0;
+      box-shadow: none;
+      font-size: 9px;
+      height: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    a {
+      color: #4f5058;
+      font-weight: 500;
+    }
     .ant-menu-title-content {
       color: #4f5058;
       font-weight: 700;
     }
 
     .ant-menu-item {
+      transition: 0.3 all;
+      svg {
+        transition: 0.3s all;
+        color: #4f5058;
+        font-size: 15px;
+      }
+      &:hover {
+        .ant-menu-title-content a {
+          color: #fff;
+        }
+        svg {
+          opacity: 1;
+        }
+      }
       &::after {
         content: "";
         border-bottom: 4px solid transparent;
@@ -267,15 +304,22 @@ body {
         width: 0px;
         transition: 0.3s all;
       }
+      &:hover::after {
+        width: 16px;
+      }
     }
 
     .ant-menu-item-selected {
       &::after {
-        border-bottom: 4px solid rgb(19, 216, 1);
-        width: 30px;
+        width: 16px;
+      }
+      svg {
+        opacity: 1;
       }
       .ant-menu-title-content {
-        color: #fff;
+        a {
+          color: #fff;
+        }
       }
     }
   }
@@ -318,7 +362,7 @@ body {
 }
 
 .homepage {
-  min-height: 60vh;
+  min-height: 77vh;
   display: flex;
   align-items: center;
   flex-direction: column;
@@ -326,7 +370,7 @@ body {
   .ant-row {
     width: 100%;
   }
-  .enter-search{
+  .enter-search {
     position: absolute;
     right: 0;
     top: 64%;
@@ -398,22 +442,40 @@ body {
     }
   }
 }
-.site-cookie-block {
-  // padding: 7px;
-  width: 12%;
+.site-cookie {
+
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
+  transition-delay: 1s;
+  font-weight: 400;
   position: fixed;
-  bottom: 0;
-  left: 0;
-  margin: 25px;
-  background: transparent;
-  text-align: center;
-  color: #fff;
-  border-radius: 10px;
-  height: 135px;
-  box-shadow: inset 2px 2px 20px #00000059, 3px 2px 0px 0px #78f7a8;
-}
-.button-accept {
-  border-color: #78f7a8;
-  background: #68635e;
-  box-shadow: inset 2px 2px 20px #00000059, 3px 2px 0px 0px #78f7a8;
+  bottom: 40px;
+  left: 25px;
+  z-index: 40;
+  border-radius: 15px;
+  transition: bottom 0.3s ease-in-out;
+  color: #9697b0;
+  font-size: 14px;
+  padding: 15px;
+  background-color: #0b0b0b;
+  box-shadow: inset 2px 2px 20px #00000059, 3px 3px 0px 0px #f8ccaf;
+  border: 1px #f8ccaf solid;
+
+  &-block {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    flex-direction: column;
+    button {
+      margin-top: 10px;
+      display: block;
+      background: transparent;
+
+      &:hover {
+        color: #000;
+      }
+    }
+  }
 }

@@ -14,22 +14,27 @@ const App = (props) => {
   return (
     <Router>
       <div className="app night">
-      <Navbar/>
+        <Navbar />
         {props.children}
         <Switch>
           <Route path="/home" >
-          <Main />
-          <Footer/>
-          <CookieRules/>
+            <Main />
+            <Footer />
+            <CookieRules />
+          </Route>
+          <Route path="/favorites" >
+            <Help />
+            <Footer />
+            <CookieRules />
           </Route>
           <Route path="/playerpage" >
-          <PlayerPage />
-          <Footer />
-          <CookieRules/>
+            <PlayerPage />
+            <Footer />
+            <CookieRules />
           </Route>
           <Route path="error">
-            <ErrorPage/>
-            <CookieRules/>
+            <ErrorPage />
+            <CookieRules />
           </Route>
         </Switch>
       </div>
