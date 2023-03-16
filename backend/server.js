@@ -2,10 +2,13 @@ const express = require("express")
 const bodyParser = require("body-parser");
 const cors = require("body-parser");
 const compression = require("compression");
-const routes = require("../frontend/src/router/routes");
+const routes = require("./routes");
 const config = require("./config/serverConfig.js");
 
+require("dotenv").config();
+
 const app = express();
+
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());

@@ -1,9 +1,14 @@
-const PlayerContoller = require("../controllers/player");
+const PlayerController = require("../controllers/player");
 
 module.exports = (router) => {
   router.post(
     "/api/player/rank",
-    PlayerContoller.validate("getPlayerData"),
-    PlayerContoller.getPlayerdata
+    PlayerController.validate("getPlayerData"),
+    PlayerController.getPlayerData
+  );
+  router.post(
+    "/api/player/steamid",
+    PlayerController.validate("getPlayerSteamName"),
+    PlayerController.getPlayerSteamName
   );
 };
