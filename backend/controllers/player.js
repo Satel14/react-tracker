@@ -3,6 +3,31 @@ const MESSAGE = require("../constant/responseMessage")
 const ANY_CONFIG = require("../constant/anyConfig")
 const { parsePlayerRank } = require("../modules/getPlayerRank")
 
+const getNormalDate = (time) => {
+  const date = new Date(time);
+  const monthOk = date.getUTCMonth();
+  const day = date.getUTCDate();
+
+  const month = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const n = month[monthOk];
+  const newdate = day + " " + n;
+  return newdate;
+};
+
 module.exports.getPlayerData = async (req, res) => {
   try {
     const error = validationResult(req);
