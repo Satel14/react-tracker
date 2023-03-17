@@ -177,7 +177,7 @@ class PlayerPage extends React.Component {
             <div className="third-row__right__rank"></div>
 
             <div className="third-row__right__title">
-              {t("pages.player.extraMods")}
+              {t("pages.player.wingman")}
             </div>
 
             <div className="third-row__right__rank"></div>
@@ -188,7 +188,7 @@ class PlayerPage extends React.Component {
             </div>
 
             <div className="third-row__right__title">
-              {t("pages.player.playlists.UnRanked")}
+
             </div>
 
             <div className="third-row__right__rank">

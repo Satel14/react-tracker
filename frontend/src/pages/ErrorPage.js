@@ -9,11 +9,14 @@ const getMainPage = (props) => {
 };
 
 const ErrorPage = (props) => {
-  <div className="errorpage">
-    <Button type="primary" onClick={() => getMainPage(props)}>
-      Повернуться на головну
-    </Button>
-  </div>;
+  return (
+    <div className="errorpage">
+      <Button type="primary" onClick={() => getMainPage(props)}>
+        Повернуться на головну
+      </Button>
+    </div>
+  );
 };
+
 
 export default ErrorPage;

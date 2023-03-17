@@ -91,8 +91,8 @@ class Navbar extends React.Component {
         </Menu>
 
         <div className="navbar__logo">
-          <span>CS</span>
-          <span>TV</span>
+          <span>CSGO</span>
+          <span>.TV</span>
         </div>
 
         <Menu

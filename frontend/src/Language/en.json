@@ -30,18 +30,7 @@
             },
             "ratingProgression": "Rating Progression",
             "compotetive": "Competetive",
-            "extraMods": "Extra Mods",
-            "playlists": {
-                "Duel 1v1": "Duel 1v1",
-                "Doubles 2v2": "Doubles 2v2",
-                "Standard 3v3": "Standard 3v3",
-                "Tourment": "Tourment",
-                "Hoops": "Hoops",
-                "Rumble": "Rumble",
-                "Dropshot": "Dropshot",
-                "Snowday": "Snowday",
-                "UnRanked": "UnRanked"
-            },
+            "wingman": "Wingman",
             "division": "Division",
             "streak": {
                 "win": "WinStreak",
@@ -55,7 +44,7 @@
     },
     "footer": {
         "text1": "Use our CSGO stats tracker to see who is the best in the world. You can see leaderboards for kills, K/D, damage, shots accuracy and pretty much every other stat you can think of.",
-    "text2": "Compare your CSGO stats against your friends or favorite streamers. CSTV provides the latest news from your favorite games along side your personalized stats profile in order to keep you informed and ahead of the competition.",
+    "text2": "Compare your CSGO stats against your friends or favorite streamers. CSGO.TV provides the latest news from your favorite games along side your personalized stats profile in order to keep you informed and ahead of the competition.",
     "developed": "Developed by Satel for Counter-Strike Community"
     },
     "other": {

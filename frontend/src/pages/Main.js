@@ -50,7 +50,7 @@ const Main = (props) => {
               <div className="homepage_left__stats__seasonend">
                 <FieldTimeOutlined />
                 <div>
-                  {t("other.words.season")} 3
+                  {t("other.words.season")}
                   <span>
                     {t("other.words.endsIn")}: {""}
                     <span>{t("other.words.leftDays", { days: 14 })}</span>
@@ -60,7 +60,7 @@ const Main = (props) => {
               <div className="homepage_left__stats__playeronline">
                 <TeamOutlined />
                 <div>
-                  {t("other.words.lastHour")}
+                  {t("other.words.playersOnline")}
                   <span>
                     {t("other.words.playersOnline")} :{" "}
                     <CountUp separator="," end={213989} />
