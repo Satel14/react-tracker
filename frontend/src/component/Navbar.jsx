@@ -66,9 +66,9 @@ class Navbar extends React.Component {
           <Menu.Item
             key="main"
             icon={<HomeOutlined />}
-            onClick={() => this.handleClickMenu("/home")}
+            onClick={() => this.handleClickMenu("/")}
           >
-            <Link to="/home">{t("menu.main")}</Link>
+            <Link to="/">{t("menu.main")}</Link>
           </Menu.Item>
 
           <Menu.Item

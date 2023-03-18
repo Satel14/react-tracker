@@ -63,7 +63,7 @@ const Main = (props) => {
                   {t("other.words.playersOnline")}
                   <span>
                     {t("other.words.playersOnline")} :{" "}
-                    <CountUp separator="," end={213989} />
+                    <CountUp separator="," end={1133462} />
                   </span>
                 </div>
               </div>

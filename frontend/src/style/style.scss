@@ -19,7 +19,10 @@ body {
 .app.night {
   max-width: 1200px;
   margin: auto;
-
+  .content {
+    position: relative;
+    height: 75vh;
+  }
   .playerpage {
     &-buttons {
       align-items: center;
@@ -330,10 +333,14 @@ body {
 }
 .footer {
   border-top: 1px solid $colorSecond;
-  padding-top: 20px;
   color: #ffffff;
   font-size: 15px;
-  margin: 40px 0;
+  margin: 50px 0;
+  flex-wrap: wrap;
+  padding-bottom: 25px;
+  padding-top: 25px;
+  display: flex;
+  justify-content: space-between;
 }
 
 .radiostyle {
@@ -440,6 +447,48 @@ body {
       }
     }
   }
+}
+.errorpage {
+  color: #ffffffd9;
+  line-height: 1.3;
+  font-size: 32px;
+  text-align: center;
+  font-weight: 700;
+  padding: 10px 15px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  margin: 0 15px;
+  font-family: "Avenir Next LT Pro Bold";
+  letter-spacing: 1px;
+  transition: 0.3s all;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  > div {
+    font-size: 15px;
+    margin: 15px 0;
+    text-transform: none;
+  }
+}
+.can-add-favoritelist {
+  color: #ffffffd9;
+  line-height: 1;
+  font-size: 18px;
+  text-align: center;
+  font-weight: 700;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 15px;
+  border-radius: 6px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  margin: 0 15px;
+  font-family: "Avenir Next LT Pro Bold";
+  letter-spacing: 1px;
+  transition: 0.3s all;
 }
 .site-cookie {
   width: 100%;

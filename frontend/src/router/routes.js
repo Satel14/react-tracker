@@ -3,7 +3,7 @@ import PlayerPage from "../pages/PlayerPage";
 import Main from "../pages/Main";
 import Help from "../pages/Help"
 import Player from "../pages/Player";
-
+import FavoritesPage from '../pages/FavoritesPage'
 const routes = [
   {
     path: "/",
@@ -35,12 +35,12 @@ const routes = [
     component: PlayerPage,
     exact: true,
   },
-  // {
-  //   path: "/favorites",
-  //   layout: FavoritesPage,
-  //   component: FavoritesPage,
-  //   exact: true,
-  // },
+  {
+    path: "/favorites",
+    layout: FavoritesPage,
+    component: FavoritesPage,
+    exact: true,
+  },
 ];
 
 export default routes;

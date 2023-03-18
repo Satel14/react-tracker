@@ -32,7 +32,7 @@ const Player = (props) => (
                 Last Hour
                 <span>
                   Player Online<span></span>
-                  <CountUp separator="," end={213989} />
+                  <CountUp separator="," end={1133462} />
                 </span>
               </div>
             </div>
