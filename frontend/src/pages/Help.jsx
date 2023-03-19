@@ -1,5 +1,5 @@
 import React from 'react'
-import Player from "../pages/Player"
+import Player from "./Player"
 
 const Help = (props) => (
     <div className="content help">
