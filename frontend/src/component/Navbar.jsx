@@ -10,13 +10,19 @@ import {
 import { Link } from "react-router-dom";
 import SetLanguage from "../Language/SetLanguage";
 import { withRouter } from "react-router";
+import SetTheme from './SetTheme';
 
 const componentRoutes = ["/", "/leaderboards", "/favorites", "/help"];
 
 class Navbar extends React.Component {
-  state = {
-    current: "home",
-  };
+  constructor(props) {
+    super(props);
+    this.state = {
+      current: "home",
+    };
+
+    window.Navbar = this;
+  }
   handleClick = (e) => {
     this.setState({ current: e.key });
   };
@@ -101,7 +107,9 @@ class Navbar extends React.Component {
           mode="horizontal"
           className="right-menu"
         ></Menu>
-
+        <div className="navbar_theme">
+          <SetTheme />
+        </div>
         <div className="navbar_lang">
           <SetLanguage />
         </div>

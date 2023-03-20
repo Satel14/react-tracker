@@ -1,0 +1,113 @@
+@mixin styleCreator($name, $colorFirst, $colorSecond, $backgroundColorFirst) {
+  .app.#{$name} {
+    .favorite-button {
+      &.active {
+        background: $colorFirst !important;
+      }
+    }
+
+    .site-cookie {
+      background-color: $backgroundColorFirst;
+      box-shadow: inset 2px 2px 20px #00000059, 3px 3px 0px 0px $colorFirst;
+      border: 1px $colorFirst solid;
+
+      &-block {
+        button {
+          border-color: $colorFirst;
+
+          &:hover {
+            background: $colorFirst;
+          }
+        }
+      }
+    }
+
+    .footer {
+      border-top: 1px solid $colorFirst;
+
+      .copyright {
+        color: $colorSecond;
+
+        a {
+          color: $colorSecond;
+        }
+      }
+
+      &-menu {
+        .ant-menu-light {
+          .ant-menu-item {
+            &.ant-menu-item-selected {
+              a {
+                color: $colorFirst;
+                box-shadow: inset 0px 0px 2px $colorFirst;
+              }
+            }
+          }
+        }
+
+        a {
+          &:hover {
+            color: $colorFirst;
+            box-shadow: inset 0px 0px 2px $colorFirst;
+          }
+        }
+      }
+      &-text {
+        b {
+          color: $colorSecond;
+        }
+      }
+    }
+
+    .about {
+      color: $colorSecond;
+    }
+
+    .navbar {
+      border-bottom: 1px solid $colorFirst;
+
+      &_logo {
+        span {
+          color: $colorFirst;
+        }
+      }
+
+      .ant-menu-light {
+        .ant-menu-title-content {
+          .ant-badge-count {
+            background: $colorFirst;
+            color: $backgroundColorFirst;
+          }
+        }
+
+        .ant-menu-item {
+          &:hover {
+            svg {
+              color: $colorFirst;
+            }
+          }
+
+          &:hover::after {
+            border-bottom: 4px solid $colorFirst;
+          }
+        }
+
+        .ant-menu-item-selected {
+          &::after {
+            border-bottom: 4px solid $colorFirst;
+          }
+
+          svg {
+            color: $colorFirst;
+          }
+        }
+      }
+    }
+  }
+}
+
+@include styleCreator("green", #77f6a7, #65656d, #222222);
+@include styleCreator("blue", #00d8d3, #65656d, #0b0b0b);
+@include styleCreator("orange", #ffbe29, #65656d, #0b0b0b);
+@include styleCreator("brown", #f8ccaf, #65656d, #0b0b0b);
+@include styleCreator("red", #f73b5d, #65656d, #161920);
