@@ -5,7 +5,7 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import CountUp from "react-countup";
-import { Row, Col, Radio, Input } from "antd";
+import { Row, Col, Input } from "antd";
 import { translate } from "react-switch-lang";
 import Fade from "react-reveal/Fade";
 import { withRouter } from "react-router";
@@ -136,7 +136,7 @@ const Main = (props) => {
             </div>
             <div className="history-list">
               <div>
-                {/* <HistoryChecking /> */}
+                <HistoryChecking />
               </div>
             </div>
           </div>

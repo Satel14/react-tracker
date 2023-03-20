@@ -1,66 +1,67 @@
 {
-    "menu": {
-        "main": "Main",
-        "leaderboards": "Leaderboards",
-        "favorites": "Favorites",
-        "obs": "OBS overlay",
-        "help": "Help"
+  "menu": {
+    "main": "Main",
+    "leaderboards": "Leaderboards",
+    "favorites": "Favorites",
+    "obs": "OBS overlay",
+    "help": "Help"
+  },
+  "pages": {
+    "main": {
+      "title": "Counter-Strike",
+      "subtitle": "Check Detailed Counter-Strike: Global Offensive Stats and Leaderboards",
+      "searchingHistory": "Searching History"
     },
-    "pages": {
-        "main": {
-            "title": "Counter-Strike",
-            "subtitle": "Check Detailed Counter-Strike: Global Offensive Stats and Leaderboards",
-            "searchingHistory": "Searching History"
-        },
-        "player": {
-            "seasonRewardLevel": "Season Reward Level",
-            "mini": {
-                "wins": "Wins",
-                "saves": "Saves",
-                "deaths" : "Deaths",
-                "shotsAccuracy" : "Shots Accuracy",
-                "bombsDefused": "Bombs Defused",
-                "mvps": "Mvps",
-                "short": "Short",
-                "seasonMatches": "Matches Played",
-                "roundsPlayed": "Rounds Played",
-                "wlPercentage": "Win Rounds %",
-                "damage": "Damage",
-                "hoursPlayed": "Hours played"
-            },
-            "ratingProgression": "Rating Progression",
-            "compotetive": "Competetive",
-            "wingman": "Wingman",
-            "division": "Division",
-            "streak": {
-                "win": "WinStreak",
-                "lose": "LoseStreak"
-            },
-            "inTheWorld": "World",
-            "inGameTitles": "Ingame Titles",
-            "moreStats": "More stats",
-            "placeinTheWorld": "Place in the world"
-        }
-    },
-    "footer": {
-        "text1": "Use our CSGO stats tracker to see who is the best in the world. You can see leaderboards for kills, K/D, damage, shots accuracy and pretty much every other stat you can think of.",
+    "player": {
+      "seasonRewardLevel": "Season Reward Level",
+      "mini": {
+        "wins": "Wins",
+        "saves": "Saves",
+        "deaths": "Deaths",
+        "shotsAccuracy": "Shots Accuracy",
+        "bombsDefused": "Bombs Defused",
+        "mvps": "Mvps",
+        "short": "Short",
+        "seasonMatches": "Matches Played",
+        "roundsPlayed": "Rounds Played",
+        "wlPercentage": "Win Rounds %",
+        "damage": "Damage",
+        "hoursPlayed": "Hours played"
+      },
+      "ratingProgression": "Rating Progression",
+      "compotetive": "Competetive",
+      "wingman": "Wingman",
+      "division": "Division",
+      "streak": {
+        "win": "WinStreak",
+        "lose": "LoseStreak"
+      },
+      "inTheWorld": "World",
+      "inGameTitles": "Ingame Titles",
+      "moreStats": "More stats",
+      "placeinTheWorld": "Place in the world"
+    }
+  },
+  "footer": {
+    "text1": "Use our CSGO stats tracker to see who is the best in the world. You can see leaderboards for kills, K/D, damage, shots accuracy and pretty much every other stat you can think of.",
     "text2": "Compare your CSGO stats against your friends or favorite streamers. CSGO.TV provides the latest news from your favorite games along side your personalized stats profile in order to keep you informed and ahead of the competition.",
     "developed": "Developed by Satel for Counter-Strike Community"
+  },
+  "other": {
+    "words": {
+      "season": "Season",
+      "endsIn": "Ends in",
+      "leftDays": "id {days} days",
+      "lastHour": "LastHour",
+      "playersOnline": "Players online",
+      "viewStats": "Open profile",
+      "rating": "Rating",
+      "contactMe": "Contact me",
+      "aboutMe": "About me"
     },
-    "other": {
-        "words": {
-            "season": "Season",
-            "endsIn": "Ends in",
-            "leftDays": "id {days} days",
-            "lastHour": "LastHour",
-            "playersOnline": "Players online",
-            "rating": "Rating",
-            "contactMe": "Contact me",
-            "aboutMe": "About me"
-        },
-        "cookie": {
-            "text": "We use cookies on our website to save searched players history, and for page Favorites. By clicking 'Accept', you consent to the use All the cookies",
-            "accept": "Accept"
-        }
+    "cookie": {
+      "text": "We use cookies on our website to save searched players history, and for page Favorites. By clicking 'Accept', you consent to the use All the cookies",
+      "accept": "Accept"
     }
+  }
 }
