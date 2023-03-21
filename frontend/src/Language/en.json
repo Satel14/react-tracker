@@ -54,7 +54,9 @@
       "leftDays": "id {days} days",
       "lastHour": "LastHour",
       "playersOnline": "Players online",
+      "deletePlayer": "Delete player",
       "viewStats": "Open profile",
+      "cleanList": "Clean list",
       "rating": "Rating",
       "contactMe": "Contact me",
       "aboutMe": "About me"

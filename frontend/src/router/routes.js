@@ -3,7 +3,7 @@ import PlayerPage from "../pages/PlayerPage";
 import Main from "../pages/Main";
 import Help from "../pages/Help"
 import Player from "../pages/Player";
-import FavoritesPage from '../pages/FavoritesPage'
+import FavoritesPage from '../pages/Favorites'
 const routes = [
   {
     path: "/",

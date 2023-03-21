@@ -55,6 +55,8 @@
             "lastHour": "Годин",
             "playersOnline": "Гравців онлайн",
             "viewStats": "Відкрити профіль",
+            "deletePlayer": "Видалити гравця",
+            "cleanList": "Очистити список",
             "rating": "Рейтинг",
             "contactMe": "Контакт",
             "aboutMe": "Про мене"
