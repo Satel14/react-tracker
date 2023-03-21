@@ -1,0 +1,37 @@
+{
+  "✪ Satel": {
+    "nickname": "✪ Satel",
+    "avatar": "https://avatars.akamai.steamstatic.com/d86d23ddc8df84453b1720c69bb39e603ff18635_full.jpg",
+    "rating": null,
+    "platform": "steam",
+    "gameId": "✪ Satel"
+  },
+  "Devil": {
+    "nickname": "Devil",
+    "avatar": "https://avatars.akamai.steamstatic.com/73e9142434d3e8517d35a93a13dfa9ca1760db86_full.jpg",
+    "rating": 14,
+    "platform": "steam",
+    "gameId": "Devil"
+  },
+  "Agnostic": {
+    "nickname": "Agnostic",
+    "avatar": "https://avatars.akamai.steamstatic.com/d4302d1300e6356ae5c3250e1ca8c46dfb902bfe_full.jpg",
+    "rating": 14,
+    "platform": "steam",
+    "gameId": "Agnostic"
+  },
+  "☠☣ Mr. Bogdanovich ☣☠": {
+    "nickname": "☠☣ Mr. Bogdanovich ☣☠",
+    "avatar": "https://avatars.akamai.steamstatic.com/1a02f759ce1817647691ffe668067c48be144540_full.jpg",
+    "rating": 12,
+    "platform": "steam",
+    "gameId": "☠☣ Mr. Bogdanovich ☣☠"
+  },
+  "END": {
+    "nickname": "END",
+    "avatar": "https://avatars.akamai.steamstatic.com/03cefb538d2fc5b5f143cb2cfd0b4c0bae771632_full.jpg",
+    "rating": 15,
+    "platform": "steam",
+    "gameId": "END"
+  }
+}
