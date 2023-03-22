@@ -360,7 +360,6 @@ body {
   max-width: 15.9%;
 }
 .footer {
-  border-top: 1px solid $colorSecond;
   color: #ffffff;
   font-size: 15px;
   margin: 50px 0;
@@ -369,8 +368,82 @@ body {
   padding-top: 25px;
   display: flex;
   justify-content: space-between;
-}
+  .copyright {
+    display: flex;
+    margin-top: 5px;
+    a {
+      margin: 0 5px;
+      svg {
+        margin-right: 3px;
+      }
+    }
+  }
+  &-menu {
+    margin: 0 -10px;
+    .ant-menu-light {
+      background: transparent;
+      line-height: 1.5;
+      box-shadow: unset;
+      border: 0 !important;
 
+      .ant-menu-horizontal > .ant-menu-item::after,
+      .ant-menu-horizontal > .ant-menu-submenu::after {
+        display: none !important;
+        border-bottom: 0 !important;
+      }
+      .ant-menu-item {
+        width: 99px;
+        height: 77px;
+        &:after {
+          display: none;
+        }
+      }
+    }
+    width: 33%;
+    display: flex;
+    text-align: center;
+    justify-content: center;
+    justify-content: space-between;
+    font-size: 13px;
+
+    a {
+      border-radius: 10px;
+      box-shadow: inset 2px 2px 20px #00000059;
+      padding: 8px 5px;
+      margin: 0;
+      width: 70px;
+      height: 77px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      letter-spacing: 1px;
+      color: #fff;
+      font-family: "Bebas Neue Regular";
+      transition: 0.3s all;
+
+      svg {
+        font-size: 18px;
+        margin-bottom: 9px;
+      }
+    }
+  }
+  &-text {
+    width: 63%;
+    margin: 0;
+    font-size: 14px;
+
+    b {
+      font-weight: 400;
+    }
+  }
+}
+.bugreport {
+  max-width: 600px;
+  margin: auto;
+}
 .radiostyle {
   .ant-radio-button-wrapper {
     background: transparent;

@@ -4,7 +4,7 @@ import { Menu, Badge } from "antd";
 import { translate } from "react-switch-lang";
 import {
   HomeOutlined,
-  ProjectOutlined,
+  HeartOutlined,
   QuestionCircleOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
@@ -79,7 +79,7 @@ class Navbar extends React.Component {
 
           <Menu.Item
             key="favorites"
-            icon={<ProjectOutlined />}
+            icon={<HeartOutlined />}
             onClick={() => this.handleClickMenu("/favorites")}
           >
             <Badge count={10}>
