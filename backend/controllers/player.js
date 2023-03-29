@@ -1,4 +1,4 @@
-const { body, validationResult } = require("express-validator");
+const { validationResult, body, check } = require("express-validator");
 const MESSAGE = require("../constant/responseMessage")
 const ANY_CONFIG = require("../constant/anyConfig")
 const { parsePlayerRank } = require("../modules/getPlayerRank")
@@ -69,6 +69,17 @@ module.exports.getPlayerSteamName = async (req, res) => {
   }
 };
 
+module.exports.getPlayerData = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+
+    let { platform, gameid } = req.body;
+
+    if (!errors.isEmpty()) {
+      return res.status(422).json({ status:422, message: MESSAGE.VALIDATOR.ERROR})
+    }
+  }
+}
 module.exports.validate = (method) => {
   switch (method) {
     case "getPlayerData": {
