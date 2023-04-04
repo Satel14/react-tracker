@@ -4,6 +4,7 @@ import Main from "../pages/Main";
 import Help from "../pages/Help"
 import Player from "../pages/Player";
 import FavoritesPage from '../pages/Favorites'
+import BugReportPage from '../pages/BugReportPage'
 const routes = [
   {
     path: "/",
@@ -39,6 +40,12 @@ const routes = [
     path: "/favorites",
     layout: FavoritesPage,
     component: FavoritesPage,
+    exact: true,
+  },
+  {
+    path: "/bugreport",
+    layout: BugReportPage,
+    component: BugReportPage,
     exact: true,
   },
 ];
