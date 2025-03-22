@@ -78,8 +78,11 @@ module.exports.getPlayerData = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(422).json({ status:422, message: MESSAGE.VALIDATOR.ERROR})
     }
+  } catch (e) {
+    return res.status(200).json({ status: 200, message: e.message });
   }
 }
+
 module.exports.validate = (method) => {
   switch (method) {
     case "getPlayerData": {
