@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { Menu, Dropdown } from "antd";
+import { Dropdown } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import {
   setTranslations,
@@ -21,7 +21,7 @@ class SomeComponent extends React.Component {
   constructor(props) {
     super(props);
 
-    
+
     this.state = {
       currentLang: "en",
     };
@@ -30,7 +30,7 @@ class SomeComponent extends React.Component {
 
   handleSetLanguage = (key) => () => {
     setLanguage(key);
-    localStorage.setItem("lang",key);
+    localStorage.setItem("lang", key);
     this.setState({
       currentLang: key,
     });
@@ -53,39 +53,35 @@ class SomeComponent extends React.Component {
   }
 
   render() {
-    const langmenu = (
-      <Menu>
-        <Menu.Item
-          key="eng"
-          className={this.state.currentLang === "en" && "dropdown-lang-active"}
-          onClick={this.handleSetLanguage("en")}
-        >
-          EN
-        </Menu.Item>
-        <Menu.Item
-          key="ua"
-          onClick={this.handleSetLanguage("ua")}
-          className={this.state.currentLang === "ua" && "dropdown-lang-active"}
-          
-        >
-          UA
-        </Menu.Item>
-      </Menu>
-    );
+    const items = [
+      {
+        key: "eng",
+        label: "EN",
+        className: this.state.currentLang === "en" ? "dropdown-lang-active" : "",
+        onClick: this.handleSetLanguage("en"),
+      },
+      {
+        key: "ua",
+        label: "UA",
+        className: this.state.currentLang === "ua" ? "dropdown-lang-active" : "",
+        onClick: this.handleSetLanguage("ua"),
+      },
+    ];
 
     return (
-        <Dropdown overlay={langmenu} className="dropdown-lang">
-            <span>
-                {this.state.currentLang} <DownOutlined/>
-            </span>
-        </Dropdown>
+      <Dropdown menu={{ items }} className="dropdown-lang">
+        <span>
+          {this.state.currentLang} <DownOutlined />
+        </span>
+      </Dropdown>
     );
   }
 }
 
+
 SomeComponent.propTypes = {
   t: PropTypes.func.isRequired,
 };
- 
+
 export default translate(SomeComponent);
 

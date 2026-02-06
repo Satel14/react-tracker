@@ -62,39 +62,40 @@ class Navbar extends React.Component {
   render() {
     const { current } = this.state;
     const { t } = this.props;
+
+    const items = [
+      {
+        key: "main",
+        icon: <HomeOutlined />,
+        label: <Link to="/">{t("menu.main")}</Link>,
+        onClick: () => this.handleClickMenu("/"),
+      },
+      {
+        key: "favorites",
+        icon: <HeartOutlined />,
+        label: (
+          <Badge count={10}>
+            <Link to="/favorites">{t("menu.favorites")}</Link>
+          </Badge>
+        ),
+        onClick: () => this.handleClickMenu("/favorites"),
+      },
+      {
+        key: "help",
+        icon: <QuestionCircleOutlined />,
+        label: <Link to="/help">{t("menu.help")}</Link>,
+        onClick: () => this.handleClickMenu("/help"),
+      },
+    ];
+
     return (
       <div className="navbar">
         <Menu
           onClick={this.handleClick}
           selectedKeys={[current]}
           mode="horizontal"
-        >
-          <Menu.Item
-            key="main"
-            icon={<HomeOutlined />}
-            onClick={() => this.handleClickMenu("/")}
-          >
-            <Link to="/">{t("menu.main")}</Link>
-          </Menu.Item>
-
-          <Menu.Item
-            key="favorites"
-            icon={<HeartOutlined />}
-            onClick={() => this.handleClickMenu("/favorites")}
-          >
-            <Badge count={10}>
-              <Link to="/favorites">{t("menu.favorites")}</Link>
-            </Badge>
-          </Menu.Item>
-
-          <Menu.Item
-            key="help"
-            icon={<QuestionCircleOutlined />}
-            onClick={() => this.handleClickMenu("/help")}
-          >
-            <Link to="/help">{t("menu.help")}</Link>
-          </Menu.Item>
-        </Menu>
+          items={items}
+        />
 
         <div className="navbar__logo">
           <span>CSGO</span>
@@ -106,7 +107,8 @@ class Navbar extends React.Component {
           selectedKeys={[current]}
           mode="horizontal"
           className="right-menu"
-        ></Menu>
+          items={[]}
+        />
         <div className="navbar_theme">
           <SetTheme />
         </div>

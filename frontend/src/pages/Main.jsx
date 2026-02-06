@@ -7,7 +7,7 @@ import {
 import CountUp from "react-countup";
 import { Row, Col, Input } from "antd";
 import { translate } from "react-switch-lang";
-import Fade from "react-reveal/Fade";
+import { motion } from "framer-motion";
 import { withRouter } from "react-router";
 import HistoryChecking from "../component/HistoryChecking";
 import { getPlayerSteamName } from '../api/player'
@@ -111,18 +111,21 @@ const Main = (props) => {
             </div>
 
             <div className="mainpage_left__stats">
-              <Fade delay={100}>
-                <div className="mainpage_left__stats__seasonend">
-                  <FieldTimeOutlined />
-                  <div>
-                    {t("other.words.season")}
-                    <span>
-                      {t("other.words.endsIn")}: {""}
-                      <span>{t("other.words.leftDays", { days: 14 })}</span>
-                    </span>
-                  </div>
+              <motion.div
+                className="mainpage_left__stats__seasonend"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <FieldTimeOutlined />
+                <div>
+                  {t("other.words.season")}
+                  <span>
+                    {t("other.words.endsIn")}: {""}
+                    <span>{t("other.words.leftDays", { days: 14 })}</span>
+                  </span>
                 </div>
-              </Fade>
+              </motion.div>
               <div className="mainpage_left__stats__playeronline">
                 <TeamOutlined />
                 <div>

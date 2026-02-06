@@ -77,13 +77,18 @@ class Footer extends React.Component {
             onClick={this.handleClick}
             selectedKeys={[current]}
             mode="horizontal"
-          >
-            <Menu.Item className="bugreport">
-              <Link to='/bugreport'>
-                <BugOutlined />
-              </Link>
-            </Menu.Item>
-          </Menu>
+            items={[
+              {
+                key: "bugreport",
+                label: (
+                  <Link to="/bugreport">
+                    <BugOutlined />
+                  </Link>
+                ),
+                className: "bugreport",
+              },
+            ]}
+          />
         </div>
       </div>
     );

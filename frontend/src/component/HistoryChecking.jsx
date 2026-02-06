@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { getHistory } from './../cookie/store';
-import { Fade } from 'react-reveal/Fade';
+import { motion } from "framer-motion";
 import { translate } from "react-switch-lang";
 import { getPlatformAvatar, getIconComponentPlatfrom } from '../helpers/other'
 import { Link } from 'react-router-dom'
@@ -68,10 +68,14 @@ class HistoryChecking extends Component {
     const { t } = this.props
 
     return (
-      <Fade delay={300}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
         <div className='titlehistory'>{t("page.main.searchingHistory")}</div>
         <div className='historycheck'>{this.renderHistoryList()}</div>
-      </Fade>
+      </motion.div>
     );
   }
 }

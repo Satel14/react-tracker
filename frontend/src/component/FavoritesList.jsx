@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { getFavorites } from '../cookie/store'
-import { Fade } from 'react-reveal/Fade';
+import { motion } from "framer-motion";
 import { Button, Popconfirm } from 'antd'
 import { DeleteOutlined, UserDeleteOutlined } from '@ant-design/icons'
 import { translate } from 'react-switch-lang'
@@ -43,7 +43,11 @@ export class FavoritesList extends Component {
     const text = "Are you sure to clean list?"
 
     return (
-      <Fade>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
         <div className='favorites-list'>
           <div className='playerpage-buttons'>
             <Button
@@ -73,7 +77,7 @@ export class FavoritesList extends Component {
             </Popconfirm>
           </div>
         </div>
-      </Fade>
+      </motion.div>
     )
   }
 }
