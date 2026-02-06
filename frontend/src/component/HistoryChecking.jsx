@@ -1,30 +1,28 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getHistory } from './../cookie/store';
 import { motion } from "framer-motion";
 import { translate } from "react-switch-lang";
 import { getPlatformAvatar, getIconComponentPlatfrom } from '../helpers/other'
 import { Link } from 'react-router-dom'
-class HistoryChecking extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      historyList: null,
-    }
+
+const HistoryChecking = ({ t }) => {
+  const [historyList, setHistoryList] = useState(null);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      const items = await getHistory();
+      if (items !== null && Object.keys(items).length > 0) {
+        setHistoryList(items);
+      }
+    };
+    fetchHistory();
+  }, []);
+
+  if (!historyList) {
+    return <></>;
   }
 
-  async componentDidMount() {
-    const items = await getHistory()
-
-    if (items !== null && Object.keys(items).length > 0) {
-      this.setState({
-        historyList: items,
-      })
-    }
-  }
-  renderHistoryList() {
-    const { historyList } = this.state;
-    const { t } = this.props;
-
+  const renderHistoryList = () => {
     const renderList = [];
 
     for (let key in historyList) {
@@ -32,7 +30,7 @@ class HistoryChecking extends Component {
       let player = historyList[gameId];
 
       if (!player.avatar) {
-        player.avatar = getPlatformAvatar(player.platform)
+        player.avatar = getPlatformAvatar(player.platform);
       }
 
       renderList.push(
@@ -57,27 +55,21 @@ class HistoryChecking extends Component {
             <span>{player.rating}</span>
           </div>
         </Link>
-      )
+      );
     }
-  }
-  render() {
-    const { historyList } = this.state;
-    if (!historyList) {
-      return <></>
-    }
-    const { t } = this.props
+    return renderList;
+  };
 
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-        <div className='titlehistory'>{t("page.main.searchingHistory")}</div>
-        <div className='historycheck'>{this.renderHistoryList()}</div>
-      </motion.div>
-    );
-  }
-}
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5, delay: 0.3 }}
+    >
+      <div className='titlehistory'>{t("page.main.searchingHistory")}</div>
+      <div className='historycheck'>{renderHistoryList()}</div>
+    </motion.div>
+  );
+};
 
 export default translate(HistoryChecking);

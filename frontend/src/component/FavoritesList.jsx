@@ -1,85 +1,71 @@
-import React, { Component } from 'react'
-import { getFavorites } from '../cookie/store'
+import React, { useState, useEffect } from 'react';
+import { getFavorites } from '../cookie/store';
 import { motion } from "framer-motion";
-import { Button, Popconfirm } from 'antd'
-import { DeleteOutlined, UserDeleteOutlined } from '@ant-design/icons'
-import { translate } from 'react-switch-lang'
-export class FavoritesList extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      favoritesList: null,
-      deleteOn: false,
-      updatingList: false,
-    }
-  }
+import { Button, Popconfirm } from 'antd';
+import { DeleteOutlined, UserDeleteOutlined } from '@ant-design/icons';
+import { translate } from 'react-switch-lang';
 
-  async componentDidMount() {
-    const item = await getFavorites()
+const FavoritesList = ({ t }) => {
+  const [favoritesList, setFavoritesList] = useState(null);
+  const [deleteOn, setDeleteOn] = useState(false);
 
-    if (item !== 0 && Object.keys(item > 0)) {
-      this.setState({
-        favoritesList: item,
-      })
-    }
-  }
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      const item = await getFavorites();
+      if (item && Object.keys(item).length > 0) {
+        setFavoritesList(item);
+      }
+    };
+    fetchFavorites();
+  }, []);
 
-  async cleanFavorites() {
-    this.setState({
-      favoritesList: null,
-    })
-  }
-  render() {
-    const { favoritesList, deleteOn } = this.state;
-    if (!favoritesList) {
-      return (
-        <div className='can-add-favoritelist'>
-          You can add player to favorite list.
-        </div>
-      )
-    }
+  const cleanFavorites = () => {
+    setFavoritesList(null);
+  };
 
-    const { t } = this.props;
-    const text = "Are you sure to clean list?"
-
+  if (!favoritesList) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className='favorites-list'>
-          <div className='playerpage-buttons'>
-            <Button
-              type='link'
-              icon={<UserDeleteOutlined />}
-              size="small"
-              className={deleteOn ? "active" : ""}
-              onClick={() => {
-                this.setState({
-                  deleteOn: !deleteOn,
-                })
-              }}
-            >
-              {t("other.words.deletePlayer")}
-            </Button>
-            <Popconfirm
-              placeholder="bottomRight"
-              title={text}
-              onConfirm={() => this.cleanFavorites()}
-              okText="Yes"
-              cancelText="No"
-              className='csgo-pop'
-            >
-              <Button type='link' icon={<DeleteOutlined />} size="small">
-                {t("other.words.cleanList")}
-              </Button>
-            </Popconfirm>
-          </div>
-        </div>
-      </motion.div>
-    )
+      <div className='can-add-favoritelist'>
+        You can add player to favorite list.
+      </div>
+    );
   }
-}
+
+  const text = "Are you sure to clean list?";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className='favorites-list'>
+        <div className='playerpage-buttons'>
+          <Button
+            type='link'
+            icon={<UserDeleteOutlined />}
+            size="small"
+            className={deleteOn ? "active" : ""}
+            onClick={() => setDeleteOn(!deleteOn)}
+          >
+            {t("other.words.deletePlayer")}
+          </Button>
+          <Popconfirm
+            placement="bottomRight"
+            title={text}
+            onConfirm={cleanFavorites}
+            okText="Yes"
+            cancelText="No"
+            className='csgo-pop'
+          >
+            <Button type='link' icon={<DeleteOutlined />} size="small">
+              {t("other.words.cleanList")}
+            </Button>
+          </Popconfirm>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
 
 export default translate(FavoritesList);

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Menu, Badge } from "antd";
 import { translate } from "react-switch-lang";
@@ -7,121 +7,94 @@ import {
   HeartOutlined,
   QuestionCircleOutlined,
 } from "@ant-design/icons";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useHistory } from "react-router-dom";
 import SetLanguage from "../Language/SetLanguage";
-import { withRouter } from "react-router";
 import SetTheme from './SetTheme';
 
 const componentRoutes = ["/", "/leaderboards", "/favorites", "/help"];
 
-class Navbar extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      current: "home",
-    };
+const Navbar = ({ t }) => {
+  const [current, setCurrent] = useState("home");
+  const location = useLocation();
+  const history = useHistory();
 
-    window.Navbar = this;
-  }
-  handleClick = (e) => {
-    this.setState({ current: e.key });
+  const handleClick = (e) => {
+    setCurrent(e.key);
   };
 
-  handleClickMenu = (e) => {
-    console.log(e.key);
-    this.props.history.push(e);
+  const handleClickMenu = (path) => {
+    history.push(path);
   };
 
+  useEffect(() => {
+    const url = location.pathname;
+    const isComponentRoute = componentRoutes.includes(url);
 
-  componentDidMount() {
-    const url = window.location.pathname;
-    console.log(url);
-    if (componentRoutes.includes(url)) {
-      this.setState({
-        current: url === "/" ? "main" : url.replace("/", ""),
-      });
+    if (isComponentRoute) {
+      setCurrent(url === "/" ? "main" : url.replace("/", ""));
+    } else {
+      setCurrent("");
     }
-  }
-  componentDidUpdate(prevProps) {
-    if (this.props.location !== prevProps.location) {
-      this.onRoutesChanges();
-    }
-  }
+  }, [location]);
 
-  onRoutesChanges() {
-    const url = this.props.location?.pathname;
-    if (url) {
-      if (!componentRoutes.includes(url)) {
-        this.setState({
-          current: "",
-        });
-      }
-    }
-  }
+  const items = [
+    {
+      key: "main",
+      icon: <HomeOutlined />,
+      label: <Link to="/">{t("menu.main")}</Link>,
+      onClick: () => handleClickMenu("/"),
+    },
+    {
+      key: "favorites",
+      icon: <HeartOutlined />,
+      label: (
+        <Badge count={10}>
+          <Link to="/favorites">{t("menu.favorites")}</Link>
+        </Badge>
+      ),
+      onClick: () => handleClickMenu("/favorites"),
+    },
+    {
+      key: "help",
+      icon: <QuestionCircleOutlined />,
+      label: <Link to="/help">{t("menu.help")}</Link>,
+      onClick: () => handleClickMenu("/help"),
+    },
+  ];
 
-  render() {
-    const { current } = this.state;
-    const { t } = this.props;
+  return (
+    <div className="navbar">
+      <Menu
+        onClick={handleClick}
+        selectedKeys={[current]}
+        mode="horizontal"
+        items={items}
+      />
 
-    const items = [
-      {
-        key: "main",
-        icon: <HomeOutlined />,
-        label: <Link to="/">{t("menu.main")}</Link>,
-        onClick: () => this.handleClickMenu("/"),
-      },
-      {
-        key: "favorites",
-        icon: <HeartOutlined />,
-        label: (
-          <Badge count={10}>
-            <Link to="/favorites">{t("menu.favorites")}</Link>
-          </Badge>
-        ),
-        onClick: () => this.handleClickMenu("/favorites"),
-      },
-      {
-        key: "help",
-        icon: <QuestionCircleOutlined />,
-        label: <Link to="/help">{t("menu.help")}</Link>,
-        onClick: () => this.handleClickMenu("/help"),
-      },
-    ];
-
-    return (
-      <div className="navbar">
-        <Menu
-          onClick={this.handleClick}
-          selectedKeys={[current]}
-          mode="horizontal"
-          items={items}
-        />
-
-        <div className="navbar__logo">
-          <span>CSGO</span>
-          <span>.TV</span>
-        </div>
-
-        <Menu
-          onClick={this.handleClick}
-          selectedKeys={[current]}
-          mode="horizontal"
-          className="right-menu"
-          items={[]}
-        />
-        <div className="navbar_theme">
-          <SetTheme />
-        </div>
-        <div className="navbar_lang">
-          <SetLanguage />
-        </div>
+      <div className="navbar__logo">
+        <span>CSGO</span>
+        <span>.TV</span>
       </div>
-    );
-  }
-}
+
+      <Menu
+        onClick={handleClick}
+        selectedKeys={[current]}
+        mode="horizontal"
+        className="right-menu"
+        items={[]}
+      />
+      <div className="navbar_theme">
+        <SetTheme />
+      </div>
+      <div className="navbar_lang">
+        <SetLanguage />
+      </div>
+    </div>
+  );
+};
 
 Navbar.propTypes = {
   t: PropTypes.func.isRequired,
 };
 
-export default withRouter(translate(Navbar));
+export default translate(Navbar);

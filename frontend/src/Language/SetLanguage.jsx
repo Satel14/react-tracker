@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Dropdown } from "antd";
 import { DownOutlined } from "@ant-design/icons";
@@ -13,75 +13,53 @@ import ua from "./ua.json"
 
 const languages = ["en", "ua"];
 
-
 setTranslations({ en, ua });
 setDefaultLanguage("en");
 
-class SomeComponent extends React.Component {
-  constructor(props) {
-    super(props);
+const SetLanguage = () => {
+  const [currentLang, setCurrentLang] = useState("en");
 
+  useEffect(() => {
+    const localLanguage = localStorage.getItem("lang");
+    if (localLanguage && languages.includes(localLanguage)) {
+      setLanguage(localLanguage);
+      setCurrentLang(localLanguage);
+    }
+  }, []);
 
-    this.state = {
-      currentLang: "en",
-    };
-  }
-
-
-  handleSetLanguage = (key) => () => {
+  const handleSetLanguage = (key) => () => {
     setLanguage(key);
     localStorage.setItem("lang", key);
-    this.setState({
-      currentLang: key,
-    });
+    setCurrentLang(key);
   };
 
-  async componentDidMount() {
-    const localLanguage = await localStorage.getItem("lang");
+  const items = [
+    {
+      key: "eng",
+      label: "EN",
+      className: currentLang === "en" ? "dropdown-lang-active" : "",
+      onClick: handleSetLanguage("en"),
+    },
+    {
+      key: "ua",
+      label: "UA",
+      className: currentLang === "ua" ? "dropdown-lang-active" : "",
+      onClick: handleSetLanguage("ua"),
+    },
+  ];
 
-    if (!localLanguage) {
-      return;
-    }
+  return (
+    <Dropdown menu={{ items }} className="dropdown-lang">
+      <span>
+        {currentLang} <DownOutlined />
+      </span>
+    </Dropdown>
+  );
+};
 
-
-    if (languages.includes(localLanguage)) {
-      setLanguage(localLanguage);
-      this.setState({
-        currentLang: localLanguage,
-      });
-    }
-  }
-
-  render() {
-    const items = [
-      {
-        key: "eng",
-        label: "EN",
-        className: this.state.currentLang === "en" ? "dropdown-lang-active" : "",
-        onClick: this.handleSetLanguage("en"),
-      },
-      {
-        key: "ua",
-        label: "UA",
-        className: this.state.currentLang === "ua" ? "dropdown-lang-active" : "",
-        onClick: this.handleSetLanguage("ua"),
-      },
-    ];
-
-    return (
-      <Dropdown menu={{ items }} className="dropdown-lang">
-        <span>
-          {this.state.currentLang} <DownOutlined />
-        </span>
-      </Dropdown>
-    );
-  }
-}
-
-
-SomeComponent.propTypes = {
+SetLanguage.propTypes = {
   t: PropTypes.func.isRequired,
 };
 
-export default translate(SomeComponent);
+export default translate(SetLanguage);
 
