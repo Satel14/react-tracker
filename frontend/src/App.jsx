@@ -1,39 +1,35 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import "./style/style.scss";
 import Navbar from "./component/Navbar";
 import Footer from "./component/Footer";
-import CookieRules from './component/CookieRule'
+import CookieRules from './component/CookieRule';
 
+const App = ({ children }) => {
+  const [currentTheme, setCurrentTheme] = useState("brown");
+  const location = useLocation(); // Force re-render on route change
 
-class App extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      currentTheme: "brown",
-    }
+  useEffect(() => {
+    // Expose theme setter for legacy components if needed, or remove if SetTheme is verified to work independently
+    window.App = {
+      changeTheme: (theme) => setCurrentTheme(theme)
+    };
+    return () => {
+      delete window.App;
+    };
+  }, [location]); // Re-run effect on route change (optional, but good for tracking)
 
-    window.App = this;
-  }
-
-  changeTheme(theme) {
-    this.setState({
-      currentTheme: theme,
-    })
-  }
-  render() {
-    const { currentTheme } = this.state;
-    return (
-      <div className={"app " + currentTheme}>
-        <Navbar />
-        <div className="content">
-          {this.props.children}
-        </div>
-        <Footer />
-        <CookieRules />
+  return (
+    <div className={"app " + currentTheme}>
+      <Navbar />
+      <div className="content">
+        {children}
       </div>
-    );
-  }
-}
+      <Footer />
+      <CookieRules />
+    </div>
+  );
+};
 
 export default App;
 

@@ -7,7 +7,7 @@ import {
   HeartOutlined,
   QuestionCircleOutlined,
 } from "@ant-design/icons";
-import { Link, useLocation, useHistory } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import SetLanguage from "../Language/SetLanguage";
 import SetTheme from './SetTheme';
 
@@ -16,14 +16,10 @@ const componentRoutes = ["/", "/leaderboards", "/favorites", "/help"];
 const Navbar = ({ t }) => {
   const [current, setCurrent] = useState("home");
   const location = useLocation();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const handleClick = (e) => {
     setCurrent(e.key);
-  };
-
-  const handleClickMenu = (path) => {
-    history.push(path);
   };
 
   useEffect(() => {
@@ -41,24 +37,24 @@ const Navbar = ({ t }) => {
     {
       key: "main",
       icon: <HomeOutlined />,
-      label: <Link to="/">{t("menu.main")}</Link>,
-      onClick: () => handleClickMenu("/"),
+      label: t("menu.main"),
+      onClick: () => navigate("/"),
     },
     {
       key: "favorites",
       icon: <HeartOutlined />,
       label: (
         <Badge count={10}>
-          <Link to="/favorites">{t("menu.favorites")}</Link>
+          {t("menu.favorites")}
         </Badge>
       ),
-      onClick: () => handleClickMenu("/favorites"),
+      onClick: () => navigate("/favorites"),
     },
     {
       key: "help",
       icon: <QuestionCircleOutlined />,
-      label: <Link to="/help">{t("menu.help")}</Link>,
-      onClick: () => handleClickMenu("/help"),
+      label: t("menu.help"),
+      onClick: () => navigate("/help"),
     },
   ];
 

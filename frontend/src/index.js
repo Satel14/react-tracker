@@ -5,11 +5,15 @@ import RouterLayout from './router/RouterLayout';
 import reportWebVitals from './reportWebVitals';
 
 
+import { BrowserRouter } from 'react-router-dom';
+
 const container = document.getElementById('root');
 const root = createRoot(container);
 root.render(
   <React.StrictMode>
-    <RouterLayout />
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <RouterLayout />
+    </BrowserRouter>
   </React.StrictMode>
 );
 

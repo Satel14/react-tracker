@@ -2,6 +2,7 @@ $backgroundColorFirst: #0d0918;
 $colorFirst: #fde82b;
 $colorSecond: #78f7a8;
 @import "mixins.scss";
+
 body {
   // background: url(../img/back.jpg) no-repeat center center fixed;
   background-color: $backgroundColorFirst;
@@ -9,26 +10,32 @@ body {
   &::-webkit-scrollbar {
     width: 4px;
   }
+
   &::-webkit-scrollbar-track {
     background: $backgroundColorFirst;
   }
+
   &::-webkit-slider-thumb {
     background: $colorFirst;
   }
 }
+
 .app {
   max-width: 1200px;
   margin: auto;
+
   .content {
     position: relative;
     height: 75vh;
   }
+
   .playerpage {
     &-buttons {
       align-items: center;
       display: flex;
       justify-content: flex-end;
     }
+
     .third-row {
       &__left {
         padding-right: 20px;
@@ -42,11 +49,13 @@ body {
           font-style: italic;
           margin-bottom: 10px;
         }
+
         &__block {
           height: 200px;
           border: 1px $colorSecond solid;
         }
       }
+
       &__right {
         &__title {
           text-transform: uppercase;
@@ -59,6 +68,7 @@ body {
           padding-bottom: 15px;
           border-bottom: 1px $colorSecond solid;
         }
+
         &__rank {
           // height: 70px;
           // border: 1px $colorSecond solid;
@@ -71,14 +81,17 @@ body {
     .first-row {
       justify-content: space-between;
       margin: 20px 0;
+
       &__left {
         display: flex;
+
         &__avatar {
           height: 100px;
           border-radius: 0;
           border: 1px $colorSecond solid;
           border-radius: 4px;
         }
+
         &__profile {
           display: flex;
           margin-left: 15px;
@@ -86,6 +99,7 @@ body {
           width: 100%;
           padding-right: 60px;
           justify-content: flex-end;
+
           &__nickname {
             color: #fff;
             font-size: 26px;
@@ -97,6 +111,7 @@ body {
             overflow: hidden;
             width: 260px;
           }
+
           &__reward {
             &__ranking {
               height: 62px;
@@ -104,23 +119,28 @@ body {
               right: 0;
               top: -36px;
             }
+
             .ant-progress-steps {
               display: inline-flex;
               width: 100%;
               flex-wrap: nowrap;
+
               .ant-progress-text {
                 display: none;
               }
+
               .ant-progress-steps-outer {
                 display: flex;
                 flex-direction: row;
                 width: 100%;
                 justify-content: space-between;
+
                 .ant-progress-steps-item {
                   width: 30px !important;
                   height: 6px !important;
                   border-radius: 10px;
                   opacity: 0.6;
+
                   &-active {
                     opacity: 1;
                     box-shadow: 0px 0px 3px $colorSecond;
@@ -129,6 +149,7 @@ body {
                 }
               }
             }
+
             &__title {
               text-transform: uppercase;
               font-weight: 500;
@@ -137,6 +158,7 @@ body {
               letter-spacing: 1px;
               position: relative;
             }
+
             &__label {
               display: flex;
               justify-content: space-between;
@@ -154,14 +176,16 @@ body {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        > div {
+
+        >div {
           display: flex;
           flex-direction: column;
           text-align: center;
           font-style: 19px;
           font-weight: 700;
           color: #fff;
-          & > span {
+
+          &>span {
             line-height: 1;
             letter-spacing: 2px;
             font-family: "Bebas Neue Regular";
@@ -169,13 +193,15 @@ body {
             color: #9697b0;
             font-weight: 700;
           }
-          & > div {
+
+          &>div {
             font-family: "Bebas Neue Regular";
             font-size: 21px;
             color: #fff;
             font-weight: 300;
             letter-spacing: 1.5px;
           }
+
           i {
             color: $colorSecond;
             font-size: 11px;
@@ -192,6 +218,7 @@ body {
     .second-row {
       justify-content: space-between;
       margin: 20px 0;
+
       &__block {
         height: 80px;
         border-radius: 15px;
@@ -219,6 +246,7 @@ body {
       }
     }
   }
+
   .navbar {
     // border-bottom: 1px solid #78f7a8;
     display: flex;
@@ -250,35 +278,43 @@ body {
         cursor: pointer;
       }
     }
+
     &_lang {
       position: absolute;
       right: 35px;
+
       span {
         color: #fff;
         font-weight: 700;
         text-transform: uppercase;
+
         &:hover {
           cursor: pointer;
         }
       }
     }
+
     &_theme {
       position: absolute;
       right: 90px;
       line-height: 1;
     }
+
     svg {
       font-size: 24px;
     }
+
     span {
       color: #fff;
       font-weight: 700;
+
       // text-transform: uppercase;
       &:hover {
         cursor: pointer;
       }
     }
   }
+
   .ant-menu-light {
     background: transparent;
     border-bottom: 0;
@@ -299,6 +335,7 @@ body {
         align-items: center;
         justify-content: center;
       }
+
       a {
         color: #4f5058;
         font-weight: 500;
@@ -307,19 +344,23 @@ body {
 
     .ant-menu-item {
       transition: 0.3 all;
+
       svg {
         transition: 0.3s all;
         color: #4f5058;
         font-size: 15px;
       }
+
       &:hover {
         .ant-menu-title-content a {
           color: #fff;
         }
+
         svg {
           opacity: 1;
         }
       }
+
       &::after {
         content: "";
         border-bottom: 4px solid transparent;
@@ -327,6 +368,7 @@ body {
         width: 0px;
         transition: 0.3s all;
       }
+
       &:hover::after {
         width: 16px;
       }
@@ -336,9 +378,11 @@ body {
       &::after {
         width: 16px;
       }
+
       svg {
         opacity: 1;
       }
+
       .ant-menu-title-content {
         a {
           color: #fff;
@@ -347,6 +391,7 @@ body {
     }
   }
 }
+
 .mainpage {
   display: flex;
   align-items: center;
@@ -354,11 +399,13 @@ body {
   justify-content: center;
   padding-top: 30px;
 }
+
 .ant-col-4 {
   display: block;
   flex: 0 0 16.66666667%;
   max-width: 15.9%;
 }
+
 .footer {
   color: #ffffff;
   font-size: 15px;
@@ -368,37 +415,45 @@ body {
   padding-top: 25px;
   display: flex;
   justify-content: space-between;
+
   .copyright {
     display: flex;
     margin-top: 5px;
+
     a {
       margin: 0 5px;
+
       svg {
         margin-right: 3px;
       }
     }
   }
+
   &-menu {
     margin: 0 -10px;
+
     .ant-menu-light {
       background: transparent;
       line-height: 1.5;
       box-shadow: unset;
       border: 0 !important;
 
-      .ant-menu-horizontal > .ant-menu-item::after,
-      .ant-menu-horizontal > .ant-menu-submenu::after {
+      .ant-menu-horizontal>.ant-menu-item::after,
+      .ant-menu-horizontal>.ant-menu-submenu::after {
         display: none !important;
         border-bottom: 0 !important;
       }
+
       .ant-menu-item {
         width: 99px;
         height: 77px;
+
         &:after {
           display: none;
         }
       }
     }
+
     width: 33%;
     display: flex;
     text-align: center;
@@ -430,6 +485,7 @@ body {
       }
     }
   }
+
   &-text {
     width: 63%;
     margin: 0;
@@ -440,15 +496,18 @@ body {
     }
   }
 }
+
 .bugreport {
   max-width: 600px;
   margin: auto;
 }
+
 .aboutmepage {
   justify-content: center;
   display: flex;
   align-items: center;
   flex-direction: column;
+
   &-text {
     color: #fff;
     font-size: 14px;
@@ -460,6 +519,7 @@ body {
     padding: 16px;
     border-radius: 20px;
   }
+
   &-socials {
     margin: 15px 0;
     color: #c7c7c7;
@@ -467,6 +527,7 @@ body {
     border-radius: 20px;
   }
 }
+
 .radiostyle {
   .ant-radio-button-wrapper {
     background: transparent;
@@ -474,15 +535,19 @@ body {
     border-radius: 10px;
     border-bottom: 0;
     border-color: $colorSecond;
+
     &-checked {
       color: #222222;
     }
+
     .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disable)::before {
       background-color: transparent;
     }
+
     .ant-radio-button-checked {
       background: $colorSecond;
       border-color: $colorSecond;
+
       span {
         border-color: $colorSecond;
         color: #222;
@@ -497,18 +562,22 @@ body {
   flex-direction: column;
   justify-content: center;
   padding-top: 30px;
+
   .mainpage-left {
     opacity: 1;
     visibility: visible;
   }
+
   .history-list {
     display: flex;
     justify-content: center;
     margin: 0 -20px;
-    > div {
+
+    >div {
       margin: 0 20px;
     }
   }
+
   &.exit {
     .mainpage-left {
       opacity: 0;
@@ -516,21 +585,58 @@ body {
       transition: 0.3s opacity, 0.3s visibility;
     }
   }
+
   .ant-row {
     width: 100%;
   }
+
   &_left {
     max-width: 620px;
     margin: auto;
+
     input {
       margin: 0;
-      background: transparent;
+      background: transparent !important;
       text-align: left;
-      color: #fff;
+      color: #fff !important;
       border-radius: 10px;
       height: 45px;
       box-shadow: inset 2px 2px 20px #00000059, 3px 2px 0px 0px #78f7a8;
+
+      &:focus,
+      &:hover,
+      &:active,
+      &-focused {
+        background: transparent !important;
+        color: #fff !important;
+        box-shadow: inset 2px 2px 20px #00000059, 3px 2px 0px 0px #78f7a8;
+      }
     }
+
+    .ant-input-group-addon {
+      background: transparent;
+      border: none;
+
+      button {
+        border: none;
+        color: #fff;
+
+        &:hover {
+          color: #78f7a8;
+        }
+      }
+    }
+
+    .ant-input-search .ant-input,
+    .ant-input-affix-wrapper,
+    .ant-input-affix-wrapper:hover,
+    .ant-input-affix-wrapper:focus,
+    .ant-input-affix-wrapper-focused {
+      background: transparent !important;
+      border-color: #78f7a8 !important;
+      padding-left: 15px;
+    }
+
     &__text {
       color: #fff;
       font-size: 36px;
@@ -539,6 +645,7 @@ body {
       text-align: center;
       margin-bottom: 35px;
       text-shadow: 2px 8px 6px rgba(0, 0, 0, 0.2), 0px -5px 35px rgba(255, 255, 255, 0.3);
+
       span {
         display: block;
         font-size: 19px;
@@ -548,18 +655,22 @@ body {
         margin-bottom: 24px;
       }
     }
+
     &__stats {
       color: #fff;
       display: flex;
       justify-content: space-evenly;
       margin: 0 -25px;
-      > div {
+
+      >div {
         margin: 0 15px;
       }
+
       .anti-icon {
         font-size: 32px;
         margin-right: 17px;
       }
+
       &__seasonend,
       &__playeronline {
         font-size: 30px;
@@ -567,15 +678,17 @@ body {
         align-items: center;
         font-size: 18px;
 
-        > div {
+        >div {
           display: flex;
           flex-direction: column;
           line-height: 1.25;
           font-size: 14px;
+
           span {
             font-size: 18px;
             color: #fff;
           }
+
           span {
             font-size: 17px;
             font-weight: 700;
@@ -585,6 +698,7 @@ body {
     }
   }
 }
+
 .chooser {
   margin-bottom: 30px;
   position: relative;
@@ -598,17 +712,21 @@ body {
     align-items: center;
     width: 40px;
     justify-content: center;
+
     &:hover {
       cursor: pointer;
     }
   }
+
   input {
     padding-left: 126px;
     padding-right: 35px;
+
     &::placeholder {
       color: white;
     }
   }
+
   .choose-platform {
     display: flex;
     position: absolute;
@@ -616,20 +734,25 @@ body {
     top: 50%;
     transform: translate(0, -50%);
     z-index: 1;
-    & > div {
+
+    &>div {
       display: flex;
       padding: 14px 8px;
       align-items: center;
+
       &:first-child {
         padding-left: 15px;
       }
+
       &:hover {
         cursor: pointer;
         opacity: 1;
+
         svg {
           opacity: 1;
         }
       }
+
       svg {
         z-index: 1;
         height: 20px;
@@ -637,6 +760,7 @@ body {
         fill: #fff;
         opacity: 0.3;
       }
+
       &.active {
         svg {
           opacity: 1;
@@ -663,12 +787,14 @@ body {
   align-items: center;
   flex-direction: column;
   justify-content: center;
-  > div {
+
+  >div {
     font-size: 15px;
     margin: 15px 0;
     text-transform: none;
   }
 }
+
 .can-add-favoritelist {
   color: #ffffffd9;
   line-height: 1;
@@ -688,6 +814,7 @@ body {
   letter-spacing: 1px;
   transition: 0.3s all;
 }
+
 .site-cookie {
   width: 100%;
   max-width: 280px;
@@ -713,6 +840,7 @@ body {
     justify-content: space-between;
     text-align: left;
     flex-direction: column;
+
     button {
       margin-top: 10px;
       display: block;

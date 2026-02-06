@@ -1,33 +1,45 @@
-import React, { Component } from "react";
+import React, { useState, useEffect } from "react";
 import ErrorPage from "../pages/ErrorPage";
-import { BrowserRouter, Route, Switch } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import routes from "./routes";
-import App from "../App";
+import Navbar from "../component/Navbar";
+import Footer from "../component/Footer";
+import CookieRules from "../component/CookieRule";
+import "../style/style.scss";
 
+const RouterLayout = () => {
+  const location = useLocation();
+  const [currentTheme, setCurrentTheme] = useState("brown");
 
-class RouterLayout extends Component {
-  render() {
-    return (
-      <BrowserRouter>
-        <App>
-          <Switch>
-            {routes.map((route, index) => (
-              <Route
-                key={index}
-                path={route.path}
-                exact={route.exact}
-                component={(props) => (
-                  //eslint-disable-next-line react/jsx-props-no-spreading 
-                  <route.component {...props} />
-                )}
-              />
-            ))}
-            <Route component={ErrorPage} />
-          </Switch>
-        </App>
-      </BrowserRouter>
-    );
-  }
-}
+  useEffect(() => {
+    // Expose theme setter for legacy SetTheme component
+    window.App = {
+      changeTheme: (theme) => setCurrentTheme(theme)
+    };
+    return () => {
+      delete window.App;
+    };
+  }, [location]);
+
+  return (
+    <div className={"app " + currentTheme}>
+      <Navbar />
+      <div className="content">
+        <Routes location={location}>
+          {routes.map((route, index) => (
+            <Route
+              key={`${route.path}-${index}`}
+              path={route.path}
+              element={<route.component />}
+            />
+          ))}
+          <Route path="*" element={<ErrorPage />} />
+        </Routes>
+      </div>
+      <Footer />
+      <CookieRules />
+    </div>
+  );
+};
 
 export default RouterLayout;

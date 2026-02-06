@@ -8,18 +8,19 @@ import CountUp from "react-countup";
 import { Row, Col, Input } from "antd";
 import { translate } from "react-switch-lang";
 import { motion } from "framer-motion";
-import { withRouter } from "react-router";
+import { useNavigate } from "react-router-dom";
 import HistoryChecking from "../component/HistoryChecking";
 import { getPlayerSteamName } from '../api/player'
 import openNotification from '../component/Notification';
 import SteamIcon from '../component/icons/SteamIcon';
 import XboxIcon from '../component/icons/XboxIcon';
 import PlaystationIcon from '../component/icons/PlaystaionIcon';
-const Main = (props) => {
+const Main = ({ t }) => {
   const [platform, setPlatform] = useState("steam");
   const [text, setText] = useState("");
   const [exit, setExit] = useState(false)
   const [placeholder, setPlaceholder] = useState("Enter name, id or url")
+  const navigate = useNavigate();
 
   function isChecked(platformCheck) {
     if (platformCheck === platform) {
@@ -56,10 +57,10 @@ const Main = (props) => {
     }
 
     setTimeout(() => {
-      props.history.push(url);
+      navigate(url);
     }, 600);
   }
-  const { t } = props;
+
 
 
   return (
@@ -149,4 +150,4 @@ const Main = (props) => {
   );
 };
 
-export default withRouter(translate(Main));
+export default translate(Main);

@@ -25,15 +25,15 @@ const routes = [
     exact: true,
   },
   {
-    path: "/player",
-    layout: Player,
-    component: Player,
+    path: "/player/:platform/:gameId",
+    layout: PlayerPage,
+    component: PlayerPage,
     exact: true,
   },
   {
-    path: "/playerpage",
-    layout: PlayerPage,
-    component: PlayerPage,
+    path: "/player",
+    layout: Player,
+    component: Player,
     exact: true,
   },
   {
