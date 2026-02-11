@@ -1,25 +1,64 @@
-import React, { useState } from "react";
-import { Row, Col, Progress, Button } from "antd";
-import player from "../data/player"; // Keep mock data for now
+import React, { useState, useEffect } from "react";
+import { Row, Col, Progress, Button, Spin, Alert } from "antd";
 import { translate } from "react-switch-lang";
 import CountUp from "react-countup";
-import { SyncOutlined, HeartOutlined } from "@ant-design/icons";
+import { SyncOutlined, HeartOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
+import { getPlayerData } from "../api/player";
 
 const PlayerPage = ({ t }) => {
-  const [loading, setLoading] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
   const { platform, gameId } = useParams();
 
-  console.log("PlayerPage Mounted. Params:", { platform, gameId });
-
-  const enterLoading = (index) => {
-    setLoading((prev) => ({ ...prev, [index]: true }));
-    setTimeout(() => {
-      setLoading((prev) => ({ ...prev, [index]: false }));
-    }, 6000);
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getPlayerData(platform, gameId);
+      if (response && response.data && response.data.data) {
+        setData(response.data.data);
+      } else if (response && response.data) {
+        setData(response.data);
+      } else {
+        setError("Player not found or private profile");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to fetch data");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  console.log("Viewing player:", platform, gameId);
+  useEffect(() => {
+    if (platform && gameId) {
+      fetchData();
+    }
+
+  }, [platform, gameId]);
+
+
+  if (loading) {
+    return (
+      <div className="playerpage" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <Spin indicator={<LoadingOutlined style={{ fontSize: 50, color: '#fde82b' }} spin />} />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="playerpage" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', flexDirection: 'column' }}>
+        <Alert message="Error" description={error} type="error" showIcon />
+        <Button type="primary" onClick={fetchData} style={{ marginTop: 20 }}>Retry</Button>
+      </div>
+    )
+  }
+
+  if (!data) return null;
+
+  const stats = data.segments && data.segments[0] && data.segments[0].stats ? data.segments[0].stats : {};
 
   return (
     <div className="playerpage">
@@ -27,20 +66,17 @@ const PlayerPage = ({ t }) => {
         <Button
           type="link"
           icon={<SyncOutlined />}
-          loading={loading[1]}
           size="small"
-          onClick={() => enterLoading(1)}
+          onClick={fetchData}
         >
-          {loading[1] ? "Updating" : "Update"}
+          {t("other.words.update")}
         </Button>
         <Button
           type="link"
           icon={<HeartOutlined />}
-          loading={loading[2]}
           size="small"
-          onClick={() => enterLoading(2)}
         >
-          {"Favorite"}
+          {t("menu.favorites")}
         </Button>
       </div>
       <Row className="first-row">
@@ -50,28 +86,25 @@ const PlayerPage = ({ t }) => {
           className="first-row__left"
         >
           <img
-            src={player.data.platformInfo.avatarUrl}
-            alt={player.data.platformInfo.platformUserHandle}
+            src={data?.platformInfo?.avatarUrl || "https://avatars.akamai.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg"}
+            alt={data?.platformInfo?.platformUserHandle || "Unknown"}
             className="first-row__left__avatar"
           />
           <div className="first-row__left__profile">
             <div className="first-row__left__profile__nickname">
-              {player.data.platformInfo.platformUserHandle}
+              {data?.platformInfo?.platformUserHandle || "Unknown"}
             </div>
             <div className="first-row__left__profile__reward">
               <div className="first-row__left__profile__reward__title">
-                {player.data.segments[0].stats.timePlayed.metadata.rankName}
+                {stats.timePlayed?.metadata?.rankName || "N/A"}
 
-                <img
-                  src={
-                    player.data.segments[0].stats.timePlayed.metadata.iconUrl
-                  }
-                  alt={
-                    player.data.segments[0].stats.wlPercentage.metadata
-                      .rankName
-                  }
-                  className="first-row__left__profile__reward__ranking"
-                />
+                {stats.timePlayed?.metadata?.iconUrl && (
+                  <img
+                    src={stats.timePlayed.metadata.iconUrl}
+                    alt="Rank"
+                    className="first-row__left__profile__reward__ranking"
+                  />
+                )}
               </div>
               <Progress percent={60} step={10} className="progress-reward" />
               <div className="first-row__left__profile__reward__label">
@@ -87,56 +120,82 @@ const PlayerPage = ({ t }) => {
           className="first-row__right"
         >
           <div>
-            <span>{t("pages.player.seasonRewardLevel.mini.wins")}</span>
+            <span>Wins</span>
             <CountUp
               separator=","
-              end={player.data.segments[0].stats.wins.displayValue}
+              end={stats.wins?.displayValue ? parseInt(stats.wins.displayValue.replace(/,/g, '')) : 0}
             />
           </div>
           <div>
-            <span>{t("pages.player.seasonRewardLevel.mini.deaths")}</span>
-            {player.data.segments[0].stats.deaths.displayValue}
+            <span>Deaths</span>
+            {stats.deaths?.displayValue || 0}
           </div>
           <div>
             <span>KD</span>
-            {player.data.segments[0].stats.kd.displayValue}
+            {stats.kd?.displayValue || 0}
           </div>
           <div>
-            <span>{t("pages.player.seasonRewardLevel.mini.mvps")}</span>
-            {player.data.segments[0].stats.mvp.displayValue}
+            <span>Revives</span>
+            {stats.mvp?.displayValue || 0}
           </div>
           <div>
             <span>
-              {t("pages.player.seasonRewardLevel.mini.shotsAccuracy")}
+              Headshots
             </span>
-            {player.data.segments[0].stats.headshotPct.displayValue}
+            {stats.headshotPct?.displayValue || "0"}
           </div>
         </Col>
       </Row>
       <Row className="second-row">
         <Col span={4} className="second-row__block">
-          {t("pages.player.mini.seasonMatches")}
-          <span>{player.data.segments[0].stats.matchesPlayed.displayValue}</span>
+          Matches
+          <span>{stats.matchesPlayed?.displayValue || 0}</span>
         </Col>
         <Col span={4} className="second-row__block">
-          {t("pages.player.mini.roundsPlayed")}
-          <span>{player.data.segments[0].stats.roundsPlayed.displayValue}</span>
+          Top 10s
+          <span>{stats.top10s?.displayValue || 0}</span>
         </Col>
         <Col span={4} className="second-row__block">
-          {t("pages.player.mini.wlPercentage")}
-          <span>{player.data.segments[0].stats.wlPercentage.displayValue}</span>
+          Win %
+          <span>{stats.wlPercentage?.displayValue || "0%"}</span>
         </Col>
         <Col span={4} className="second-row__block">
-          {t("pages.player.mini.damage")}
-          <span>{player.data.segments[0].stats.damage.displayValue}</span>
+          Damage
+          <span>{stats.damage?.displayValue || 0}</span>
         </Col>
         <Col span={4} className="second-row__block">
-          {t("pages.player.mini.hoursPlayed")}
-          <span>{player.data.segments[0].stats.timePlayed.displayValue}</span>
+          Hours
+          <span>{stats.timePlayed?.displayValue || "0h"}</span>
         </Col>
         <Col span={4} className="second-row__block">
-          {t("pages.player.mini.bombsDefused")}
-          <span>{player.data.segments[0].stats.bombsDefused.displayValue}</span>
+          Longest Kill
+          <span>{stats.bombsDefused?.displayValue || 0}</span>
+        </Col>
+      </Row>
+      <Row className="second-row" style={{ marginTop: '10px' }}>
+        <Col span={4} className="second-row__block">
+          Assists
+          <span>{stats.assists?.displayValue || 0}</span>
+        </Col>
+        <Col span={4} className="second-row__block">
+          Knockouts
+          <span>{stats.dbnos?.displayValue || 0}</span>
+        </Col>
+        <Col span={4} className="second-row__block">
+          Heals
+          <span>{stats.heals?.displayValue || 0}</span>
+        </Col>
+        <Col span={4} className="second-row__block">
+          Boosts
+          <span>{stats.boosts?.displayValue || 0}</span>
+        </Col>
+        <Col span={4} className="second-row__block">
+          Vehicle Kills
+          <span>{stats.vehicleDestroys?.displayValue || 0}</span>
+        </Col>
+        <Col span={4} className="second-row__block">
+          Road Kills
+          <span>{stats.roadKills?.displayValue || 0}</span>
         </Col>
       </Row>
       <Row className="third-row">
@@ -167,7 +226,7 @@ const PlayerPage = ({ t }) => {
           <div className="third-row__right__rank"></div>
           <div className="third-row__right__rank"></div>
           <div className="third-row__right__rank">
-            {player.data.segments[8]}
+            {/* {data.segments[8]} */}
           </div>
 
           <div className="third-row__right__title">
@@ -175,7 +234,7 @@ const PlayerPage = ({ t }) => {
           </div>
 
           <div className="third-row__right__rank">
-            {player.data.segments[0].stats.deaths.displayValue}
+            {/* {stats.deaths.displayValue} */}
           </div>
         </Col>
       </Row>

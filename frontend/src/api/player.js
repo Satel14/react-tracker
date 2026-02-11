@@ -8,3 +8,13 @@ export const getPlayerSteamName = (text) =>
     },
     true
   );
+
+export const getPlayerData = (platform, gameId) =>
+  post(
+    "/player/rank",
+    {
+      platform,
+      gameId,
+    },
+    true
+  );
