@@ -88,7 +88,7 @@ function mapPubgStatsToFrontend(pubgStats, playerName, accountId) {
             headshotPct: { displayValue: totalHeadshots.toLocaleString(), value: totalHeadshots },
             damage: { displayValue: Math.round(totalDamage).toLocaleString(), value: totalDamage },
             wlPercentage: { displayValue: wlPercentage + "%", value: wlPercentage },
-            bombsDefused: { displayValue: Math.round(maxKillDistance) + "m", value: maxKillDistance },
+            longestKill: { displayValue: Math.round(maxKillDistance) + "m", value: maxKillDistance },
             assists: { displayValue: totalAssists.toLocaleString(), value: totalAssists },
             dbnos: { displayValue: totalDBNOs.toLocaleString(), value: totalDBNOs },
             top10s: { displayValue: totalTop10s.toLocaleString(), value: totalTop10s },

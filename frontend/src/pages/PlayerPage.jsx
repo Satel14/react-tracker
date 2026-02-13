@@ -169,7 +169,7 @@ const PlayerPage = ({ t }) => {
         </Col>
         <Col span={4} className="second-row__block">
           Longest Kill
-          <span>{stats.bombsDefused?.displayValue || 0}</span>
+          <span>{stats.longestKill?.displayValue || 0}</span>
         </Col>
       </Row>
       <Row className="second-row" style={{ marginTop: '10px' }}>

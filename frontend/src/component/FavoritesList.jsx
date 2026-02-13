@@ -56,7 +56,7 @@ const FavoritesList = ({ t }) => {
             onConfirm={cleanFavorites}
             okText="Yes"
             cancelText="No"
-            className='csgo-pop'
+            className='pubg-pop'
           >
             <Button type='link' icon={<DeleteOutlined />} size="small">
               {t("other.words.cleanList")}

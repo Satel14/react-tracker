@@ -23,8 +23,8 @@ const Player = () => {
         <Col span={12}>
           <div className="homepage_left">
             <div className="homepage_left__text">
-              <Title level={1} style={{ color: '#fff', marginBottom: 0 }}>Counter-Strike STATS</Title>
-              <span>Check detailed Counter-Strike and Leaderboards</span>
+              <Title level={1} style={{ color: '#fff', marginBottom: 0 }}>PUBG STATS</Title>
+              <span>Check detailed PUBG stats and leaderboards</span>
             </div>
             <Radio.Group
               value={platform}

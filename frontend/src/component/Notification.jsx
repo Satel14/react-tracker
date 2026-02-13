@@ -3,7 +3,7 @@ import { notification } from "antd"
 const openNotification = (type, title, description = "", placement = "bottomRight") => {
   notification[type]({
     message: title,
-    className: "csgo-notification",
+    className: "pubg-notification",
     description,
     placement
   })

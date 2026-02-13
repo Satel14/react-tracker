@@ -211,10 +211,10 @@ module.exports = {
             "displayValue": "2,114",
             "displayType": "Number"
           },
-          "bombsDefused": {
+          "longestKill": {
             "rank": null,
             "percentile": 77,
-            "displayName": "Bombs Defused",
+            "displayName": "Longest Kill",
             "displayCategory": "Objective",
             "category": "objective",
             "description": null,

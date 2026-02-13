@@ -68,8 +68,8 @@ const Navbar = ({ t }) => {
       />
 
       <div className="navbar__logo">
-        <span>CSGO</span>
-        <span>.TV</span>
+        <span>PUBG</span>
+        <span>.TRACKER</span>
       </div>
 
       <Menu

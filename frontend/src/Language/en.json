@@ -8,44 +8,44 @@
   },
   "pages": {
     "main": {
-      "title": "Counter-Strike",
-      "subtitle": "Check Detailed Counter-Strike: Global Offensive Stats and Leaderboards",
+      "title": "PUBG",
+      "subtitle": "Track detailed PUBG: BATTLEGROUNDS stats and leaderboards",
       "searchingHistory": "Searching History"
     },
     "player": {
       "seasonRewardLevel": "Season Reward Level",
       "mini": {
         "wins": "Wins",
-        "saves": "Saves",
+        "saves": "Revives",
         "deaths": "Deaths",
-        "shotsAccuracy": "Shots Accuracy",
-        "bombsDefused": "Bombs Defused",
-        "mvps": "Mvps",
-        "short": "Short",
+        "shotsAccuracy": "Headshot Rate",
+        "longestKill": "Longest Kill",
+        "mvps": "Revives",
+        "short": "Solo",
         "seasonMatches": "Matches Played",
         "roundsPlayed": "Rounds Played",
-        "wlPercentage": "Win Rounds %",
+        "wlPercentage": "Win Rate %",
         "damage": "Damage",
-        "hoursPlayed": "Hours played"
+        "hoursPlayed": "Hours Played"
       },
-      "ratingProgression": "Rating Progression",
-      "compotetive": "Competetive",
-      "wingman": "Wingman",
-      "division": "Division",
+      "ratingProgression": "Stat Progression",
+      "compotetive": "Solo",
+      "wingman": "Squad",
+      "division": "Tier",
       "streak": {
-        "win": "WinStreak",
-        "lose": "LoseStreak"
+        "win": "Win Streak",
+        "lose": "Loss Streak"
       },
       "inTheWorld": "World",
-      "inGameTitles": "Ingame Titles",
-      "moreStats": "More stats",
+      "inGameTitles": "In-game Titles",
+      "moreStats": "More Stats",
       "placeinTheWorld": "Place in the world"
     }
   },
   "footer": {
-    "text1": "Use our CSGO stats tracker to see who is the best in the world. You can see leaderboards for kills, K/D, damage, shots accuracy and pretty much every other stat you can think of.",
-    "text2": "Compare your CSGO stats against your friends or favorite streamers. CSGO.TV provides the latest news from your favorite games along side your personalized stats profile in order to keep you informed and ahead of the competition.",
-    "developed": "Developed by Satel for Counter-Strike Community"
+    "text1": "Use our PUBG stats tracker to see how you perform in every match. Track kills, K/D, damage, win rate, longest kill, and more.",
+    "text2": "Compare your PUBG stats with friends or streamers and keep your profile up to date with your latest performance.",
+    "developed": "Developed by Satel for the PUBG community"
   },
   "other": {
     "words": {
@@ -57,7 +57,7 @@
       "deletePlayer": "Delete player",
       "viewStats": "Open profile",
       "cleanList": "Clean list",
-      "rating": "Rating",
+      "rating": "Rank",
       "contactMe": "Contact me",
       "aboutMe": "About me"
     },
