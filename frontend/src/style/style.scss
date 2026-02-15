@@ -1254,6 +1254,84 @@ body {
   }
 }
 
+.help-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 0 8px;
+  color: #fff;
+
+  &__hero {
+    margin-bottom: 14px;
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 1px;
+      color: #fff;
+      text-transform: uppercase;
+    }
+
+    p {
+      margin: 10px 0 0;
+      color: #9da1bf;
+      font-size: 14px;
+      line-height: 1.4;
+      max-width: 760px;
+    }
+  }
+
+  &__faq {
+    background: transparent;
+
+    .ant-collapse-item {
+      border: 1px solid rgba(120, 247, 168, 0.22);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.24);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .ant-collapse-header {
+      color: #fff !important;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      align-items: center !important;
+      min-height: 48px;
+    }
+
+    .ant-collapse-expand-icon {
+      color: #78f7a8;
+    }
+
+    .ant-collapse-content {
+      background: rgba(10, 20, 16, 0.32);
+      border-top: 1px solid rgba(120, 247, 168, 0.15);
+    }
+
+    .ant-collapse-content-box {
+      color: #c8cbe0;
+      line-height: 1.55;
+      font-size: 14px;
+
+      p {
+        margin: 0;
+      }
+    }
+  }
+
+  &__note {
+    margin: 10px 0 0;
+    color: #8e93b3;
+    font-size: 13px;
+  }
+
+  @media (max-width: 760px) {
+    &__hero h1 {
+      font-size: 24px;
+    }
+  }
+}
+
 .radiostyle {
   .ant-radio-button-wrapper {
     background: transparent;

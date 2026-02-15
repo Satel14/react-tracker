@@ -17,7 +17,7 @@
             "mini": {
                 "wins": "Перемоги",
                 "saves": "Ревайви",
-                "deaths" : "Смерті",
+                "deaths": "Смерті",
                 "shotsAccuracy": "Відсоток хедшотів",
                 "longestKill": "Найдальше вбивство",
                 "mvps": "Ревайви",
@@ -40,6 +40,45 @@
             "inGameTitles": "Внутрішньоігрові титули",
             "moreStats": "Більше статистики",
             "placeinTheWorld": "Місце у світі"
+        },
+        "help": {
+            "title": "Help & FAQ",
+            "subtitle": "Quick answers about search, seasons, favorites, and PUBG Report integration.",
+            "contact": "If your issue is not listed, open Bug Report and describe what happened.",
+            "faq": {
+                "search": {
+                    "q": "How do I search for a player?",
+                    "a": "Use the search field on the main page, choose platform (Steam/Xbox/PSN), and enter nickname, account ID, or profile URL."
+                },
+                "season": {
+                    "q": "How do season stats work?",
+                    "a": "Current season is selected by default. You can switch to previous seasons from the season dropdown on the player page."
+                },
+                "missingStats": {
+                    "q": "Why are season stats empty or too low?",
+                    "a": "PUBG API can return limited or delayed data for some accounts/seasons. Also, requesting a wrong platform may show no stats."
+                },
+                "avatar": {
+                    "q": "Why is avatar not shown?",
+                    "a": "Steam avatar requires a valid Steam API key on backend. If avatar cannot be resolved, fallback avatar is used."
+                },
+                "reports": {
+                    "q": "What is the PUBG Report tab?",
+                    "a": "This tab shows encounters found via PUBG Report where kills/deaths were captured on Twitch streams."
+                },
+                "favorites": {
+                    "q": "How do Favorites and History work?",
+                    "a": "Favorites and local history are stored in your browser. Recent searched list is served from backend recent searches."
+                },
+                "limits": {
+                    "q": "What does Rate Limit Reached mean?",
+                    "a": "PUBG API has request limits. When limit is reached, tracker can temporarily serve cached data until cooldown passes."
+                },
+                "platforms": {
+                    "q": "Which platforms are supported?",
+                    "a": "Steam, Xbox, and PlayStation are supported. Make sure you pick the same platform where the player actually plays."
+                }
+            }
         }
     },
     "footer": {
