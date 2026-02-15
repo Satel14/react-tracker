@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   EnterOutlined,
   FieldTimeOutlined,
@@ -10,7 +10,7 @@ import { translate } from "react-switch-lang";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import HistoryChecking from "../component/HistoryChecking";
-import { getPlayerSteamName } from '../api/player'
+import { getLiveSnapshot, getPlayerSteamName } from '../api/player'
 import openNotification from '../component/Notification';
 import SteamIcon from '../component/icons/SteamIcon';
 import XboxIcon from '../component/icons/XboxIcon';
@@ -20,6 +20,7 @@ const Main = ({ t }) => {
   const [text, setText] = useState("");
   const [exit, setExit] = useState(false)
   const [placeholder, setPlaceholder] = useState("Enter name, id or url")
+  const [liveStats, setLiveStats] = useState(null);
   const navigate = useNavigate();
 
   function isChecked(platformCheck) {
@@ -60,6 +61,37 @@ const Main = ({ t }) => {
       navigate(url);
     }, 600);
   }
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchLiveData = async () => {
+      try {
+        const response = await getLiveSnapshot();
+        const payload = response?.data?.data || response?.data || null;
+        if (isMounted && payload) {
+          setLiveStats(payload);
+        }
+      } catch (_e) {
+        // keep fallback UI values if request fails
+      }
+    };
+
+    fetchLiveData();
+    const intervalId = setInterval(fetchLiveData, 60 * 1000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  const seasonLabel = liveStats?.season?.label || t("other.words.season");
+  const endsInDays = liveStats?.season?.endsInDays;
+  const playersOnlineValue = Number(liveStats?.playersOnline?.value);
+  const hasPlayersOnline = Number.isFinite(playersOnlineValue);
+  const hasSeasonCountdown = Number.isFinite(Number(endsInDays));
+  const isEstimatedSeasonCountdown = Boolean(liveStats?.season?.isEstimated);
 
 
 
@@ -120,10 +152,14 @@ const Main = ({ t }) => {
               >
                 <FieldTimeOutlined />
                 <div>
-                  {t("other.words.season")}
+                  {seasonLabel}
                   <span>
                     {t("other.words.endsIn")}: {""}
-                    <span>{t("other.words.leftDays", { days: 14 })}</span>
+                    <span>
+                      {hasSeasonCountdown
+                        ? `${isEstimatedSeasonCountdown ? "~ " : ""}${t("other.words.leftDays", { days: Number(endsInDays) })}`
+                        : t("other.words.notAvailable")}
+                    </span>
                   </span>
                 </div>
               </motion.div>
@@ -133,15 +169,17 @@ const Main = ({ t }) => {
                   {t("other.words.playersOnline")}
                   <span>
                     {t("other.words.playersOnline")} :{" "}
-                    <CountUp separator="," end={1133462} />
+                    {hasPlayersOnline ? (
+                      <CountUp separator="," end={playersOnlineValue} />
+                    ) : (
+                      t("other.words.notAvailable")
+                    )}
                   </span>
                 </div>
               </div>
             </div>
             <div className="history-list">
-              <div>
-                <HistoryChecking />
-              </div>
+              <HistoryChecking />
             </div>
           </div>
         </Col>

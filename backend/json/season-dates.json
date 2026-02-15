@@ -1,0 +1,15 @@
+{
+  "updatedAt": "2026-02-15",
+  "defaults": {
+    "cycleDays": 56
+  },
+  "seasons": {
+    "division.bro.official.pc-2018-40": {
+      "startDate": "2026-02-12T00:00:00Z",
+      "cycleDays": 56,
+      "isEstimated": true,
+      "source": "manual-json-estimate",
+      "note": "Estimated by patch cadence. Replace with official endDate when announced."
+    }
+  }
+}

@@ -11,4 +11,17 @@ module.exports = (router) => {
     PlayerController.validate("getPlayerSteamName"),
     PlayerController.getPlayerSteamName
   );
+  router.post(
+    "/api/player/reports",
+    PlayerController.validate("getPlayerReports"),
+    PlayerController.getPlayerReports
+  );
+  router.get(
+    "/api/player/live",
+    PlayerController.getLiveSnapshot
+  );
+  router.get(
+    "/api/player/recent",
+    PlayerController.getRecentSearches
+  );
 };

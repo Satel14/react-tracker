@@ -2,10 +2,10 @@ const express = require("express")
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const compression = require("compression");
-const routes = require("./routes");
 const config = require("./config/serverConfig.js");
 
 require("dotenv").config();
+const routes = require("./routes");
 
 const app = express();
 
