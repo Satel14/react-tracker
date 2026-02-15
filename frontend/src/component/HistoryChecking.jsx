@@ -5,35 +5,9 @@ import { translate } from "react-switch-lang";
 import { getRecentSearches } from "../api/player";
 import { getHistory, HISTORY_UPDATED_EVENT } from "../cookie/store";
 import { getIconComponentPlatfrom, getPlatformAvatar } from "../helpers/other";
+import { normalizeDisplayName, stripPlatformPrefix } from "../helpers/playerIdentity";
 
 const EMPTY_LIST = [];
-
-const isAccountIdentifier = (value) =>
-  typeof value === "string" && /^account\./i.test(value.trim());
-
-const stripPlatformPrefix = (value, platform) => {
-  if (typeof value !== "string") return "";
-  const raw = value.trim();
-  if (!raw) return "";
-
-  const prefix = `${String(platform || "steam").toLowerCase()}:`;
-  if (raw.toLowerCase().startsWith(prefix)) {
-    return raw.slice(prefix.length);
-  }
-
-  return raw;
-};
-
-const normalizeDisplayName = (nickname, gameId, platform) => {
-  const normalizedGameId = stripPlatformPrefix(String(gameId || "").trim(), platform);
-  const normalizedNickname = stripPlatformPrefix(String(nickname || "").trim(), platform);
-
-  if (normalizedNickname && !(isAccountIdentifier(normalizedNickname) && !isAccountIdentifier(normalizedGameId))) {
-    return normalizedNickname;
-  }
-
-  return normalizedGameId || "Unknown";
-};
 
 const normalizeHistoryEntries = (historyMap = {}) => {
   return Object.entries(historyMap || {})

@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  MailOutlined,
-  InfoCircleOutlined,
-  BugOutlined,
-  DollarCircleOutlined,
-  CompassOutlined,
-} from "@ant-design/icons";
+import { BugOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { Menu } from "antd";

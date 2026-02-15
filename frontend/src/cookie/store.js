@@ -1,3 +1,5 @@
+import { normalizePlatform } from "../helpers/playerIdentity";
+
 const HISTORY_KEY = "history";
 const FAVORITES_KEY = "favorites";
 const MAX_HISTORY_ITEMS = 5;
@@ -58,12 +60,6 @@ function emitHistoryUpdated(history) {
       },
     })
   );
-}
-
-function normalizePlatform(platform) {
-  const normalized = String(platform || "steam").trim().toLowerCase();
-  if (normalized === "xbl") return "xbox";
-  return normalized || "steam";
 }
 
 function getHistoryEntryId(platform, gameid) {

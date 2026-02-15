@@ -5,6 +5,7 @@ import { SyncOutlined, HeartOutlined, HeartFilled, LoadingOutlined } from "@ant-
 import { useParams } from "react-router-dom";
 import { getPlayerData, getPlayerReports } from "../api/player";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
+import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
 
 const OVERVIEW_ITEMS = [
   { key: "matchesPlayed", label: "Matches", fallback: "0" },
@@ -90,25 +91,6 @@ const formatReportDate = (value, fallback = "") => {
 const formatRankPoints = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed.toLocaleString() : "N/A";
-};
-
-const isAccountIdentifier = (value) => {
-  return typeof value === "string" && /^account\./i.test(value.trim());
-};
-
-const resolvePreferredPlayerName = (apiHandle, routeHandle) => {
-  const requested = typeof routeHandle === "string" ? routeHandle.trim() : "";
-  const resolved = typeof apiHandle === "string" ? apiHandle.trim() : "";
-
-  if (resolved && (!isAccountIdentifier(resolved) || isAccountIdentifier(requested))) {
-    return resolved;
-  }
-
-  if (requested) {
-    return requested;
-  }
-
-  return resolved || "";
 };
 
 const PlayerPage = ({ t }) => {
