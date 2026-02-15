@@ -5,23 +5,25 @@ import XboxIcon from './../component/icons/XboxIcon';
 
 
 const getPlatformAvatar = (platform) => {
+  const normalizedPlatform = platform === "xbl" ? "xbox" : platform;
   const avatars = {
-    pns: "/images/psn_avatar.jpg",
+    psn: "/images/psn_avatar.jpg",
     steam: "/images/steam_avatar.jpg",
     xbox: "/images/xbox_avatar.jpg",
   }
 
-  return avatars[platform]
+  return avatars[normalizedPlatform] || avatars.steam
 }
 
 const getIconComponentPlatfrom = (platform) => {
+  const normalizedPlatform = platform === "xbl" ? "xbox" : platform;
   const iconComponents = {
     steam: <SteamIcon />,
     psn: <PlaystationIcon />,
     xbox: <XboxIcon />,
   }
 
-  return iconComponents[platform]
+  return iconComponents[normalizedPlatform] || iconComponents.steam
 }
 
 export {

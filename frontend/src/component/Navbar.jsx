@@ -10,11 +10,13 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import SetLanguage from "../Language/SetLanguage";
 import SetTheme from './SetTheme';
+import { FAVORITES_UPDATED_EVENT, getFavoritesCount } from "../cookie/store";
 
 const componentRoutes = ["/", "/leaderboards", "/favorites", "/help"];
 
 const Navbar = ({ t }) => {
   const [current, setCurrent] = useState("home");
+  const [favoritesCount, setFavoritesCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -33,6 +35,33 @@ const Navbar = ({ t }) => {
     }
   }, [location]);
 
+  useEffect(() => {
+    const loadFavoritesCount = async () => {
+      const count = await getFavoritesCount();
+      setFavoritesCount(count);
+    };
+
+    loadFavoritesCount();
+
+    const onFavoritesUpdated = () => {
+      loadFavoritesCount();
+    };
+
+    const onStorageUpdated = (event) => {
+      if (event.key === "favorites") {
+        loadFavoritesCount();
+      }
+    };
+
+    window.addEventListener(FAVORITES_UPDATED_EVENT, onFavoritesUpdated);
+    window.addEventListener("storage", onStorageUpdated);
+
+    return () => {
+      window.removeEventListener(FAVORITES_UPDATED_EVENT, onFavoritesUpdated);
+      window.removeEventListener("storage", onStorageUpdated);
+    };
+  }, []);
+
   const items = [
     {
       key: "main",
@@ -44,7 +73,7 @@ const Navbar = ({ t }) => {
       key: "favorites",
       icon: <HeartOutlined />,
       label: (
-        <Badge count={10}>
+        <Badge count={favoritesCount} size="small" showZero={false}>
           {t("menu.favorites")}
         </Badge>
       ),
@@ -68,8 +97,8 @@ const Navbar = ({ t }) => {
       />
 
       <div className="navbar__logo">
-        <span>PUBG</span>
-        <span>.TRACKER</span>
+        <span className="navbar__logo-main">PUBG</span>
+        <span className="navbar__logo-tracker">.TRACKER</span>
       </div>
 
       <Menu
