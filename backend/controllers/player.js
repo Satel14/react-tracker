@@ -6,9 +6,7 @@ const { getLiveSnapshot } = require("../modules/getLiveSnapshot")
 const { getPlayerReports } = require("../modules/getPlayerReports")
 const { addRecentSearch, getRecentSearches } = require("../modules/recentSearches")
 const { getPlayerSteamNameByUrl } = require("../modules/getPlayerSteamNameByUrl")
-
-const isAccountIdentifier = (value) =>
-  typeof value === "string" && /^account\./i.test(value.trim());
+const { isAccountIdentifier } = require("../modules/playerIdentity");
 
 const getNormalDate = (time) => {
   const date = new Date(time);
@@ -63,7 +61,7 @@ module.exports.getPlayerData = async (req, res) => {
         platformInfo.platformUserHandle = canonicalHandle;
       }
 
-      addRecentSearch({
+      await addRecentSearch({
         gameId: canonicalHandle,
         platform: platform || platformInfo.platformSlug || "steam",
         nickname: canonicalHandle,
@@ -139,7 +137,7 @@ module.exports.getLiveSnapshot = async (_req, res) => {
 
 module.exports.getRecentSearches = async (_req, res) => {
   try {
-    const data = getRecentSearches(10);
+    const data = await getRecentSearches(10);
     return res.status(200).json({ status: 200, data });
   } catch (e) {
     return res.status(200).json({ status: 200, message: e.message });

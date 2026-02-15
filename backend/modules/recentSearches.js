@@ -1,39 +1,24 @@
-const fs = require("fs");
+const fs = require("fs/promises");
 const path = require("path");
+const {
+  isAccountIdentifier,
+  normalizePlatform,
+  stripPlatformPrefix,
+} = require("./playerIdentity");
 
 const RECENT_SEARCHES_FILE = path.join(__dirname, "..", "json", "last-searcheds.json");
 const MAX_RECENT_SEARCHES = 20;
+let mutationQueue = Promise.resolve();
 
-function normalizePlatform(platform) {
-  const value = String(platform || "steam").trim().toLowerCase();
-  if (value === "xbl") return "xbox";
-  return value || "steam";
+function enqueueMutation(task) {
+  const run = mutationQueue.then(task, task);
+  mutationQueue = run.catch(() => {});
+  return run;
 }
 
-function isAccountIdentifier(value) {
-  return typeof value === "string" && /^account\./i.test(value.trim());
-}
-
-function stripPlatformPrefix(value, platform) {
-  if (typeof value !== "string") return "";
-  const raw = value.trim();
-  if (!raw) return "";
-
-  const prefix = `${normalizePlatform(platform)}:`;
-  if (raw.toLowerCase().startsWith(prefix)) {
-    return raw.slice(prefix.length);
-  }
-
-  return raw;
-}
-
-function readRecentSearches() {
+async function readRecentSearches() {
   try {
-    if (!fs.existsSync(RECENT_SEARCHES_FILE)) {
-      return [];
-    }
-
-    const raw = fs.readFileSync(RECENT_SEARCHES_FILE, "utf8");
+    const raw = await fs.readFile(RECENT_SEARCHES_FILE, "utf8");
     if (!raw || !raw.trim()) return [];
 
     const parsed = JSON.parse(raw);
@@ -46,14 +31,16 @@ function readRecentSearches() {
     }
 
     return [];
-  } catch (_e) {
+  } catch (e) {
+    if (e?.code === "ENOENT") return [];
     return [];
   }
 }
 
-function writeRecentSearches(list) {
+async function writeRecentSearches(list) {
   try {
-    fs.writeFileSync(RECENT_SEARCHES_FILE, JSON.stringify(list, null, 2), "utf8");
+    await fs.mkdir(path.dirname(RECENT_SEARCHES_FILE), { recursive: true });
+    await fs.writeFile(RECENT_SEARCHES_FILE, JSON.stringify(list, null, 2), "utf8");
   } catch (e) {
     console.log(`[RECENT] Failed to write file: ${e.message}`);
   }
@@ -90,8 +77,8 @@ function normalizeRecentEntry(entry = {}) {
   };
 }
 
-function getRecentSearches(limit = 10) {
-  const records = readRecentSearches()
+async function getRecentSearches(limit = 10) {
+  const records = (await readRecentSearches())
     .map((item) => normalizeRecentEntry(item))
     .filter(Boolean)
     .filter((item) => Number(item.searchedAt) > 0)
@@ -105,26 +92,28 @@ function getRecentSearches(limit = 10) {
   return records.slice(0, safeLimit);
 }
 
-function addRecentSearch(entry, maxItems = MAX_RECENT_SEARCHES) {
-  const normalized = normalizeRecentEntry(entry);
-  if (!normalized) return getRecentSearches(maxItems);
+async function addRecentSearch(entry, maxItems = MAX_RECENT_SEARCHES) {
+  return enqueueMutation(async () => {
+    const normalized = normalizeRecentEntry(entry);
+    if (!normalized) return getRecentSearches(maxItems);
 
-  const current = readRecentSearches()
-    .map((item) => normalizeRecentEntry(item))
-    .filter(Boolean);
+    const current = (await readRecentSearches())
+      .map((item) => normalizeRecentEntry(item))
+      .filter(Boolean);
 
-  const deduped = current.filter((item) => item.id !== normalized.id);
-  deduped.push({
-    ...normalized,
-    searchedAt: Date.now(),
+    const deduped = current.filter((item) => item.id !== normalized.id);
+    deduped.push({
+      ...normalized,
+      searchedAt: Date.now(),
+    });
+
+    while (deduped.length > maxItems) {
+      deduped.shift();
+    }
+
+    await writeRecentSearches(deduped);
+    return deduped.slice().sort((a, b) => (b.searchedAt || 0) - (a.searchedAt || 0));
   });
-
-  while (deduped.length > maxItems) {
-    deduped.shift();
-  }
-
-  writeRecentSearches(deduped);
-  return deduped.slice().sort((a, b) => (b.searchedAt || 0) - (a.searchedAt || 0));
 }
 
 module.exports = {
