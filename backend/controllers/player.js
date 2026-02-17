@@ -61,12 +61,15 @@ module.exports.getPlayerData = async (req, res) => {
         platformInfo.platformUserHandle = canonicalHandle;
       }
 
+      const rankedInfo = data?.data?.season?.rankedInfo || null;
       await addRecentSearch({
         gameId: canonicalHandle,
         platform: platform || platformInfo.platformSlug || "steam",
         nickname: canonicalHandle,
         avatar: platformInfo.avatarUrl || null,
-        rating: null,
+        rating: rankedInfo?.currentRankPoint ?? null,
+        rankIconUrl: rankedInfo?.iconUrl || rankedInfo?.iconFallbackUrl || null,
+        rankLabel: rankedInfo?.label || null,
       });
     }
 

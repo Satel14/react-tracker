@@ -93,6 +93,27 @@ const formatRankPoints = (value) => {
   return Number.isFinite(parsed) ? parsed.toLocaleString() : "N/A";
 };
 
+const formatTopPercentage = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  const fixed = parsed.toFixed(4).replace(/\.?0+$/, "");
+  return fixed || "0";
+};
+
+const formatRankPlacement = (rankedInfo) => {
+  if (!rankedInfo || typeof rankedInfo !== "object") return null;
+
+  const rank = Number(rankedInfo?.leaderboardRank);
+  const top = formatTopPercentage(rankedInfo?.topPercentage);
+  const hasRank = Number.isFinite(rank) && rank > 0;
+  const hasTop = typeof top === "string";
+
+  if (!hasRank && !hasTop) return null;
+  if (hasRank && hasTop) return `#${rank} (Top ${top}%)`;
+  if (hasRank) return `#${rank}`;
+  return `Top ${top}%`;
+};
+
 const PlayerPage = ({ t }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
@@ -123,7 +144,11 @@ const PlayerPage = ({ t }) => {
         setError("Player not found or private profile");
       }
     } catch (err) {
-      setError(err.message || "Failed to fetch data");
+      if (err?.status === 422) {
+        setError(err?.message || "Гравця не знайдено. Перевірте платформу та нікнейм.");
+      } else {
+        setError(err?.message || "Не вдалося завантажити дані гравця.");
+      }
     } finally {
       setLoading(false);
     }
@@ -215,16 +240,26 @@ const PlayerPage = ({ t }) => {
     const accountId = data?.platformInfo?.platformUserId || gameId || null;
     const playerName = resolvePreferredPlayerName(data?.platformInfo?.platformUserHandle, gameId) || null;
     const avatarUrl = data?.platformInfo?.avatarUrl || null;
+    const rankedInfo = data?.season?.rankedInfo || null;
     const platformSlug = platform || data?.platformInfo?.platformSlug || "steam";
     const historyLookupId = playerName || accountId || null;
 
     if (!historyLookupId) return;
-    addHistory(platformSlug, historyLookupId, playerName || historyLookupId, avatarUrl);
+    addHistory(
+      platformSlug,
+      historyLookupId,
+      playerName || historyLookupId,
+      avatarUrl,
+      rankedInfo?.iconUrl || rankedInfo?.iconFallbackUrl || null,
+      rankedInfo?.label || null,
+      rankedInfo?.currentRankPoint ?? null
+    );
   }, [
     data?.platformInfo?.platformUserId,
     data?.platformInfo?.platformUserHandle,
     data?.platformInfo?.avatarUrl,
     data?.platformInfo?.platformSlug,
+    data?.season?.rankedInfo,
     platform,
     gameId,
   ]);
@@ -293,6 +328,8 @@ const PlayerPage = ({ t }) => {
     value: item.id,
     label: item.isCurrentSeason ? `${item.label} (Current)` : item.label,
   }));
+  const headerRankedInfo = season?.rankedInfo || null;
+  const headerRankPlacement = formatRankPlacement(headerRankedInfo);
 
   const quickStats = [
     { label: "Wins", value: getDisplay(stats, "wins", "0") },
@@ -340,6 +377,7 @@ const PlayerPage = ({ t }) => {
     const rankedMatches = getDisplay(seasonRankedStats, "matchesPlayed", "0");
     const totalMatches = getDisplay(seasonStats, "matchesPlayed", "0");
     const rankedInfo = season?.rankedInfo || null;
+    const rankedPlacement = formatRankPlacement(rankedInfo);
 
     return (
       <section className="player-card">
@@ -387,6 +425,7 @@ const PlayerPage = ({ t }) => {
                 <div className="player-rank__text">
                   <span>{rankedInfo.label || "Ranked"}</span>
                   <strong>{`${formatRankPoints(rankedInfo.currentRankPoint)} RP`}</strong>
+                  {rankedPlacement ? <small>{rankedPlacement}</small> : null}
                 </div>
               </div>
             </div>
@@ -653,6 +692,33 @@ const PlayerPage = ({ t }) => {
             <div className="player-identity__sub">
               {(data?.platformInfo?.platformSlug || platform || "steam").toUpperCase()} PROFILE
             </div>
+            {headerRankedInfo ? (
+              <div className="player-identity__rank">
+                <img
+                  src={headerRankedInfo.iconUrl}
+                  alt={headerRankedInfo.label || "Rank"}
+                  className="player-identity__rank-icon"
+                  onError={(e) => {
+                    const fallback = headerRankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.png";
+                    const usedFallback = e.currentTarget.dataset.fallbackApplied === "1";
+
+                    if (!usedFallback && fallback) {
+                      e.currentTarget.dataset.fallbackApplied = "1";
+                      e.currentTarget.src = fallback;
+                      return;
+                    }
+
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "/images/ranks/opgg/unranked.png";
+                  }}
+                />
+                <div className="player-identity__rank-text">
+                  <strong>{headerRankedInfo.label || "Ranked"}</strong>
+                  <span>{`${formatRankPoints(headerRankedInfo.currentRankPoint)} RP`}</span>
+                  {headerRankPlacement ? <small>{headerRankPlacement}</small> : null}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 

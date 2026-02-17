@@ -89,7 +89,15 @@ function normalizeFavorite(payload = {}) {
 
 export const getHistory = async () => readObject(HISTORY_KEY);
 
-export const addHistory = async (platform, gameid, nickname, avatar) => {
+export const addHistory = async (
+  platform,
+  gameid,
+  nickname,
+  avatar,
+  rankIconUrl = null,
+  rankLabel = null,
+  rankPoints = null
+) => {
   const platformSlug = normalizePlatform(platform);
   const id = String(gameid || "").trim();
   const entryId = getHistoryEntryId(platformSlug, id);
@@ -107,6 +115,9 @@ export const addHistory = async (platform, gameid, nickname, avatar) => {
     platform: platformSlug,
     nickname: String(nickname || id).trim() || id,
     avatar: avatar || existing.avatar || null,
+    rankIconUrl: rankIconUrl || existing.rankIconUrl || null,
+    rankLabel: rankLabel || existing.rankLabel || null,
+    rating: rankPoints ?? existing.rating ?? null,
     searchedAt: Date.now(),
   };
 

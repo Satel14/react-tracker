@@ -57,6 +57,10 @@ function normalizeRecentEntry(entry = {}) {
       ? rawNickname
       : gameId;
   const avatar = typeof entry.avatar === "string" && entry.avatar.trim() ? entry.avatar.trim() : null;
+  const rankIconUrl =
+    typeof entry.rankIconUrl === "string" && entry.rankIconUrl.trim() ? entry.rankIconUrl.trim() : null;
+  const rankLabel =
+    typeof entry.rankLabel === "string" && entry.rankLabel.trim() ? entry.rankLabel.trim() : null;
   const rating =
     entry.rating === null || entry.rating === undefined || entry.rating === ""
       ? null
@@ -72,6 +76,8 @@ function normalizeRecentEntry(entry = {}) {
     platform,
     nickname,
     avatar,
+    rankIconUrl,
+    rankLabel,
     rating: Number.isFinite(rating) ? rating : null,
     searchedAt,
   };

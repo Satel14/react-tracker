@@ -29,6 +29,8 @@ const normalizeHistoryEntries = (historyMap = {}) => {
         gameId,
         nickname,
         avatar,
+        rankIconUrl: player?.rankIconUrl || null,
+        rankLabel: player?.rankLabel || null,
         rating: player?.rating ?? null,
         searchedAt: Number(player?.searchedAt || 0),
       };
@@ -54,6 +56,8 @@ const normalizeRecentEntries = (items = []) => {
         gameId,
         nickname,
         avatar,
+        rankIconUrl: item?.rankIconUrl || null,
+        rankLabel: item?.rankLabel || null,
         rating: item?.rating ?? null,
         searchedAt: Number(item?.searchedAt || 0),
       };
@@ -145,10 +149,15 @@ const HistoryChecking = ({ t }) => {
           {getIconComponentPlatfrom(player.platform)}
         </div>
         <div className="historycheck_block-mmr">
-          {t("other.words.rating")}
-          <span>
-            {player.rating ?? ""}
-          </span>
+          <img
+            src={player.rankIconUrl || "/images/ranks/opgg/unranked.png"}
+            alt={player.rankLabel || "Rank"}
+            title={player.rankLabel || "Unranked"}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "/images/ranks/opgg/unranked.png";
+            }}
+          />
         </div>
       </Link>
     ));

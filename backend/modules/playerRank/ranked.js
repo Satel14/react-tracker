@@ -3,6 +3,12 @@ function toNumberOrNull(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function toPositiveIntOrNull(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.floor(parsed);
+}
+
 function normalizeTierName(value) {
   if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase();
@@ -137,6 +143,68 @@ function extractTierInfo(rawTier = null) {
   };
 }
 
+function parseRankTitleString(value) {
+  if (typeof value !== "string" || !value.trim()) return {};
+  const raw = value.trim();
+
+  const rankMatch = raw.match(/#\s*([0-9]+)/i);
+  const topMatch = raw.match(/top\s*([0-9]+(?:\.[0-9]+)?)\s*%/i);
+
+  return {
+    leaderboardRank: rankMatch ? toPositiveIntOrNull(rankMatch[1]) : null,
+    topPercentage: topMatch ? toNumberOrNull(topMatch[1]) : null,
+  };
+}
+
+function normalizeTopPercentage(value, sourceKey = "") {
+  const parsed = toNumberOrNull(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+
+  const normalizedKey = String(sourceKey || "").toLowerCase();
+  const likelyPercentile = normalizedKey.includes("percentile");
+  if (likelyPercentile && parsed <= 1) {
+    return Number((parsed * 100).toFixed(6));
+  }
+
+  return parsed;
+}
+
+function extractLeaderboardMeta(stats = {}) {
+  const rankKeys = ["rank", "leaderboardRank", "currentRank", "rankPosition", "position"];
+  const topKeys = ["topPercentage", "topPercent", "rankPercentile", "percentile", "rankPercentage"];
+  const titleKeys = ["currentRankPointTitle", "rankPointTitle", "currentRankTitle", "rankTitle"];
+
+  let leaderboardRank = null;
+  let topPercentage = null;
+
+  rankKeys.forEach((key) => {
+    if (leaderboardRank !== null) return;
+    const value = toPositiveIntOrNull(stats?.[key]);
+    if (value !== null) leaderboardRank = value;
+  });
+
+  topKeys.forEach((key) => {
+    if (topPercentage !== null) return;
+    const value = normalizeTopPercentage(stats?.[key], key);
+    if (value !== null) topPercentage = value;
+  });
+
+  titleKeys.forEach((key) => {
+    const parsed = parseRankTitleString(stats?.[key]);
+    if (leaderboardRank === null && Number.isFinite(parsed?.leaderboardRank)) {
+      leaderboardRank = parsed.leaderboardRank;
+    }
+    if (topPercentage === null && Number.isFinite(parsed?.topPercentage)) {
+      topPercentage = parsed.topPercentage;
+    }
+  });
+
+  return {
+    leaderboardRank,
+    topPercentage,
+  };
+}
+
 function extractRankedInfo(rankedModeStats = {}) {
   const entries = Object.entries(rankedModeStats || {});
   if (!entries.length) return null;
@@ -152,6 +220,7 @@ function extractRankedInfo(rankedModeStats = {}) {
 
     const rankPoints = toNumberOrNull(stats?.currentRankPoint);
     const bestRankPoints = toNumberOrNull(stats?.bestRankPoint);
+    const leaderboardMeta = extractLeaderboardMeta(stats);
     const score = toTierScore(chosenTier.tier, chosenTier.subTier) + (rankPoints || 0) / 10000;
     const rankBadge = buildRankBadgeData(chosenTier.tier, chosenTier.subTier);
 
@@ -162,6 +231,8 @@ function extractRankedInfo(rankedModeStats = {}) {
       label: chosenTier.label,
       currentRankPoint: rankPoints,
       bestRankPoint: bestRankPoints,
+      leaderboardRank: leaderboardMeta.leaderboardRank,
+      topPercentage: leaderboardMeta.topPercentage,
       iconUrl: rankBadge.iconUrl,
       iconFallbackUrl: rankBadge.iconFallbackUrl,
       score,
@@ -182,7 +253,10 @@ function extractRankedInfo(rankedModeStats = {}) {
     mode: best.mode,
     currentRankPoint: best.currentRankPoint,
     bestRankPoint: best.bestRankPoint,
+    leaderboardRank: best.leaderboardRank,
+    topPercentage: best.topPercentage,
     iconUrl: best.iconUrl,
+    iconFallbackUrl: best.iconFallbackUrl,
     byMode: modeSummaries
       .sort((a, b) => b.score - a.score)
       .map(({ score, ...rest }) => rest),
