@@ -73,7 +73,13 @@ const Navbar = ({ t }) => {
       key: "favorites",
       icon: <HeartOutlined />,
       label: (
-        <Badge count={favoritesCount} size="small" showZero={false}>
+        <Badge
+          count={favoritesCount}
+          size="small"
+          showZero={false}
+          overflowCount={99}
+          className="navbar__favorites-badge"
+        >
           {t("menu.favorites")}
         </Badge>
       ),
