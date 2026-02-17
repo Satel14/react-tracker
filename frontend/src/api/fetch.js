@@ -5,6 +5,14 @@ const headers = {
   "Content-Type": "application/json",
 };
 
+const parseErrorPayload = async (result) => {
+  try {
+    return await result.json();
+  } catch (_e) {
+    return null;
+  }
+};
+
 export const post = async (destination, body, notificationErr = false) => {
   const result = await fetch(`${API_URL}${destination}`, {
     method: "POST",
@@ -16,12 +24,17 @@ export const post = async (destination, body, notificationErr = false) => {
     return result.json();
   }
 
+  const payload = await parseErrorPayload(result);
+  const message = payload?.message || payload?.data?.message || null;
+
   if (result.status !== 200 && notificationErr) {
-    openNotification("error", "Server error", "Problems on server.");
+    openNotification("error", "Request error", message || "Problems on server.");
   }
 
-  // eslint-disable-next-line no-throw-literal
-  throw { error: result.status };
+  const error = new Error(message || `Request failed with status ${result.status}`);
+  error.status = result.status;
+  error.payload = payload;
+  throw error;
 };
 
 export const get = async (destination, notificationErr = false) => {
@@ -33,9 +46,15 @@ export const get = async (destination, notificationErr = false) => {
     return result.json();
   }
 
+  const payload = await parseErrorPayload(result);
+  const message = payload?.message || payload?.data?.message || null;
+
   if (result.status !== 200 && notificationErr) {
-    openNotification("error", "Server error", "Problems on server.");
+    openNotification("error", "Request error", message || "Problems on server.");
   }
-  // eslint-disable-next-line no-throw-literal
-  throw { error: result.status };
+
+  const error = new Error(message || `Request failed with status ${result.status}`);
+  error.status = result.status;
+  error.payload = payload;
+  throw error;
 };
