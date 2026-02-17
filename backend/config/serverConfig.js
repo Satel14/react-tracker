@@ -19,7 +19,7 @@ const config ={
         //     username : process.env.MYSQL_USER,
         //     password : process.env.MYSQL_PASSWORD,
         // },
-        port: process.env.SERVER_POST | 8080,
+        port: Number(process.env.PORT) || Number(process.env.SERVER_PORT) || 8080,
     },
 };
 
