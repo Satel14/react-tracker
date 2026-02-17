@@ -1,3 +1,3 @@
 module.exports = {
-  PLATFORMS: ["xbl", "steam"],
+  PLATFORMS: ["steam", "kakao", "xbox", "xbl", "psn", "stadia"],
 }

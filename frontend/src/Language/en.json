@@ -48,7 +48,7 @@
       "faq": {
         "search": {
           "q": "How do I search for a player?",
-          "a": "Use the search field on the main page, choose platform (Steam/Xbox/PSN), and enter nickname, account ID, or profile URL."
+          "a": "Use the search field on the main page, choose platform (Steam/Xbox/PSN/Stadia/Kakao), and enter nickname, account ID, or profile URL."
         },
         "season": {
           "q": "How do season stats work?",
@@ -76,7 +76,7 @@
         },
         "platforms": {
           "q": "Which platforms are supported?",
-          "a": "Steam, Xbox, and PlayStation are supported. Make sure you pick the same platform where the player actually plays."
+          "a": "Steam, Xbox, PlayStation, Stadia, and Kakao shards are supported. Make sure you pick the same platform where the player actually plays."
         }
       }
     }

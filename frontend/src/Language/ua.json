@@ -42,41 +42,41 @@
             "placeinTheWorld": "Місце у світі"
         },
         "help": {
-            "title": "Help & FAQ",
-            "subtitle": "Quick answers about search, seasons, favorites, and PUBG Report integration.",
-            "contact": "If your issue is not listed, open Bug Report and describe what happened.",
+            "title": "Допомога та FAQ",
+            "subtitle": "Короткі відповіді про пошук, сезони, обране та інтеграцію PUBG Report.",
+            "contact": "Якщо вашої проблеми немає у списку, відкрийте Bug Report і опишіть ситуацію.",
             "faq": {
                 "search": {
-                    "q": "How do I search for a player?",
-                    "a": "Use the search field on the main page, choose platform (Steam/Xbox/PSN), and enter nickname, account ID, or profile URL."
+                    "q": "Як знайти гравця?",
+                    "a": "На головній сторінці оберіть платформу (Steam/Xbox/PSN/Stadia/Kakao) і введіть нік, account ID або URL профілю."
                 },
                 "season": {
-                    "q": "How do season stats work?",
-                    "a": "Current season is selected by default. You can switch to previous seasons from the season dropdown on the player page."
+                    "q": "Як працює сезонна статистика?",
+                    "a": "За замовчуванням відкривається поточний сезон. На сторінці гравця можна вибрати попередні сезони у dropdown."
                 },
                 "missingStats": {
-                    "q": "Why are season stats empty or too low?",
-                    "a": "PUBG API can return limited or delayed data for some accounts/seasons. Also, requesting a wrong platform may show no stats."
+                    "q": "Чому статистика за сезон порожня або дуже мала?",
+                    "a": "PUBG API іноді повертає неповні або затримані дані для окремих акаунтів і сезонів. Також перевірте, чи обрана правильна платформа."
                 },
                 "avatar": {
-                    "q": "Why is avatar not shown?",
-                    "a": "Steam avatar requires a valid Steam API key on backend. If avatar cannot be resolved, fallback avatar is used."
+                    "q": "Чому не показується аватар?",
+                    "a": "Для Steam-аватарів потрібен валідний Steam API key на backend. Якщо аватар не вдається отримати, показується fallback-аватар."
                 },
                 "reports": {
-                    "q": "What is the PUBG Report tab?",
-                    "a": "This tab shows encounters found via PUBG Report where kills/deaths were captured on Twitch streams."
+                    "q": "Що таке вкладка PUBG Report?",
+                    "a": "У ній відображаються знайдені через PUBG Report епізоди, де ваші кіли або смерті потрапили на Twitch-стріми."
                 },
                 "favorites": {
-                    "q": "How do Favorites and History work?",
-                    "a": "Favorites and local history are stored in your browser. Recent searched list is served from backend recent searches."
+                    "q": "Як працюють Favorites та History?",
+                    "a": "Favorites і локальна історія зберігаються у вашому браузері. Список Recent searched віддається з backend."
                 },
                 "limits": {
-                    "q": "What does Rate Limit Reached mean?",
-                    "a": "PUBG API has request limits. When limit is reached, tracker can temporarily serve cached data until cooldown passes."
+                    "q": "Що означає Rate Limit Reached?",
+                    "a": "PUBG API має ліміти запитів. Коли ліміт вичерпано, трекер тимчасово показує кешовані дані до завершення cooldown."
                 },
                 "platforms": {
-                    "q": "Which platforms are supported?",
-                    "a": "Steam, Xbox, and PlayStation are supported. Make sure you pick the same platform where the player actually plays."
+                    "q": "Які платформи підтримуються?",
+                    "a": "Підтримуються шард-платформи Steam, Xbox, PlayStation, Stadia та Kakao. Обирайте ту платформу, на якій гравець реально грає."
                 }
             }
         }

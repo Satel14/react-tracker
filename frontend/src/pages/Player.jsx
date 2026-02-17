@@ -35,7 +35,8 @@ const Player = () => {
               <Radio.Button value="steam">Steam</Radio.Button>
               <Radio.Button value="xbox">Xbox</Radio.Button>
               <Radio.Button value="psn">PSN</Radio.Button>
-              <Radio.Button value="nintendo">Nintendo</Radio.Button>
+              <Radio.Button value="stadia">Stadia</Radio.Button>
+              <Radio.Button value="kakao">Kakao</Radio.Button>
             </Radio.Group>
 
             <Input.Search

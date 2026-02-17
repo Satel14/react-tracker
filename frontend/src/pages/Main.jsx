@@ -15,13 +15,54 @@ import openNotification from '../component/Notification';
 import SteamIcon from '../component/icons/SteamIcon';
 import XboxIcon from '../component/icons/XboxIcon';
 import PlaystationIcon from '../component/icons/PlaystaionIcon';
+import KakaoIcon from "../component/icons/KakaoIcon";
+import StadiaIcon from "../component/icons/StadiaIcon";
+
+const PLATFORM_OPTIONS = [
+  {
+    value: "steam",
+    label: "Steam",
+    placeholder: "Enter Steam name, ID or url",
+    icon: <SteamIcon />,
+  },
+  {
+    value: "xbox",
+    label: "Xbox",
+    placeholder: "Enter Xbox Gamertag",
+    icon: <XboxIcon />,
+  },
+  {
+    value: "psn",
+    label: "PSN",
+    placeholder: "Enter PlayStation Network ID",
+    icon: <PlaystationIcon />,
+  },
+  {
+    value: "stadia",
+    label: "Stadia",
+    placeholder: "Enter Stadia nickname",
+    icon: <StadiaIcon />,
+  },
+  {
+    value: "kakao",
+    label: "Kakao",
+    placeholder: "Enter Kakao nickname",
+    icon: <KakaoIcon />,
+  },
+];
+
+const PLATFORM_LOOKUP = PLATFORM_OPTIONS.reduce((accumulator, item) => {
+  accumulator[item.value] = item;
+  return accumulator;
+}, {});
+
 const Main = ({ t }) => {
   const [platform, setPlatform] = useState("steam");
   const [text, setText] = useState("");
   const [exit, setExit] = useState(false)
-  const [placeholder, setPlaceholder] = useState("Enter name, id or url")
   const [liveStats, setLiveStats] = useState(null);
   const navigate = useNavigate();
+  const placeholder = PLATFORM_LOOKUP?.[platform]?.placeholder || "Enter name, id or url";
 
   function isChecked(platformCheck) {
     if (platformCheck === platform) {
@@ -30,12 +71,16 @@ const Main = ({ t }) => {
     return false
   }
 
+  function handlePlatformChange(nextPlatform) {
+    setPlatform(nextPlatform);
+  }
+
   async function handleClick() {
     setExit(true);
 
     let steamName;
 
-    if (text.search(/steamcommunity.com/) !== -1) {
+    if (platform === "steam" && text.search(/steamcommunity.com/) !== -1) {
       steamName = await getPlayerSteamName(text).then(({ data }) => {
         if (!data) {
           steamName = null;
@@ -106,30 +151,16 @@ const Main = ({ t }) => {
             </div>
             <div className="chooser">
               <div className="choose-platform">
-                <div className={isChecked("steam") ? "active" : ""}
-                  onClick={() => {
-                    setPlatform("steam")
-                    setPlaceholder("Enter Steam name, ID or url")
-                  }}
-                >
-                  <SteamIcon />
-                </div>
-                <div className={isChecked("xbox") ? "active" : ""}
-                  onClick={() => {
-                    setPlatform("xbox");
-                    setPlaceholder("Enter Xbox Username")
-                  }}
-                >
-                  <XboxIcon />
-                </div>
-                <div className={isChecked("psn") ? "active" : ""}
-                  onClick={() => {
-                    setPlatform("psn");
-                    setPlaceholder("Enter Playstation Network Username")
-                  }}
-                >
-                  <PlaystationIcon />
-                </div>
+                {PLATFORM_OPTIONS.map((item) => (
+                  <div
+                    key={item.value}
+                    className={isChecked(item.value) ? "active" : ""}
+                    onClick={() => handlePlatformChange(item.value)}
+                    title={item.label}
+                  >
+                    {item.icon}
+                  </div>
+                ))}
               </div>
               <Input
                 size="large"
