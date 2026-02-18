@@ -10,3 +10,4 @@
 
 <li>backend <code>nodemon server.js</code> or <code>node server.js</code></li>
 <li>frontend <code>npm start</code></li>
+.
