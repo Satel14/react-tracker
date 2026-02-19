@@ -21,6 +21,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "postbuild": "react-snap",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -43,7 +44,22 @@
     ]
   },
   "devDependencies": {
+    "react-snap": "^1.23.0",
     "sass": "^1.59.3"
+  },
+  "reactSnap": {
+    "include": [
+      "/",
+      "/help",
+      "/favorites",
+      "/bugreport"
+    ],
+    "skipThirdPartyRequests": true,
+    "headless": true,
+    "puppeteerArgs": [
+      "--no-sandbox",
+      "--disable-setuid-sandbox"
+    ]
   },
   "proxy": "http://localhost:3003"
 }
