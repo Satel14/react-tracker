@@ -1,16 +1,6 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // true for 465, false for other ports
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-    family: 4, // Force IPv4
-    connectionTimeout: 10000, // 10 seconds
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 module.exports.sendBugReport = async (req, res) => {
     try {
@@ -20,22 +10,19 @@ module.exports.sendBugReport = async (req, res) => {
             return res.status(400).json({ status: 400, message: "Description is required" });
         }
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: process.env.EMAIL_USER, // Send to self
+        await resend.emails.send({
+            from: "PubG Tracker <onboarding@resend.dev>",
+            to: process.env.EMAIL_USER || "ostaplvov@gmail.com",
             subject: `Bug Report from ${name || "Anonymous"}`,
-            text: `Name: ${name || "Not provided"}\nEmail: ${email || "Not provided"}\n\nBug Description:\n${description}`,
             html: `
-        <h2>Bug Report</h2>
-        <p><strong>Name:</strong> ${name || "Not provided"}</p>
-        <p><strong>Email:</strong> ${email || "Not provided"}</p>
-        <hr/>
-        <h3>Description:</h3>
-        <p>${description.replace(/\n/g, "<br/>")}</p>
-      `,
-        };
-
-        await transporter.sendMail(mailOptions);
+                <h2>Bug Report</h2>
+                <p><strong>Name:</strong> ${name || "Not provided"}</p>
+                <p><strong>Email:</strong> ${email || "Not provided"}</p>
+                <hr/>
+                <h3>Description:</h3>
+                <p>${description.replace(/\n/g, "<br/>")}</p>
+            `,
+        });
 
         return res.status(200).json({ status: 200, message: "Bug report sent successfully" });
     } catch (e) {
