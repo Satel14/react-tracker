@@ -1,5 +1,10 @@
 # Proxy API requests to Render backend
 /api/*  https://pubgtracker-api.onrender.com/api/:splat  200
 
+# Static files (must be before SPA fallback)
+/google4fb6a85272b47cc5.html  /google4fb6a85272b47cc5.html  200
+/sitemap.xml  /sitemap.xml  200
+/robots.txt  /robots.txt  200
+
 # SPA fallback for React Router
 /*  /index.html  200
