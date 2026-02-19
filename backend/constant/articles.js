@@ -1,4 +1,4 @@
-module.export = {
+module.exports = {
   help: "",
   aboutMe: "I'm web developer from Lviv.I enjoy creating beautifully designed, intuitive and functional websites. I describe myself as a passionate developer who loves coding, open source, and the web platform.",
   bugReportText: "If you notice a bug, please let me know",

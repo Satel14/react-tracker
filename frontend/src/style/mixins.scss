@@ -52,6 +52,7 @@
           }
         }
       }
+
       &-text {
         b {
           color: $colorSecond;
@@ -200,6 +201,54 @@
         &:hover .historycheck_block-left img {
           border-color: rgba($colorFirst, 0.82);
           transform: translateY(-1px);
+        }
+      }
+    }
+
+    .bugreport {
+      &__icon {
+        color: $colorFirst;
+      }
+
+      &__form {
+        border-color: rgba($colorFirst, 0.22);
+      }
+
+      &__field {
+
+        .ant-input,
+        textarea.ant-input {
+          border-color: rgba($colorFirst, 0.25) !important;
+
+          &:hover {
+            border-color: rgba($colorFirst, 0.45) !important;
+          }
+
+          &:focus {
+            border-color: $colorFirst !important;
+            box-shadow: 0 0 0 2px rgba($colorFirst, 0.12) !important;
+          }
+        }
+      }
+
+      &__submit {
+        background: linear-gradient(135deg, $colorFirst, darken($colorFirst, 10%)) !important;
+
+        &:hover {
+          box-shadow: 0 6px 20px rgba($colorFirst, 0.3);
+        }
+      }
+
+      &__contact-item {
+        border-color: rgba($colorFirst, 0.14);
+
+        &:hover {
+          border-color: rgba($colorFirst, 0.55);
+          background: rgba($colorFirst, 0.08);
+        }
+
+        >.anticon {
+          color: $colorFirst;
         }
       }
     }

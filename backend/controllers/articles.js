@@ -7,7 +7,7 @@ const {
   socialList,
 } = require('../constant/articles')
 
-module.exports.getAboutMe = async (res, req) => {
+module.exports.getAboutMe = async (req, res) => {
   try {
     const data = {
       aboutMe,
@@ -19,7 +19,7 @@ module.exports.getAboutMe = async (res, req) => {
   }
 }
 
-module.exports.getRoadmap = async (res, req) => {
+module.exports.getRoadmap = async (req, res) => {
   try {
     const data = {
       roadmapText,
@@ -32,7 +32,7 @@ module.exports.getRoadmap = async (res, req) => {
 }
 
 
-module.exports.getBugReport = async (res, req) => {
+module.exports.getBugReport = async (req, res) => {
   try {
     const data = {
       bugReportPage,
