@@ -143,7 +143,7 @@ const Main = ({ t }) => {
   return (
     <div className={exit ? "content mainpage exit" : "content mainpage"}>
       <Row style={{ justifyContent: "center" }}>
-        <Col span={15}>
+        <Col xs={24} sm={22} md={18} lg={15}>
           <div className="mainpage_left">
             <div className="mainpage_left__text">
               {t("pages.main.title")}

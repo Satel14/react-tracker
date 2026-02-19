@@ -51,7 +51,7 @@ const SetLanguage = () => {
   return (
     <Dropdown menu={{ items }} className="dropdown-lang">
       <span>
-        {currentLang} <DownOutlined />
+        {currentLang.toUpperCase()} <DownOutlined />
       </span>
     </Dropdown>
   );
