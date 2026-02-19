@@ -1,5 +1,5 @@
 import React from 'react';
-import { createRoot, hydrateRoot } from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import './index.css';
 import RouterLayout from './router/RouterLayout';
 import reportWebVitals from './reportWebVitals';
@@ -8,19 +8,14 @@ import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
 
 const container = document.getElementById('root');
-const app = (
+const root = createRoot(container);
+root.render(
   <React.StrictMode>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <RouterLayout />
     </BrowserRouter>
   </React.StrictMode>
 );
-
-if (container.hasChildNodes()) {
-  hydrateRoot(container, app);
-} else {
-  createRoot(container).render(app);
-}
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
