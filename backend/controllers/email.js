@@ -1,7 +1,9 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // true for 465, false for other ports
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -18,7 +20,7 @@ module.exports.sendBugReport = async (req, res) => {
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
-            to: "ostaplvov@gmail.com",
+            to: process.env.EMAIL_USER, // Send to self
             subject: `Bug Report from ${name || "Anonymous"}`,
             text: `Name: ${name || "Not provided"}\nEmail: ${email || "Not provided"}\n\nBug Description:\n${description}`,
             html: `
@@ -35,7 +37,7 @@ module.exports.sendBugReport = async (req, res) => {
 
         return res.status(200).json({ status: 200, message: "Bug report sent successfully" });
     } catch (e) {
-        console.error("Email error:", e.message);
-        return res.status(500).json({ status: 500, message: "Failed to send bug report" });
+        console.error("Email error:", e);
+        return res.status(500).json({ status: 500, message: "Failed to send bug report", error: e.message });
     }
 };
