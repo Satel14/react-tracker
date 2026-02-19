@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button, Spin, Alert, Tabs, Select } from "antd";
 import { translate } from "react-switch-lang";
-import { SyncOutlined, HeartOutlined, HeartFilled, LoadingOutlined } from "@ant-design/icons";
-import { useParams } from "react-router-dom";
+import { SyncOutlined, HeartOutlined, HeartFilled, LoadingOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { useParams, useNavigate } from "react-router-dom";
 import { getPlayerData, getPlayerReports } from "../api/player";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
@@ -127,6 +127,7 @@ const PlayerPage = ({ t }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const { platform, gameId } = useParams();
+  const navigate = useNavigate();
 
   const fetchData = useCallback(async (seasonId = null) => {
     setLoading(true);
@@ -303,9 +304,14 @@ const PlayerPage = ({ t }) => {
         }}
       >
         <Alert message="Error" description={error} type="error" showIcon />
-        <Button type="primary" onClick={() => fetchData(selectedSeasonId)} style={{ marginTop: 20 }}>
-          Retry
-        </Button>
+        <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/")}>
+            Back
+          </Button>
+          <Button type="primary" onClick={() => fetchData(selectedSeasonId)}>
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }
@@ -677,7 +683,7 @@ const PlayerPage = ({ t }) => {
           <img
             src={
               data?.platformInfo?.avatarUrl ||
-              "https://avatars.akamai.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg"
+              `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#172236"/><stop offset="100%" stop-color="#0c141f"/></linearGradient></defs><rect width="256" height="256" rx="32" fill="url(#g)"/><circle cx="128" cy="128" r="94" fill="none" stroke="#78f7a8" stroke-opacity="0.35" stroke-width="4"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="86" font-weight="700" fill="#ffffff">${(data?.platformInfo?.platformUserHandle || "PU").slice(0, 2).toUpperCase()}</text></svg>`)}`
             }
             onError={(e) => {
               e.currentTarget.onerror = null;

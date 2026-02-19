@@ -22,7 +22,7 @@ const PLATFORM_OPTIONS = [
   {
     value: "steam",
     label: "Steam",
-    placeholder: "Enter Steam name, ID or url",
+    placeholder: "Enter PUBG nickname or Steam url",
     icon: <SteamIcon />,
   },
   {
@@ -76,30 +76,32 @@ const Main = ({ t }) => {
   }
 
   async function handleClick() {
+    if (!text.trim()) return;
     setExit(true);
 
-    let steamName;
+    let resolvedName;
 
     if (platform === "steam" && text.search(/steamcommunity.com/) !== -1) {
-      steamName = await getPlayerSteamName(text).then(({ data }) => {
+      resolvedName = await getPlayerSteamName(text).then(({ data }) => {
         if (!data) {
-          steamName = null;
+          resolvedName = null;
         }
         return data;
       });
     }
 
-    if (steamName === null) {
-      openNotification("error", "SteamId Error", "Такого аккаунта нет");
+    if (resolvedName === null) {
+      openNotification("error", "Steam Error", "Account not found");
+      setExit(false);
       return;
     }
 
     let url;
 
-    if (steamName) {
-      url = "/player/" + platform + "/" + steamName;
+    if (resolvedName) {
+      url = "/player/" + platform + "/" + resolvedName;
     } else {
-      url = "/player/" + platform + "/" + text;
+      url = "/player/" + platform + "/" + text.trim();
     }
 
     setTimeout(() => {

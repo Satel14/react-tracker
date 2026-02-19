@@ -15,7 +15,7 @@ import SetTheme from './SetTheme';
 import { FAVORITES_UPDATED_EVENT, getFavoritesCount } from "../cookie/store";
 
 const componentRoutes = ["/", "/leaderboards", "/favorites", "/help"];
-const MOBILE_BREAKPOINT = 768;
+const MOBILE_BREAKPOINT = 960;
 
 const Navbar = ({ t }) => {
   const [current, setCurrent] = useState("home");

@@ -92,13 +92,13 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
       ) {
         const byMode = Array.isArray(cachedRankedInfo.byMode)
           ? cachedRankedInfo.byMode.map((entry) => {
-              const badge = buildRankBadgeData(entry?.tier, entry?.subTier);
-              return {
-                ...entry,
-                iconUrl: badge.iconUrl,
-                iconFallbackUrl: badge.iconFallbackUrl,
-              };
-            })
+            const badge = buildRankBadgeData(entry?.tier, entry?.subTier);
+            return {
+              ...entry,
+              iconUrl: badge.iconUrl,
+              iconFallbackUrl: badge.iconFallbackUrl,
+            };
+          })
           : cachedRankedInfo.byMode;
 
         nextPayload = {
@@ -307,6 +307,10 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
             : playerName;
 
         setCachedPlayerName(shard, accountId, displayPlayerName);
+        let resolvedAvatar = null;
+        if (shard === "steam") {
+          resolvedAvatar = await getBestEffortSteamAvatar(requestedPlayerId, displayPlayerName);
+        }
         const mappedData = mapPubgStatsToFrontend(
           lifetimeAttributes,
           displayPlayerName,
@@ -316,7 +320,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
           seasonCatalog,
           selectedSeasonId,
           shard,
-          shard === "steam" ? await getBestEffortSteamAvatar(requestedPlayerId, displayPlayerName) : null
+          resolvedAvatar
         );
 
         const cacheEntry = {

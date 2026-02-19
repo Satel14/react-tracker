@@ -27,19 +27,6 @@ function createSteamAvatarService({ steamApiKey, steamAvatarCache, steamCacheDur
     if (/^\d{17}$/.test(normalized)) {
       steamId64 = normalized;
     } else {
-      const resolveUrl =
-        `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/` +
-        `?key=${steamApiKey}&vanityurl=${encodeURIComponent(normalized)}`;
-      const resolveResponse = await fetch(resolveUrl);
-      if (resolveResponse.ok) {
-        const resolveData = await resolveResponse.json();
-        if (String(resolveData?.response?.success) === "1") {
-          steamId64 = resolveData.response.steamid;
-        }
-      }
-    }
-
-    if (!steamId64) {
       steamAvatarCache.set(normalized, { data: null, timestamp: Date.now() });
       return null;
     }
@@ -58,9 +45,9 @@ function createSteamAvatarService({ steamApiKey, steamAvatarCache, steamCacheDur
     const avatarUrl = player?.avatarfull || player?.avatarmedium || player?.avatar || null;
     const result = avatarUrl
       ? {
-          avatarUrl,
-          steamId64,
-        }
+        avatarUrl,
+        steamId64,
+      }
       : null;
 
     steamAvatarCache.set(normalized, { data: result, timestamp: Date.now() });

@@ -1163,6 +1163,8 @@ body {
       &:focus {
         cursor: pointer;
       }
+
+      z-index: 2;
     }
 
     &_lang {
@@ -1327,7 +1329,7 @@ body {
       line-height: 1;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 960px) {
       &__logo {
         position: static;
         transform: none;
