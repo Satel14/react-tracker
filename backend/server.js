@@ -14,6 +14,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.use(compression());
+
+app.get('/ping', (req, res) => {
+  res.status(200).send('OK');
+});
+
 routes(app);
 
 app.listen(config.port, () => console.log(`Listening on port ${config.port}`));
