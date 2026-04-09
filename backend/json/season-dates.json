@@ -1,11 +1,11 @@
 {
-  "updatedAt": "2026-02-15",
+  "updatedAt": "2026-04-09",
   "defaults": {
     "cycleDays": 56
   },
   "seasons": {
-    "division.bro.official.pc-2018-40": {
-      "startDate": "2026-02-12T00:00:00Z",
+    "division.bro.official.pc-2018-41": {
+      "startDate": "2026-04-09T00:00:00Z",
       "cycleDays": 56,
       "isEstimated": true,
       "source": "manual-json-estimate",
