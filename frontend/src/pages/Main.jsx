@@ -196,20 +196,25 @@ const Main = ({ t }) => {
                   </span>
                 </div>
               </motion.div>
-              <div className="mainpage_left__stats__playeronline">
+              <motion.div
+                className="mainpage_left__stats__playeronline"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.25 }}
+              >
                 <TeamOutlined />
                 <div>
                   {t("other.words.playersOnline")}
                   <span>
                     {t("other.words.playersOnline")} :{" "}
                     {hasPlayersOnline ? (
-                      <CountUp separator="," end={playersOnlineValue} />
+                      <CountUp separator="," end={playersOnlineValue} duration={1.4} />
                     ) : (
                       t("other.words.notAvailable")
                     )}
                   </span>
                 </div>
-              </div>
+              </motion.div>
             </div>
             <div className="history-list">
               <HistoryChecking />
