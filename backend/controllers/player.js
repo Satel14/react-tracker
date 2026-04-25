@@ -7,6 +7,7 @@ const { getPlayerReports } = require("../modules/getPlayerReports")
 const { addRecentSearch, getRecentSearches } = require("../modules/recentSearches")
 const { getPlayerSteamNameByUrl } = require("../modules/getPlayerSteamNameByUrl")
 const { isAccountIdentifier } = require("../modules/playerIdentity");
+const { getMatchHeatmap } = require("../modules/getMatchHeatmap");
 
 const getNormalDate = (time) => {
   const date = new Date(time);
@@ -141,6 +142,31 @@ module.exports.getLiveSnapshot = async (_req, res) => {
 module.exports.getRecentSearches = async (_req, res) => {
   try {
     const data = await getRecentSearches(10);
+    return res.status(200).json({ status: 200, data });
+  } catch (e) {
+    return res.status(200).json({ status: 200, message: e.message });
+  }
+};
+
+module.exports.getMatchHeatmap = async (req, res) => {
+  try {
+    const { matchId } = req.params || {};
+    const { shard, accountId, playerName } = req.query || {};
+
+    if (!matchId) {
+      return res.status(400).json({ status: 400, message: "matchId is required" });
+    }
+    if (!accountId && !playerName) {
+      return res.status(400).json({ status: 400, message: "accountId or playerName is required" });
+    }
+
+    const data = await getMatchHeatmap({
+      shard: shard || "steam",
+      matchId,
+      accountId: accountId || null,
+      playerName: playerName || null,
+    });
+
     return res.status(200).json({ status: 200, data });
   } catch (e) {
     return res.status(200).json({ status: 200, message: e.message });

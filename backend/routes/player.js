@@ -24,4 +24,8 @@ module.exports = (router) => {
     "/api/player/recent",
     PlayerController.getRecentSearches
   );
+  router.get(
+    "/api/match/:matchId/heatmap",
+    PlayerController.getMatchHeatmap
+  );
 };
