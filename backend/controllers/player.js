@@ -8,6 +8,7 @@ const { addRecentSearch, getRecentSearches } = require("../modules/recentSearche
 const { getPlayerSteamNameByUrl } = require("../modules/getPlayerSteamNameByUrl")
 const { isAccountIdentifier } = require("../modules/playerIdentity");
 const { getMatchHeatmap } = require("../modules/getMatchHeatmap");
+const { getPlayerCard } = require("../modules/getPlayerCard");
 
 const getNormalDate = (time) => {
   const date = new Date(time);
@@ -145,6 +146,25 @@ module.exports.getRecentSearches = async (_req, res) => {
     return res.status(200).json({ status: 200, data });
   } catch (e) {
     return res.status(200).json({ status: 200, message: e.message });
+  }
+};
+
+module.exports.getPlayerCard = async (req, res) => {
+  try {
+    const { platform, gameId } = req.params || {};
+    if (!platform || !gameId) {
+      return res.status(400).send("platform and gameId are required");
+    }
+
+    const buffer = await getPlayerCard({ platform, gameId });
+    res.set({
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=300",
+      "Content-Length": buffer.length,
+    });
+    return res.status(200).send(buffer);
+  } catch (e) {
+    return res.status(500).send(`Card unavailable: ${e.message}`);
   }
 };
 

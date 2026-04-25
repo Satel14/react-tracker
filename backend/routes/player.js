@@ -28,4 +28,8 @@ module.exports = (router) => {
     "/api/match/:matchId/heatmap",
     PlayerController.getMatchHeatmap
   );
+  router.get(
+    "/api/player/:platform/:gameId/card.png",
+    PlayerController.getPlayerCard
+  );
 };
