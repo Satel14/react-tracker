@@ -5,6 +5,8 @@ import Help from "../pages/Help"
 import Player from "../pages/Player";
 import FavoritesPage from '../pages/Favorites'
 import BugReportPage from '../pages/BugReportPage'
+import Compare from '../pages/Compare'
+import Overlay from '../pages/Overlay'
 const routes = [
   {
     path: "/",
@@ -46,6 +48,18 @@ const routes = [
     path: "/bugreport",
     layout: BugReportPage,
     component: BugReportPage,
+    exact: true,
+  },
+  {
+    path: "/compare",
+    layout: Compare,
+    component: Compare,
+    exact: true,
+  },
+  {
+    path: "/overlay/:platform/:gameId",
+    layout: Overlay,
+    component: Overlay,
     exact: true,
   },
 ];
