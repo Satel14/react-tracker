@@ -2,52 +2,10 @@ import React from "react";
 import { BugOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { translate } from "react-switch-lang";
-import { Menu } from "antd";
 
-const componentRoutes = [
-  "/bugreport",
-];
 class Footer extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      current: ''
-    }
-  }
-
-  componentDidUpdate(prevProps) {
-    if (this.props.location !== prevProps.location) {
-      this.onRouteChanged();
-    }
-  }
-
-  componentDidMount() {
-    const url = window.location.pathname;
-
-    if (componentRoutes.includes(url)) {
-      this.setState({
-        current: url.replace("/", ""),
-      });
-    }
-  }
-
-  onRouteChanged() {
-    const url = this.props.location?.pathname;
-
-    if (url) {
-      if (!componentRoutes.includes(url)) {
-        this.setState({
-          current: "",
-        });
-      }
-    }
-  }
-  handleClick = (e) => {
-    this.setState({ current: e.key })
-  }
   render() {
     const { t } = this.props;
-    const { current } = this.state;
     return (
       <div className="footer">
         <div className="footer-text">
@@ -67,22 +25,10 @@ class Footer extends React.Component {
           </a>
         </div>
         <div className="footer-menu">
-          <Menu
-            onClick={this.handleClick}
-            selectedKeys={[current]}
-            mode="horizontal"
-            items={[
-              {
-                key: "bugreport",
-                label: (
-                  <Link to="/bugreport">
-                    <BugOutlined />
-                  </Link>
-                ),
-                className: "bugreport",
-              },
-            ]}
-          />
+          <Link to="/bugreport" className="footer-bug-report" aria-label={t("footer.bugReport")}>
+            <BugOutlined />
+            <span>{t("footer.bugReport")}</span>
+          </Link>
         </div>
       </div>
     );
