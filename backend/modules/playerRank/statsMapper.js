@@ -319,13 +319,21 @@ function mapPubgStatsToFrontend(
   seasonCatalog = null,
   selectedSeasonId = null,
   platformSlug = "steam",
-  avatarUrl = null
+  avatarUrl = null,
+  profileExtras = null
 ) {
   const lifetimeAggregated = aggregateModeStats(lifetimeStats.gameModeStats);
   const finalAvatarUrl = avatarUrl || buildFallbackAvatarDataUri(playerName);
   const seasons = seasonCatalog?.seasons || [];
   const currentSeasonId = seasonCatalog?.currentSeasonId || null;
   const effectiveSelectedSeasonId = selectedSeasonId || currentSeasonId;
+  const defaultProfile = {
+    status: "not_loaded",
+    error: "Profile extras were not requested or did not complete",
+    banType: null,
+    clan: null,
+    survivalMastery: null,
+  };
 
   const data = {
     platformInfo: {
@@ -344,6 +352,8 @@ function mapPubgStatsToFrontend(
     seasons,
     currentSeasonId,
     selectedSeasonId: effectiveSelectedSeasonId,
+    profile: profileExtras?.profile || defaultProfile,
+    matches: profileExtras?.matches || { summary: { total: 0 }, items: [] },
   };
 
   if (

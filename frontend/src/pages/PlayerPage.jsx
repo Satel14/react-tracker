@@ -1,7 +1,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button, Spin, Alert, Tabs, Select } from "antd";
 import { translate } from "react-switch-lang";
-import { SyncOutlined, HeartOutlined, HeartFilled, LoadingOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import {
+  SyncOutlined,
+  HeartOutlined,
+  HeartFilled,
+  LoadingOutlined,
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  TrophyOutlined,
+  BarChartOutlined,
+  HistoryOutlined,
+} from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { getPlayerData, getPlayerReports } from "../api/player";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
@@ -112,6 +122,110 @@ const formatRankPlacement = (rankedInfo) => {
   if (hasRank && hasTop) return `#${rank} (Top ${top}%)`;
   if (hasRank) return `#${rank}`;
   return `Top ${top}%`;
+};
+
+const getStatValue = (stats, key, fallback = 0) => {
+  const parsed = Number(stats?.[key]?.value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const clampPercent = (value, max) => {
+  const parsedValue = Number(value);
+  const parsedMax = Number(max);
+  if (!Number.isFinite(parsedValue) || !Number.isFinite(parsedMax) || parsedMax <= 0) return 0;
+  if (parsedValue <= 0) return 0;
+  return Math.max(4, Math.min(100, (parsedValue / parsedMax) * 100));
+};
+
+const formatMatchDate = (value) => {
+  if (!value) return "Unknown time";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getBanLabel = (banType) => {
+  if (!banType) return "Unknown";
+  if (banType === "Innocent") return "Clean";
+  if (banType === "TemporaryBan") return "Temp ban";
+  if (banType === "PermanentBan") return "Perm ban";
+  return banType;
+};
+
+const RANK_PROGRESS_STEPS = [
+  { key: "bronze", label: "Bronze", min: 0, next: 1400, nextLabel: "Silver" },
+  { key: "silver", label: "Silver", min: 1400, next: 1800, nextLabel: "Gold" },
+  { key: "gold", label: "Gold", min: 1800, next: 2200, nextLabel: "Platinum" },
+  { key: "platinum", label: "Platinum", min: 2200, next: 3000, nextLabel: "Diamond" },
+  { key: "diamond", label: "Diamond", min: 3000, next: 3400, nextLabel: "Master" },
+  { key: "master", label: "Master", min: 3400, next: null, nextLabel: "Max" },
+  { key: "grandmaster", label: "Grandmaster", min: 3400, next: null, nextLabel: "Max" },
+  { key: "survivor", label: "Survivor", min: 3700, next: null, nextLabel: "Max" },
+  { key: "top500", label: "Top 500", min: 3700, next: null, nextLabel: "Max" },
+];
+
+const getRankProgressMeta = (rankedInfo) => {
+  const tier = String(rankedInfo?.tier || "").toLowerCase();
+  const points = Number(rankedInfo?.currentRankPoint);
+  const step = RANK_PROGRESS_STEPS.find((item) => item.key === tier) || null;
+
+  if (!step || !Number.isFinite(points)) {
+    return {
+      progress: 0,
+      leftLabel: rankedInfo?.label || "Unranked",
+      rightLabel: "Ranked",
+      detail: "No ranked RP data",
+      pointsLabel: null,
+      remainingLabel: "No ranked RP data",
+    };
+  }
+
+  if (!step.next) {
+    return {
+      progress: 100,
+      leftLabel: step.label,
+      rightLabel: "Max",
+      detail: `${formatRankPoints(points)} RP`,
+      pointsLabel: `${formatRankPoints(points)} RP`,
+      remainingLabel: "Highest rank bracket",
+    };
+  }
+
+  const remaining = Math.max(step.next - points, 0);
+  const progress = Math.max(0, Math.min(100, ((points - step.min) / (step.next - step.min)) * 100));
+  return {
+    progress,
+    leftLabel: step.label,
+    rightLabel: step.nextLabel,
+    detail: `${formatRankPoints(points)} RP - ${formatRankPoints(remaining)} RP to ${step.nextLabel}`,
+    pointsLabel: `${formatRankPoints(points)} RP`,
+    remainingLabel: `${formatRankPoints(remaining)} RP to ${step.nextLabel}`,
+  };
+};
+
+const getSurvivalMasteryTierMeta = (survivalMastery) => {
+  const parsedTier = Number(survivalMastery?.tier);
+  const parsedLevel = Number(survivalMastery?.level);
+
+  const tier = Number.isFinite(parsedTier) && parsedTier > 0
+    ? parsedTier
+    : Number.isFinite(parsedLevel) && parsedLevel > 0
+      ? Math.floor((parsedLevel - 1) / 100) + 1
+      : null;
+
+  if (!tier) return null;
+
+  const normalizedTier = Math.max(1, Math.min(5, Math.round(tier)));
+  return {
+    tier: normalizedTier,
+    label: `Survival Mastery Tier ${normalizedTier}`,
+    iconUrl: `/images/mastery/SM_tier_${normalizedTier}.png`,
+  };
 };
 
 const PlayerPage = ({ t }) => {
@@ -336,6 +450,17 @@ const PlayerPage = ({ t }) => {
   }));
   const headerRankedInfo = season?.rankedInfo || null;
   const headerRankPlacement = formatRankPlacement(headerRankedInfo);
+  const rankBadgeUrl = headerRankedInfo?.iconUrl || headerRankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.png";
+  const rankTitle = headerRankedInfo?.label || "Unranked";
+  const rankProgress = getRankProgressMeta(headerRankedInfo);
+  const profile = data?.profile || {};
+  const clan = profile?.clan || null;
+  const survivalMastery = profile?.survivalMastery || null;
+  const survivalMasteryTier = getSurvivalMasteryTierMeta(survivalMastery);
+  const matchSummary = data?.matches?.summary || {};
+  const matchItems = Array.isArray(data?.matches?.items) ? data.matches.items : [];
+  const banLabel = getBanLabel(profile?.banType);
+  const hasBanWarning = profile?.banType && profile.banType !== "Innocent";
 
   const quickStats = [
     { label: "Wins", value: getDisplay(stats, "wins", "0") },
@@ -522,6 +647,213 @@ const PlayerPage = ({ t }) => {
     </section>
   );
 
+  const renderProgressBars = (items) => (
+    <div className="player-chart-bars">
+      {items.map((item) => (
+        <div className="player-chart-bar" key={item.label}>
+          <div className="player-chart-bar__head">
+            <span>{item.label}</span>
+            <strong>{item.displayValue}</strong>
+          </div>
+          <div className="player-chart-bar__track">
+            <span style={{ width: `${clampPercent(item.value, item.max)}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderRecentFormChart = () => {
+    const series = matchItems.slice().reverse();
+    if (series.length < 2) {
+      return <div className="player-chart-empty">Need at least two recent matches for a trend chart.</div>;
+    }
+
+    const width = 320;
+    const height = 120;
+    const xStep = series.length > 1 ? width / (series.length - 1) : width;
+    const maxKills = Math.max(...series.map((item) => item.kills || 0), 1);
+    const maxDamage = Math.max(...series.map((item) => item.damage || 0), 1);
+    const toPoints = (key, max) =>
+      series
+        .map((item, index) => {
+          const x = Math.round(index * xStep);
+          const y = Math.round(height - 12 - ((Number(item[key]) || 0) / max) * (height - 24));
+          return `${x},${y}`;
+        })
+        .join(" ");
+
+    return (
+      <div className="player-line-chart">
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Recent match performance trend">
+          <polyline className="player-line-chart__grid" points={`0,${height - 12} ${width},${height - 12}`} />
+          <polyline className="player-line-chart__damage" points={toPoints("damage", maxDamage)} />
+          <polyline className="player-line-chart__kills" points={toPoints("kills", maxKills)} />
+        </svg>
+        <div className="player-line-chart__legend">
+          <span><i className="is-kills" /> Kills</span>
+          <span><i className="is-damage" /> Damage</span>
+        </div>
+      </div>
+    );
+  };
+
+  const renderChartsCard = () => {
+    const chartStats = season ? seasonStats : stats;
+    const chartModes = season ? seasonModes : lifetimeModes;
+    const modeRows = MODE_ORDER
+      .map((modeKey) => {
+        const modeStats = chartModes?.[modeKey]?.stats;
+        if (!modeStats || Number(modeStats.matchesPlayed?.value || 0) <= 0) return null;
+        return {
+          label: MODE_LABELS[modeKey],
+          value: getStatValue(modeStats, "avgDamage"),
+          displayValue: getDisplay(modeStats, "avgDamage", "0"),
+          max: 500,
+        };
+      })
+      .filter(Boolean);
+
+    const combatBars = [
+      { label: "K/D", value: getStatValue(chartStats, "kd"), displayValue: getDisplay(chartStats, "kd", "0"), max: 8 },
+      {
+        label: "Avg Damage",
+        value: getStatValue(chartStats, "avgDamage"),
+        displayValue: getDisplay(chartStats, "avgDamage", "0"),
+        max: 500,
+      },
+      {
+        label: "Kills / Match",
+        value: getStatValue(chartStats, "killsPerMatch"),
+        displayValue: getDisplay(chartStats, "killsPerMatch", "0"),
+        max: 5,
+      },
+      {
+        label: "Headshot %",
+        value: getStatValue(chartStats, "headshotRate"),
+        displayValue: getDisplay(chartStats, "headshotRate", "0%"),
+        max: 60,
+      },
+    ];
+
+    const resultBars = [
+      {
+        label: "Win Rate",
+        value: getStatValue(chartStats, "wlPercentage"),
+        displayValue: getDisplay(chartStats, "wlPercentage", "0%"),
+        max: 40,
+      },
+      {
+        label: "Top 10 Rate",
+        value: getStatValue(chartStats, "top10Rate"),
+        displayValue: getDisplay(chartStats, "top10Rate", "0%"),
+        max: 80,
+      },
+      {
+        label: "Recent Avg Kills",
+        value: Number(matchSummary.avgKills || 0),
+        displayValue: Number(matchSummary.avgKills || 0).toFixed(2),
+        max: 5,
+      },
+      {
+        label: "Recent Avg Damage",
+        value: Number(matchSummary.avgDamage || 0),
+        displayValue: `${Math.round(Number(matchSummary.avgDamage || 0))}`,
+        max: 500,
+      },
+    ];
+
+    return (
+      <section className="player-card">
+        <div className="player-card__head">
+          <h3>Performance Charts</h3>
+          <span>{season ? seasonLabel : "Lifetime"}</span>
+        </div>
+
+        <div className="player-chart-grid">
+          <div className="player-chart-panel">
+            <h4><BarChartOutlined /> Combat</h4>
+            {renderProgressBars(combatBars)}
+          </div>
+          <div className="player-chart-panel">
+            <h4><TrophyOutlined /> Results</h4>
+            {renderProgressBars(resultBars)}
+          </div>
+          <div className="player-chart-panel">
+            <h4><BarChartOutlined /> Avg Damage by Mode</h4>
+            {modeRows.length ? renderProgressBars(modeRows) : <div className="player-chart-empty">No mode data yet.</div>}
+          </div>
+          <div className="player-chart-panel">
+            <h4><HistoryOutlined /> Recent Form</h4>
+            {renderRecentFormChart()}
+          </div>
+        </div>
+      </section>
+    );
+  };
+
+  const renderMatchesCard = () => {
+    if (!matchItems.length) {
+      return renderEmptyCard("Recent Matches", "No recent match history returned for this player.");
+    }
+
+    return (
+      <section className="player-card">
+        <div className="player-card__head">
+          <h3>Recent Matches</h3>
+          <span>Last {matchItems.length} API matches</span>
+        </div>
+
+        <div className="player-card__meta">
+          <div className="player-meta-badge">
+            <span>Matches</span>
+            <strong>{matchSummary.total || matchItems.length}</strong>
+          </div>
+          <div className="player-meta-badge">
+            <span>Wins</span>
+            <strong>{matchSummary.wins || 0}</strong>
+          </div>
+          <div className="player-meta-badge">
+            <span>Top 10s</span>
+            <strong>{matchSummary.top10s || 0}</strong>
+          </div>
+          <div className="player-meta-badge">
+            <span>Avg Damage</span>
+            <strong>{Math.round(Number(matchSummary.avgDamage || 0))}</strong>
+          </div>
+        </div>
+
+        <div className="player-card__divider" />
+
+        <div className="player-match-list">
+          {matchItems.map((match) => (
+            <article className={`player-match-item ${match.isWin ? "player-match-item--win" : ""}`} key={match.id}>
+              <div className="player-match-item__main">
+                <div>
+                  <strong>{match.placementLabel}</strong>
+                  <span>{match.isWin ? "Chicken Dinner" : formatMatchDate(match.createdAt)}</span>
+                </div>
+                <div>
+                  <b>{match.mapName}</b>
+                  <span>{match.gameModeLabel}</span>
+                </div>
+              </div>
+
+              <div className="player-match-stats">
+                <div><span>Kills</span><strong>{match.kills}</strong></div>
+                <div><span>Damage</span><strong>{match.damage}</strong></div>
+                <div><span>Assists</span><strong>{match.assists}</strong></div>
+                <div><span>DBNOs</span><strong>{match.dbnos}</strong></div>
+                <div><span>Survived</span><strong>{match.survivalTimeLabel}</strong></div>
+                <div><span>Longest</span><strong>{match.longestKill}m</strong></div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
   const modeLifetimeSection = renderModeSection("By Mode - Lifetime", lifetimeModes);
   const modeSeasonSection = season ? renderModeSection(`By Mode - ${seasonLabel}`, seasonModes) : null;
   const reportSummary = reportsData?.summary || {};
@@ -654,6 +986,16 @@ const PlayerPage = ({ t }) => {
         ),
     },
     {
+      key: "charts",
+      label: "Charts",
+      children: renderChartsCard(),
+    },
+    {
+      key: "matches",
+      label: "Matches",
+      children: renderMatchesCard(),
+    },
+    {
       key: "reports",
       label: "Twitch Reports",
       children: renderReportsCard(),
@@ -679,62 +1021,75 @@ const PlayerPage = ({ t }) => {
       </div>
 
       <section className="player-card player-card--header">
-        <div className="player-identity">
+        <div className="player-hero-rank">
           <img
-            src={
-              data?.platformInfo?.avatarUrl ||
-              `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#172236"/><stop offset="100%" stop-color="#0c141f"/></linearGradient></defs><rect width="256" height="256" rx="32" fill="url(#g)"/><circle cx="128" cy="128" r="94" fill="none" stroke="#78f7a8" stroke-opacity="0.35" stroke-width="4"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="86" font-weight="700" fill="#ffffff">${(data?.platformInfo?.platformUserHandle || "PU").slice(0, 2).toUpperCase()}</text></svg>`)}`
-            }
+            src={rankBadgeUrl}
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src =
-                "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Crect width='100%25' height='100%25' fill='%23172236'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='middle' text-anchor='middle' font-size='78' font-family='Arial' fill='white'%3EPU%3C/text%3E%3C/svg%3E";
+              e.currentTarget.src = "/images/ranks/opgg/unranked.png";
             }}
-            alt={data?.platformInfo?.platformUserHandle || "Unknown"}
-            className="player-identity__avatar"
+            alt={rankTitle}
+            className="player-hero-rank__badge"
           />
-          <div className="player-identity__meta">
-            <div className="player-identity__name">{data?.platformInfo?.platformUserHandle || "Unknown"}</div>
-            <div className="player-identity__sub">
-              {(data?.platformInfo?.platformSlug || platform || "steam").toUpperCase()} PROFILE
+          <div className="player-hero-rank__progress">
+            <div className="player-rank-progress__path">
+              <span>{rankProgress.leftLabel}</span>
+              <ArrowRightOutlined />
+              <strong>{rankProgress.rightLabel}</strong>
             </div>
-            {headerRankedInfo ? (
-              <div className="player-identity__rank">
-                <img
-                  src={headerRankedInfo.iconUrl}
-                  alt={headerRankedInfo.label || "Rank"}
-                  className="player-identity__rank-icon"
-                  onError={(e) => {
-                    const fallback = headerRankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.png";
-                    const usedFallback = e.currentTarget.dataset.fallbackApplied === "1";
-
-                    if (!usedFallback && fallback) {
-                      e.currentTarget.dataset.fallbackApplied = "1";
-                      e.currentTarget.src = fallback;
-                      return;
-                    }
-
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = "/images/ranks/opgg/unranked.png";
-                  }}
-                />
-                <div className="player-identity__rank-text">
-                  <strong>{headerRankedInfo.label || "Ranked"}</strong>
-                  <span>{`${formatRankPoints(headerRankedInfo.currentRankPoint)} RP`}</span>
-                  {headerRankPlacement ? <small>{headerRankPlacement}</small> : null}
-                </div>
-              </div>
-            ) : null}
+            <div className="player-rank-progress__track">
+              <span style={{ width: `${rankProgress.progress}%` }} />
+            </div>
+            <div className="player-rank-progress__details">
+              {rankProgress.pointsLabel ? <strong>{rankProgress.pointsLabel}</strong> : null}
+              <span>{rankProgress.remainingLabel || rankProgress.detail}</span>
+            </div>
           </div>
         </div>
 
-        <div className="player-quick-grid">
-          {quickStats.map((item) => (
-            <div key={item.label} className="player-quick-stat">
-              <span className="player-quick-stat__label">{item.label}</span>
-              <span className="player-quick-stat__value">{item.value}</span>
+        <div className="player-hero-main">
+          <div className="player-identity player-identity--minimal">
+            <div className="player-identity__meta">
+              <div className="player-identity__name">{data?.platformInfo?.platformUserHandle || "Unknown"}</div>
+              <div className="player-identity__badges">
+                <span>{(data?.platformInfo?.platformSlug || platform || "steam").toUpperCase()}</span>
+                <span>{rankTitle}</span>
+                {headerRankPlacement ? <span>{headerRankPlacement}</span> : null}
+                {clan?.tag ? <span>[{clan.tag}]</span> : null}
+                {hasBanWarning ? <span className="is-danger">{banLabel}</span> : null}
+              </div>
+              {survivalMasteryTier ? (
+                <div className="player-mastery-chip">
+                  <img
+                    src={survivalMasteryTier.iconUrl}
+                    alt={survivalMasteryTier.label}
+                    onError={(e) => {
+                      const usedFallback = e.currentTarget.dataset.fallbackApplied === "1";
+                      if (usedFallback) return;
+                      e.currentTarget.dataset.fallbackApplied = "1";
+                      e.currentTarget.src = "/images/mastery/SM_tier_1.png";
+                    }}
+                  />
+                  <div>
+                    <span>Survival Mastery</span>
+                    <strong>
+                      Tier {survivalMasteryTier.tier}
+                      {survivalMastery?.level ? ` - Lv ${survivalMastery.level}` : ""}
+                    </strong>
+                  </div>
+                </div>
+              ) : null}
             </div>
-          ))}
+          </div>
+
+          <div className="player-quick-grid">
+            {quickStats.map((item) => (
+              <div key={item.label} className="player-quick-stat">
+                <span className="player-quick-stat__label">{item.label}</span>
+                <span className="player-quick-stat__value">{item.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

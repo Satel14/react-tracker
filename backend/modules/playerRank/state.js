@@ -4,6 +4,10 @@ const statsCache = new Map();
 const lifetimeStatsCache = new Map();
 const seasonCatalogCache = new Map();
 const steamAvatarCache = new Map();
+const playerProfileCache = new Map();
+const clanCache = new Map();
+const masteryCache = new Map();
+const matchSummaryCache = new Map();
 const inFlightRankRequests = new Map();
 const stalePlayerDataCache = new Map();
 
@@ -47,7 +51,11 @@ module.exports = {
   CURRENT_SEASON_CACHE_DURATION,
   STEAM_CACHE_DURATION,
   lifetimeStatsCache,
+  clanCache,
+  masteryCache,
+  matchSummaryCache,
   playerCache,
+  playerProfileCache,
   playerNameCache,
   seasonCatalogCache,
   setRateLimited,

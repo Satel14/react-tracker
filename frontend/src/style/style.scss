@@ -568,8 +568,115 @@ body {
       .player-card--header {
         display: flex;
         justify-content: space-between;
+        align-items: stretch;
+        gap: 0;
+        overflow: hidden;
+        padding: 0;
+        background:
+          radial-gradient(circle at 14% 12%, rgba(253, 232, 43, 0.1), transparent 32%),
+          linear-gradient(135deg, rgba(34, 32, 26, 0.94), rgba(8, 14, 19, 0.96));
+      }
+
+      .player-hero-rank {
+        width: 238px;
+        min-height: 210px;
+        padding: 22px 22px 18px;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
         align-items: center;
-        gap: 16px;
+        justify-content: space-between;
+        flex-direction: column;
+        flex-shrink: 0;
+      }
+
+      .player-hero-rank__badge {
+        width: 132px;
+        height: 132px;
+        object-fit: contain;
+        filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.42));
+      }
+
+      .player-hero-rank__progress {
+        width: 100%;
+        display: grid;
+        gap: 8px;
+      }
+
+      .player-rank-progress__path,
+      .player-rank-progress__details {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .player-rank-progress__path {
+        color: #a8a7a0;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+
+        .anticon {
+          color: #fde82b;
+          font-size: 12px;
+        }
+
+        span,
+        strong {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        strong {
+          color: #fff;
+        }
+      }
+
+      .player-rank-progress__track {
+        width: 100%;
+        height: 7px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+
+        span {
+          display: block;
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(90deg, #fde82b, #f4a62a);
+        }
+      }
+
+      .player-rank-progress__details {
+        color: #c4c1b8;
+        font-size: 11px;
+        line-height: 1.25;
+        font-weight: 700;
+        text-align: center;
+        flex-wrap: wrap;
+
+        strong {
+          color: #fff;
+        }
+
+        span {
+          color: #fde82b;
+        }
+      }
+
+      .player-hero-main {
+        min-width: 0;
+        flex: 1;
+        padding: 28px 24px 22px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 22px;
+
+        .player-quick-grid {
+          max-width: none;
+        }
       }
 
       .player-identity {
@@ -577,15 +684,6 @@ body {
         align-items: center;
         gap: 12px;
         min-width: 0;
-
-        &__avatar {
-          width: 72px;
-          height: 72px;
-          border-radius: 10px;
-          border: 1px solid rgba(120, 247, 168, 0.45);
-          object-fit: cover;
-          background: #111;
-        }
 
         &__meta {
           min-width: 0;
@@ -602,68 +700,16 @@ body {
           max-width: 320px;
         }
 
-        &__sub {
-          margin-top: 4px;
-          color: #7d809e;
-          font-size: 12px;
-          letter-spacing: 1.1px;
-          text-transform: uppercase;
-        }
+        &--minimal {
+          align-items: flex-start;
 
-        &__rank {
-          margin-top: 8px;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          border: 1px solid rgba(120, 247, 168, 0.22);
-          border-radius: 10px;
-          background: rgba(0, 0, 0, 0.24);
-          padding: 6px 8px;
-          max-width: 290px;
-        }
-
-        &__rank-icon {
-          width: 36px;
-          height: 36px;
-          border-radius: 8px;
-          border: 1px solid rgba(120, 247, 168, 0.28);
-          object-fit: cover;
-          background: rgba(0, 0, 0, 0.35);
-          flex-shrink: 0;
-        }
-
-        &__rank-text {
-          display: flex;
-          flex-direction: column;
-          min-width: 0;
-          gap: 2px;
-
-          strong {
-            color: #fff;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.7px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          span {
-            color: #d8dcef;
-            font-size: 12px;
-            font-weight: 700;
-            line-height: 1.1;
-          }
-
-          small {
-            color: #9fa4c4;
-            font-size: 11px;
-            line-height: 1.1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+          .player-identity__name {
+            max-width: 560px;
+            font-size: 34px;
+            letter-spacing: 0;
           }
         }
+
       }
 
       .player-quick-grid {
@@ -904,10 +950,346 @@ body {
         }
       }
 
+      .player-identity__badges {
+        margin-top: 6px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+
+        span {
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 999px;
+          background: rgba(0, 0, 0, 0.26);
+          color: #d8d2bf;
+          font-size: 10px;
+          line-height: 1;
+          letter-spacing: 0.7px;
+          padding: 5px 8px;
+          text-transform: uppercase;
+          max-width: 160px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+
+          &.is-danger {
+            border-color: rgba(255, 147, 147, 0.4);
+            color: #ffb0b0;
+            background: rgba(98, 33, 33, 0.3);
+          }
+        }
+      }
+
+      .player-mastery-chip {
+        margin-top: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.28);
+        padding: 7px 10px 7px 7px;
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        max-width: 260px;
+
+        img {
+          width: 34px;
+          height: 34px;
+          object-fit: contain;
+          flex-shrink: 0;
+          filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.46));
+        }
+
+        div {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        span {
+          color: #9f9c91;
+          font-size: 10px;
+          line-height: 1;
+          letter-spacing: 0.7px;
+          text-transform: uppercase;
+        }
+
+        strong {
+          color: #f7efd0;
+          font-size: 13px;
+          line-height: 1.1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+
+      .player-chart-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .player-chart-panel {
+        border: 1px solid rgba(120, 247, 168, 0.18);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.22);
+        padding: 12px;
+        min-height: 190px;
+
+        h4 {
+          margin: 0 0 12px;
+          color: #fff;
+          font-size: 13px;
+          line-height: 1.2;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .anticon {
+            color: #78f7a8;
+          }
+        }
+      }
+
+      .player-chart-bars {
+        display: grid;
+        gap: 10px;
+      }
+
+      .player-chart-bar {
+        display: grid;
+        gap: 5px;
+
+        &__head {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 12px;
+
+          span {
+            color: #9fa3bf;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+          }
+
+          strong {
+            color: #fff;
+            font-size: 13px;
+            white-space: nowrap;
+          }
+        }
+
+        &__track {
+          height: 8px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.07);
+          overflow: hidden;
+
+          span {
+            display: block;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #78f7a8, #fde82b);
+          }
+        }
+      }
+
+      .player-chart-empty {
+        color: #9fa3bf;
+        border: 1px dashed rgba(120, 247, 168, 0.28);
+        border-radius: 10px;
+        min-height: 118px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 12px;
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .player-line-chart {
+        svg {
+          width: 100%;
+          height: 120px;
+          display: block;
+        }
+
+        polyline {
+          fill: none;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+        }
+
+        &__grid {
+          stroke: rgba(255, 255, 255, 0.12);
+          stroke-width: 1;
+        }
+
+        &__kills {
+          stroke: #78f7a8;
+          stroke-width: 3;
+        }
+
+        &__damage {
+          stroke: #fde82b;
+          stroke-width: 3;
+          opacity: 0.82;
+        }
+
+        &__legend {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          color: #9fa3bf;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+
+          span {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+          }
+
+          i {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+
+            &.is-kills {
+              background: #78f7a8;
+            }
+
+            &.is-damage {
+              background: #fde82b;
+            }
+          }
+        }
+      }
+
+      .player-match-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .player-match-item {
+        border: 1px solid rgba(120, 247, 168, 0.18);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.24);
+        padding: 10px;
+        display: grid;
+        grid-template-columns: minmax(230px, 1.2fr) minmax(0, 2fr);
+        gap: 12px;
+        align-items: center;
+
+        &--win {
+          border-color: rgba(253, 232, 43, 0.45);
+          background: rgba(75, 65, 13, 0.22);
+        }
+      }
+
+      .player-match-item__main {
+        display: grid;
+        grid-template-columns: 92px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+
+        div {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+
+        strong {
+          color: #fff;
+          font-size: 24px;
+          line-height: 1;
+        }
+
+        b {
+          color: #fff;
+          font-size: 15px;
+          line-height: 1.1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        span {
+          color: #9fa3bf;
+          font-size: 11px;
+          letter-spacing: 0.4px;
+        }
+      }
+
+      .player-match-stats {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 8px;
+
+        div {
+          border: 1px solid rgba(120, 247, 168, 0.14);
+          border-radius: 8px;
+          background: rgba(0, 0, 0, 0.2);
+          padding: 7px 8px;
+          min-width: 0;
+        }
+
+        span {
+          display: block;
+          color: #8d91b2;
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.55px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        strong {
+          display: block;
+          margin-top: 3px;
+          color: #fff;
+          font-size: 14px;
+          line-height: 1.05;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+
       @media (max-width: 1100px) {
         .player-card--header {
           flex-direction: column;
           align-items: stretch;
+        }
+
+        .player-hero-rank {
+          width: 100%;
+          min-height: 168px;
+          border-right: 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          flex-direction: row;
+          gap: 18px;
+        }
+
+        .player-hero-rank__badge {
+          width: 112px;
+          height: 112px;
+        }
+
+        .player-hero-rank__progress {
+          max-width: 420px;
+        }
+
+        .player-hero-main {
+          padding: 20px;
         }
 
         .player-quick-grid {
@@ -921,6 +1303,14 @@ body {
           &--dense {
             grid-template-columns: repeat(4, minmax(0, 1fr));
           }
+        }
+
+        .player-match-item {
+          grid-template-columns: 1fr;
+        }
+
+        .player-match-stats {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
         }
       }
 
@@ -958,6 +1348,10 @@ body {
             font-size: 20px;
             max-width: 100%;
           }
+
+          &--minimal .player-identity__name {
+            font-size: 26px;
+          }
         }
 
         .player-quick-grid {
@@ -980,6 +1374,10 @@ body {
           flex-direction: column;
           align-items: flex-start;
         }
+
+        .player-chart-grid {
+          grid-template-columns: 1fr;
+        }
       }
 
       @media (max-width: 480px) {
@@ -987,13 +1385,35 @@ body {
           padding: 12px;
         }
 
-        .player-identity__avatar {
-          width: 64px;
-          height: 64px;
+        .player-hero-rank {
+          align-items: center;
+          flex-direction: column;
+          padding: 18px 14px;
+        }
+
+        .player-hero-rank__badge {
+          width: 104px;
+          height: 104px;
+        }
+
+        .player-hero-main {
+          padding: 16px 14px;
+        }
+
+        .player-identity--minimal .player-identity__name {
+          font-size: 22px;
         }
 
         .player-stat-tile__value {
           font-size: 16px;
+        }
+
+        .player-match-stats {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .player-match-item__main {
+          grid-template-columns: 74px minmax(0, 1fr);
         }
       }
     }

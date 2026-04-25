@@ -7,15 +7,20 @@ const { createPubgApiClient } = require("./pubgApi");
 const { createPlayerNameService } = require("./playerName");
 const { createSteamAvatarService } = require("./steamAvatar");
 const { createSeasonCatalogService } = require("./seasonCatalog");
+const { createEmptyMatches, createPlayerEnrichmentService } = require("./enrichment");
 const {
   CACHE_DURATION,
   CURRENT_SEASON_CACHE_DURATION,
   STEAM_CACHE_DURATION,
+  clanCache,
   inFlightRankRequests,
   isRateLimited,
   getStalePlayerData,
   lifetimeStatsCache,
+  masteryCache,
+  matchSummaryCache,
   playerCache,
+  playerProfileCache,
   playerNameCache,
   seasonCatalogCache,
   setRateLimited,
@@ -47,6 +52,90 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     currentSeasonCacheDuration: CURRENT_SEASON_CACHE_DURATION,
     doRequest,
   });
+
+  const { getProfileExtras } = createPlayerEnrichmentService({
+    doRequest,
+    clanCache,
+    masteryCache,
+    matchSummaryCache,
+    profileCache: playerProfileCache,
+    cacheDuration: CACHE_DURATION,
+  });
+
+  function createProfileExtrasError(error, fallbackProfile = null) {
+    return {
+      profile: {
+        status: "error",
+        error: error?.message || String(error || "Profile extras failed"),
+        banType: fallbackProfile?.banType || null,
+        clan: fallbackProfile?.clan || null,
+        survivalMastery: fallbackProfile?.survivalMastery || null,
+      },
+      matches: createEmptyMatches(),
+    };
+  }
+
+  async function enrichCachedPayload({
+    payload,
+    statsCacheKey,
+    cachedStats,
+    requestKey,
+    shard,
+    accountId,
+    playerName,
+    playerRecord,
+  }) {
+    const cachedData = payload?.data || {};
+    const hasProfileExtras = Object.prototype.hasOwnProperty.call(cachedData, "profile");
+    const hasMatchExtras = Object.prototype.hasOwnProperty.call(cachedData, "matches");
+
+    if (hasProfileExtras && cachedData.profile !== null && hasMatchExtras) {
+      return payload;
+    }
+
+    try {
+      const profileExtras = await getProfileExtras({
+        shard,
+        accountId,
+        playerName,
+        playerRecord,
+      });
+
+      const enrichedPayload = {
+        ...payload,
+        data: {
+          ...cachedData,
+          profile: profileExtras?.profile || cachedData.profile || null,
+          matches: profileExtras?.matches || cachedData.matches || { summary: { total: 0 }, items: [] },
+        },
+      };
+
+      statsCache.set(statsCacheKey, {
+        ...cachedStats,
+        data: enrichedPayload,
+      });
+      setStalePlayerData(requestKey, enrichedPayload);
+
+      return enrichedPayload;
+    } catch (profileExtrasError) {
+      console.log(`[PUBG] Cached profile extras unavailable for ${playerName}: ${profileExtrasError.message}`);
+      const enrichedPayload = {
+        ...payload,
+        data: {
+          ...cachedData,
+          ...createProfileExtrasError(profileExtrasError, cachedData.profile),
+        },
+      };
+
+      statsCache.set(statsCacheKey, {
+        ...cachedStats,
+        data: enrichedPayload,
+      });
+      setStalePlayerData(requestKey, enrichedPayload);
+
+      return enrichedPayload;
+    }
+  }
 
   function repairCachedPayload({
     cachedPayload,
@@ -150,6 +239,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
         const playerCacheKey = `${shard}:${requestedPlayerId}`;
         let accountId = playerCache.get(playerCacheKey);
         let playerName = requestedPlayerId;
+        let playerRecord = null;
 
         if (!accountId) {
           if (isAccountIdentifier(requestedPlayerId)) {
@@ -171,8 +261,9 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
               throw new Error("Player not found");
             }
 
-            accountId = searchData.data[0].id;
-            playerName = searchData.data[0].attributes.name;
+            playerRecord = searchData.data[0];
+            accountId = playerRecord.id;
+            playerName = playerRecord.attributes.name;
             playerCache.set(playerCacheKey, accountId);
             setCachedPlayerName(shard, accountId, playerName);
           }
@@ -239,7 +330,16 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
           }
 
           console.log(`[PUBG] Serving cached stats for ${normalized.playerName} (${targetSeasonId || "no-season"})`);
-          return normalized.payload;
+          return enrichCachedPayload({
+            payload: normalized.payload,
+            statsCacheKey,
+            cachedStats,
+            requestKey,
+            shard,
+            accountId,
+            playerName: normalized.playerName,
+            playerRecord,
+          });
         }
 
         const lifetimeCacheKey = `${shard}:${accountId}:lifetime`;
@@ -311,6 +411,20 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
         if (shard === "steam") {
           resolvedAvatar = await getBestEffortSteamAvatar(requestedPlayerId, displayPlayerName);
         }
+
+        let profileExtras = null;
+        try {
+          profileExtras = await getProfileExtras({
+            shard,
+            accountId,
+            playerName: displayPlayerName,
+            playerRecord,
+          });
+        } catch (profileExtrasError) {
+          console.log(`[PUBG] Profile extras unavailable for ${displayPlayerName}: ${profileExtrasError.message}`);
+          profileExtras = createProfileExtrasError(profileExtrasError);
+        }
+
         const mappedData = mapPubgStatsToFrontend(
           lifetimeAttributes,
           displayPlayerName,
@@ -320,7 +434,8 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
           seasonCatalog,
           selectedSeasonId,
           shard,
-          resolvedAvatar
+          resolvedAvatar,
+          profileExtras
         );
 
         const cacheEntry = {
