@@ -41,9 +41,139 @@
       "moreStats": "More Stats",
       "placeinTheWorld": "Place in the world"
     },
+    "compare": {
+      "title": "Player Comparison",
+      "empty": "Pick two or three players from your Favorites and tap Compare.",
+      "goFavorites": "Open Favorites",
+      "back": "Back",
+      "swap": "Swap",
+      "remove": "Remove player"
+    },
+    "shareCard": {
+      "button": "Share card",
+      "copyTitle": "Card URL copied"
+    },
+    "playerError": {
+      "searched": "You searched for:",
+      "retry": "Try again",
+      "home": "Back to home",
+      "help": "Open Help",
+      "not_found": {
+        "title": "Player not found",
+        "description": "We could not find this profile on the selected platform. Double-check the spelling and platform.",
+        "tips": "Make sure the platform matches where the player actually plays.|Account names are case-sensitive.|Try the player's account ID if the nickname keeps failing.|If they have never logged into PUBG with the linked account, the API may not know them yet."
+      },
+      "rate_limit": {
+        "title": "Hit the API rate limit",
+        "description": "PUBG API throttled our requests. Wait about a minute and try again - cached results may still load.",
+        "tips": "Refresh in 30-60 seconds.|If you only see partial data, that is the cached fallback.|Less popular profiles take longer to refresh from cache."
+      },
+      "private": {
+        "title": "Private or hidden profile",
+        "description": "This profile is private or has restricted PUBG API visibility.",
+        "tips": "Ask the player to set their PUBG profile to public.|Steam profile privacy may also block avatar fetch."
+      },
+      "network": {
+        "title": "Connection problem",
+        "description": "Could not reach the tracker backend. Check your internet and try again.",
+        "tips": "Check your internet connection.|Try a different network if you are on VPN.|If problem persists, our service may be temporarily down."
+      },
+      "generic": {
+        "title": "Could not load player",
+        "description": "Something went wrong while loading the profile. The detail below may help.",
+        "tips": "Try again in a moment.|If it keeps failing, open Bug Report and include the error message."
+      }
+    },
+    "weapons": {
+      "tab": "Weapons",
+      "title": "Weapon Mastery",
+      "subtitle": "{count} weapons tracked",
+      "empty": "Weapon mastery data is not available yet.",
+      "kills": "Kills",
+      "headshots": "Headshots",
+      "headshotRate": "HS %",
+      "damage": "Damage",
+      "dmgPerKill": "DMG/Kill",
+      "knockouts": "Knockouts",
+      "longest": "Longest",
+      "cat": {
+        "ar": "Assault Rifles",
+        "dmr": "Marksman Rifles",
+        "sr": "Sniper Rifles",
+        "smg": "Submachine Guns",
+        "lmg": "Light Machine Guns",
+        "shotgun": "Shotguns",
+        "pistol": "Pistols",
+        "throwable": "Throwables",
+        "special": "Special",
+        "other": "Other"
+      }
+    },
+    "squad": {
+      "tab": "Squad",
+      "title": "Squad-mates",
+      "subtitle": "From last {count} matches",
+      "empty": "No teammate data found in recent matches.",
+      "matchesShared": "{count} shared matches",
+      "bestPlace": "best",
+      "kills": "Kills",
+      "damage": "Damage"
+    },
+    "overlay": {
+      "loading": "Loading...",
+      "errorNoPlayer": "Player not found",
+      "errorGeneric": "Failed to load overlay",
+      "statKd": "K/D",
+      "statWin": "Win %",
+      "statAvgDmg": "Avg DMG",
+      "statMatches": "Matches",
+      "lastMatches": "Last:",
+      "copyButton": "Get OBS overlay",
+      "copyTitle": "Overlay URL copied",
+      "copyFallback": "Copy this URL into OBS browser source:"
+    },
+    "matchHeatmap": {
+      "buttonLabel": "Heatmap",
+      "openAria": "Open match heatmap",
+      "modalTitle": "{map} - Match Heatmap",
+      "fallbackMapName": "Match Map",
+      "legendKills": "Kills",
+      "legendDeaths": "Deaths",
+      "legendDrop": "Drop",
+      "loading": "Loading telemetry (it can take a moment)...",
+      "errorUnavailable": "Heatmap unavailable for this match",
+      "errorGeneric": "Failed to load heatmap",
+      "helpToggle": "What is this heatmap?",
+      "helpIntro": "This is a top-down map of your match showing where key things happened to you:",
+      "helpDrop": "Blue dot - where you parachuted in.",
+      "helpKill": "Green dot - where you killed an enemy. ×N means multiple kills at the same spot.",
+      "helpDeath": "Red dot - where you died.",
+      "helpPath": "The dashed line connects events in time order - it is your path through the match.",
+      "helpCompass": "Compass letters (N/E/S/W) and grid lines (1km / 500m / 250m depending on zoom) help you orient.",
+      "helpHover": "Hover any dot for who/what/when. Multi-event dots list all stacked events.",
+      "labelDrop": "DROP",
+      "labelKill": "KILL",
+      "labelDeath": "DEATH",
+      "tooltipDrop": "Drop",
+      "tooltipKill": "Kill",
+      "tooltipDeath": "Death",
+      "tooltipVs": "vs {name}",
+      "tooltipBy": "by {name}",
+      "storyTitle": "Match story",
+      "storyTravel": "Travelled {distance} from drop to your final position.",
+      "storyKillsBeforeOne": "Got 1 kill before going down.",
+      "storyKillsBeforeMany": "Got {count} kills before going down.",
+      "storySurvivedOne": "Survived with 1 kill on the board.",
+      "storySurvivedMany": "Survived with {count} kills on the board.",
+      "storyNoKills": "No kills logged this match.",
+      "storyDiedAt": "Died at {time} into the match.",
+      "storyAlive": "You were alive at match end."
+    },
     "help": {
       "title": "Help & FAQ",
       "subtitle": "Quick answers about search, seasons, favorites, and PUBG Report integration.",
+      "searchPlaceholder": "Search FAQ...",
+      "empty": "No matching questions. Try a different keyword.",
       "contact": "If your issue is not listed, open Bug Report and describe what happened.",
       "faq": {
         "search": {
@@ -82,9 +212,10 @@
     }
   },
   "footer": {
-    "text1": "Use our PUBG stats tracker to see how you perform in every match. Track kills, K/D, damage, win rate, longest kill, and more.",
-    "text2": "Compare your PUBG stats with friends or streamers and keep your profile up to date with your latest performance.",
-    "developed": "Developed by Satel for the PUBG community"
+    "text1": "Real-time PUBG stats - K/D, damage, win rate, longest kills, ranked progression and recent matches across every platform.",
+    "text2": "Save favorites, follow friends and streamers, and watch your performance evolve season after season.",
+    "developed": "Built by Satel for the PUBG community",
+    "bugReport": "Report a bug"
   },
   "other": {
     "words": {
@@ -105,6 +236,10 @@
       "addFavorite": "Add Favorite",
       "removeFavorite": "Remove Favorite",
       "noFavorites": "You can add players to favorites list.",
+      "compareMode": "Compare mode",
+      "compareGo": "Compare ({count})",
+      "select": "Select",
+      "selected": "Selected",
       "contactMe": "Contact me",
       "aboutMe": "About me"
     },

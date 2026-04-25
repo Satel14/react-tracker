@@ -1,21 +1,38 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Button, Spin, Alert, Tabs, Select } from "antd";
+import { Button, Spin, Tabs, Select } from "antd";
 import { translate } from "react-switch-lang";
 import {
   SyncOutlined,
   HeartOutlined,
   HeartFilled,
   LoadingOutlined,
-  ArrowLeftOutlined,
   ArrowRightOutlined,
   TrophyOutlined,
   BarChartOutlined,
   HistoryOutlined,
+  InboxOutlined,
+  EnvironmentOutlined,
+  VideoCameraOutlined,
+  ShareAltOutlined,
+  UserOutlined,
+  ClockCircleOutlined,
+  WarningOutlined,
+  QuestionCircleOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { getPlayerData, getPlayerReports } from "../api/player";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
+import { getCurrentLocale } from "../helpers/locale";
+import openNotification from "../component/Notification";
+import {
+  MapPerformanceChart,
+  ModesRadarChart,
+  PerformanceTrendChart,
+  PlacementDistributionChart,
+} from "../component/charts/MatchCharts";
+import MatchHeatmap from "../component/charts/MatchHeatmap";
 
 const OVERVIEW_ITEMS = [
   { key: "matchesPlayed", label: "Matches", fallback: "0" },
@@ -95,12 +112,12 @@ const formatReportDate = (value, fallback = "") => {
   if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return fallback || value;
-  return date.toLocaleString();
+  return date.toLocaleString(getCurrentLocale());
 };
 
 const formatRankPoints = (value) => {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed.toLocaleString() : "N/A";
+  return Number.isFinite(parsed) ? parsed.toLocaleString(getCurrentLocale()) : "N/A";
 };
 
 const formatTopPercentage = (value) => {
@@ -137,11 +154,22 @@ const clampPercent = (value, max) => {
   return Math.max(4, Math.min(100, (parsedValue / parsedMax) * 100));
 };
 
+const getPlacementMeta = (placement) => {
+  const parsed = Number(placement);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return { tier: "na", value: null };
+  }
+  if (parsed === 1) return { tier: "win", value: parsed };
+  if (parsed <= 10) return { tier: "top10", value: parsed };
+  if (parsed <= 25) return { tier: "top25", value: parsed };
+  return { tier: "rest", value: parsed };
+};
+
 const formatMatchDate = (value) => {
   if (!value) return "Unknown time";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Unknown time";
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(getCurrentLocale(), {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -240,6 +268,7 @@ const PlayerPage = ({ t }) => {
   const [reportsFilter, setReportsFilter] = useState("all");
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [heatmapMatch, setHeatmapMatch] = useState(null);
   const { platform, gameId } = useParams();
   const navigate = useNavigate();
 
@@ -256,14 +285,17 @@ const PlayerPage = ({ t }) => {
         setData(response.data);
         setSelectedSeasonId(response.data?.selectedSeasonId || response.data?.season?.id || seasonId || null);
       } else {
-        setError("Player not found or private profile");
+        setError({ code: "not_found", message: null });
       }
     } catch (err) {
-      if (err?.status === 422) {
-        setError(err?.message || "Гравця не знайдено. Перевірте платформу та нікнейм.");
-      } else {
-        setError(err?.message || "Не вдалося завантажити дані гравця.");
-      }
+      const raw = err?.message || "";
+      const lower = raw.toLowerCase();
+      let code = "generic";
+      if (err?.status === 422 || lower.includes("not found")) code = "not_found";
+      else if (lower.includes("rate limit")) code = "rate_limit";
+      else if (lower.includes("private")) code = "private";
+      else if (lower.includes("network") || lower.includes("fetch")) code = "network";
+      setError({ code, message: raw || null });
     } finally {
       setLoading(false);
     }
@@ -406,25 +438,57 @@ const PlayerPage = ({ t }) => {
   }
 
   if (error) {
+    const code = error?.code || "generic";
+    const errorIcon =
+      code === "not_found" ? <UserOutlined /> :
+      code === "rate_limit" ? <ClockCircleOutlined /> :
+      code === "private" ? <WarningOutlined /> :
+      code === "network" ? <WarningOutlined /> :
+      <QuestionCircleOutlined />;
+
+    const tipsKey = `pages.playerError.${code}.tips`;
+    const tips = t(tipsKey);
+    const tipList = typeof tips === "string" ? tips.split("|") : [];
+
     return (
-      <div
-        className="playerpage"
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "50vh",
-          flexDirection: "column",
-        }}
-      >
-        <Alert message="Error" description={error} type="error" showIcon />
-        <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/")}>
-            Back
-          </Button>
-          <Button type="primary" onClick={() => fetchData(selectedSeasonId)}>
-            Retry
-          </Button>
+      <div className="player-error">
+        <div className={`player-error__card player-error__card--${code}`}>
+          <div className="player-error__icon">{errorIcon}</div>
+          <h2 className="player-error__title">{t(`pages.playerError.${code}.title`)}</h2>
+          <p className="player-error__description">{t(`pages.playerError.${code}.description`)}</p>
+
+          <div className="player-error__query">
+            <span>{t("pages.playerError.searched")}</span>
+            <strong>{(platform || "steam").toUpperCase()} - {gameId}</strong>
+          </div>
+
+          {tipList.length ? (
+            <ul className="player-error__tips">
+              {tipList.map((tip, index) => (
+                <li key={index}>{tip}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          {error?.message && code === "generic" ? (
+            <div className="player-error__raw">{error.message}</div>
+          ) : null}
+
+          <div className="player-error__actions">
+            <Button
+              type="primary"
+              icon={<SyncOutlined />}
+              onClick={() => fetchData(selectedSeasonId)}
+            >
+              {t("pages.playerError.retry")}
+            </Button>
+            <Button icon={<HomeOutlined />} onClick={() => navigate("/")}>
+              {t("pages.playerError.home")}
+            </Button>
+            <Button type="link" icon={<QuestionCircleOutlined />} onClick={() => navigate("/help")}>
+              {t("pages.playerError.help")}
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -457,8 +521,36 @@ const PlayerPage = ({ t }) => {
   const clan = profile?.clan || null;
   const survivalMastery = profile?.survivalMastery || null;
   const survivalMasteryTier = getSurvivalMasteryTierMeta(survivalMastery);
+  const weaponMastery = Array.isArray(profile?.weaponMastery) ? profile.weaponMastery : [];
   const matchSummary = data?.matches?.summary || {};
   const matchItems = Array.isArray(data?.matches?.items) ? data.matches.items : [];
+
+  const squadAggregates = (() => {
+    const map = new Map();
+    matchItems.forEach((match) => {
+      const teammates = Array.isArray(match.teammates) ? match.teammates : [];
+      teammates.forEach((tm) => {
+        if (!tm.accountId) return;
+        const existing = map.get(tm.accountId) || {
+          accountId: tm.accountId,
+          name: tm.name,
+          shared: 0,
+          totalKills: 0,
+          totalDamage: 0,
+          bestPlacement: null,
+        };
+        existing.shared += 1;
+        existing.totalKills += Number(tm.kills) || 0;
+        existing.totalDamage += Number(tm.damage) || 0;
+        if (tm.placement && (!existing.bestPlacement || tm.placement < existing.bestPlacement)) {
+          existing.bestPlacement = tm.placement;
+        }
+        if (tm.name && tm.name !== "Unknown") existing.name = tm.name;
+        map.set(tm.accountId, existing);
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => b.shared - a.shared || b.totalKills - a.totalKills);
+  })();
   const banLabel = getBanLabel(profile?.banType);
   const hasBanWarning = profile?.banType && profile.banType !== "Innocent";
 
@@ -638,12 +730,130 @@ const PlayerPage = ({ t }) => {
     );
   };
 
+  const renderWeaponsCard = () => {
+    if (!weaponMastery.length) {
+      return renderEmptyCard(t("pages.weapons.title"), t("pages.weapons.empty"));
+    }
+
+    const maxKills = Math.max(...weaponMastery.map((w) => w.kills || 0), 1);
+    const categoryOrder = ["ar", "dmr", "sr", "smg", "lmg", "shotgun", "pistol", "throwable", "special", "other"];
+    const grouped = weaponMastery.reduce((acc, weapon) => {
+      const cat = weapon.category || "other";
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(weapon);
+      return acc;
+    }, {});
+    const visibleCategories = categoryOrder.filter((cat) => grouped[cat]?.length);
+
+    const renderTier = (tier) => {
+      const tierVal = Math.max(0, Math.min(5, Number(tier) || 0));
+      return (
+        <span className="player-weapon-card__tier" title={`Tier ${tierVal}`}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <i key={i} className={i <= tierVal ? "is-on" : ""} />
+          ))}
+        </span>
+      );
+    };
+
+    return (
+      <section className="player-card">
+        <div className="player-card__head">
+          <h3>{t("pages.weapons.title")}</h3>
+          <span>{t("pages.weapons.subtitle", { count: weaponMastery.length })}</span>
+        </div>
+
+        {visibleCategories.map((cat) => (
+          <div className="player-weapon-section" key={cat}>
+            <h4 className="player-weapon-section__title">
+              {t(`pages.weapons.cat.${cat}`)}
+              <span>{grouped[cat].length}</span>
+            </h4>
+            <div className="player-weapon-grid">
+              {grouped[cat].map((weapon) => (
+                <div className="player-weapon-card" key={weapon.raw}>
+                  <div className="player-weapon-card__head">
+                    <img
+                      src={`/images/weapons/${weapon.imageKey || weapon.raw}.png`}
+                      alt={weapon.name}
+                      className="player-weapon-card__image"
+                      onError={(e) => {
+                        e.currentTarget.style.visibility = "hidden";
+                      }}
+                    />
+                    <div className="player-weapon-card__title">
+                      <strong>{weapon.name}</strong>
+                      <span>Lv {weapon.level}</span>
+                    </div>
+                    {renderTier(weapon.tier)}
+                  </div>
+                  <div className="player-weapon-card__bar">
+                    <span style={{ width: `${Math.max(6, Math.min(100, (weapon.kills / maxKills) * 100))}%` }} />
+                  </div>
+                  <div className="player-weapon-card__stats">
+                    <div><span>{t("pages.weapons.kills")}</span><strong>{weapon.kills.toLocaleString()}</strong></div>
+                    <div><span>{t("pages.weapons.headshots")}</span><strong>{weapon.headshots.toLocaleString()}</strong></div>
+                    <div><span>{t("pages.weapons.headshotRate")}</span><strong>{weapon.headshotRate}%</strong></div>
+                    <div><span>{t("pages.weapons.damage")}</span><strong>{weapon.damage.toLocaleString()}</strong></div>
+                    <div><span>{t("pages.weapons.dmgPerKill")}</span><strong>{weapon.avgDamagePerKill}</strong></div>
+                    <div><span>{t("pages.weapons.knockouts")}</span><strong>{weapon.groggies.toLocaleString()}</strong></div>
+                    <div><span>{t("pages.weapons.longest")}</span><strong>{weapon.longestKill}m</strong></div>
+                    <div><span>XP</span><strong>{weapon.xp.toLocaleString()}</strong></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+    );
+  };
+
+  const renderSquadCard = () => {
+    if (!squadAggregates.length) {
+      return renderEmptyCard(t("pages.squad.title"), t("pages.squad.empty"));
+    }
+
+    return (
+      <section className="player-card">
+        <div className="player-card__head">
+          <h3>{t("pages.squad.title")}</h3>
+          <span>{t("pages.squad.subtitle", { count: matchItems.length })}</span>
+        </div>
+
+        <div className="player-squad-list">
+          {squadAggregates.map((mate) => (
+            <article className="player-squad-item" key={mate.accountId}>
+              <div className="player-squad-item__main">
+                <div className="player-squad-item__avatar">{mate.name?.charAt(0)?.toUpperCase() || "?"}</div>
+                <div className="player-squad-item__meta">
+                  <strong>{mate.name}</strong>
+                  <span>
+                    {t("pages.squad.matchesShared", { count: mate.shared })}
+                    {mate.bestPlacement ? ` - ${t("pages.squad.bestPlace")} #${mate.bestPlacement}` : ""}
+                  </span>
+                </div>
+              </div>
+              <div className="player-squad-item__stats">
+                <div><span>{t("pages.squad.kills")}</span><strong>{mate.totalKills}</strong></div>
+                <div><span>{t("pages.squad.damage")}</span><strong>{mate.totalDamage.toLocaleString()}</strong></div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
   const renderEmptyCard = (title, message) => (
     <section className="player-card player-card--empty">
       <div className="player-card__head">
         <h3>{title}</h3>
       </div>
-      <div className="player-empty">{message}</div>
+      <div className="player-empty">
+        <InboxOutlined className="player-empty__icon" />
+        <span>{message}</span>
+      </div>
     </section>
   );
 
@@ -663,40 +873,7 @@ const PlayerPage = ({ t }) => {
     </div>
   );
 
-  const renderRecentFormChart = () => {
-    const series = matchItems.slice().reverse();
-    if (series.length < 2) {
-      return <div className="player-chart-empty">Need at least two recent matches for a trend chart.</div>;
-    }
-
-    const width = 320;
-    const height = 120;
-    const xStep = series.length > 1 ? width / (series.length - 1) : width;
-    const maxKills = Math.max(...series.map((item) => item.kills || 0), 1);
-    const maxDamage = Math.max(...series.map((item) => item.damage || 0), 1);
-    const toPoints = (key, max) =>
-      series
-        .map((item, index) => {
-          const x = Math.round(index * xStep);
-          const y = Math.round(height - 12 - ((Number(item[key]) || 0) / max) * (height - 24));
-          return `${x},${y}`;
-        })
-        .join(" ");
-
-    return (
-      <div className="player-line-chart">
-        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Recent match performance trend">
-          <polyline className="player-line-chart__grid" points={`0,${height - 12} ${width},${height - 12}`} />
-          <polyline className="player-line-chart__damage" points={toPoints("damage", maxDamage)} />
-          <polyline className="player-line-chart__kills" points={toPoints("kills", maxKills)} />
-        </svg>
-        <div className="player-line-chart__legend">
-          <span><i className="is-kills" /> Kills</span>
-          <span><i className="is-damage" /> Damage</span>
-        </div>
-      </div>
-    );
-  };
+  const renderRecentFormChart = () => <PerformanceTrendChart items={matchItems} />;
 
   const renderChartsCard = () => {
     const chartStats = season ? seasonStats : stats;
@@ -771,6 +948,18 @@ const PlayerPage = ({ t }) => {
         </div>
 
         <div className="player-chart-grid">
+          <div className="player-chart-panel player-chart-panel--wide">
+            <h4><HistoryOutlined /> Recent Form Trend</h4>
+            {renderRecentFormChart()}
+          </div>
+          <div className="player-chart-panel">
+            <h4><TrophyOutlined /> Placement Distribution</h4>
+            <PlacementDistributionChart items={matchItems} />
+          </div>
+          <div className="player-chart-panel">
+            <h4><BarChartOutlined /> Map Performance</h4>
+            <MapPerformanceChart items={matchItems} />
+          </div>
           <div className="player-chart-panel">
             <h4><BarChartOutlined /> Combat</h4>
             {renderProgressBars(combatBars)}
@@ -779,13 +968,9 @@ const PlayerPage = ({ t }) => {
             <h4><TrophyOutlined /> Results</h4>
             {renderProgressBars(resultBars)}
           </div>
-          <div className="player-chart-panel">
+          <div className="player-chart-panel player-chart-panel--wide">
             <h4><BarChartOutlined /> Avg Damage by Mode</h4>
             {modeRows.length ? renderProgressBars(modeRows) : <div className="player-chart-empty">No mode data yet.</div>}
-          </div>
-          <div className="player-chart-panel">
-            <h4><HistoryOutlined /> Recent Form</h4>
-            {renderRecentFormChart()}
           </div>
         </div>
       </section>
@@ -826,11 +1011,16 @@ const PlayerPage = ({ t }) => {
         <div className="player-card__divider" />
 
         <div className="player-match-list">
-          {matchItems.map((match) => (
+          {matchItems.map((match) => {
+            const placeMeta = getPlacementMeta(match.placement);
+            return (
             <article className={`player-match-item ${match.isWin ? "player-match-item--win" : ""}`} key={match.id}>
               <div className="player-match-item__main">
                 <div>
-                  <strong>{match.placementLabel}</strong>
+                  <span className={`player-place-badge player-place-badge--${placeMeta.tier}`}>
+                    <span className="player-place-badge__label">Place</span>
+                    <span className="player-place-badge__value">{placeMeta.value ?? "—"}</span>
+                  </span>
                   <span>{match.isWin ? "Chicken Dinner" : formatMatchDate(match.createdAt)}</span>
                 </div>
                 <div>
@@ -847,8 +1037,19 @@ const PlayerPage = ({ t }) => {
                 <div><span>Survived</span><strong>{match.survivalTimeLabel}</strong></div>
                 <div><span>Longest</span><strong>{match.longestKill}m</strong></div>
               </div>
+
+              <button
+                type="button"
+                className="player-match-heatmap-btn"
+                onClick={() => setHeatmapMatch(match)}
+                aria-label={t("pages.matchHeatmap.openAria")}
+              >
+                <EnvironmentOutlined />
+                <span>{t("pages.matchHeatmap.buttonLabel")}</span>
+              </button>
             </article>
-          ))}
+            );
+          })}
         </div>
       </section>
     );
@@ -914,7 +1115,7 @@ const PlayerPage = ({ t }) => {
 
         <div className="player-report-list">
           {filteredReportItems.map((item) => (
-            <article className="player-report-item" key={item.id}>
+            <article className={`player-report-item player-report-item--${item.type || "other"}`} key={item.id}>
               <div className="player-report-item__head">
                 <span className={`player-report-badge ${getReportTypeClass(item.type)}`}>
                   {getReportTypeLabel(item.type)}
@@ -978,6 +1179,13 @@ const PlayerPage = ({ t }) => {
       children:
         modeLifetimeSection || modeSeasonSection ? (
           <>
+            <section className="player-card">
+              <div className="player-card__head">
+                <h3>Modes Comparison</h3>
+                <span>{season ? seasonLabel : "Lifetime"}</span>
+              </div>
+              <ModesRadarChart modes={season ? seasonModes : lifetimeModes} />
+            </section>
             {modeLifetimeSection}
             {modeSeasonSection}
           </>
@@ -994,6 +1202,16 @@ const PlayerPage = ({ t }) => {
       key: "matches",
       label: "Matches",
       children: renderMatchesCard(),
+    },
+    {
+      key: "weapons",
+      label: t("pages.weapons.tab"),
+      children: renderWeaponsCard(),
+    },
+    {
+      key: "squad",
+      label: t("pages.squad.tab"),
+      children: renderSquadCard(),
     },
     {
       key: "reports",
@@ -1018,9 +1236,46 @@ const PlayerPage = ({ t }) => {
         >
           {isFavorited ? t("other.words.removeFavorite") : t("other.words.addFavorite")}
         </Button>
+        <Button
+          type="link"
+          icon={<VideoCameraOutlined />}
+          size="small"
+          onClick={async () => {
+            const url = `${window.location.origin}/overlay/${platform}/${encodeURIComponent(gameId)}`;
+            try {
+              await navigator.clipboard.writeText(url);
+              openNotification("success", t("pages.overlay.copyTitle"), url);
+            } catch (_e) {
+              window.prompt(t("pages.overlay.copyFallback"), url);
+            }
+          }}
+        >
+          {t("pages.overlay.copyButton")}
+        </Button>
+        <Button
+          type="link"
+          icon={<ShareAltOutlined />}
+          size="small"
+          onClick={async () => {
+            const apiBase = process.env.REACT_APP_API_URL ||
+              (process.env.NODE_ENV === "development"
+                ? `${window.location.origin}/api`
+                : "https://pubgtracker-api.onrender.com/api");
+            const url = `${apiBase}/player/${platform}/${encodeURIComponent(gameId)}/card.png`;
+            try {
+              await navigator.clipboard.writeText(url);
+              openNotification("success", t("pages.shareCard.copyTitle"), url);
+              window.open(url, "_blank", "noopener,noreferrer");
+            } catch (_e) {
+              window.open(url, "_blank", "noopener,noreferrer");
+            }
+          }}
+        >
+          {t("pages.shareCard.button")}
+        </Button>
       </div>
 
-      <section className="player-card player-card--header">
+      <section className={`player-card player-card--header player-card--tier-${String(headerRankedInfo?.tier || "unranked").toLowerCase()}`}>
         <div className="player-hero-rank">
           <img
             src={rankBadgeUrl}
@@ -1094,6 +1349,17 @@ const PlayerPage = ({ t }) => {
       </section>
 
       <Tabs className="player-tabs" activeKey={activeTabKey} onChange={setActiveTabKey} items={tabItems} />
+
+      <MatchHeatmap
+        open={Boolean(heatmapMatch)}
+        onClose={() => setHeatmapMatch(null)}
+        matchId={heatmapMatch?.id}
+        shard={platform}
+        accountId={data?.platformInfo?.platformUserId || null}
+        playerName={data?.platformInfo?.platformUserHandle || gameId}
+        mapNameHint={heatmapMatch?.mapName}
+        rawMapNameHint={heatmapMatch?.rawMapName}
+      />
     </div>
   );
 };
