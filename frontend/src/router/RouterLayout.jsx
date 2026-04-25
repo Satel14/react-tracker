@@ -21,6 +21,25 @@ const RouterLayout = () => {
     };
   }, [location]);
 
+  const isChromeless = location.pathname.startsWith("/overlay/");
+
+  if (isChromeless) {
+    return (
+      <div className="app app--chromeless">
+        <Routes location={location}>
+          {routes.map((route, index) => (
+            <Route
+              key={`${route.path}-${index}`}
+              path={route.path}
+              element={<route.component />}
+            />
+          ))}
+          <Route path="*" element={<ErrorPage />} />
+        </Routes>
+      </div>
+    );
+  }
+
   return (
     <div className={"app " + currentTheme}>
       <Navbar />
