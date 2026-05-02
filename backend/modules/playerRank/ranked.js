@@ -42,6 +42,7 @@ function toTierScore(tier, subTier) {
     gold: 30,
     platinum: 40,
     diamond: 50,
+    crystal: 55,
     master: 60,
     grandmaster: 70,
     survivor: 75,
@@ -65,6 +66,7 @@ const LOCAL_PUBG_RANK_ICON_URLS = {
   platinum: "/images/ranks/opgg/platinum-1.png",
   diamond: "/images/ranks/opgg/diamond-1.png",
   elite: "/images/ranks/opgg/diamond-1.png",
+  crystal: "/images/ranks/opgg/crystal-1.png",
   master: "/images/ranks/opgg/master-1.png",
   grandmaster: "/images/ranks/opgg/survivor-1.png",
   survivor: "/images/ranks/opgg/survivor-1.png",
@@ -99,6 +101,11 @@ function buildLocalOpggCompetitiveRankIconPath(tier, subTier) {
   if (withDivision.has(normalizedTier)) {
     const subTierNumber = toSubTierNumber(subTier) || 1;
     return `/images/ranks/opgg/${normalizedTier}-${subTierNumber}.png`;
+  }
+
+  if (normalizedTier === "crystal") {
+    const subTierNumber = Math.min(toSubTierNumber(subTier) || 1, 4);
+    return `/images/ranks/opgg/crystal-${subTierNumber}.png`;
   }
 
   if (normalizedTier === "master") {
