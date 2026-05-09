@@ -49,5 +49,11 @@
   "proxy": "http://localhost:3003",
   "knip": {
     "ignore": ["src/setupTests.js"]
+  },
+  "overrides": {
+    "nth-check": "^2.1.1",
+    "postcss": "^8.4.31",
+    "serialize-javascript": "^7.0.5",
+    "cookie": "^0.7.2"
   }
 }
