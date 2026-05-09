@@ -47,6 +47,33 @@ const ChartFallback = () => (
   </div>
 );
 
+const WeaponTier = ({ tier }) => {
+  const tierVal = Math.max(0, Math.min(5, Number(tier) || 0));
+  return (
+    <span className="player-weapon-card__tier" title={`Tier ${tierVal}`}>
+      {[1, 2, 3, 4, 5].map((tierStep) => (
+        <i key={`tier-${tierStep}`} className={tierStep <= tierVal ? "is-on" : ""} />
+      ))}
+    </span>
+  );
+};
+
+const ProgressBars = ({ items }) => (
+  <div className="player-chart-bars">
+    {items.map((item) => (
+      <div className="player-chart-bar" key={item.label}>
+        <div className="player-chart-bar__head">
+          <span>{item.label}</span>
+          <strong>{item.displayValue}</strong>
+        </div>
+        <div className="player-chart-bar__track">
+          <span style={{ width: `${clampPercent(item.value, item.max)}%` }} />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const OVERVIEW_ITEMS = [
   { key: "matchesPlayed", label: "Matches", fallback: "0" },
   { key: "wins", label: "Wins", fallback: "0" },
@@ -759,17 +786,6 @@ const PlayerPage = ({ t }) => {
     }, {});
     const visibleCategories = categoryOrder.filter((cat) => grouped[cat]?.length);
 
-    const renderTier = (tier) => {
-      const tierVal = Math.max(0, Math.min(5, Number(tier) || 0));
-      return (
-        <span className="player-weapon-card__tier" title={`Tier ${tierVal}`}>
-          {[1, 2, 3, 4, 5].map((tierStep) => (
-            <i key={`tier-${tierStep}`} className={tierStep <= tierVal ? "is-on" : ""} />
-          ))}
-        </span>
-      );
-    };
-
     return (
       <section className="player-card">
         <div className="player-card__head">
@@ -799,7 +815,7 @@ const PlayerPage = ({ t }) => {
                       <strong>{weapon.name}</strong>
                       <span>Lv {weapon.level}</span>
                     </div>
-                    {renderTier(weapon.tier)}
+                    <WeaponTier tier={weapon.tier} />
                   </div>
                   <div className="player-weapon-card__bar">
                     <span style={{ width: `${Math.max(6, Math.min(100, (weapon.kills / maxKills) * 100))}%` }} />
@@ -871,27 +887,6 @@ const PlayerPage = ({ t }) => {
     </section>
   );
 
-  const renderProgressBars = (items) => (
-    <div className="player-chart-bars">
-      {items.map((item) => (
-        <div className="player-chart-bar" key={item.label}>
-          <div className="player-chart-bar__head">
-            <span>{item.label}</span>
-            <strong>{item.displayValue}</strong>
-          </div>
-          <div className="player-chart-bar__track">
-            <span style={{ width: `${clampPercent(item.value, item.max)}%` }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderRecentFormChart = () => (
-    <Suspense fallback={<ChartFallback />}>
-      <PerformanceTrendChart items={matchItems} />
-    </Suspense>
-  );
 
   const renderChartsCard = () => {
     const chartStats = season ? seasonStats : stats;
@@ -966,7 +961,9 @@ const PlayerPage = ({ t }) => {
         <div className="player-chart-grid">
           <div className="player-chart-panel player-chart-panel--wide">
             <h4><HistoryOutlined /> Recent Form Trend</h4>
-            {renderRecentFormChart()}
+            <Suspense fallback={<ChartFallback />}>
+              <PerformanceTrendChart items={matchItems} />
+            </Suspense>
           </div>
           <div className="player-chart-panel">
             <h4><TrophyOutlined /> Placement Distribution</h4>
@@ -982,15 +979,15 @@ const PlayerPage = ({ t }) => {
           </div>
           <div className="player-chart-panel">
             <h4><BarChartOutlined /> Combat</h4>
-            {renderProgressBars(combatBars)}
+            <ProgressBars items={combatBars} />
           </div>
           <div className="player-chart-panel">
             <h4><TrophyOutlined /> Results</h4>
-            {renderProgressBars(resultBars)}
+            <ProgressBars items={resultBars} />
           </div>
           <div className="player-chart-panel player-chart-panel--wide">
             <h4><BarChartOutlined /> Avg Damage by Mode</h4>
-            {modeRows.length ? renderProgressBars(modeRows) : <div className="player-chart-empty">No mode data yet.</div>}
+            {modeRows.length ? <ProgressBars items={modeRows} /> : <div className="player-chart-empty">No mode data yet.</div>}
           </div>
         </div>
       </section>

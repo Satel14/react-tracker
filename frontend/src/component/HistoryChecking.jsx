@@ -64,6 +64,57 @@ const normalizeRecentEntries = (items = []) => {
     .sort((a, b) => (b?.searchedAt || 0) - (a?.searchedAt || 0));
 };
 
+const HistoryBlocks = ({ items, t }) => {
+  if (!items.length) {
+    return (
+      <div className="historycheck_block historycheck_block--empty">
+        <div className="historycheck_block-left">
+          <div className="nickname">
+            {t("other.words.notAvailable")}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return items.map((player) => (
+    <Link
+      to={`/player/${player.platform}/${player.gameId}`}
+      className="historycheck_block"
+      key={player.id}
+    >
+      <div className="historycheck_block-left">
+        <img
+          alt={player.nickname}
+          src={player.avatar || "/images/steam_avatar.jpg"}
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = "/images/steam_avatar.jpg";
+          }}
+        />
+        <div className="nickname">
+          {player.nickname}
+          <span>{t("other.words.viewStats")}</span>
+        </div>
+      </div>
+      <div className="historycheck_block-platform">
+        {getIconComponentPlatfrom(player.platform)}
+      </div>
+      <div className="historycheck_block-mmr">
+        <img
+          src={player.rankIconUrl || "/images/ranks/opgg/unranked.png"}
+          alt={player.rankLabel || "Rank"}
+          title={player.rankLabel || "Unranked"}
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = "/images/ranks/opgg/unranked.png";
+          }}
+        />
+      </div>
+    </Link>
+  ));
+};
+
 const HistoryChecking = ({ t }) => {
   const [historyList, setHistoryList] = useState(EMPTY_LIST);
   const [recentList, setRecentList] = useState(EMPTY_LIST);
@@ -110,57 +161,6 @@ const HistoryChecking = ({ t }) => {
     return <></>;
   }
 
-  const renderHistoryBlocks = (items) => {
-    if (!items.length) {
-      return (
-        <div className="historycheck_block historycheck_block--empty">
-          <div className="historycheck_block-left">
-            <div className="nickname">
-              {t("other.words.notAvailable")}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return items.map((player) => (
-      <Link
-        to={`/player/${player.platform}/${player.gameId}`}
-        className="historycheck_block"
-        key={player.id}
-      >
-        <div className="historycheck_block-left">
-          <img
-            alt={player.nickname}
-            src={player.avatar || "/images/steam_avatar.jpg"}
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = "/images/steam_avatar.jpg";
-            }}
-          />
-          <div className="nickname">
-            {player.nickname}
-            <span>{t("other.words.viewStats")}</span>
-          </div>
-        </div>
-        <div className="historycheck_block-platform">
-          {getIconComponentPlatfrom(player.platform)}
-        </div>
-        <div className="historycheck_block-mmr">
-          <img
-            src={player.rankIconUrl || "/images/ranks/opgg/unranked.png"}
-            alt={player.rankLabel || "Rank"}
-            title={player.rankLabel || "Unranked"}
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = "/images/ranks/opgg/unranked.png";
-            }}
-          />
-        </div>
-      </Link>
-    ));
-  };
-
   return (
     <>
       <div>
@@ -178,7 +178,7 @@ const HistoryChecking = ({ t }) => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          {renderHistoryBlocks(historyList)}
+          <HistoryBlocks items={historyList} t={t} />
         </m.div>
       </div>
 
@@ -197,8 +197,7 @@ const HistoryChecking = ({ t }) => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.35 }}
         >
-          {renderHistoryBlocks(recentList)}
-        </m.div>
+          <HistoryBlocks items={recentList} t={t} />
       </div>
     </>
   );

@@ -31,13 +31,10 @@ const Navbar = ({ t }) => {
 
   useEffect(() => {
     const url = location.pathname;
-    const isComponentRoute = componentRoutes.includes(url);
-
-    if (isComponentRoute) {
-      setCurrent(url === "/" ? "main" : url.replace("/", ""));
-    } else {
-      setCurrent("");
-    }
+    const nextCurrent = componentRoutes.includes(url)
+      ? (url === "/" ? "main" : url.replace("/", ""))
+      : "";
+    setCurrent(nextCurrent);
     setMobileOpen(false);
   }, [location]);
 
