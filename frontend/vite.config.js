@@ -17,5 +17,12 @@ export default defineConfig({
     outDir: 'build',
     sourcemap: true,
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        silenceDeprecations: ['import', 'global-builtin', 'color-functions'],
+      },
+    },
+  },
   envPrefix: 'VITE_',
 });
