@@ -1292,8 +1292,8 @@ const PlayerPage = ({ t }) => {
           icon={<ShareAltOutlined />}
           size="small"
           onClick={async () => {
-            const apiBase = process.env.REACT_APP_API_URL ||
-              (process.env.NODE_ENV === "development"
+            const apiBase = import.meta.env.VITE_API_URL ||
+              (import.meta.env.MODE === "development"
                 ? `${window.location.origin}/api`
                 : "https://pubgtracker-api.onrender.com/api");
             const url = `${apiBase}/player/${platform}/${encodeURIComponent(gameId)}/card.png`;
