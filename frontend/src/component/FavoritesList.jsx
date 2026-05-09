@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Button, Popconfirm } from "antd";
 import {
   CheckOutlined,
@@ -107,7 +107,7 @@ const FavoritesList = ({ t }) => {
   const text = t("other.words.cleanListConfirm");
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -200,7 +200,7 @@ const FavoritesList = ({ t }) => {
             );
 
             return (
-              <motion.article
+              <m.article
                 className={`favorite-card ${isSelected ? "favorite-card--selected" : ""} ${
                   reachedSelectionCap ? "favorite-card--disabled" : ""
                 }`}
@@ -241,12 +241,12 @@ const FavoritesList = ({ t }) => {
                     <HeartOutlined />
                   </div>
                 )}
-              </motion.article>
+              </m.article>
             );
           })}
         </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 };
 

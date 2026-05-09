@@ -46,5 +46,8 @@
   "devDependencies": {
     "sass": "^1.59.3"
   },
-  "proxy": "http://localhost:3003"
+  "proxy": "http://localhost:3003",
+  "knip": {
+    "ignore": ["src/setupTests.js"]
+  }
 }

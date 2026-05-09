@@ -333,7 +333,7 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
                 );
               })()}
 
-              {clusters.map((cluster, index) => {
+              {clusters.map((cluster) => {
                 const baseRadius = cluster.type === "drop" ? scale * 0.028 : scale * 0.024;
                 const sizeBoost = Math.min(cluster.count - 1, 3) * 0.4;
                 const radius = baseRadius * (1 + sizeBoost);
@@ -343,8 +343,9 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
                   cluster.type === "kill" && cluster.count > 1
                     ? `${baseLabel} ×${cluster.count}`
                     : baseLabel;
+                const clusterKey = `${cluster.type}-${cluster.x.toFixed(2)}-${cluster.y.toFixed(2)}`;
                 return (
-                  <g key={`cluster-${index}`}>
+                  <g key={clusterKey}>
                     <circle
                       cx={cluster.x}
                       cy={cluster.y}
@@ -411,15 +412,16 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
                   {hovered.cluster && hovered.cluster.count > 1 ? ` ×${hovered.cluster.count}` : ""}
                 </strong>
                 {hovered.cluster && hovered.cluster.count > 1 ? (
-                  hovered.cluster.items.slice(0, 5).map((item, i) => {
+                  hovered.cluster.items.slice(0, 5).map((item) => {
                     const opponent = item.victim
                       ? t("pages.matchHeatmap.tooltipVs", { name: item.victim })
                       : item.killer
                         ? t("pages.matchHeatmap.tooltipBy", { name: item.killer })
                         : null;
                     const weapon = item.weapon ? item.weapon.replace(/^WeapHK_C$|^Item_Weapon_/i, "") : null;
+                    const itemKey = `${item.victim || item.killer || ""}-${item.weapon || ""}-${item.distance ?? ""}-${item.time ?? ""}`;
                     return (
-                      <div key={i}>
+                      <div key={itemKey}>
                         {opponent}
                         {weapon ? ` - ${weapon}` : null}
                         {item.distance ? ` (${item.distance}m)` : null}
@@ -447,8 +449,8 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
         <div className="match-heatmap__insights">
           <strong>{t("pages.matchHeatmap.storyTitle")}</strong>
           <ul>
-            {insights.map((line, index) => (
-              <li key={index}>{line}</li>
+            {insights.map((line) => (
+              <li key={line}>{line}</li>
             ))}
           </ul>
         </div>

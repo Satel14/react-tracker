@@ -4,6 +4,7 @@ export const normalizePlatform = (platform) => {
   return normalized || "steam";
 };
 
+/** @public — kept for parity with backend mirror (modules/playerIdentity.js) */
 export const isAccountIdentifier = (value) =>
   typeof value === "string" && /^account\./i.test(value.trim());
 

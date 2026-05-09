@@ -19,22 +19,20 @@ const Help = ({ t }) => {
 
   const items = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return FAQ_KEYS
-      .map((key, index) => {
-        const question = t(`pages.help.faq.${key}.q`);
-        const answer = t(`pages.help.faq.${key}.a`);
-        const matches =
-          !normalizedQuery ||
-          question.toLowerCase().includes(normalizedQuery) ||
-          answer.toLowerCase().includes(normalizedQuery);
-        if (!matches) return null;
-        return {
-          key: String(index + 1),
-          label: question,
-          children: <p>{answer}</p>,
-        };
-      })
-      .filter(Boolean);
+    return FAQ_KEYS.flatMap((key, index) => {
+      const question = t(`pages.help.faq.${key}.q`);
+      const answer = t(`pages.help.faq.${key}.a`);
+      const matches =
+        !normalizedQuery ||
+        question.toLowerCase().includes(normalizedQuery) ||
+        answer.toLowerCase().includes(normalizedQuery);
+      if (!matches) return [];
+      return [{
+        key: String(index + 1),
+        label: question,
+        children: <p>{answer}</p>,
+      }];
+    });
   }, [query, t]);
 
   return (

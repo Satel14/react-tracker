@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Button, Spin, Tabs, Select } from "antd";
 import { translate } from "react-switch-lang";
 import {
@@ -26,13 +26,26 @@ import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from 
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
 import { getCurrentLocale } from "../helpers/locale";
 import openNotification from "../component/Notification";
-import {
-  MapPerformanceChart,
-  ModesRadarChart,
-  PerformanceTrendChart,
-  PlacementDistributionChart,
-} from "../component/charts/MatchCharts";
 import MatchHeatmap from "../component/charts/MatchHeatmap";
+
+const MapPerformanceChart = lazy(() =>
+  import("../component/charts/MatchCharts").then((mod) => ({ default: mod.MapPerformanceChart }))
+);
+const ModesRadarChart = lazy(() =>
+  import("../component/charts/MatchCharts").then((mod) => ({ default: mod.ModesRadarChart }))
+);
+const PerformanceTrendChart = lazy(() =>
+  import("../component/charts/MatchCharts").then((mod) => ({ default: mod.PerformanceTrendChart }))
+);
+const PlacementDistributionChart = lazy(() =>
+  import("../component/charts/MatchCharts").then((mod) => ({ default: mod.PlacementDistributionChart }))
+);
+
+const ChartFallback = () => (
+  <div className="player-chart-empty" style={{ minHeight: 180, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <Spin indicator={<LoadingOutlined style={{ fontSize: 28, color: "#fde82b" }} spin />} />
+  </div>
+);
 
 const OVERVIEW_ITEMS = [
   { key: "matchesPlayed", label: "Matches", fallback: "0" },
@@ -465,8 +478,8 @@ const PlayerPage = ({ t }) => {
 
           {tipList.length ? (
             <ul className="player-error__tips">
-              {tipList.map((tip, index) => (
-                <li key={index}>{tip}</li>
+              {tipList.map((tip) => (
+                <li key={tip}>{tip}</li>
               ))}
             </ul>
           ) : null}
@@ -750,8 +763,8 @@ const PlayerPage = ({ t }) => {
       const tierVal = Math.max(0, Math.min(5, Number(tier) || 0));
       return (
         <span className="player-weapon-card__tier" title={`Tier ${tierVal}`}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <i key={i} className={i <= tierVal ? "is-on" : ""} />
+          {[1, 2, 3, 4, 5].map((tierStep) => (
+            <i key={`tier-${tierStep}`} className={tierStep <= tierVal ? "is-on" : ""} />
           ))}
         </span>
       );
@@ -874,23 +887,25 @@ const PlayerPage = ({ t }) => {
     </div>
   );
 
-  const renderRecentFormChart = () => <PerformanceTrendChart items={matchItems} />;
+  const renderRecentFormChart = () => (
+    <Suspense fallback={<ChartFallback />}>
+      <PerformanceTrendChart items={matchItems} />
+    </Suspense>
+  );
 
   const renderChartsCard = () => {
     const chartStats = season ? seasonStats : stats;
     const chartModes = season ? seasonModes : lifetimeModes;
-    const modeRows = MODE_ORDER
-      .map((modeKey) => {
-        const modeStats = chartModes?.[modeKey]?.stats;
-        if (!modeStats || Number(modeStats.matchesPlayed?.value || 0) <= 0) return null;
-        return {
-          label: MODE_LABELS[modeKey],
-          value: getStatValue(modeStats, "avgDamage"),
-          displayValue: getDisplay(modeStats, "avgDamage", "0"),
-          max: 500,
-        };
-      })
-      .filter(Boolean);
+    const modeRows = MODE_ORDER.flatMap((modeKey) => {
+      const modeStats = chartModes?.[modeKey]?.stats;
+      if (!modeStats || Number(modeStats.matchesPlayed?.value || 0) <= 0) return [];
+      return [{
+        label: MODE_LABELS[modeKey],
+        value: getStatValue(modeStats, "avgDamage"),
+        displayValue: getDisplay(modeStats, "avgDamage", "0"),
+        max: 500,
+      }];
+    });
 
     const combatBars = [
       { label: "K/D", value: getStatValue(chartStats, "kd"), displayValue: getDisplay(chartStats, "kd", "0"), max: 8 },
@@ -955,11 +970,15 @@ const PlayerPage = ({ t }) => {
           </div>
           <div className="player-chart-panel">
             <h4><TrophyOutlined /> Placement Distribution</h4>
-            <PlacementDistributionChart items={matchItems} />
+            <Suspense fallback={<ChartFallback />}>
+              <PlacementDistributionChart items={matchItems} />
+            </Suspense>
           </div>
           <div className="player-chart-panel">
             <h4><BarChartOutlined /> Map Performance</h4>
-            <MapPerformanceChart items={matchItems} />
+            <Suspense fallback={<ChartFallback />}>
+              <MapPerformanceChart items={matchItems} />
+            </Suspense>
           </div>
           <div className="player-chart-panel">
             <h4><BarChartOutlined /> Combat</h4>
@@ -1185,7 +1204,9 @@ const PlayerPage = ({ t }) => {
                 <h3>Modes Comparison</h3>
                 <span>{season ? seasonLabel : "Lifetime"}</span>
               </div>
-              <ModesRadarChart modes={season ? seasonModes : lifetimeModes} />
+              <Suspense fallback={<ChartFallback />}>
+                <ModesRadarChart modes={season ? seasonModes : lifetimeModes} />
+              </Suspense>
             </section>
             {modeLifetimeSection}
             {modeSeasonSection}

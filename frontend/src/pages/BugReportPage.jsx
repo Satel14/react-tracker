@@ -47,8 +47,9 @@ class BugReportPage extends React.Component {
 
           <div className='bugreport__form'>
             <div className='bugreport__field'>
-              <label>Your Name <span>(optional)</span></label>
+              <label htmlFor='bugreport-name'>Your Name <span>(optional)</span></label>
               <Input
+                id='bugreport-name'
                 placeholder='Enter your name'
                 value={name}
                 onChange={(e) => this.setState({ name: e.target.value })}
@@ -56,8 +57,9 @@ class BugReportPage extends React.Component {
             </div>
 
             <div className='bugreport__field'>
-              <label>Email <span>(optional, for follow-up)</span></label>
+              <label htmlFor='bugreport-email'>Email <span>(optional, for follow-up)</span></label>
               <Input
+                id='bugreport-email'
                 placeholder='your@email.com'
                 value={email}
                 onChange={(e) => this.setState({ email: e.target.value })}
@@ -65,8 +67,9 @@ class BugReportPage extends React.Component {
             </div>
 
             <div className='bugreport__field'>
-              <label>Bug Description <span className='required'>*</span></label>
+              <label htmlFor='bugreport-description'>Bug Description <span className='required'>*</span></label>
               <TextArea
+                id='bugreport-description'
                 placeholder='Describe the bug: what happened, what you expected, and steps to reproduce...'
                 rows={5}
                 value={description}

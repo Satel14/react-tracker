@@ -25,7 +25,7 @@ const Navbar = ({ t }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleClick = (e) => {
+  const selectMenuItem = (e) => {
     setCurrent(e.key);
   };
 
@@ -131,19 +131,31 @@ const Navbar = ({ t }) => {
       {!isMobile && (
         <>
           <Menu
-            onClick={handleClick}
+            onClick={selectMenuItem}
             selectedKeys={[current]}
             mode="horizontal"
             items={items}
           />
 
-          <div className="navbar__logo" onClick={() => navigate("/")}>
+          <div
+            className="navbar__logo"
+            onClick={() => navigate("/")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                navigate("/");
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={t("menu.main")}
+          >
             <span className="navbar__logo-main">PUBG</span>
             <span className="navbar__logo-tracker">.TRACKER</span>
           </div>
 
           <Menu
-            onClick={handleClick}
+            onClick={selectMenuItem}
             selectedKeys={[current]}
             mode="horizontal"
             className="right-menu"
@@ -160,7 +172,19 @@ const Navbar = ({ t }) => {
 
       {isMobile && (
         <>
-          <div className="navbar__logo" onClick={() => navigate("/")}>
+          <div
+            className="navbar__logo"
+            onClick={() => navigate("/")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                navigate("/");
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={t("menu.main")}
+          >
             <span className="navbar__logo-main">PUBG</span>
             <span className="navbar__logo-tracker">.TRACKER</span>
           </div>
@@ -174,22 +198,41 @@ const Navbar = ({ t }) => {
           </button>
 
           {mobileOpen && (
-            <div className="navbar__mobile-overlay" onClick={() => setMobileOpen(false)}>
-              <div className="navbar__mobile-drawer" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="navbar__mobile-overlay"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setMobileOpen(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setMobileOpen(false);
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={t("menu.main")}
+            >
+              <div className="navbar__mobile-drawer">
                 <div className="navbar__mobile-items">
-                  {items.map((item) => (
-                    <div
-                      key={item.key}
-                      className={`navbar__mobile-item ${current === item.key ? "active" : ""}`}
-                      onClick={() => handleMobileNav(
-                        item.key === "main" ? "/" : `/${item.key}`,
-                        item.key
-                      )}
-                    >
-                      {item.icon}
-                      <span>{typeof item.label === "string" ? item.label : t(`menu.${item.key}`)}</span>
-                    </div>
-                  ))}
+                  {items.map((item) => {
+                    const path = item.key === "main" ? "/" : `/${item.key}`;
+                    return (
+                      <div
+                        key={item.key}
+                        className={`navbar__mobile-item ${current === item.key ? "active" : ""}`}
+                        onClick={() => handleMobileNav(path, item.key)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleMobileNav(path, item.key);
+                          }
+                        }}
+                        role="menuitem"
+                        tabIndex={0}
+                      >
+                        {item.icon}
+                        <span>{typeof item.label === "string" ? item.label : t(`menu.${item.key}`)}</span>
+                      </div>
+                    );
+                  })}
                 </div>
                 <div className="navbar__mobile-controls">
                   <SetTheme />

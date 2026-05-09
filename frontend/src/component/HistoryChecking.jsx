@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Link } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { getRecentSearches } from "../api/player";
@@ -11,7 +11,7 @@ const EMPTY_LIST = [];
 
 const normalizeHistoryEntries = (historyMap = {}) => {
   return Object.entries(historyMap || {})
-    .map(([entryKey, player]) => {
+    .flatMap(([entryKey, player]) => {
       const rawKey = String(entryKey || "");
       const delimiterIndex = rawKey.indexOf(":");
       const platformFromKey = delimiterIndex >= 0 ? rawKey.slice(0, delimiterIndex) : "";
@@ -21,9 +21,9 @@ const normalizeHistoryEntries = (historyMap = {}) => {
       const nickname = normalizeDisplayName(player?.nickname, gameId, platform);
       const avatar = player?.avatar || getPlatformAvatar(platform);
 
-      if (!gameId) return null;
+      if (!gameId) return [];
 
-      return {
+      return [{
         id: `${platform}:${gameId}`,
         platform,
         gameId,
@@ -33,9 +33,8 @@ const normalizeHistoryEntries = (historyMap = {}) => {
         rankLabel: player?.rankLabel || null,
         rating: player?.rating ?? null,
         searchedAt: Number(player?.searchedAt || 0),
-      };
+      }];
     })
-    .filter(Boolean)
     .sort((a, b) => (b?.searchedAt || 0) - (a?.searchedAt || 0));
 };
 
@@ -43,14 +42,14 @@ const normalizeRecentEntries = (items = []) => {
   if (!Array.isArray(items)) return EMPTY_LIST;
 
   return items
-    .map((item) => {
+    .flatMap((item) => {
       const platform = item?.platform || "steam";
       const gameId = stripPlatformPrefix(item?.gameId || "", platform);
       const nickname = normalizeDisplayName(item?.nickname, gameId, platform);
       const avatar = item?.avatar || getPlatformAvatar(platform);
-      if (!gameId) return null;
+      if (!gameId) return [];
 
-      return {
+      return [{
         id: item?.id || `${platform}:${gameId}`,
         platform,
         gameId,
@@ -60,9 +59,8 @@ const normalizeRecentEntries = (items = []) => {
         rankLabel: item?.rankLabel || null,
         rating: item?.rating ?? null,
         searchedAt: Number(item?.searchedAt || 0),
-      };
+      }];
     })
-    .filter(Boolean)
     .sort((a, b) => (b?.searchedAt || 0) - (a?.searchedAt || 0));
 };
 
@@ -166,41 +164,41 @@ const HistoryChecking = ({ t }) => {
   return (
     <>
       <div>
-        <motion.div
+        <m.div
           className="titlehistory"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
           {t("other.words.yourHistory")}
-        </motion.div>
-        <motion.div
+        </m.div>
+        <m.div
           className="historycheck"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
           {renderHistoryBlocks(historyList)}
-        </motion.div>
+        </m.div>
       </div>
 
       <div>
-        <motion.div
+        <m.div
           className="titlehistory"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.35 }}
         >
           {t("other.words.recentSearched")}
-        </motion.div>
-        <motion.div
+        </m.div>
+        <m.div
           className="historycheck"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.35 }}
         >
           {renderHistoryBlocks(recentList)}
-        </motion.div>
+        </m.div>
       </div>
     </>
   );

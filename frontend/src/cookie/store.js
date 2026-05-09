@@ -132,13 +132,6 @@ export const addHistory = async (
   return next[entryId];
 };
 
-export const removeHistory = () => {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.removeItem(HISTORY_KEY);
-  emitHistoryUpdated({});
-};
-
 export const getFavorites = async () => readObject(FAVORITES_KEY);
 
 export const getFavoritesCount = async () => {
@@ -153,7 +146,7 @@ export const isFavorite = async (id) => {
   return Boolean(favorites[key]);
 };
 
-export const addFavorite = async (payload) => {
+const addFavorite = async (payload) => {
   const item = normalizeFavorite(payload);
   if (!item) return null;
 

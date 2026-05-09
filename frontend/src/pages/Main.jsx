@@ -7,7 +7,7 @@ import {
 import CountUp from "react-countup";
 import { Row, Col, Input } from "antd";
 import { translate } from "react-switch-lang";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import HistoryChecking from "../component/HistoryChecking";
 import { getLiveSnapshot, getPlayerSteamName } from '../api/player'
@@ -152,17 +152,29 @@ const Main = ({ t }) => {
               <span>{t("pages.main.subtitle")}</span>
             </div>
             <div className="chooser">
-              <div className="choose-platform">
-                {PLATFORM_OPTIONS.map((item) => (
-                  <div
-                    key={item.value}
-                    className={isChecked(item.value) ? "active" : ""}
-                    onClick={() => handlePlatformChange(item.value)}
-                    title={item.label}
-                  >
-                    {item.icon}
-                  </div>
-                ))}
+              <div className="choose-platform" role="radiogroup" aria-label={t("pages.main.title")}>
+                {PLATFORM_OPTIONS.map((item) => {
+                  const checked = isChecked(item.value);
+                  return (
+                    <div
+                      key={item.value}
+                      className={checked ? "active" : ""}
+                      onClick={() => handlePlatformChange(item.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handlePlatformChange(item.value);
+                        }
+                      }}
+                      role="radio"
+                      tabIndex={0}
+                      aria-checked={checked}
+                      title={item.label}
+                    >
+                      {item.icon}
+                    </div>
+                  );
+                })}
               </div>
               <Input
                 size="large"
@@ -171,13 +183,25 @@ const Main = ({ t }) => {
                 onChange={(e) => setText(e.target.value)}
                 onPressEnter={() => handleClick()}
               />
-              <div className="enter-search" onClick={() => handleClick()}>
+              <div
+                className="enter-search"
+                onClick={() => handleClick()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleClick();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={t("other.words.viewStats")}
+              >
                 <EnterOutlined />
               </div>
             </div>
 
             <div className="mainpage_left__stats">
-              <motion.div
+              <m.div
                 className="mainpage_left__stats__seasonend"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -195,8 +219,8 @@ const Main = ({ t }) => {
                     </span>
                   </span>
                 </div>
-              </motion.div>
-              <motion.div
+              </m.div>
+              <m.div
                 className="mainpage_left__stats__playeronline"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -214,7 +238,7 @@ const Main = ({ t }) => {
                     )}
                   </span>
                 </div>
-              </motion.div>
+              </m.div>
             </div>
             <div className="history-list">
               <HistoryChecking />
