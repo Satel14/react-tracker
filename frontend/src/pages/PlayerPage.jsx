@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useReducer, lazy, Suspense } from "react";
 import { Button, Spin, Tabs, Select } from "antd";
 import { translate } from "react-switch-lang";
 import {
@@ -297,19 +297,46 @@ const getSurvivalMasteryTierMeta = (survivalMastery) => {
   };
 };
 
+const INITIAL_REPORTS = { loading: false, error: null, data: null, filter: "all" };
+function reportsReducer(state, action) {
+  switch (action.type) {
+    case "reset": return INITIAL_REPORTS;
+    case "loadStart": return { ...state, loading: true, error: null };
+    case "loadResult": return { ...state, loading: false, error: null, data: action.data };
+    case "loadError": return { ...state, loading: false, error: action.error };
+    case "clearData": return { ...state, data: null };
+    case "setFilter": return { ...state, filter: action.filter };
+    default: return state;
+  }
+}
+
+const INITIAL_SESSION = {
+  activeTabKey: "overview",
+  selectedSeasonId: null,
+  isFavorited: false,
+  favoriteLoading: false,
+};
+function sessionReducer(state, action) {
+  switch (action.type) {
+    case "reset": return INITIAL_SESSION;
+    case "setTab": return { ...state, activeTabKey: action.key };
+    case "setSeason": return { ...state, selectedSeasonId: action.id };
+    case "setFavorited": return { ...state, isFavorited: action.value };
+    case "favoriteStart": return { ...state, favoriteLoading: true };
+    case "favoriteEnd": return { ...state, favoriteLoading: false };
+    default: return state;
+  }
+}
+
 const PlayerPage = ({ t }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [selectedSeasonId, setSelectedSeasonId] = useState(null);
-  const [activeTabKey, setActiveTabKey] = useState("overview");
-  const [reportsLoading, setReportsLoading] = useState(false);
-  const [reportsError, setReportsError] = useState(null);
-  const [reportsData, setReportsData] = useState(null);
-  const [reportsFilter, setReportsFilter] = useState("all");
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [heatmapMatch, setHeatmapMatch] = useState(null);
+  const [reports, reportsDispatch] = useReducer(reportsReducer, INITIAL_REPORTS);
+  const { loading: reportsLoading, error: reportsError, data: reportsData, filter: reportsFilter } = reports;
+  const [session, sessionDispatch] = useReducer(sessionReducer, INITIAL_SESSION);
+  const { activeTabKey, selectedSeasonId, isFavorited, favoriteLoading } = session;
   const { platform, gameId } = useParams();
   const navigate = useNavigate();
 
@@ -321,10 +348,10 @@ const PlayerPage = ({ t }) => {
       if (response && response.data && response.data.data) {
         const payload = response.data.data;
         setData(payload);
-        setSelectedSeasonId(payload?.selectedSeasonId || payload?.season?.id || seasonId || null);
+        sessionDispatch({ type: "setSeason", id: payload?.selectedSeasonId || payload?.season?.id || seasonId || null });
       } else if (response && response.data) {
         setData(response.data);
-        setSelectedSeasonId(response.data?.selectedSeasonId || response.data?.season?.id || seasonId || null);
+        sessionDispatch({ type: "setSeason", id: response.data?.selectedSeasonId || response.data?.season?.id || seasonId || null });
       } else {
         setError({ code: "not_found", message: null });
       }
@@ -344,37 +371,29 @@ const PlayerPage = ({ t }) => {
 
   const fetchReports = useCallback(async (accountId, playerName) => {
     if (!accountId && !playerName) {
-      setReportsData(null);
+      reportsDispatch({ type: "clearData" });
       return;
     }
 
-    setReportsLoading(true);
-    setReportsError(null);
+    reportsDispatch({ type: "loadStart" });
     try {
       const response = await getPlayerReports(accountId, playerName);
-      if (response && response.data && response.data.data) {
-        setReportsData(response.data.data);
-      } else if (response && response.data) {
-        setReportsData(response.data);
-      } else {
-        setReportsData(null);
-      }
+      const payload = response?.data?.data ?? response?.data ?? null;
+      reportsDispatch({ type: "loadResult", data: payload });
     } catch (err) {
-      setReportsError(err.message || "Failed to fetch PUBG Report data");
-    } finally {
-      setReportsLoading(false);
+      reportsDispatch({ type: "loadError", error: err.message || "Failed to fetch PUBG Report data" });
     }
   }, []);
 
   const syncFavoriteState = useCallback(async () => {
     const favoriteId = data?.platformInfo?.platformUserId || gameId || null;
     if (!favoriteId) {
-      setIsFavorited(false);
+      sessionDispatch({ type: "setFavorited", value: false });
       return;
     }
 
     const value = await isFavorite(favoriteId);
-    setIsFavorited(value);
+    sessionDispatch({ type: "setFavorited", value });
   }, [data?.platformInfo?.platformUserId, gameId]);
 
   const handleToggleFavorite = useCallback(async () => {
@@ -391,27 +410,23 @@ const PlayerPage = ({ t }) => {
       avatarUrl: data?.platformInfo?.avatarUrl || null,
     };
 
-    setFavoriteLoading(true);
+    sessionDispatch({ type: "favoriteStart" });
     try {
       const result = await toggleFavorite(payload);
       if (result && typeof result.favorited === "boolean") {
-        setIsFavorited(result.favorited);
+        sessionDispatch({ type: "setFavorited", value: result.favorited });
       } else {
         await syncFavoriteState();
       }
     } finally {
-      setFavoriteLoading(false);
+      sessionDispatch({ type: "favoriteEnd" });
     }
   }, [data, favoriteLoading, gameId, platform, syncFavoriteState]);
 
   useEffect(() => {
     if (platform && gameId) {
-      setActiveTabKey("overview");
-      setSelectedSeasonId(null);
-      setReportsData(null);
-      setReportsError(null);
-      setReportsFilter("all");
-      setIsFavorited(false);
+      sessionDispatch({ type: "reset" });
+      reportsDispatch({ type: "reset" });
       fetchData(null);
     }
   }, [platform, gameId, fetchData]);
@@ -656,7 +671,7 @@ const PlayerPage = ({ t }) => {
                 value={activeSeasonId || undefined}
                 options={seasonOptions}
                 onChange={(value) => {
-                  setSelectedSeasonId(value);
+                  sessionDispatch({ type: "setSeason", id: value });
                   fetchData(value);
                 }}
               />
@@ -1108,7 +1123,7 @@ const PlayerPage = ({ t }) => {
               className="player-season-select"
               value={reportsFilter}
               options={REPORT_FILTER_OPTIONS}
-              onChange={(value) => setReportsFilter(value)}
+              onChange={(value) => reportsDispatch({ type: "setFilter", filter: value })}
             />
           </div>
         </div>
@@ -1367,7 +1382,7 @@ const PlayerPage = ({ t }) => {
         </div>
       </section>
 
-      <Tabs className="player-tabs" activeKey={activeTabKey} onChange={setActiveTabKey} items={tabItems} />
+      <Tabs className="player-tabs" activeKey={activeTabKey} onChange={(key) => sessionDispatch({ type: "setTab", key })} items={tabItems} />
 
       <MatchHeatmap
         open={Boolean(heatmapMatch)}
