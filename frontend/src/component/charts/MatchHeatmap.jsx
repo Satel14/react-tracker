@@ -17,6 +17,185 @@ const formatSeconds = (sec) => {
   return `${m}:${String(s).padStart(2, "0")}`;
 };
 
+const HeatmapTooltip = ({ hovered, eventLabels, t }) => (
+  <div className="match-heatmap__tooltip">
+    <strong style={{ color: EVENT_COLORS[hovered.event.type] }}>
+      {eventLabels[hovered.event.type]}
+      {hovered.cluster && hovered.cluster.count > 1 ? ` ×${hovered.cluster.count}` : ""}
+    </strong>
+    {hovered.cluster && hovered.cluster.count > 1 ? (
+      hovered.cluster.items.slice(0, 5).map((item) => {
+        const opponent = item.victim
+          ? t("pages.matchHeatmap.tooltipVs", { name: item.victim })
+          : item.killer
+            ? t("pages.matchHeatmap.tooltipBy", { name: item.killer })
+            : null;
+        const weapon = item.weapon ? item.weapon.replace(/^WeapHK_C$|^Item_Weapon_/i, "") : null;
+        const itemKey = `${item.victim || item.killer || ""}-${item.weapon || ""}-${item.distance ?? ""}-${item.time ?? ""}`;
+        return (
+          <div key={itemKey}>
+            {opponent}
+            {weapon ? ` - ${weapon}` : null}
+            {item.distance ? ` (${item.distance}m)` : null}
+          </div>
+        );
+      })
+    ) : (
+      <>
+        {hovered.event.victim ? <div>{t("pages.matchHeatmap.tooltipVs", { name: hovered.event.victim })}</div> : null}
+        {hovered.event.killer ? <div>{t("pages.matchHeatmap.tooltipBy", { name: hovered.event.killer })}</div> : null}
+        {hovered.event.weapon ? <div>{hovered.event.weapon.replace(/^WeapHK_C$|^Item_Weapon_/i, "")}</div> : null}
+        {hovered.event.distance ? <div>{hovered.event.distance}m</div> : null}
+        {hovered.event.time !== null && hovered.event.time !== undefined ? (
+          <div>{formatSeconds(hovered.event.time)}</div>
+        ) : null}
+      </>
+    )}
+  </div>
+);
+
+const HeatmapClusters = ({ clusters, scale, eventDotLabels, setHovered }) =>
+  clusters.map((cluster) => {
+    const baseRadius = cluster.type === "drop" ? scale * 0.028 : scale * 0.024;
+    const sizeBoost = Math.min(cluster.count - 1, 3) * 0.4;
+    const radius = baseRadius * (1 + sizeBoost);
+    const firstEvent = cluster.items[0];
+    const baseLabel = eventDotLabels[cluster.type] || cluster.type.toUpperCase();
+    const labelText =
+      cluster.type === "kill" && cluster.count > 1
+        ? `${baseLabel} ×${cluster.count}`
+        : baseLabel;
+    const clusterKey = `${cluster.type}-${cluster.x.toFixed(2)}-${cluster.y.toFixed(2)}`;
+    return (
+      <g key={clusterKey}>
+        <circle cx={cluster.x} cy={cluster.y} r={radius * 2.4} fill={EVENT_COLORS[cluster.type]} opacity="0.16" />
+        <circle cx={cluster.x} cy={cluster.y} r={radius * 1.5} fill={EVENT_COLORS[cluster.type]} opacity="0.32" />
+        <circle
+          cx={cluster.x}
+          cy={cluster.y}
+          r={radius}
+          fill={EVENT_COLORS[cluster.type]}
+          stroke="#0c1018"
+          strokeWidth={scale * 0.0024}
+          onMouseEnter={() => setHovered({ event: firstEvent, cluster })}
+          onMouseLeave={() => setHovered(null)}
+          style={{ cursor: "pointer" }}
+        />
+        {cluster.count > 1 ? (
+          <text
+            x={cluster.x}
+            y={cluster.y}
+            fill="#0c1018"
+            fontSize={radius * 1.0}
+            fontWeight="800"
+            textAnchor="middle"
+            dominantBaseline="central"
+            style={{ pointerEvents: "none" }}
+          >
+            ×{cluster.count}
+          </text>
+        ) : null}
+        <text
+          x={cluster.x}
+          y={cluster.y + radius * 2 + scale * 0.018}
+          fill="#fff"
+          fontSize={scale * 0.026}
+          fontWeight="700"
+          letterSpacing="1"
+          textAnchor="middle"
+          stroke="#0c1018"
+          strokeWidth={scale * 0.004}
+          paintOrder="stroke"
+        style={{ pointerEvents: "none" }}
+        >
+          {labelText}
+        </text>
+      </g>
+    );
+  });
+
+const HeatmapGrid = ({ viewBox, scale }) => {
+  const gridStep = viewBox.size > 4000 ? 1000 : viewBox.size > 2000 ? 500 : 250;
+  const startX = Math.floor(viewBox.x / gridStep) * gridStep;
+  const endX = viewBox.x + viewBox.size;
+  const startY = Math.floor(viewBox.y / gridStep) * gridStep;
+  const endY = viewBox.y + viewBox.size;
+  const lines = [];
+  for (let x = startX; x <= endX; x += gridStep) {
+    lines.push(
+      <line key={`vx-${x}`} x1={x} y1={viewBox.y} x2={x} y2={viewBox.y + viewBox.size} stroke="rgba(120, 247, 168, 0.12)" strokeWidth={scale * 0.0008} />
+    );
+  }
+  for (let y = startY; y <= endY; y += gridStep) {
+    lines.push(
+      <line key={`hy-${y}`} x1={viewBox.x} y1={y} x2={viewBox.x + viewBox.size} y2={y} stroke="rgba(120, 247, 168, 0.12)" strokeWidth={scale * 0.0008} />
+    );
+  }
+  return <>{lines}</>;
+};
+
+const HeatmapTimeline = ({ events, scale }) => {
+  const timeline = events
+    .filter((event) => event.time !== null && event.time !== undefined)
+    .slice()
+    .sort((a, b) => (a.time || 0) - (b.time || 0));
+  if (timeline.length < 2) return null;
+  const points = timeline.map((event) => `${event.x},${event.y}`).join(" ");
+  return (
+    <polyline
+      points={points}
+      fill="none"
+      stroke="rgba(255, 255, 255, 0.4)"
+      strokeWidth={scale * 0.003}
+      strokeDasharray={`${scale * 0.012} ${scale * 0.008}`}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  );
+};
+
+const HeatmapStage = ({ loading, error, rawMap, viewBox, scale, events, clusters, hovered, setHovered, eventLabels, eventDotLabels, t }) => {
+  if (loading) {
+    return (
+      <div className="match-heatmap__loading">
+        <Spin indicator={<LoadingOutlined style={{ fontSize: 32, color: "#fde82b" }} spin />} />
+        <span>{t("pages.matchHeatmap.loading")}</span>
+      </div>
+    );
+  }
+  if (error) return <Alert type="error" message={error} showIcon />;
+  return (
+    <div className={`match-heatmap__canvas match-heatmap__canvas--${(rawMap || "").toLowerCase()}`}>
+      <svg viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.size} ${viewBox.size}`} className="match-heatmap__svg">
+        <defs>
+          <radialGradient id="heatmap-bg" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stopColor="rgba(120, 247, 168, 0.08)" />
+            <stop offset="100%" stopColor="rgba(8, 14, 24, 0)" />
+          </radialGradient>
+        </defs>
+        <rect x={viewBox.x} y={viewBox.y} width={viewBox.size} height={viewBox.size} fill="url(#heatmap-bg)" />
+        <HeatmapGrid viewBox={viewBox} scale={scale} />
+        <rect
+          x={viewBox.x + scale * 0.005}
+          y={viewBox.y + scale * 0.005}
+          width={viewBox.size - scale * 0.01}
+          height={viewBox.size - scale * 0.01}
+          fill="none"
+          stroke="rgba(120, 247, 168, 0.25)"
+          strokeWidth={scale * 0.0014}
+        />
+        <text x={viewBox.x + viewBox.size / 2} y={viewBox.y + scale * 0.045} fill="rgba(120, 247, 168, 0.6)" fontSize={scale * 0.035} fontWeight="700" textAnchor="middle">N</text>
+        <text x={viewBox.x + viewBox.size / 2} y={viewBox.y + viewBox.size - scale * 0.018} fill="rgba(120, 247, 168, 0.6)" fontSize={scale * 0.035} fontWeight="700" textAnchor="middle">S</text>
+        <text x={viewBox.x + scale * 0.022} y={viewBox.y + viewBox.size / 2} fill="rgba(120, 247, 168, 0.6)" fontSize={scale * 0.035} fontWeight="700" textAnchor="middle" dominantBaseline="middle">W</text>
+        <text x={viewBox.x + viewBox.size - scale * 0.022} y={viewBox.y + viewBox.size / 2} fill="rgba(120, 247, 168, 0.6)" fontSize={scale * 0.035} fontWeight="700" textAnchor="middle" dominantBaseline="middle">E</text>
+        <HeatmapTimeline events={events} scale={scale} />
+        <HeatmapClusters clusters={clusters} scale={scale} eventDotLabels={eventDotLabels} setHovered={setHovered} />
+      </svg>
+      {hovered ? <HeatmapTooltip hovered={hovered} eventLabels={eventLabels} t={t} /> : null}
+    </div>
+  );
+};
+
 const INITIAL_HEATMAP_STATE = { data: null, loading: false, error: null, hovered: null };
 
 function heatmapReducer(state, action) {
@@ -226,239 +405,20 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
       </details>
 
       <div className="match-heatmap__stage">
-        {loading ? (
-          <div className="match-heatmap__loading">
-            <Spin indicator={<LoadingOutlined style={{ fontSize: 32, color: "#fde82b" }} spin />} />
-            <span>{t("pages.matchHeatmap.loading")}</span>
-          </div>
-        ) : error ? (
-          <Alert type="error" message={error} showIcon />
-        ) : (
-          <div className={`match-heatmap__canvas match-heatmap__canvas--${(rawMap || "").toLowerCase()}`}>
-            <svg
-              viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.size} ${viewBox.size}`}
-              className="match-heatmap__svg"
-            >
-              <defs>
-                <radialGradient id="heatmap-bg" cx="50%" cy="50%" r="65%">
-                  <stop offset="0%" stopColor="rgba(120, 247, 168, 0.08)" />
-                  <stop offset="100%" stopColor="rgba(8, 14, 24, 0)" />
-                </radialGradient>
-              </defs>
-              <rect x={viewBox.x} y={viewBox.y} width={viewBox.size} height={viewBox.size} fill="url(#heatmap-bg)" />
-
-              {(() => {
-                const gridStep = viewBox.size > 4000 ? 1000 : viewBox.size > 2000 ? 500 : 250;
-                const startX = Math.floor(viewBox.x / gridStep) * gridStep;
-                const endX = viewBox.x + viewBox.size;
-                const startY = Math.floor(viewBox.y / gridStep) * gridStep;
-                const endY = viewBox.y + viewBox.size;
-                const lines = [];
-                for (let x = startX; x <= endX; x += gridStep) {
-                  lines.push(
-                    <line
-                      key={`vx-${x}`}
-                      x1={x}
-                      y1={viewBox.y}
-                      x2={x}
-                      y2={viewBox.y + viewBox.size}
-                      stroke="rgba(120, 247, 168, 0.12)"
-                      strokeWidth={scale * 0.0008}
-                    />
-                  );
-                }
-                for (let y = startY; y <= endY; y += gridStep) {
-                  lines.push(
-                    <line
-                      key={`hy-${y}`}
-                      x1={viewBox.x}
-                      y1={y}
-                      x2={viewBox.x + viewBox.size}
-                      y2={y}
-                      stroke="rgba(120, 247, 168, 0.12)"
-                      strokeWidth={scale * 0.0008}
-                    />
-                  );
-                }
-                return lines;
-              })()}
-
-              <rect
-                x={viewBox.x + scale * 0.005}
-                y={viewBox.y + scale * 0.005}
-                width={viewBox.size - scale * 0.01}
-                height={viewBox.size - scale * 0.01}
-                fill="none"
-                stroke="rgba(120, 247, 168, 0.25)"
-                strokeWidth={scale * 0.0014}
-              />
-
-              <text
-                x={viewBox.x + viewBox.size / 2}
-                y={viewBox.y + scale * 0.045}
-                fill="rgba(120, 247, 168, 0.6)"
-                fontSize={scale * 0.035}
-                fontWeight="700"
-                textAnchor="middle"
-              >N</text>
-              <text
-                x={viewBox.x + viewBox.size / 2}
-                y={viewBox.y + viewBox.size - scale * 0.018}
-                fill="rgba(120, 247, 168, 0.6)"
-                fontSize={scale * 0.035}
-                fontWeight="700"
-                textAnchor="middle"
-              >S</text>
-              <text
-                x={viewBox.x + scale * 0.022}
-                y={viewBox.y + viewBox.size / 2}
-                fill="rgba(120, 247, 168, 0.6)"
-                fontSize={scale * 0.035}
-                fontWeight="700"
-                textAnchor="middle"
-                dominantBaseline="middle"
-              >W</text>
-              <text
-                x={viewBox.x + viewBox.size - scale * 0.022}
-                y={viewBox.y + viewBox.size / 2}
-                fill="rgba(120, 247, 168, 0.6)"
-                fontSize={scale * 0.035}
-                fontWeight="700"
-                textAnchor="middle"
-                dominantBaseline="middle"
-              >E</text>
-
-              {(() => {
-                const timeline = events
-                  .filter((event) => event.time !== null && event.time !== undefined)
-                  .slice()
-                  .sort((a, b) => (a.time || 0) - (b.time || 0));
-
-                if (timeline.length < 2) return null;
-                const points = timeline.map((event) => `${event.x},${event.y}`).join(" ");
-                return (
-                  <polyline
-                    points={points}
-                    fill="none"
-                    stroke="rgba(255, 255, 255, 0.4)"
-                    strokeWidth={scale * 0.003}
-                    strokeDasharray={`${scale * 0.012} ${scale * 0.008}`}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                );
-              })()}
-
-              {clusters.map((cluster) => {
-                const baseRadius = cluster.type === "drop" ? scale * 0.028 : scale * 0.024;
-                const sizeBoost = Math.min(cluster.count - 1, 3) * 0.4;
-                const radius = baseRadius * (1 + sizeBoost);
-                const firstEvent = cluster.items[0];
-                const baseLabel = eventDotLabels[cluster.type] || cluster.type.toUpperCase();
-                const labelText =
-                  cluster.type === "kill" && cluster.count > 1
-                    ? `${baseLabel} ×${cluster.count}`
-                    : baseLabel;
-                const clusterKey = `${cluster.type}-${cluster.x.toFixed(2)}-${cluster.y.toFixed(2)}`;
-                return (
-                  <g key={clusterKey}>
-                    <circle
-                      cx={cluster.x}
-                      cy={cluster.y}
-                      r={radius * 2.4}
-                      fill={EVENT_COLORS[cluster.type]}
-                      opacity="0.16"
-                    />
-                    <circle
-                      cx={cluster.x}
-                      cy={cluster.y}
-                      r={radius * 1.5}
-                      fill={EVENT_COLORS[cluster.type]}
-                      opacity="0.32"
-                    />
-                    <circle
-                      cx={cluster.x}
-                      cy={cluster.y}
-                      r={radius}
-                      fill={EVENT_COLORS[cluster.type]}
-                      stroke="#0c1018"
-                      strokeWidth={scale * 0.0024}
-                      onMouseEnter={() => setHovered({ event: firstEvent, cluster })}
-                      onMouseLeave={() => setHovered(null)}
-                      style={{ cursor: "pointer" }}
-                    />
-                    {cluster.count > 1 ? (
-                      <text
-                        x={cluster.x}
-                        y={cluster.y}
-                        fill="#0c1018"
-                        fontSize={radius * 1.0}
-                        fontWeight="800"
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        style={{ pointerEvents: "none" }}
-                      >
-                        ×{cluster.count}
-                      </text>
-                    ) : null}
-                    <text
-                      x={cluster.x}
-                      y={cluster.y + radius * 2 + scale * 0.018}
-                      fill="#fff"
-                      fontSize={scale * 0.026}
-                      fontWeight="700"
-                      letterSpacing="1"
-                      textAnchor="middle"
-                      stroke="#0c1018"
-                      strokeWidth={scale * 0.004}
-                      paintOrder="stroke"
-                      style={{ pointerEvents: "none" }}
-                    >
-                      {labelText}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-
-            {hovered ? (
-              <div className="match-heatmap__tooltip">
-                <strong style={{ color: EVENT_COLORS[hovered.event.type] }}>
-                  {eventLabels[hovered.event.type]}
-                  {hovered.cluster && hovered.cluster.count > 1 ? ` ×${hovered.cluster.count}` : ""}
-                </strong>
-                {hovered.cluster && hovered.cluster.count > 1 ? (
-                  hovered.cluster.items.slice(0, 5).map((item) => {
-                    const opponent = item.victim
-                      ? t("pages.matchHeatmap.tooltipVs", { name: item.victim })
-                      : item.killer
-                        ? t("pages.matchHeatmap.tooltipBy", { name: item.killer })
-                        : null;
-                    const weapon = item.weapon ? item.weapon.replace(/^WeapHK_C$|^Item_Weapon_/i, "") : null;
-                    const itemKey = `${item.victim || item.killer || ""}-${item.weapon || ""}-${item.distance ?? ""}-${item.time ?? ""}`;
-                    return (
-                      <div key={itemKey}>
-                        {opponent}
-                        {weapon ? ` - ${weapon}` : null}
-                        {item.distance ? ` (${item.distance}m)` : null}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <>
-                    {hovered.event.victim ? <div>{t("pages.matchHeatmap.tooltipVs", { name: hovered.event.victim })}</div> : null}
-                    {hovered.event.killer ? <div>{t("pages.matchHeatmap.tooltipBy", { name: hovered.event.killer })}</div> : null}
-                    {hovered.event.weapon ? <div>{hovered.event.weapon.replace(/^WeapHK_C$|^Item_Weapon_/i, "")}</div> : null}
-                    {hovered.event.distance ? <div>{hovered.event.distance}m</div> : null}
-                    {hovered.event.time !== null && hovered.event.time !== undefined ? (
-                      <div>{formatSeconds(hovered.event.time)}</div>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            ) : null}
-          </div>
-        )}
+        <HeatmapStage
+          loading={loading}
+          error={error}
+          rawMap={rawMap}
+          viewBox={viewBox}
+          scale={scale}
+          events={events}
+          clusters={clusters}
+          hovered={hovered}
+          setHovered={setHovered}
+          eventLabels={eventLabels}
+          eventDotLabels={eventDotLabels}
+          t={t}
+        />
       </div>
 
       {insights.length ? (
