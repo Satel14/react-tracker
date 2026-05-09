@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useReducer } from "react";
 import { Modal, Spin, Alert } from "antd";
 import { LoadingOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { translate } from "react-switch-lang";
@@ -17,6 +17,27 @@ const formatSeconds = (sec) => {
   return `${m}:${String(s).padStart(2, "0")}`;
 };
 
+const INITIAL_HEATMAP_STATE = { data: null, loading: false, error: null, hovered: null };
+
+function heatmapReducer(state, action) {
+  switch (action.type) {
+    case "reset":
+      return INITIAL_HEATMAP_STATE;
+    case "loadStart":
+      return { ...state, loading: true, error: null };
+    case "loadSuccess":
+      return { ...state, loading: false, error: null, data: action.data };
+    case "loadError":
+      return { ...state, loading: false, error: action.error };
+    case "loadFinish":
+      return state.loading ? { ...state, loading: false } : state;
+    case "hover":
+      return { ...state, hovered: action.hovered };
+    default:
+      return state;
+  }
+}
+
 const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, mapNameHint, rawMapNameHint, t }) => {
   const eventLabels = {
     drop: t("pages.matchHeatmap.tooltipDrop"),
@@ -28,41 +49,36 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
     kill: t("pages.matchHeatmap.labelKill"),
     death: t("pages.matchHeatmap.labelDeath"),
   };
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [hovered, setHovered] = useState(null);
+  const [{ data, loading, error, hovered }, dispatch] = useReducer(heatmapReducer, INITIAL_HEATMAP_STATE);
+  const setHovered = (hovered) => dispatch({ type: "hover", hovered });
 
   useEffect(() => {
     if (!open || !matchId) {
-      setData(null);
-      setError(null);
-      setHovered(null);
+      dispatch({ type: "reset" });
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    dispatch({ type: "loadStart" });
 
     getMatchHeatmap(matchId, shard, accountId, playerName)
       .then((response) => {
         if (cancelled) return;
         const payload = response?.data?.data || response?.data || null;
         if (response?.data?.message && !payload) {
-          setError(response.data.message);
+          dispatch({ type: "loadError", error: response.data.message });
         } else if (payload && payload.events) {
-          setData(payload);
+          dispatch({ type: "loadSuccess", data: payload });
         } else {
-          setError(t("pages.matchHeatmap.errorUnavailable"));
+          dispatch({ type: "loadError", error: t("pages.matchHeatmap.errorUnavailable") });
         }
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err?.message || t("pages.matchHeatmap.errorGeneric"));
+        dispatch({ type: "loadError", error: err?.message || t("pages.matchHeatmap.errorGeneric") });
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) dispatch({ type: "loadFinish" });
       });
 
     return () => {
