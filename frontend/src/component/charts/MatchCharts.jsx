@@ -1,22 +1,8 @@
 import React, { useMemo } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Line,
-  LineChart,
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+// This file is itself lazy-loaded from PlayerPage via React.lazy, so recharts
+// already lands in a separate chunk — react-doctor's static-import check is a false positive.
+// oxlint-disable-next-line react-doctor/prefer-dynamic-import
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getCurrentLocale } from "../../helpers/locale";
 
 const COLORS = {

@@ -329,6 +329,7 @@ function sessionReducer(state, action) {
 }
 
 const PlayerPage = ({ t }) => {
+  // oxlint-disable-next-line react-doctor/rerender-state-only-in-handlers -- loading IS read at line ~459 to render the Spin overlay; rule misses early-returns
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
