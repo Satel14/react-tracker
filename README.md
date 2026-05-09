@@ -9,7 +9,6 @@ Web app for tracking PUBG player stats: ranks, match history, leaderboards, prof
 - **Frontend** — React 18 + Vite, Ant Design, react-router-dom, recharts
 - **Backend** — Node + Express
 - **i18n** — English and Ukrainian
-- **Hosting** — Cloudflare Pages (frontend) + Render (backend)
 
 ## Run locally
 
@@ -30,13 +29,11 @@ cd frontend && npm start              # Vite picks the first free port
 
 Get a PUBG key at [developer.pubg.com](https://developer.pubg.com).
 
-## Build and deploy
+## Production build
 
 ```bash
 cd frontend && npm run build          # → frontend/build/
 ```
-
-Production deploy is automatic: push to `main` → Cloudflare Pages builds and ships the frontend. The backend deploys separately on Render.
 
 ## Layout
 
