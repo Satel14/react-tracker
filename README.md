@@ -1,48 +1,48 @@
 # PUBG Tracker
 
-Веб-додаток для відстеження статистики гравців PUBG: ранги, історія матчів, лідерборди, порівняння профілів. Працює поверх офіційного PUBG Developer API.
+Web app for tracking PUBG player stats: ranks, match history, leaderboards, profile comparisons. Built on top of the official PUBG Developer API.
 
 **Live:** [pubgtracker.top](https://www.pubgtracker.top)
 
-## Стек
+## Stack
 
 - **Frontend** — React 18 + Vite, Ant Design, react-router-dom, recharts
 - **Backend** — Node + Express
-- **i18n** — українська та англійська
-- **Хостинг** — Cloudflare Pages (фронт) + Render (бек)
+- **i18n** — English and Ukrainian
+- **Hosting** — Cloudflare Pages (frontend) + Render (backend)
 
-## Запуск локально
+## Run locally
 
-Потрібен **Node 22.12+** і npm.
+Requires **Node 22.12+** and npm.
 
 ```bash
-# 1. Встановити залежності
+# 1. Install deps
 cd frontend && npm install
 cd ../backend && npm install
 
-# 2. Створити backend/.env з ключем PUBG API
+# 2. Create backend/.env with a PUBG API key
 echo "PUBG_API_KEY=your_key_here" > backend/.env
 
-# 3. Запустити (у двох терміналах)
-cd backend && node server.js          # порт 3003
-cd frontend && npm start              # Vite сам обере вільний порт
+# 3. Run (in two terminals)
+cd backend && node server.js          # port 3003
+cd frontend && npm start              # Vite picks the first free port
 ```
 
-Ключ PUBG отримати на [developer.pubg.com](https://developer.pubg.com).
+Get a PUBG key at [developer.pubg.com](https://developer.pubg.com).
 
-## Білд та деплой
+## Build and deploy
 
 ```bash
 cd frontend && npm run build          # → frontend/build/
 ```
 
-Прод-деплой автоматичний: push у `main` → Cloudflare Pages робить білд і викочує. Бекенд деплоїться окремо на Render.
+Production deploy is automatic: push to `main` → Cloudflare Pages builds and ships the frontend. The backend deploys separately on Render.
 
-## Структура
+## Layout
 
 ```
-frontend/   React-фронт
-backend/    Express-бек, обгортка над PUBG/Steam API
+frontend/   React frontend
+backend/    Express backend, wraps PUBG / Steam APIs
 ```
 
-Кожна папка — окремий npm-проект зі своїм `package.json`.
+Each folder is its own npm project with its own `package.json`.
