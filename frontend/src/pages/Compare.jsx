@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer } from "react";
 import { Alert, Button, Spin } from "antd";
 import {
   ArrowLeftOutlined,
@@ -44,6 +44,21 @@ const getStatValue = (stats, key) => {
 
 const getStatDisplay = (stats, key) => stats?.[key]?.displayValue || "-";
 
+function profilesReducer(state, action) {
+  switch (action.type) {
+    case "start":
+      return { ...state, [action.slotKey]: { loading: true, error: null, data: null } };
+    case "success":
+      return { ...state, [action.slotKey]: { loading: false, error: null, data: action.data } };
+    case "notFound":
+      return { ...state, [action.slotKey]: { loading: false, error: "Player not found", data: null } };
+    case "error":
+      return { ...state, [action.slotKey]: { loading: false, error: action.error, data: null } };
+    default:
+      return state;
+  }
+}
+
 const Compare = ({ t }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -57,40 +72,28 @@ const Compare = ({ t }) => {
     return collected;
   }, [searchParams]);
 
-  const [profiles, setProfiles] = useState({});
+  const [profiles, profilesDispatch] = useReducer(profilesReducer, {});
 
   useEffect(() => {
     let cancelled = false;
-    const next = {};
 
     const load = async () => {
       await Promise.all(
         slots.map(async (slot) => {
           const slotKey = buildSlotParam(slot);
-          next[slotKey] = { loading: true, error: null, data: null };
-          setProfiles((prev) => ({ ...prev, [slotKey]: next[slotKey] }));
-
+          profilesDispatch({ type: "start", slotKey });
           try {
             const response = await getPlayerData(slot.platform, slot.id, null);
-            const payload = response?.data?.data || response?.data || null;
             if (cancelled) return;
+            const payload = response?.data?.data || response?.data || null;
             if (payload && payload.platformInfo) {
-              setProfiles((prev) => ({
-                ...prev,
-                [slotKey]: { loading: false, error: null, data: payload },
-              }));
+              profilesDispatch({ type: "success", slotKey, data: payload });
             } else {
-              setProfiles((prev) => ({
-                ...prev,
-                [slotKey]: { loading: false, error: "Player not found", data: null },
-              }));
+              profilesDispatch({ type: "notFound", slotKey });
             }
           } catch (err) {
             if (cancelled) return;
-            setProfiles((prev) => ({
-              ...prev,
-              [slotKey]: { loading: false, error: err?.message || "Load failed", data: null },
-            }));
+            profilesDispatch({ type: "error", slotKey, error: err?.message || "Load failed" });
           }
         })
       );
