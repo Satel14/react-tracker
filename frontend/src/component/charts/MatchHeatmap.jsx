@@ -367,7 +367,7 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
                       fill={EVENT_COLORS[cluster.type]}
                       stroke="#0c1018"
                       strokeWidth={scale * 0.0024}
-                      onMouseEnter={() => setHovered({ event: firstEvent, cluster, index })}
+                      onMouseEnter={() => setHovered({ event: firstEvent, cluster })}
                       onMouseLeave={() => setHovered(null)}
                       style={{ cursor: "pointer" }}
                     />
