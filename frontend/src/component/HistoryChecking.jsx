@@ -198,6 +198,7 @@ const HistoryChecking = ({ t }) => {
           transition={{ duration: 0.5, delay: 0.35 }}
         >
           <HistoryBlocks items={recentList} t={t} />
+        </m.div>
       </div>
     </>
   );
