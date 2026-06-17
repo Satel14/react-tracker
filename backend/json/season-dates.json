@@ -1,15 +1,15 @@
 {
-  "updatedAt": "2026-04-09",
+  "updatedAt": "2026-06-17",
   "defaults": {
     "cycleDays": 56
   },
   "seasons": {
-    "division.bro.official.pc-2018-41": {
-      "startDate": "2026-04-09T00:00:00Z",
-      "cycleDays": 56,
+    "division.bro.official.pc-2018-42": {
+      "startDate": "2026-06-17T00:00:00Z",
+      "cycleDays": 92,
       "isEstimated": true,
       "source": "manual-json-estimate",
-      "note": "Estimated by patch cadence. Replace with official endDate when announced."
+      "note": "Season 42 runs ~3 months (Update 42.1 through 42.3). Estimated endDate by 3-month cadence. Replace with official endDate when announced."
     }
   }
 }
