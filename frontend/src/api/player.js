@@ -44,3 +44,10 @@ export const getMatchHeatmap = (matchId, shard, accountId, playerName) => {
   const query = params.toString();
   return get(`/match/${encodeURIComponent(matchId)}/heatmap${query ? `?${query}` : ""}`, true);
 };
+
+export const getAggregateHeatmap = ({ shard, accountId, playerName, map, matchIds }) =>
+  post(
+    "/player/heatmap/aggregate",
+    { shard, accountId, playerName, map, matchIds },
+    true
+  );

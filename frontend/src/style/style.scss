@@ -4154,3 +4154,22 @@ body {
     circle, text { pointer-events: auto; }
   }
 }
+
+.aggregate-heatmap {
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  &__count { margin-left: auto; opacity: 0.8; }
+  &__field .aggregate-heatmap__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  &__empty, &__loading { padding: 24px; text-align: center; opacity: 0.8; }
+}
