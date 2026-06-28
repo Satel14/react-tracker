@@ -3986,6 +3986,15 @@ body {
   padding: 16px;
 
   &__title { color: #fde82b; }
+  &__back {
+    display: inline-block;
+    margin-bottom: 10px;
+    color: $colorSecond;
+    text-decoration: none;
+    font-size: 13px;
+
+    &:hover { color: #fff; text-decoration: underline; }
+  }
   &__loading { display: flex; gap: 10px; align-items: center; padding: 24px; }
   &__field .match-replay__canvas {
     position: absolute;
@@ -4000,7 +4009,33 @@ body {
     gap: 14px;
     margin-top: 12px;
     flex-wrap: wrap;
+
+    .ant-btn {
+      background: rgba(120, 247, 168, 0.1);
+      border-color: rgba(120, 247, 168, 0.45);
+      color: #d5ffe7;
+
+      &:hover {
+        background: rgba(120, 247, 168, 0.2);
+        border-color: $colorSecond;
+        color: #fff;
+      }
+    }
+    .ant-slider-rail { background: rgba(255, 255, 255, 0.15); }
+    .ant-slider-track { background: $colorSecond; }
+    .ant-slider:hover .ant-slider-track { background: $colorSecond; }
+    .ant-slider-handle::after { box-shadow: 0 0 0 2px $colorSecond; }
+    .ant-segmented {
+      background: rgba(255, 255, 255, 0.06);
+      color: #d6e0f0;
+    }
+    .ant-segmented-item-selected {
+      background: $colorSecond;
+      color: #0c1018;
+    }
+    .ant-segmented-item:hover:not(.ant-segmented-item-selected) { color: #fff; }
   }
+  &__time { color: #d6e0f0; font-variant-numeric: tabular-nums; }
 }
 
 .match-replay__layout {
@@ -4014,18 +4049,27 @@ body {
 .replay-roster {
   width: 200px;
   flex: 0 0 200px;
+  box-sizing: border-box;
   max-height: 600px;
+  overflow-x: hidden;
   overflow-y: auto;
   background: #0c1422;
   border-radius: 10px;
   padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 247, 168, 0.4) transparent;
+
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: rgba(120, 247, 168, 0.35); border-radius: 3px; }
 
   &__title { color: #fde82b; font-weight: 700; margin-bottom: 6px; }
   &__team { border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 0; }
   &__row {
     display: flex;
     justify-content: space-between;
+    gap: 8px;
     width: 100%;
+    box-sizing: border-box;
     background: none;
     border: 1px solid transparent;
     color: #d6e0f0;
@@ -4037,7 +4081,8 @@ body {
     &.is-dead { opacity: 0.4; }
     &.is-selected { border-color: #fde82b; background: rgba(253, 232, 43, 0.1); }
   }
-  &__kills { opacity: 0.8; }
+  &__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  &__kills { opacity: 0.8; flex-shrink: 0; }
 }
 
 @media (max-width: 760px) {
