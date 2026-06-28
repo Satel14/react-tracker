@@ -171,11 +171,7 @@
     "maps": {
       "tab": "Maps",
       "description": "Aggregate heatmap — where you land, die, and get kills across your recent matches. To watch a single match, open its Replay.",
-      "selectMatch": "Match",
       "selectMap": "Map",
-      "modeSingle": "This match",
-      "modeAggregate": "All matches",
-      "noMatches": "No matches to show on the map yet.",
       "aggregateEmpty": "No accumulated data for this map yet — open a few matches to build it up.",
       "layerDrop": "Landings",
       "layerKill": "Kills",
