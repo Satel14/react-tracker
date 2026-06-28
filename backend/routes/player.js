@@ -28,6 +28,10 @@ module.exports = (router) => {
     "/api/match/:matchId/heatmap",
     PlayerController.getMatchHeatmap
   );
+  router.get(
+    "/api/match/:matchId/replay",
+    PlayerController.getMatchReplay
+  );
   router.post(
     "/api/player/heatmap/aggregate",
     PlayerController.getPlayerHeatmapAggregate
