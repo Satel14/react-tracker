@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer, useRef, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Spin, Alert, Button, Slider, Segmented } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import { translate } from "react-switch-lang";
@@ -34,6 +34,10 @@ const MatchReplayPage = ({ t }) => {
   const [search] = useSearchParams();
   const accountId = search.get("accountId");
   const playerName = search.get("playerName");
+  const backTo =
+    playerName || accountId
+      ? `/player/${platform}/${encodeURIComponent(playerName || accountId)}`
+      : "/";
   const [{ loading, error, data }, dispatch] = useReducer(reducer, INITIAL);
   const [focusedAccountId, setFocusedAccountId] = useState(null);
   const canvasRef = useRef(null);
@@ -76,6 +80,7 @@ const MatchReplayPage = ({ t }) => {
 
   return (
     <div className="match-replay">
+      <Link className="match-replay__back" to={backTo}>{t("pages.replay.back")}</Link>
       <h2 className="match-replay__title">
         {t("pages.replay.title")}{data ? ` — ${data.mapName}` : ""}
       </h2>

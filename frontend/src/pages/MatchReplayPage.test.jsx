@@ -57,3 +57,9 @@ test("clicking a roster row marks it selected", async () => {
   fireEvent.click(row);
   expect(row.className).toMatch(/is-selected/);
 });
+
+test("shows a back-to-profile link pointing at the player page", () => {
+  renderAt("/match/steam/m1/replay?playerName=Me&accountId=account.me");
+  const back = screen.getByRole("link", { name: "pages.replay.back" });
+  expect(back).toHaveAttribute("href", "/player/steam/Me");
+});

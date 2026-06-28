@@ -187,6 +187,7 @@
       "pause": "Pause",
       "speed": "Speed",
       "open": "Replay",
+      "back": "← Back to profile",
       "roster": "Roster",
       "killsShort": "{count} K"
     },
