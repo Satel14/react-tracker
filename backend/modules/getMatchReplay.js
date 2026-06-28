@@ -35,6 +35,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
   const positions = new Map();
   const deathTime = new Map();
   const kills = [];
+  const zones = [];
 
   const accountKey = typeof accountId === "string" && accountId.trim() ? accountId.trim() : null;
   const lowerName = lower(playerName);
@@ -78,6 +79,27 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       }
       continue;
     }
+
+    if (type === "LogGameStatePeriodic") {
+      const gs = ev.gameState || {};
+      const t = eventTime(ev, matchStartMs);
+      const blue = readXY(gs.safetyZonePosition);
+      const br = Number(gs.safetyZoneRadius);
+      if (t !== null && blue && Number.isFinite(br) && br > 0) {
+        const white = readXY(gs.poisonGasWarningPosition);
+        const wr = Number(gs.poisonGasWarningRadius);
+        zones.push({
+          t,
+          bx: blue.x,
+          by: blue.y,
+          br: Math.round(br / 100),
+          wx: white ? white.x : blue.x,
+          wy: white ? white.y : blue.y,
+          wr: Number.isFinite(wr) ? Math.round(wr / 100) : 0,
+        });
+      }
+      continue;
+    }
   }
 
   let focalTeam = null;
@@ -106,6 +128,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     });
   }
   kills.sort((a, b) => a.t - b.t);
+  zones.sort((a, b) => a.t - b.t);
 
   return {
     rawMapName,
@@ -115,6 +138,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     createdAt: matchAttributes.createdAt || null,
     players,
     kills,
+    zones,
   };
 }
 
