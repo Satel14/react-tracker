@@ -6,7 +6,7 @@
 
 **Architecture:** A reusable `<MapField>` renders the real map image with zoom/pan and hosts overlay layers. Single-match uses an SVG marker overlay (`viewBox = 0 0 mapMax mapMax`, world coords plotted directly). Aggregate uses a hand-rolled canvas density renderer fed by points the backend accumulates per `(player, map)` — reusing the existing single-match telemetry parser, persisted via the same mutation-queue pattern as recent searches.
 
-**Tech Stack:** React 18 (CRA), Ant Design 5.15.3, SVG + Canvas 2D (no new rendering dependency), Express (CommonJS), Node built-in `node:test` for backend units, Jest + React Testing Library for frontend.
+**Tech Stack:** React 18 (Vite), Ant Design 5.15.3, SVG + Canvas 2D (no new rendering dependency), Express (CommonJS), Node built-in `node:test` for backend units, **Vitest** + React Testing Library for frontend.
 
 ## Global Constraints
 
@@ -14,7 +14,7 @@
 - **Commit messages:** Conventional Commits (`feat:`/`fix:`/`chore:`/`test:`). NO `Co-Authored-By` trailer in this repo.
 - **Frontend style:** 2-space indent, semicolons, ESM. Components `PascalCase`, helpers `camelCase`. Ant Design + SCSS in `frontend/src/style/style.scss`.
 - **Backend style:** 2-space indent, semicolons, CommonJS (`require`/`module.exports`).
-- **No new runtime dependencies** for rendering (heat layer is hand-rolled). Backend tests use the built-in `node:test` runner — no new dependency.
+- **Build tool is Vite** (not CRA — `CLAUDE.md` is stale on this). Frontend tests run on **Vitest** (jsdom env, `globals: true`, `@testing-library/jest-dom`), invoked as `npm test -- <pathSubstring>`. Backend tests use the built-in `node:test` runner. **No new runtime dependencies** for rendering (heat layer is hand-rolled); the only new dependencies are dev-only test tooling (`vitest`, `jsdom`), set up in Task 0.
 - **Mirrored logic:** map metadata exists in both `backend/modules/mapMeta.js` and `frontend/src/helpers/mapMeta.js` (same `displayName`/`mapMax` table). Changes must be made in both, like `playerIdentity.js`.
 - **Coordinates:** telemetry units kept as `cm / 100`. Origin is top-left; **Y axis points down — do NOT flip Y**. `pixel = (world / mapMax) * imageSize`.
 - **Comments:** keep minimal; no explanatory paragraphs above lint-disable directives.
@@ -169,7 +169,7 @@ test("MAP_LIST contains Erangel once and excludes the legacy duplicate", () => {
 
 - [ ] **Step 7: Run the frontend test to verify it fails**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=mapMeta`
+Run: `cd frontend && npm test -- mapMeta`
 Expected: FAIL — cannot resolve `./mapMeta`.
 
 - [ ] **Step 8: Implement the frontend module**
@@ -226,7 +226,7 @@ export default MAP_META;
 
 - [ ] **Step 9: Run the frontend test to verify it passes**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=mapMeta`
+Run: `cd frontend && npm test -- mapMeta`
 Expected: PASS (3 mapMeta tests).
 
 - [ ] **Step 10: Commit**
@@ -313,8 +313,8 @@ test("known maps resolve to an image asset", () => {
 
 - [ ] **Step 6: Run frontend tests**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=mapMeta`
-Expected: PASS (4 tests). (CRA's jest maps image imports to a stub filename string, so `image` is truthy.)
+Run: `cd frontend && npm test -- mapMeta`
+Expected: PASS (4 tests). (Under Vitest, Vite resolves `.webp` imports to a URL string, so `image` is truthy.)
 
 - [ ] **Step 7: Commit**
 
@@ -369,7 +369,7 @@ test("renders overlay children", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=MapField`
+Run: `cd frontend && npm test -- MapField`
 Expected: FAIL — cannot resolve `./MapField`.
 
 - [ ] **Step 3: Implement `MapField.jsx`**
@@ -443,7 +443,7 @@ export default MapField;
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=MapField`
+Run: `cd frontend && npm test -- MapField`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: Add styles**
@@ -543,7 +543,7 @@ test("renders the real map background once loaded", async () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=MatchHeatmap`
+Run: `cd frontend && npm test -- MatchHeatmap`
 Expected: FAIL — no `img` with name "erangel" (current component renders an abstract SVG, no map image).
 
 - [ ] **Step 3: Replace the SVG stage background with `MapField` + world-coordinate marker overlay**
@@ -597,7 +597,7 @@ const mapMax = getMapMeta(rawMap).mapMax;
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=MatchHeatmap`
+Run: `cd frontend && npm test -- MatchHeatmap`
 Expected: PASS.
 
 - [ ] **Step 5: Add overlay styles**
@@ -668,7 +668,7 @@ test("renders a match selector", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=MapsTab`
+Run: `cd frontend && npm test -- MapsTab`
 Expected: FAIL — cannot resolve `./MapsTab`.
 
 - [ ] **Step 3: Implement `MapsTab.jsx` (single mode)**
@@ -758,7 +758,7 @@ return (
 
 - [ ] **Step 5: Run the MapsTab + MatchHeatmap tests**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern="MapsTab|MatchHeatmap"`
+Run: `cd frontend && npm test -- MapsTab MatchHeatmap`
 Expected: PASS.
 
 - [ ] **Step 6: Add i18n keys**
@@ -828,7 +828,7 @@ Then in the `tabItems` array (the `matches`/`weapons`/`reports` block near line 
 
 - [ ] **Step 8: Run the full frontend test suite**
 
-Run: `cd frontend && npm test -- --watchAll=false`
+Run: `cd frontend && npm test`
 Expected: PASS (no regressions).
 
 - [ ] **Step 9: Manual smoke check**
@@ -883,7 +883,7 @@ test("intensityAlpha scales with count and clamps to 1", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=heatLayer`
+Run: `cd frontend && npm test -- heatLayer`
 Expected: FAIL — cannot resolve `./heatLayer`.
 
 - [ ] **Step 3: Implement `heatLayer.js`**
@@ -959,8 +959,8 @@ export const drawHeat = (ctx, points, { size, mapMax, radius = 18, gradient } = 
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=heatLayer`
-Expected: PASS (2 tests). (CRA jsdom provides a stub canvas 2D context sufficient for `buildGradient`'s fallback path; the gradient ramp test passes via either the real or fallback path.)
+Run: `cd frontend && npm test -- heatLayer`
+Expected: PASS (2 tests). (Under Vitest + jsdom, `canvas.getContext("2d")` returns null, so `buildGradient` takes its grayscale fallback path; the ramp test asserts `ramp[1020] > 200`, which the fallback satisfies.)
 
 - [ ] **Step 5: Commit**
 
@@ -1355,7 +1355,7 @@ test("shows the sample count after loading", async () => {
 
 - [ ] **Step 3: Run the test to verify it fails**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=AggregateHeatmap`
+Run: `cd frontend && npm test -- AggregateHeatmap`
 Expected: FAIL — cannot resolve `./AggregateHeatmap`.
 
 - [ ] **Step 4: Implement `AggregateHeatmap.jsx`**
@@ -1441,7 +1441,7 @@ export default AggregateHeatmap;
 
 - [ ] **Step 5: Run the test to verify it passes**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=AggregateHeatmap`
+Run: `cd frontend && npm test -- AggregateHeatmap`
 Expected: PASS.
 
 - [ ] **Step 6: Add styles**
@@ -1506,7 +1506,7 @@ test("switches to aggregate mode", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=MapsTab`
+Run: `cd frontend && npm test -- MapsTab`
 Expected: FAIL — no element with text "pages.maps.modeAggregate".
 
 - [ ] **Step 3: Add the mode switch + map selector to `MapsTab.jsx`**
@@ -1574,12 +1574,12 @@ const [selectedMap, setSelectedMap] = useState(playedMaps[0]?.value || "Baltic_M
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd frontend && npm test -- --watchAll=false --testPathPattern=MapsTab`
+Run: `cd frontend && npm test -- MapsTab`
 Expected: PASS (both MapsTab tests).
 
 - [ ] **Step 5: Run the full frontend suite**
 
-Run: `cd frontend && npm test -- --watchAll=false`
+Run: `cd frontend && npm test`
 Expected: PASS (no regressions).
 
 - [ ] **Step 6: Manual smoke check**
