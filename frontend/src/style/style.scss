@@ -3955,11 +3955,16 @@ body {
     .ant-checkbox-wrapper { color: #d6e0f0; }
     .ant-checkbox-inner {
       background-color: transparent;
-      border-color: rgba(255, 255, 255, 0.35);
+      border-color: rgba(255, 255, 255, 0.4);
     }
-    .ant-checkbox-wrapper:hover .ant-checkbox-inner { border-color: $colorSecond; }
-    .ant-checkbox-checked .ant-checkbox-inner {
-      background-color: rgba(120, 247, 168, 0.2);
+    .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+    .ant-checkbox:hover .ant-checkbox-inner {
+      border-color: rgba(120, 247, 168, 0.55);
+    }
+    .ant-checkbox-checked .ant-checkbox-inner,
+    .ant-checkbox-checked:hover .ant-checkbox-inner,
+    .ant-checkbox-wrapper:hover .ant-checkbox-checked .ant-checkbox-inner {
+      background-color: rgba(120, 247, 168, 0.22);
       border-color: $colorSecond;
     }
     .ant-checkbox-checked .ant-checkbox-inner::after { border-color: $colorSecond; }
