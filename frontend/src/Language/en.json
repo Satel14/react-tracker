@@ -189,7 +189,9 @@
       "play": "Play",
       "pause": "Pause",
       "speed": "Speed",
-      "open": "Replay"
+      "open": "Replay",
+      "roster": "Roster",
+      "killsShort": "{count} K"
     },
     "help": {
       "title": "Help & FAQ",

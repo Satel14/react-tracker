@@ -4196,3 +4196,45 @@ body {
     flex-wrap: wrap;
   }
 }
+
+.match-replay__layout {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+
+  .match-replay__stage { flex: 1; min-width: 0; }
+}
+
+.replay-roster {
+  width: 200px;
+  flex: 0 0 200px;
+  max-height: 600px;
+  overflow-y: auto;
+  background: #0c1422;
+  border-radius: 10px;
+  padding: 8px;
+
+  &__title { color: #fde82b; font-weight: 700; margin-bottom: 6px; }
+  &__team { border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 0; }
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: 1px solid transparent;
+    color: #d6e0f0;
+    padding: 4px 6px;
+    cursor: pointer;
+    border-radius: 6px;
+
+    &.is-focal .replay-roster__name { color: #78f7a8; }
+    &.is-dead { opacity: 0.4; }
+    &.is-selected { border-color: #fde82b; background: rgba(253, 232, 43, 0.1); }
+  }
+  &__kills { opacity: 0.8; }
+}
+
+@media (max-width: 760px) {
+  .match-replay__layout { flex-direction: column; }
+  .replay-roster { width: 100%; flex-basis: auto; max-height: 240px; }
+}

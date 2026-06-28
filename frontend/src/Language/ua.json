@@ -189,7 +189,9 @@
             "play": "Пуск",
             "pause": "Пауза",
             "speed": "Швидкість",
-            "open": "Реплей"
+            "open": "Реплей",
+            "roster": "Ростер",
+            "killsShort": "{count} вб."
         },
         "help": {
             "title": "Допомога та FAQ",

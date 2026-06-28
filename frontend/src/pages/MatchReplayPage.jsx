@@ -1,12 +1,13 @@
-import React, { useEffect, useReducer, useRef } from "react";
+import React, { useEffect, useReducer, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Spin, Alert, Button, Slider, Segmented } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import { translate } from "react-switch-lang";
 import MapField from "../component/charts/MapField";
+import ReplayRoster from "../component/charts/ReplayRoster";
 import { getMatchReplay } from "../api/player";
 import { useReplayClock } from "../component/charts/useReplayClock";
-import { playersAt, activeKills, zoneAt } from "../component/charts/replayEngine";
+import { playersAt, activeKills, zoneAt, rosterAt } from "../component/charts/replayEngine";
 import { drawReplayFrame } from "../component/charts/replayDraw";
 
 const fmt = (sec) => {
@@ -34,6 +35,7 @@ const MatchReplayPage = ({ t }) => {
   const accountId = search.get("accountId");
   const playerName = search.get("playerName");
   const [{ loading, error, data }, dispatch] = useReducer(reducer, INITIAL);
+  const [focusedAccountId, setFocusedAccountId] = useState(null);
   const canvasRef = useRef(null);
   const clock = useReplayClock(data?.duration || 0);
 
@@ -45,8 +47,8 @@ const MatchReplayPage = ({ t }) => {
     const players = playersAt(data.players, clock.t);
     const kills = activeKills(data.kills, clock.t);
     const zone = zoneAt(data.zones, clock.t);
-    drawReplayFrame(ctx, { players, kills, zone, mapMax: data.mapMax, size: CANVAS_SIZE });
-  }, [data, clock.t]);
+    drawReplayFrame(ctx, { players, kills, zone, mapMax: data.mapMax, size: CANVAS_SIZE, focusedAccountId });
+  }, [data, clock.t, focusedAccountId]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -85,10 +87,20 @@ const MatchReplayPage = ({ t }) => {
       ) : error ? (
         <Alert type="error" message={error} showIcon />
       ) : data ? (
-        <div className="match-replay__stage">
-          <MapField rawMapName={data.rawMapName} className="match-replay__field">
-            <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} className="match-replay__canvas" />
-          </MapField>
+        <>
+          <div className="match-replay__layout">
+            <div className="match-replay__stage">
+              <MapField rawMapName={data.rawMapName} className="match-replay__field">
+                <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} className="match-replay__canvas" />
+              </MapField>
+            </div>
+            <ReplayRoster
+              rows={rosterAt(data.players, data.kills, clock.t)}
+              focusedAccountId={focusedAccountId}
+              onSelect={setFocusedAccountId}
+              t={t}
+            />
+          </div>
           <div className="match-replay__controls">
             <Button onClick={clock.toggle}>
               {clock.playing ? t("pages.replay.pause") : t("pages.replay.play")}
@@ -109,7 +121,7 @@ const MatchReplayPage = ({ t }) => {
               options={SPEEDS.map((s) => ({ value: s, label: `${s}×` }))}
             />
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );
