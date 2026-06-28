@@ -241,66 +241,40 @@ git commit -m "feat: add shared map metadata with precise map scale"
 ### Task 2: Map background images
 
 **Files:**
-- Create: `frontend/src/img/maps/erangel.webp`, `miramar.webp`, `taego.webp`, `deston.webp`, `rondo.webp`, `vikendi.webp`, `sanhok.webp`, `paramo.webp`, `karakin.webp`, `camp_jackal.webp`, `haven.webp`
+- Already present (downloaded by the controller): `frontend/src/img/maps/{erangel,miramar,taego,deston,rondo,vikendi,sanhok,paramo,karakin,camp_jackal,haven}.png`
 - Modify: `frontend/src/helpers/mapMeta.js` (wire image imports)
 
 **Interfaces:**
 - Produces: each `MAP_META[*].image` resolves to a bundled image URL string consumed by `<MapField>`.
 
-- [ ] **Step 1: Download the official no-text maps**
+**Note:** The 11 map images are ALREADY downloaded into `frontend/src/img/maps/` (official `pubg/api-assets` `*_No_Text_Low_Res.png`, served directly from `raw.githubusercontent.com` — they are NOT Git-LFS). Each is a square **819×819 PNG**, ~1–1.6 MB, lazy-loaded one at a time by the browser. No resize/ImageMagick needed — ship the PNGs as-is. This task only wires the imports + adds the presence test + commits.
 
-Source: `pubg/api-assets` repo, `Assets/Maps/<Map>_No_Text_Low_Res.png` (served via `https://raw.githubusercontent.com/pubg/api-assets/master/Assets/Maps/<file>`; if a file is a Git-LFS pointer, use the GitHub "media" download URL or the GitHub web "Download" button). Download these into a scratch folder:
+- [ ] **Step 1: Verify the 11 images are present**
 
-```
-Erangel_Main_No_Text_Low_Res.png
-Desert_Main_No_Text_Low_Res.png
-Tiger_Main_No_Text_Low_Res.png
-Kiki_Main_No_Text_Low_Res.png
-Neon_Main_No_Text_Low_Res.png
-DihorOtok_Main_No_Text_Low_Res.png
-Savage_Main_No_Text_Low_Res.png
-Chimera_Main_No_Text_Low_Res.png
-Summerland_Main_No_Text_Low_Res.png
-Range_Main_No_Text_Low_Res.png
-Heaven_Main_No_Text_Low_Res.png
-```
+Run: `cd frontend && node -e "const fs=require('fs');const d='src/img/maps';const got=fs.readdirSync(d).filter(f=>f.endsWith('.png')).sort();console.log(got.length, got.join(','))"`
+Expected: `11 camp_jackal.png,deston.png,erangel.png,haven.png,karakin.png,miramar.png,paramo.png,rondo.png,sanhok.png,taego.png,vikendi.png`
 
-- [ ] **Step 2: Downscale + convert to ~2048px webp**
+- [ ] **Step 2: Wire image imports into the frontend map registry**
 
-Using ImageMagick (`magick`) per file, e.g.:
-
-```bash
-magick Erangel_Main_No_Text_Low_Res.png -resize 2048x2048 -quality 82 erangel.webp
-```
-
-Repeat for each map, naming outputs `erangel/miramar/taego/deston/rondo/vikendi/sanhok/paramo/karakin/camp_jackal/haven.webp`. Place them in `frontend/src/img/maps/`.
-
-- [ ] **Step 3: Verify each image loads and is square-ish**
-
-Run: `cd frontend && node -e "const fs=require('fs');const d='src/img/maps';for(const f of fs.readdirSync(d)){console.log(f, (fs.statSync(d+'/'+f).size/1024).toFixed(0)+'KB')}"`
-Expected: 11 files listed, each well under ~600KB. (Spot-check one visually; all PUBG maps are square.)
-
-- [ ] **Step 4: Wire image imports into the frontend map registry**
-
-Edit `frontend/src/helpers/mapMeta.js`: add imports at the top and replace each `image: null` with the imported URL. Both Erangel entries use the same import.
+Edit `frontend/src/helpers/mapMeta.js`: add these imports at the top and replace each `image: null` with the imported URL. Both Erangel entries use the same import.
 
 ```js
-import erangel from "../img/maps/erangel.webp";
-import miramar from "../img/maps/miramar.webp";
-import taego from "../img/maps/taego.webp";
-import deston from "../img/maps/deston.webp";
-import rondo from "../img/maps/rondo.webp";
-import vikendi from "../img/maps/vikendi.webp";
-import sanhok from "../img/maps/sanhok.webp";
-import paramo from "../img/maps/paramo.webp";
-import karakin from "../img/maps/karakin.webp";
-import campJackal from "../img/maps/camp_jackal.webp";
-import haven from "../img/maps/haven.webp";
+import erangel from "../img/maps/erangel.png";
+import miramar from "../img/maps/miramar.png";
+import taego from "../img/maps/taego.png";
+import deston from "../img/maps/deston.png";
+import rondo from "../img/maps/rondo.png";
+import vikendi from "../img/maps/vikendi.png";
+import sanhok from "../img/maps/sanhok.png";
+import paramo from "../img/maps/paramo.png";
+import karakin from "../img/maps/karakin.png";
+import campJackal from "../img/maps/camp_jackal.png";
+import haven from "../img/maps/haven.png";
 ```
 
-Then set: `Baltic_Main`/`Erangel_Main` → `erangel`, `Desert_Main` → `miramar`, `Tiger_Main` → `taego`, `Kiki_Main` → `deston`, `Neon_Main` → `rondo`, `DihorOtok_Main` → `vikendi`, `Savage_Main` → `sanhok`, `Chimera_Main` → `paramo`, `Summerland_Main` → `karakin`, `Range_Main` → `campJackal`, `Heaven_Main` → `haven`.
+Then set the `image` field per entry: `Baltic_Main`/`Erangel_Main` → `erangel`, `Desert_Main` → `miramar`, `Tiger_Main` → `taego`, `Kiki_Main` → `deston`, `Neon_Main` → `rondo`, `DihorOtok_Main` → `vikendi`, `Savage_Main` → `sanhok`, `Chimera_Main` → `paramo`, `Summerland_Main` → `karakin`, `Range_Main` → `campJackal`, `Heaven_Main` → `haven`. (The fallback entry in `getMapMeta` keeps `image: null`.)
 
-- [ ] **Step 5: Update the failing-safe test for image presence**
+- [ ] **Step 3: Update the test for image presence**
 
 Append to `frontend/src/helpers/mapMeta.test.js`:
 
@@ -311,16 +285,16 @@ test("known maps resolve to an image asset", () => {
 });
 ```
 
-- [ ] **Step 6: Run frontend tests**
+- [ ] **Step 4: Run frontend tests**
 
 Run: `cd frontend && npm test -- mapMeta`
-Expected: PASS (4 tests). (Under Vitest, Vite resolves `.webp` imports to a URL string, so `image` is truthy.)
+Expected: PASS (4 tests). (Under Vitest, Vite resolves `.png` imports to a URL string, so `image` is truthy.)
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add frontend/src/img/maps frontend/src/helpers/mapMeta.js frontend/src/helpers/mapMeta.test.js
-git commit -m "feat: add downscaled PUBG map images for heatmap backgrounds"
+git commit -m "feat: add PUBG map images for heatmap backgrounds"
 ```
 
 ---
