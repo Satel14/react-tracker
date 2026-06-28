@@ -4142,3 +4142,15 @@ body {
     &--missing { background: #11182a; }
   }
 }
+
+.match-heatmap__field {
+  .match-heatmap__svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+
+    circle, text { pointer-events: auto; }
+  }
+}

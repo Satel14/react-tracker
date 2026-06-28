@@ -3,6 +3,8 @@ import { Modal, Spin, Alert } from "antd";
 import { LoadingOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { translate } from "react-switch-lang";
 import { getMatchHeatmap } from "../../api/player";
+import MapField from "./MapField";
+import { getMapMeta } from "../../helpers/mapMeta";
 
 const EVENT_COLORS = {
   drop: "#5ab4ff",
@@ -114,25 +116,6 @@ const HeatmapClusters = ({ clusters, scale, eventDotLabels, setHovered }) =>
     );
   });
 
-const HeatmapGrid = ({ viewBox, scale }) => {
-  const gridStep = viewBox.size > 4000 ? 1000 : viewBox.size > 2000 ? 500 : 250;
-  const startX = Math.floor(viewBox.x / gridStep) * gridStep;
-  const endX = viewBox.x + viewBox.size;
-  const startY = Math.floor(viewBox.y / gridStep) * gridStep;
-  const endY = viewBox.y + viewBox.size;
-  const lines = [];
-  for (let x = startX; x <= endX; x += gridStep) {
-    lines.push(
-      <line key={`vx-${x}`} x1={x} y1={viewBox.y} x2={x} y2={viewBox.y + viewBox.size} stroke="rgba(120, 247, 168, 0.12)" strokeWidth={scale * 0.0008} />
-    );
-  }
-  for (let y = startY; y <= endY; y += gridStep) {
-    lines.push(
-      <line key={`hy-${y}`} x1={viewBox.x} y1={y} x2={viewBox.x + viewBox.size} y2={y} stroke="rgba(120, 247, 168, 0.12)" strokeWidth={scale * 0.0008} />
-    );
-  }
-  return <>{lines}</>;
-};
 
 const HeatmapTimeline = ({ events, scale }) => {
   const timeline = events
@@ -154,7 +137,7 @@ const HeatmapTimeline = ({ events, scale }) => {
   );
 };
 
-const HeatmapStage = ({ loading, error, rawMap, viewBox, scale, events, clusters, hovered, setHovered, eventLabels, eventDotLabels, t }) => {
+const HeatmapStage = ({ loading, error, rawMap, mapMax, events, clusters, hovered, setHovered, eventLabels, eventDotLabels, t }) => {
   if (loading) {
     return (
       <div className="match-heatmap__loading">
@@ -165,34 +148,13 @@ const HeatmapStage = ({ loading, error, rawMap, viewBox, scale, events, clusters
   }
   if (error) return <Alert type="error" message={error} showIcon />;
   return (
-    <div className={`match-heatmap__canvas match-heatmap__canvas--${(rawMap || "").toLowerCase()}`}>
-      <svg viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.size} ${viewBox.size}`} className="match-heatmap__svg">
-        <defs>
-          <radialGradient id="heatmap-bg" cx="50%" cy="50%" r="65%">
-            <stop offset="0%" stopColor="rgba(120, 247, 168, 0.08)" />
-            <stop offset="100%" stopColor="rgba(8, 14, 24, 0)" />
-          </radialGradient>
-        </defs>
-        <rect x={viewBox.x} y={viewBox.y} width={viewBox.size} height={viewBox.size} fill="url(#heatmap-bg)" />
-        <HeatmapGrid viewBox={viewBox} scale={scale} />
-        <rect
-          x={viewBox.x + scale * 0.005}
-          y={viewBox.y + scale * 0.005}
-          width={viewBox.size - scale * 0.01}
-          height={viewBox.size - scale * 0.01}
-          fill="none"
-          stroke="rgba(120, 247, 168, 0.25)"
-          strokeWidth={scale * 0.0014}
-        />
-        <text x={viewBox.x + viewBox.size / 2} y={viewBox.y + scale * 0.045} fill="rgba(120, 247, 168, 0.6)" fontSize={scale * 0.035} fontWeight="700" textAnchor="middle">N</text>
-        <text x={viewBox.x + viewBox.size / 2} y={viewBox.y + viewBox.size - scale * 0.018} fill="rgba(120, 247, 168, 0.6)" fontSize={scale * 0.035} fontWeight="700" textAnchor="middle">S</text>
-        <text x={viewBox.x + scale * 0.022} y={viewBox.y + viewBox.size / 2} fill="rgba(120, 247, 168, 0.6)" fontSize={scale * 0.035} fontWeight="700" textAnchor="middle" dominantBaseline="middle">W</text>
-        <text x={viewBox.x + viewBox.size - scale * 0.022} y={viewBox.y + viewBox.size / 2} fill="rgba(120, 247, 168, 0.6)" fontSize={scale * 0.035} fontWeight="700" textAnchor="middle" dominantBaseline="middle">E</text>
-        <HeatmapTimeline events={events} scale={scale} />
-        <HeatmapClusters clusters={clusters} scale={scale} eventDotLabels={eventDotLabels} setHovered={setHovered} />
+    <MapField rawMapName={rawMap} className="match-heatmap__field">
+      <svg className="match-heatmap__svg" viewBox={`0 0 ${mapMax} ${mapMax}`} preserveAspectRatio="none">
+        <HeatmapTimeline events={events} scale={mapMax} />
+        <HeatmapClusters clusters={clusters} scale={mapMax} eventDotLabels={eventDotLabels} setHovered={setHovered} />
       </svg>
       {hovered ? <HeatmapTooltip hovered={hovered} eventLabels={eventLabels} t={t} /> : null}
-    </div>
+    </MapField>
   );
 };
 
@@ -266,9 +228,9 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, matchId, shard, accountId, playerName]);
 
-  const mapSize = data?.mapSize || 8000;
   const mapDisplayName = data?.mapName || mapNameHint || t("pages.matchHeatmap.fallbackMapName");
   const rawMap = data?.rawMapName || rawMapNameHint || null;
+  const mapMax = getMapMeta(rawMap).mapMax;
   const events = useMemo(() => (Array.isArray(data?.events) ? data.events : []), [data]);
 
   const counts = events.reduce(
@@ -297,35 +259,6 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
     });
     return groups;
   }, [events]);
-
-  const viewBox = useMemo(() => {
-    if (!events.length) return { x: 0, y: 0, size: mapSize };
-    const xs = events.map((event) => event.x);
-    const ys = events.map((event) => event.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    const width = Math.max(maxX - minX, 1);
-    const height = Math.max(maxY - minY, 1);
-
-    const baseExtent = Math.max(width, height);
-    const padding = Math.max(baseExtent * 0.4, 600);
-    const finalSize = Math.min(mapSize, Math.max(baseExtent + padding * 2, 1500));
-
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-
-    let x = cx - finalSize / 2;
-    let y = cy - finalSize / 2;
-
-    x = Math.max(0, Math.min(mapSize - finalSize, x));
-    y = Math.max(0, Math.min(mapSize - finalSize, y));
-
-    return { x, y, size: finalSize };
-  }, [events, mapSize]);
-
-  const scale = viewBox.size;
 
   const insights = useMemo(() => {
     if (!events.length) return [];
@@ -409,8 +342,7 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
           loading={loading}
           error={error}
           rawMap={rawMap}
-          viewBox={viewBox}
-          scale={scale}
+          mapMax={mapMax}
           events={events}
           clusters={clusters}
           hovered={hovered}
