@@ -4235,4 +4235,32 @@ body {
   .replay-roster { width: 100%; flex-basis: auto; max-height: 240px; }
 }
 
-.maps-tab__description { opacity: 0.75; margin-bottom: 10px; max-width: 640px; }
+.maps-tab {
+  max-width: 720px;
+
+  &__description {
+    opacity: 0.75;
+    margin-bottom: 12px;
+    max-width: 640px;
+    line-height: 1.5;
+  }
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    opacity: 0.8;
+  }
+
+  &__select {
+    min-width: 180px;
+  }
+}
