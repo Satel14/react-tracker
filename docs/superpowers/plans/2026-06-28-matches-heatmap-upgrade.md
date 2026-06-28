@@ -484,9 +484,10 @@ Create `frontend/src/component/charts/MatchHeatmap.test.jsx`:
 ```jsx
 import React from "react";
 import { render, screen } from "@testing-library/react";
+import MatchHeatmap from "./MatchHeatmap";
 
-jest.mock("../../api/player", () => ({
-  getMatchHeatmap: jest.fn(() =>
+vi.mock("../../api/player", () => ({
+  getMatchHeatmap: vi.fn(() =>
     Promise.resolve({
       data: {
         data: {
@@ -503,8 +504,6 @@ jest.mock("../../api/player", () => ({
     })
   ),
 }));
-
-const MatchHeatmap = require("./MatchHeatmap").default;
 
 test("renders the real map background once loaded", async () => {
   render(<MatchHeatmap open matchId="m1" shard="steam" accountId="account.1" playerName="Me" />);
@@ -625,8 +624,8 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import MapsTab from "./MapsTab";
 
-jest.mock("../api/player", () => ({
-  getMatchHeatmap: jest.fn(() => Promise.resolve({ data: { data: { rawMapName: "Baltic_Main", mapName: "Erangel", events: [] } } })),
+vi.mock("../api/player", () => ({
+  getMatchHeatmap: vi.fn(() => Promise.resolve({ data: { data: { rawMapName: "Baltic_Main", mapName: "Erangel", events: [] } } })),
 }));
 
 const t = (k) => k;
@@ -1309,16 +1308,16 @@ Create `frontend/src/component/charts/AggregateHeatmap.test.jsx`:
 ```jsx
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
+import AggregateHeatmap from "./AggregateHeatmap";
 
-jest.mock("../../api/player", () => ({
-  getAggregateHeatmap: jest.fn(() =>
+vi.mock("../../api/player", () => ({
+  getAggregateHeatmap: vi.fn(() =>
     Promise.resolve({
       data: { map: "Baltic_Main", mapMax: 8160, matchesCount: 3, layers: { drop: [{ x: 1, y: 1 }], kill: [], death: [] } },
     })
   ),
 }));
 
-const AggregateHeatmap = require("./AggregateHeatmap").default;
 const t = (k, p) => (p ? `${k}:${p.count}` : k);
 
 test("shows the sample count after loading", async () => {
@@ -1469,7 +1468,7 @@ Append to `frontend/src/pages/MapsTab.test.jsx`:
 ```jsx
 import { fireEvent } from "@testing-library/react";
 
-jest.mock("../component/charts/AggregateHeatmap", () => () => <div data-testid="aggregate" />);
+vi.mock("../component/charts/AggregateHeatmap", () => ({ default: () => <div data-testid="aggregate" /> }));
 
 test("switches to aggregate mode", () => {
   render(<MapsTab matches={matches} shard="steam" accountId="account.1" playerName="Me" t={t} />);
