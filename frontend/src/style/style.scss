@@ -2946,7 +2946,7 @@ body {
   &--na { background: #3a3e58; }
 }
 
-.player-match-heatmap-btn {
+.player-match-item__replay {
   margin-top: 8px;
   display: inline-flex;
   align-items: center;
@@ -2960,13 +2960,9 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.6px;
   cursor: pointer;
+  text-decoration: none;
   transition: all 0.15s ease;
   align-self: flex-start;
-
-  svg {
-    color: #78f7a8;
-    font-size: 13px;
-  }
 
   &:hover {
     background: rgba(120, 247, 168, 0.18);
