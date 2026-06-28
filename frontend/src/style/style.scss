@@ -3951,8 +3951,14 @@ body {
     gap: 14px;
     flex-wrap: wrap;
     margin-bottom: 10px;
+
+    .ant-checkbox-wrapper { color: #d6e0f0; }
+    .ant-checkbox-checked .ant-checkbox-inner {
+      background-color: $colorSecond;
+      border-color: $colorSecond;
+    }
   }
-  &__count { margin-left: auto; opacity: 0.8; }
+  &__count { margin-left: auto; opacity: 0.8; color: #d6e0f0; }
   &__field .aggregate-heatmap__canvas {
     position: absolute;
     inset: 0;
@@ -3960,7 +3966,7 @@ body {
     height: 100%;
     pointer-events: none;
   }
-  &__empty, &__loading { padding: 24px; text-align: center; opacity: 0.8; }
+  &__empty, &__loading { padding: 24px; text-align: center; opacity: 0.8; color: #d6e0f0; }
 }
 
 .match-replay {
@@ -4032,10 +4038,12 @@ body {
   max-width: 720px;
 
   &__description {
-    opacity: 0.75;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     max-width: 640px;
-    line-height: 1.5;
+    line-height: 1.55;
+    color: #aeb8c8;
+    border-left: 2px solid rgba(120, 247, 168, 0.5);
+    padding-left: 10px;
   }
 
   &__controls {
@@ -4050,7 +4058,7 @@ body {
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
-    opacity: 0.8;
+    color: #fff;
   }
 
   &__select {
