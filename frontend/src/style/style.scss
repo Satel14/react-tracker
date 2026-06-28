@@ -3953,10 +3953,16 @@ body {
     margin-bottom: 10px;
 
     .ant-checkbox-wrapper { color: #d6e0f0; }
+    .ant-checkbox-inner {
+      background-color: transparent;
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+    .ant-checkbox-wrapper:hover .ant-checkbox-inner { border-color: $colorSecond; }
     .ant-checkbox-checked .ant-checkbox-inner {
-      background-color: $colorSecond;
+      background-color: rgba(120, 247, 168, 0.2);
       border-color: $colorSecond;
     }
+    .ant-checkbox-checked .ant-checkbox-inner::after { border-color: $colorSecond; }
   }
   &__count { margin-left: auto; opacity: 0.8; color: #d6e0f0; }
   &__field .aggregate-heatmap__canvas {
