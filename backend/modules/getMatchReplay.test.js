@@ -54,4 +54,8 @@ test("parses LogGameStatePeriodic into a zones timeline, skipping pre-game zero-
   assert.equal(r.zones[0].br, 3000); // 300000 / 100
   assert.equal(r.zones[0].wx, 4200);
   assert.equal(r.zones[0].wr, 2000);
+  assert.equal(r.zones[1].bx, 4100); // 410000 / 100
+  assert.equal(r.zones[1].by, 4100); // 410000 / 100
+  assert.equal(r.zones[1].br, 2500); // 250000 / 100
+  assert.equal(r.zones[1].wr, 2000); // 200000 / 100
 });
