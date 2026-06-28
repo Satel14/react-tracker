@@ -20,7 +20,7 @@ import {
   QuestionCircleOutlined,
   HomeOutlined,
 } from "@ant-design/icons";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { getPlayerData, getPlayerReports } from "../api/player";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
@@ -1081,6 +1081,12 @@ const PlayerPage = ({ t }) => {
                 <EnvironmentOutlined />
                 <span>{t("pages.matchHeatmap.buttonLabel")}</span>
               </button>
+              <Link
+                className="player-match-item__replay"
+                to={`/match/${platform}/${encodeURIComponent(match.id)}/replay?accountId=${encodeURIComponent(data?.platformInfo?.platformUserId || "")}&playerName=${encodeURIComponent(data?.platformInfo?.platformUserHandle || gameId || "")}`}
+              >
+                {t("pages.replay.open")}
+              </Link>
             </article>
             );
           })}
