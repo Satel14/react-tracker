@@ -7,7 +7,9 @@ const { getPlayerReports } = require("../modules/getPlayerReports")
 const { addRecentSearch, getRecentSearches } = require("../modules/recentSearches")
 const { getPlayerSteamNameByUrl } = require("../modules/getPlayerSteamNameByUrl")
 const { isAccountIdentifier } = require("../modules/playerIdentity");
-const { getMatchHeatmap } = require("../modules/getMatchHeatmap");
+const { getMatchHeatmap, shardForMatch } = require("../modules/getMatchHeatmap");
+const { getMapMeta } = require("../modules/mapMeta");
+const { aggregateKey, getAggregate } = require("../modules/heatmapAggregate");
 const { getPlayerCard } = require("../modules/getPlayerCard");
 
 const getNormalDate = (time) => {
@@ -194,6 +196,42 @@ module.exports.getMatchHeatmap = async (req, res) => {
 };
 
 
+
+module.exports.getPlayerHeatmapAggregate = async (req, res) => {
+  try {
+    const { shard = "steam", accountId = null, playerName = null, map = null, matchIds = [] } = req.body || {};
+    if (!accountId && !playerName) {
+      return res.status(400).json({ status: 400, message: "accountId or playerName is required" });
+    }
+    if (!map) {
+      return res.status(400).json({ status: 400, message: "map is required" });
+    }
+
+    const ids = Array.isArray(matchIds) ? matchIds.slice(0, 12) : [];
+    for (const matchId of ids) {
+      try {
+        const built = await getMatchHeatmap({ shard, matchId, accountId, playerName });
+        if (built && built.rawMapName !== map) continue;
+      } catch (_e) {
+        // skip matches that fail to build (404 after retention, rate limit, etc.)
+      }
+    }
+
+    const key = aggregateKey({ shard: shardForMatch(shard), accountId, playerName, rawMapName: map });
+    const aggregate = await getAggregate({ key });
+    return res.status(200).json({
+      status: 200,
+      data: {
+        map,
+        mapMax: getMapMeta(map).mapMax,
+        layers: aggregate.layers,
+        matchesCount: aggregate.matchesCount,
+      },
+    });
+  } catch (e) {
+    return res.status(200).json({ status: 200, message: e.message });
+  }
+};
 
 module.exports.validate = (method) => {
   switch (method) {

@@ -225,6 +225,4 @@ async function getMatchHeatmap({ shard, matchId, accountId, playerName }) {
   return run;
 }
 
-module.exports = {
-  getMatchHeatmap,
-};
+module.exports = { getMatchHeatmap, shardForMatch };
