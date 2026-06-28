@@ -1,18 +1,7 @@
 const PUBG_API_KEY = process.env.PUBG_API_KEY || "";
 
-const MAP_META = {
-  Baltic_Main: { name: "Erangel", size: 8000 },
-  Desert_Main: { name: "Miramar", size: 8000 },
-  DihorOtok_Main: { name: "Vikendi", size: 6000 },
-  Erangel_Main: { name: "Erangel", size: 8000 },
-  Heaven_Main: { name: "Haven", size: 1000 },
-  Kiki_Main: { name: "Deston", size: 8000 },
-  Neon_Main: { name: "Rondo", size: 8000 },
-  Range_Main: { name: "Camp Jackal", size: 2000 },
-  Savage_Main: { name: "Sanhok", size: 4000 },
-  Summerland_Main: { name: "Karakin", size: 2000 },
-  Tiger_Main: { name: "Taego", size: 8000 },
-};
+const { getMapMeta } = require("./mapMeta");
+const { aggregateKey, addMatchPoints } = require("./heatmapAggregate");
 
 const heatmapCache = new Map();
 const inFlightHeatmap = new Map();
@@ -22,12 +11,6 @@ const HEATMAP_CACHE_LIMIT = 200;
 function shardForMatch(shard) {
   if (shard === "psn" || shard === "xbox") return "console";
   return shard;
-}
-
-function getMapMeta(rawMapName) {
-  const meta = MAP_META[rawMapName];
-  if (!meta) return { name: rawMapName?.replace(/_Main$/i, "") || "Unknown", size: 8000 };
-  return meta;
 }
 
 async function fetchPubgJson(url, useApiKey = false) {
@@ -196,11 +179,20 @@ async function buildHeatmap({ shard, matchId, accountId, playerName }) {
     }
   }
 
+  const points = { drop: [], kill: [], death: [] };
+  for (const ev of events) {
+    if (points[ev.type]) points[ev.type].push({ x: ev.x, y: ev.y });
+  }
+  if (rawMapName && (accountId || playerName)) {
+    const key = aggregateKey({ shard: shardForMatch(shard), accountId, playerName, rawMapName });
+    addMatchPoints({ key, matchId, points }).catch(() => {});
+  }
+
   return {
     matchId,
     rawMapName,
-    mapName: mapMeta.name,
-    mapSize: mapMeta.size,
+    mapName: mapMeta.displayName,
+    mapSize: mapMeta.mapMax,
     duration: Number(matchAttributes.duration) || null,
     createdAt: matchStart,
     events,
