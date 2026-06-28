@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import MatchReplayPage from "./MatchReplayPage";
 
@@ -28,4 +28,17 @@ test("renders the real map after loading replay data", async () => {
   renderAt("/match/steam/m1/replay");
   const img = await screen.findByRole("img", { name: /erangel/i });
   expect(img).toBeInTheDocument();
+});
+
+test("shows playback controls after load", async () => {
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  expect(screen.getByText("pages.replay.play")).toBeInTheDocument();
+});
+
+test("clicking play switches the button to pause", async () => {
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  fireEvent.click(screen.getByText("pages.replay.play"));
+  expect(screen.getByText("pages.replay.pause")).toBeInTheDocument();
 });

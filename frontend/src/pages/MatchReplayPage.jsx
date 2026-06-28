@@ -1,6 +1,6 @@
 import React, { useEffect, useReducer, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { Spin, Alert } from "antd";
+import { Spin, Alert, Button, Slider, Segmented } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import { translate } from "react-switch-lang";
 import MapField from "../component/charts/MapField";
@@ -8,6 +8,12 @@ import { getMatchReplay } from "../api/player";
 import { useReplayClock } from "../component/charts/useReplayClock";
 import { playersAt, activeKills } from "../component/charts/replayEngine";
 import { drawReplayFrame } from "../component/charts/replayDraw";
+
+const fmt = (sec) => {
+  const s = Math.max(0, Math.floor(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+const SPEEDS = [1, 2, 4, 8, 16];
 
 const INITIAL = { loading: false, error: null, data: null };
 
@@ -42,6 +48,14 @@ const MatchReplayPage = ({ t }) => {
   }, [data, clock.t]);
 
   useEffect(() => {
+    const onKey = (e) => {
+      if (e.code === "Space") { e.preventDefault(); clock.toggle(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clock]);
+
+  useEffect(() => {
     let cancelled = false;
     dispatch({ type: "start" });
     getMatchReplay(matchId, platform, accountId, playerName)
@@ -74,6 +88,26 @@ const MatchReplayPage = ({ t }) => {
           <MapField rawMapName={data.rawMapName} className="match-replay__field">
             <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} className="match-replay__canvas" />
           </MapField>
+          <div className="match-replay__controls">
+            <Button onClick={clock.toggle}>
+              {clock.playing ? t("pages.replay.pause") : t("pages.replay.play")}
+            </Button>
+            <Slider
+              className="match-replay__scrubber"
+              style={{ flex: 1, minWidth: 180 }}
+              min={0}
+              max={data.duration || 0}
+              value={Math.floor(clock.t)}
+              onChange={clock.seek}
+              tooltip={{ formatter: (v) => fmt(v) }}
+            />
+            <span className="match-replay__time">{fmt(clock.t)} / {fmt(data.duration || 0)}</span>
+            <Segmented
+              value={clock.speed}
+              onChange={clock.setSpeed}
+              options={SPEEDS.map((s) => ({ value: s, label: `${s}×` }))}
+            />
+          </div>
         </div>
       ) : null}
     </div>
