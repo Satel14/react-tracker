@@ -169,6 +169,19 @@
       "storyDiedAt": "Died at {time} into the match.",
       "storyAlive": "You were alive at match end."
     },
+    "maps": {
+      "tab": "Maps",
+      "selectMatch": "Match",
+      "selectMap": "Map",
+      "modeSingle": "This match",
+      "modeAggregate": "All matches",
+      "noMatches": "No matches to show on the map yet.",
+      "aggregateEmpty": "No accumulated data for this map yet — open a few matches to build it up.",
+      "layerDrop": "Landings",
+      "layerKill": "Kills",
+      "layerDeath": "Deaths",
+      "sampleCount": "{count} matches in sample"
+    },
     "help": {
       "title": "Help & FAQ",
       "subtitle": "Quick answers about search, seasons, favorites, and PUBG Report integration.",

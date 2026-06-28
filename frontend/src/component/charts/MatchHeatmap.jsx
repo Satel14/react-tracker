@@ -179,7 +179,7 @@ function heatmapReducer(state, action) {
   }
 }
 
-const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, mapNameHint, rawMapNameHint, t }) => {
+const MatchHeatmap = ({ open, inline = false, onClose, matchId, shard, accountId, playerName, mapNameHint, rawMapNameHint, t }) => {
   const eventLabels = {
     drop: t("pages.matchHeatmap.tooltipDrop"),
     kill: t("pages.matchHeatmap.tooltipKill"),
@@ -304,16 +304,8 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events]);
 
-  return (
-    <Modal
-      open={open}
-      onCancel={onClose}
-      footer={null}
-      width={620}
-      destroyOnHidden
-      className="match-heatmap-modal"
-      title={t("pages.matchHeatmap.modalTitle", { map: mapDisplayName })}
-    >
+  const body = (
+    <>
       <div className="match-heatmap__legend">
         <span style={{ color: EVENT_COLORS.kill }}>● {t("pages.matchHeatmap.legendKills")}: {counts.kill || 0}</span>
         <span style={{ color: EVENT_COLORS.death }}>● {t("pages.matchHeatmap.legendDeaths")}: {counts.death || 0}</span>
@@ -363,6 +355,22 @@ const MatchHeatmap = ({ open, onClose, matchId, shard, accountId, playerName, ma
           </ul>
         </div>
       ) : null}
+    </>
+  );
+
+  if (inline) return <div className="match-heatmap-inline">{body}</div>;
+
+  return (
+    <Modal
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      width={620}
+      destroyOnHidden
+      className="match-heatmap-modal"
+      title={t("pages.matchHeatmap.modalTitle", { map: mapDisplayName })}
+    >
+      {body}
     </Modal>
   );
 };

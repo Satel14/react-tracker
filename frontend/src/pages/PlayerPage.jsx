@@ -27,6 +27,7 @@ import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
 import { getCurrentLocale } from "../helpers/locale";
 import openNotification from "../component/Notification";
 import MatchHeatmap from "../component/charts/MatchHeatmap";
+import MapsTab from "./MapsTab";
 
 const MapPerformanceChart = lazy(() =>
   import("../component/charts/MatchCharts").then((mod) => ({ default: mod.MapPerformanceChart }))
@@ -1237,6 +1238,18 @@ const PlayerPage = ({ t }) => {
       key: "matches",
       label: "Matches",
       children: renderMatchesCard(),
+    },
+    {
+      key: "maps",
+      label: t("pages.maps.tab"),
+      children: (
+        <MapsTab
+          matches={matchItems}
+          shard={platform}
+          accountId={data?.platformInfo?.platformUserId || null}
+          playerName={data?.platformInfo?.platformUserHandle || gameId}
+        />
+      ),
     },
     {
       key: "weapons",

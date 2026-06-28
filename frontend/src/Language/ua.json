@@ -169,6 +169,19 @@
             "storyDiedAt": "Загинули на {time} матчу.",
             "storyAlive": "Дожили до кінця матчу."
         },
+        "maps": {
+            "tab": "Карти",
+            "selectMatch": "Матч",
+            "selectMap": "Карта",
+            "modeSingle": "Цей матч",
+            "modeAggregate": "Усі матчі",
+            "noMatches": "Поки немає матчів для показу на карті.",
+            "aggregateEmpty": "Поки немає накопичених даних для цієї карти — відкрий кілька матчів, щоб назбирати.",
+            "layerDrop": "Висадки",
+            "layerKill": "Вбивства",
+            "layerDeath": "Смерті",
+            "sampleCount": "{count} матчів у вибірці"
+        },
         "help": {
             "title": "Допомога та FAQ",
             "subtitle": "Короткі відповіді про пошук, сезони, обране та інтеграцію PUBG Report.",
