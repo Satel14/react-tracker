@@ -37,3 +37,11 @@ test("addMatchPoints merges multiple matches and caps count", async () => {
   assert.equal(agg.matchesCount, 60);
   assert.equal(agg.layers.drop.length, 60);
 });
+
+test("getAggregate observes a not-yet-awaited write (queue ordering)", async () => {
+  const key = aggregateKey({ shard: "steam", accountId: "account.race", rawMapName: "Baltic_Main" });
+  addMatchPoints({ key, matchId: "mr", points: { drop: [{ x: 1, y: 1 }], kill: [], death: [] }, filePath: tmp }); // intentionally NOT awaited
+  const agg = await getAggregate({ key, filePath: tmp });
+  assert.equal(agg.matchesCount, 1);
+  assert.equal(agg.layers.drop.length, 1);
+});

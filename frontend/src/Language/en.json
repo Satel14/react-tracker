@@ -149,7 +149,6 @@
       "helpKill": "Green dot - where you killed an enemy. ×N means multiple kills at the same spot.",
       "helpDeath": "Red dot - where you died.",
       "helpPath": "The dashed line connects events in time order - it is your path through the match.",
-      "helpCompass": "Compass letters (N/E/S/W) and grid lines (1km / 500m / 250m depending on zoom) help you orient.",
       "helpHover": "Hover any dot for who/what/when. Multi-event dots list all stacked events.",
       "labelDrop": "DROP",
       "labelKill": "KILL",

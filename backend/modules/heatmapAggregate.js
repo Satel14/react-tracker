@@ -63,18 +63,20 @@ function addMatchPoints({ key, matchId, points, filePath = DEFAULT_FILE, maxMatc
   });
 }
 
-async function getAggregate({ key, filePath = DEFAULT_FILE }) {
-  const store = await readStore(filePath);
-  const entry = store[key];
-  const matches = entry && Array.isArray(entry.matches) ? entry.matches : [];
-  const layers = emptyPoints();
-  for (const m of matches) {
-    if (!m) continue;
-    if (Array.isArray(m.drop)) layers.drop.push(...m.drop);
-    if (Array.isArray(m.kill)) layers.kill.push(...m.kill);
-    if (Array.isArray(m.death)) layers.death.push(...m.death);
-  }
-  return { layers, matchesCount: matches.length };
+function getAggregate({ key, filePath = DEFAULT_FILE }) {
+  return enqueueMutation(async () => {
+    const store = await readStore(filePath);
+    const entry = store[key];
+    const matches = entry && Array.isArray(entry.matches) ? entry.matches : [];
+    const layers = emptyPoints();
+    for (const m of matches) {
+      if (!m) continue;
+      if (Array.isArray(m.drop)) layers.drop.push(...m.drop);
+      if (Array.isArray(m.kill)) layers.kill.push(...m.kill);
+      if (Array.isArray(m.death)) layers.death.push(...m.death);
+    }
+    return { layers, matchesCount: matches.length };
+  });
 }
 
 module.exports = { aggregateKey, addMatchPoints, getAggregate };

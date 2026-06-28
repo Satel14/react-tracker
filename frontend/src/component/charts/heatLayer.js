@@ -20,11 +20,6 @@ export const buildGradient = (stops) => {
   return ctx.getImageData(0, 0, 1, 256).data;
 };
 
-export const intensityAlpha = (count, max) => {
-  if (!max || count <= 0) return 0;
-  return Math.min(1, count / max);
-};
-
 export const DEFAULT_STOPS = [
   [0.0, "rgba(0,0,255,0)"],
   [0.4, "#3b82f6"],

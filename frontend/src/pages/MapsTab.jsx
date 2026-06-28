@@ -9,7 +9,7 @@ const MapsTab = ({ matches = [], shard, accountId, playerName, t }) => {
     .filter((m) => m && m.id)
     .map((m) => ({
       value: m.id,
-      label: `${m.mapName || m.rawMapName || "?"} · ${m.gameModeLabel || ""}`.trim(),
+      label: [m.mapName || m.rawMapName || "?", m.gameModeLabel].filter(Boolean).join(" · "),
       rawMapName: m.rawMapName,
       mapName: m.mapName,
     }));

@@ -116,7 +116,6 @@ const HeatmapClusters = ({ clusters, scale, eventDotLabels, setHovered }) =>
     );
   });
 
-
 const HeatmapTimeline = ({ events, scale }) => {
   const timeline = events
     .filter((event) => event.time !== null && event.time !== undefined)
@@ -323,7 +322,6 @@ const MatchHeatmap = ({ open, inline = false, onClose, matchId, shard, accountId
             <li><span style={{ color: EVENT_COLORS.kill }}>●</span> {t("pages.matchHeatmap.helpKill")}</li>
             <li><span style={{ color: EVENT_COLORS.death }}>●</span> {t("pages.matchHeatmap.helpDeath")}</li>
             <li>{t("pages.matchHeatmap.helpPath")}</li>
-            <li>{t("pages.matchHeatmap.helpCompass")}</li>
           </ul>
           <p>{t("pages.matchHeatmap.helpHover")}</p>
         </div>

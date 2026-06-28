@@ -195,8 +195,6 @@ module.exports.getMatchHeatmap = async (req, res) => {
   }
 };
 
-
-
 module.exports.getPlayerHeatmapAggregate = async (req, res) => {
   try {
     const { shard = "steam", accountId = null, playerName = null, map = null, matchIds = [] } = req.body || {};
@@ -210,8 +208,7 @@ module.exports.getPlayerHeatmapAggregate = async (req, res) => {
     const ids = Array.isArray(matchIds) ? matchIds.slice(0, 12) : [];
     for (const matchId of ids) {
       try {
-        const built = await getMatchHeatmap({ shard, matchId, accountId, playerName });
-        if (built && built.rawMapName !== map) continue;
+        await getMatchHeatmap({ shard, matchId, accountId, playerName });
       } catch (_e) {
         // skip matches that fail to build (404 after retention, rate limit, etc.)
       }
