@@ -20,7 +20,9 @@
   "scripts": {
     "start": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 4173"
+    "preview": "vite preview --port 4173",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "browserslist": {
     "production": [
@@ -36,8 +38,10 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.1",
+    "jsdom": "^29.1.1",
     "sass": "^1.99.0",
-    "vite": "^8.0.11"
+    "vite": "^8.0.11",
+    "vitest": "^4.1.9"
   },
   "knip": {
     "ignore": []

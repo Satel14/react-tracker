@@ -25,4 +25,10 @@ export default defineConfig({
     },
   },
   envPrefix: 'VITE_',
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js',
+    css: false,
+  },
 });
