@@ -36,15 +36,6 @@ export const getLiveSnapshot = () =>
 export const getRecentSearches = () =>
   get("/player/recent", true);
 
-export const getMatchHeatmap = (matchId, shard, accountId, playerName) => {
-  const params = new URLSearchParams();
-  if (shard) params.set("shard", shard);
-  if (accountId) params.set("accountId", accountId);
-  if (playerName) params.set("playerName", playerName);
-  const query = params.toString();
-  return get(`/match/${encodeURIComponent(matchId)}/heatmap${query ? `?${query}` : ""}`, true);
-};
-
 export const getAggregateHeatmap = ({ shard, accountId, playerName, map, matchIds }) =>
   post(
     "/player/heatmap/aggregate",

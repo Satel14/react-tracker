@@ -26,7 +26,6 @@ import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from 
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
 import { getCurrentLocale } from "../helpers/locale";
 import openNotification from "../component/Notification";
-import MatchHeatmap from "../component/charts/MatchHeatmap";
 import MapsTab from "./MapsTab";
 
 const MapPerformanceChart = lazy(() =>
@@ -334,7 +333,6 @@ const PlayerPage = ({ t }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [heatmapMatch, setHeatmapMatch] = useState(null);
   const [reports, reportsDispatch] = useReducer(reportsReducer, INITIAL_REPORTS);
   const { loading: reportsLoading, error: reportsError, data: reportsData, filter: reportsFilter } = reports;
   const [session, sessionDispatch] = useReducer(sessionReducer, INITIAL_SESSION);
@@ -1072,15 +1070,6 @@ const PlayerPage = ({ t }) => {
                 <div><span>Longest</span><strong>{match.longestKill}m</strong></div>
               </div>
 
-              <button
-                type="button"
-                className="player-match-heatmap-btn"
-                onClick={() => setHeatmapMatch(match)}
-                aria-label={t("pages.matchHeatmap.openAria")}
-              >
-                <EnvironmentOutlined />
-                <span>{t("pages.matchHeatmap.buttonLabel")}</span>
-              </button>
               <Link
                 className="player-match-item__replay"
                 to={`/match/${platform}/${encodeURIComponent(match.id)}/replay?accountId=${encodeURIComponent(data?.platformInfo?.platformUserId || "")}&playerName=${encodeURIComponent(data?.platformInfo?.platformUserHandle || gameId || "")}`}
@@ -1403,17 +1392,6 @@ const PlayerPage = ({ t }) => {
       </section>
 
       <Tabs className="player-tabs" activeKey={activeTabKey} onChange={(key) => sessionDispatch({ type: "setTab", key })} items={tabItems} />
-
-      <MatchHeatmap
-        open={Boolean(heatmapMatch)}
-        onClose={() => setHeatmapMatch(null)}
-        matchId={heatmapMatch?.id}
-        shard={platform}
-        accountId={data?.platformInfo?.platformUserId || null}
-        playerName={data?.platformInfo?.platformUserHandle || gameId}
-        mapNameHint={heatmapMatch?.mapName}
-        rawMapNameHint={heatmapMatch?.rawMapName}
-      />
     </div>
   );
 };
