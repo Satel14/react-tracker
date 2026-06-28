@@ -6,7 +6,7 @@ import { translate } from "react-switch-lang";
 import MapField from "../component/charts/MapField";
 import { getMatchReplay } from "../api/player";
 import { useReplayClock } from "../component/charts/useReplayClock";
-import { playersAt, activeKills } from "../component/charts/replayEngine";
+import { playersAt, activeKills, zoneAt } from "../component/charts/replayEngine";
 import { drawReplayFrame } from "../component/charts/replayDraw";
 
 const fmt = (sec) => {
@@ -44,7 +44,8 @@ const MatchReplayPage = ({ t }) => {
     if (!ctx) return;
     const players = playersAt(data.players, clock.t);
     const kills = activeKills(data.kills, clock.t);
-    drawReplayFrame(ctx, { players, kills, mapMax: data.mapMax, size: CANVAS_SIZE });
+    const zone = zoneAt(data.zones, clock.t);
+    drawReplayFrame(ctx, { players, kills, zone, mapMax: data.mapMax, size: CANVAS_SIZE });
   }, [data, clock.t]);
 
   useEffect(() => {
