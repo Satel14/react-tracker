@@ -25,10 +25,6 @@ module.exports = (router) => {
     PlayerController.getRecentSearches
   );
   router.get(
-    "/api/match/:matchId/heatmap",
-    PlayerController.getMatchHeatmap
-  );
-  router.get(
     "/api/match/:matchId/replay",
     PlayerController.getMatchReplay
   );

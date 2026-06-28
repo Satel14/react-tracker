@@ -171,31 +171,6 @@ module.exports.getPlayerCard = async (req, res) => {
   }
 };
 
-module.exports.getMatchHeatmap = async (req, res) => {
-  try {
-    const { matchId } = req.params || {};
-    const { shard, accountId, playerName } = req.query || {};
-
-    if (!matchId) {
-      return res.status(400).json({ status: 400, message: "matchId is required" });
-    }
-    if (!accountId && !playerName) {
-      return res.status(400).json({ status: 400, message: "accountId or playerName is required" });
-    }
-
-    const data = await getMatchHeatmap({
-      shard: shard || "steam",
-      matchId,
-      accountId: accountId || null,
-      playerName: playerName || null,
-    });
-
-    return res.status(200).json({ status: 200, data });
-  } catch (e) {
-    return res.status(200).json({ status: 200, message: e.message });
-  }
-};
-
 module.exports.getMatchReplay = async (req, res) => {
   try {
     const { matchId } = req.params || {};
