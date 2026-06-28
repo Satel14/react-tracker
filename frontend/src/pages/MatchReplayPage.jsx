@@ -11,7 +11,7 @@ import { drawReplayFrame } from "../component/charts/replayDraw";
 
 const fmt = (sec) => {
   const s = Math.max(0, Math.floor(sec));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 };
 const SPEEDS = [1, 2, 4, 8, 16];
 
