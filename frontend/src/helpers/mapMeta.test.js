@@ -15,3 +15,8 @@ test("MAP_LIST contains Erangel once and excludes the legacy duplicate", () => {
   const erangel = MAP_LIST.filter((m) => m.displayName === "Erangel");
   expect(erangel).toHaveLength(1);
 });
+
+test("known maps resolve to an image asset", () => {
+  expect(getMapMeta("Baltic_Main").image).toBeTruthy();
+  expect(getMapMeta("Savage_Main").image).toBeTruthy();
+});

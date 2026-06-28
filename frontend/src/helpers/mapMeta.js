@@ -1,16 +1,28 @@
+import erangel from "../img/maps/erangel.png";
+import miramar from "../img/maps/miramar.png";
+import taego from "../img/maps/taego.png";
+import deston from "../img/maps/deston.png";
+import rondo from "../img/maps/rondo.png";
+import vikendi from "../img/maps/vikendi.png";
+import sanhok from "../img/maps/sanhok.png";
+import paramo from "../img/maps/paramo.png";
+import karakin from "../img/maps/karakin.png";
+import campJackal from "../img/maps/camp_jackal.png";
+import haven from "../img/maps/haven.png";
+
 export const MAP_META = {
-  Baltic_Main: { displayName: "Erangel", mapMax: 8160, image: null },
-  Erangel_Main: { displayName: "Erangel", mapMax: 8160, image: null },
-  Desert_Main: { displayName: "Miramar", mapMax: 8160, image: null },
-  Tiger_Main: { displayName: "Taego", mapMax: 8160, image: null },
-  Kiki_Main: { displayName: "Deston", mapMax: 8160, image: null },
-  Neon_Main: { displayName: "Rondo", mapMax: 8160, image: null },
-  DihorOtok_Main: { displayName: "Vikendi", mapMax: 8160, image: null },
-  Savage_Main: { displayName: "Sanhok", mapMax: 4080, image: null },
-  Chimera_Main: { displayName: "Paramo", mapMax: 3060, image: null },
-  Summerland_Main: { displayName: "Karakin", mapMax: 2040, image: null },
-  Range_Main: { displayName: "Camp Jackal", mapMax: 2040, image: null },
-  Heaven_Main: { displayName: "Haven", mapMax: 1020, image: null },
+  Baltic_Main: { displayName: "Erangel", mapMax: 8160, image: erangel },
+  Erangel_Main: { displayName: "Erangel", mapMax: 8160, image: erangel },
+  Desert_Main: { displayName: "Miramar", mapMax: 8160, image: miramar },
+  Tiger_Main: { displayName: "Taego", mapMax: 8160, image: taego },
+  Kiki_Main: { displayName: "Deston", mapMax: 8160, image: deston },
+  Neon_Main: { displayName: "Rondo", mapMax: 8160, image: rondo },
+  DihorOtok_Main: { displayName: "Vikendi", mapMax: 8160, image: vikendi },
+  Savage_Main: { displayName: "Sanhok", mapMax: 4080, image: sanhok },
+  Chimera_Main: { displayName: "Paramo", mapMax: 3060, image: paramo },
+  Summerland_Main: { displayName: "Karakin", mapMax: 2040, image: karakin },
+  Range_Main: { displayName: "Camp Jackal", mapMax: 2040, image: campJackal },
+  Heaven_Main: { displayName: "Haven", mapMax: 1020, image: haven },
 };
 
 export const getMapMeta = (rawMapName) => {
