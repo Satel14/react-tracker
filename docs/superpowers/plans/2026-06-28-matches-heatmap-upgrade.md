@@ -1186,21 +1186,37 @@ git commit -m "feat: accumulate match heatmap points and use precise map scale"
 ### Task 9: Aggregate endpoint + seeding
 
 **Files:**
+- Modify: `backend/modules/getMatchHeatmap.js` (export `shardForMatch`)
 - Modify: `backend/controllers/player.js`
 - Modify: `backend/routes/player.js`
 
 **Interfaces:**
-- Consumes: `getMatchHeatmap` (builds + accumulates a match), `aggregateKey`/`getAggregate` (Task 7).
+- Consumes: `getMatchHeatmap` + `shardForMatch` (this task exports the latter), `aggregateKey`/`getAggregate` (Task 7).
 - Produces: `POST /api/player/heatmap/aggregate` body `{ shard, accountId, playerName, map, matchIds[] }` → `{ status: 200, data: { map, mapMax, layers, matchesCount } }`. Seeds by building any provided `matchIds` not yet stored, then returns the aggregate.
 
-- [ ] **Step 1: Add the controller**
+**Key-consistency note:** Task 8 writes the accumulator key with the NORMALIZED shard (`shardForMatch(shard)` — maps `psn`/`xbox` → `console`). The aggregate READ key here MUST use the same normalization, or console-platform reads would miss their data. That's why we export and reuse `shardForMatch` instead of passing the raw `shard`.
 
-In `backend/controllers/player.js`, add imports near the existing `getMatchHeatmap` import (line ~10):
+- [ ] **Step 1: Export `shardForMatch` from the heatmap module**
+
+In `backend/modules/getMatchHeatmap.js`, change the exports line from `module.exports = { getMatchHeatmap };` to also export the existing internal helper:
 
 ```js
+module.exports = { getMatchHeatmap, shardForMatch };
+```
+
+(`shardForMatch` already exists in that file: `if (shard === "psn" || shard === "xbox") return "console"; return shard;` — just expose it; don't reimplement it.)
+
+- [ ] **Step 2: Add the controller**
+
+In `backend/controllers/player.js`, update the existing `getMatchHeatmap` import (line ~10) to also pull in `shardForMatch`, and add the two new module imports:
+
+```js
+const { getMatchHeatmap, shardForMatch } = require("../modules/getMatchHeatmap");
 const { getMapMeta } = require("../modules/mapMeta");
 const { aggregateKey, getAggregate } = require("../modules/heatmapAggregate");
 ```
+
+(The existing line is `const { getMatchHeatmap } = require("../modules/getMatchHeatmap");` — extend it; don't duplicate the require.)
 
 Then add the handler (after `getMatchHeatmap`, before `validate`):
 
@@ -1225,7 +1241,7 @@ module.exports.getPlayerHeatmapAggregate = async (req, res) => {
       }
     }
 
-    const key = aggregateKey({ shard, accountId, playerName, rawMapName: map });
+    const key = aggregateKey({ shard: shardForMatch(shard), accountId, playerName, rawMapName: map });
     const aggregate = await getAggregate({ key });
     return res.status(200).json({
       status: 200,
@@ -1242,7 +1258,7 @@ module.exports.getPlayerHeatmapAggregate = async (req, res) => {
 };
 ```
 
-- [ ] **Step 2: Register the route**
+- [ ] **Step 3: Register the route**
 
 In `backend/routes/player.js`, add (after the existing `/api/match/:matchId/heatmap` route):
 
@@ -1253,7 +1269,7 @@ router.post(
 );
 ```
 
-- [ ] **Step 3: Manual verification**
+- [ ] **Step 4: Manual verification**
 
 With the backend running and a real player's recent match IDs:
 
@@ -1265,10 +1281,10 @@ curl -X POST "http://localhost:3003/api/player/heatmap/aggregate" \
 
 Expected: 200 with `data.layers.{drop,kill,death}` arrays and `data.matchesCount` ≥ 1 (only matches whose `rawMapName` is `Baltic_Main` contribute). Re-running does not inflate `matchesCount` (idempotent).
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add backend/controllers/player.js backend/routes/player.js
+git add backend/modules/getMatchHeatmap.js backend/controllers/player.js backend/routes/player.js
 git commit -m "feat: add aggregate heatmap endpoint with on-demand seeding"
 ```
 
