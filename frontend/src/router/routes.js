@@ -7,6 +7,7 @@ import FavoritesPage from '../pages/Favorites'
 import BugReportPage from '../pages/BugReportPage'
 import Compare from '../pages/Compare'
 import Overlay from '../pages/Overlay'
+import MatchReplayPage from '../pages/MatchReplayPage'
 const routes = [
   {
     path: "/",
@@ -60,6 +61,12 @@ const routes = [
     path: "/overlay/:platform/:gameId",
     layout: Overlay,
     component: Overlay,
+    exact: true,
+  },
+  {
+    path: "/match/:platform/:matchId/replay",
+    layout: MatchReplayPage,
+    component: MatchReplayPage,
     exact: true,
   },
 ];

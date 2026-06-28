@@ -181,6 +181,16 @@
       "layerDeath": "Deaths",
       "sampleCount": "{count} matches in sample"
     },
+    "replay": {
+      "title": "Match Replay",
+      "loading": "Loading replay…",
+      "errorUnavailable": "Replay data unavailable for this match.",
+      "errorGeneric": "Could not load the replay.",
+      "play": "Play",
+      "pause": "Pause",
+      "speed": "Speed",
+      "open": "Replay"
+    },
     "help": {
       "title": "Help & FAQ",
       "subtitle": "Quick answers about search, seasons, favorites, and PUBG Report integration.",
