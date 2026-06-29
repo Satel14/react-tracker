@@ -154,6 +154,7 @@ const Leaderboard = ({ t }) => {
       <div className="leaderboard-page__filters">
         <Select
           className="leaderboard-page__platform"
+          popupClassName="leaderboard-page__dropdown"
           value={platform}
           onChange={(value) => patchParams({ platform: value })}
           options={REGIONS}
@@ -167,6 +168,7 @@ const Leaderboard = ({ t }) => {
         />
         <Select
           className="leaderboard-page__season"
+          popupClassName="leaderboard-page__dropdown"
           value={season || undefined}
           onChange={(value) => { setSeason(value); patchParams({ season: value }); }}
           options={seasons.map((s) => ({ value: s.id, label: s.label || s.id }))}
