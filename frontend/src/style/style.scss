@@ -4190,6 +4190,89 @@ body {
   }
 
   &__table {
-    .ant-table { background: transparent; }
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(120, 247, 168, 0.12);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+
+    .ant-table {
+      background: linear-gradient(180deg, #15182b 0%, #11132099 100%);
+      color: #d6d9ee;
+      font-size: 14px;
+    }
+
+    // Header
+    .ant-table-thead > tr > th {
+      background: #1a2235;
+      color: #fde82b;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 12px;
+      border-bottom: 1px solid rgba(120, 247, 168, 0.18);
+
+      &::before {
+        display: none;
+      }
+    }
+
+    .ant-table-column-sorter {
+      color: #6c7090;
+    }
+
+    .ant-table-column-sort {
+      background: rgba(120, 247, 168, 0.04);
+    }
+
+    // Body cells
+    .ant-table-tbody > tr > td {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    // Zebra + hover
+    .ant-table-tbody > tr:nth-child(even) > td {
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .ant-table-tbody > tr.ant-table-row:hover > td,
+    .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+      background: rgba(120, 247, 168, 0.08);
+    }
+
+    // Player links
+    .ant-table-tbody a {
+      color: #78f7a8;
+      font-weight: 600;
+      transition: 0.15s ease;
+
+      &:hover {
+        color: #fde82b;
+      }
+    }
+
+    // Pagination
+    .ant-pagination {
+      .ant-pagination-item a {
+        color: #d6d9ee;
+      }
+
+      .ant-pagination-item-active {
+        background: #fde82b;
+        border-color: #fde82b;
+
+        a { color: #0d0918; }
+      }
+
+      .ant-pagination-prev button,
+      .ant-pagination-next button {
+        color: #d6d9ee;
+      }
+    }
+
+    // Empty state
+    .ant-table-placeholder {
+      .ant-table-cell { background: transparent; }
+      .ant-empty-description { color: #8d91b2; }
+    }
   }
 }

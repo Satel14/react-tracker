@@ -14,7 +14,7 @@ const REGIONS = [
   { value: "pc-kakao", label: "PC · KAKAO" },
 ];
 const GAME_MODES = ["solo", "solo-fpp", "duo", "duo-fpp", "squad", "squad-fpp"];
-const DEFAULT_PLATFORM = "pc-na";
+const DEFAULT_PLATFORM = "pc-eu";
 const DEFAULT_MODE = "squad-fpp";
 
 const pct = (ratio) => `${(Number(ratio || 0) * 100).toFixed(1)}%`;
