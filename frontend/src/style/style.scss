@@ -4220,8 +4220,18 @@ body {
       color: #6c7090;
     }
 
-    .ant-table-column-sort {
-      background: rgba(120, 247, 168, 0.04);
+    // Sorted column must not get Ant's default light background
+    .ant-table-tbody > tr > td.ant-table-column-sort {
+      background: rgba(120, 247, 168, 0.05);
+    }
+
+    .ant-table-thead > tr > th.ant-table-column-sort {
+      background: #1a2235;
+    }
+
+    // Hover keeps the dark hover tint even on the sorted column
+    .ant-table-tbody > tr.ant-table-row:hover > td.ant-table-column-sort {
+      background: rgba(120, 247, 168, 0.1);
     }
 
     // Body cells

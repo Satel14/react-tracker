@@ -20,11 +20,14 @@ function mapLeaderboard(raw) {
         accountId: item.id || null,
         name: typeof attrs.name === "string" ? attrs.name : "",
         rankPoints: toNum(stats.rankPoints),
+        tier: typeof stats.tier === "string" ? stats.tier : "",
+        subTier: stats.subTier != null ? String(stats.subTier) : "",
         games: toNum(stats.games),
         wins: toNum(stats.wins),
         winRatio: toNum(stats.winRatio),
         kda: toNum(stats.kda),
         avgDamage: toNum(stats.averageDamage),
+        avgRank: toNum(stats.averageRank),
         kills: toNum(stats.kills),
       };
     })

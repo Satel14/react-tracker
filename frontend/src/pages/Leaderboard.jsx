@@ -19,7 +19,6 @@ const DEFAULT_MODE = "squad-fpp";
 
 const pct = (ratio) => `${(Number(ratio || 0) * 100).toFixed(1)}%`;
 const round = (n) => Math.round(Number(n || 0));
-const dec = (n) => Number(n || 0).toFixed(2);
 
 const Leaderboard = ({ t }) => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -108,10 +107,16 @@ const Leaderboard = ({ t }) => {
         key: "name",
         render: (name) => <Link to={`/player/steam/${encodeURIComponent(name)}`}>{name}</Link>,
       },
+      {
+        title: t("pages.leaderboards.tier"),
+        dataIndex: "tier",
+        key: "tier",
+        render: (tier, row) => (tier ? `${tier}${row.subTier ? ` ${row.subTier}` : ""}` : "—"),
+      },
       { title: t("pages.leaderboards.rp"), dataIndex: "rankPoints", key: "rankPoints", render: round, sorter: (a, b) => a.rankPoints - b.rankPoints },
       { title: t("pages.leaderboards.games"), dataIndex: "games", key: "games", render: round, sorter: (a, b) => a.games - b.games },
+      { title: t("pages.leaderboards.wins"), dataIndex: "wins", key: "wins", render: round, sorter: (a, b) => a.wins - b.wins },
       { title: t("pages.leaderboards.winRate"), dataIndex: "winRatio", key: "winRatio", render: pct, sorter: (a, b) => a.winRatio - b.winRatio },
-      { title: t("pages.leaderboards.kda"), dataIndex: "kda", key: "kda", render: dec, sorter: (a, b) => a.kda - b.kda },
       { title: t("pages.leaderboards.avgDamage"), dataIndex: "avgDamage", key: "avgDamage", render: round, sorter: (a, b) => a.avgDamage - b.avgDamage },
       { title: t("pages.leaderboards.kills"), dataIndex: "kills", key: "kills", render: round, sorter: (a, b) => a.kills - b.kills },
     ],
