@@ -4,6 +4,7 @@ import { Menu, Badge } from "antd";
 import { translate } from "react-switch-lang";
 import {
   HomeOutlined,
+  TrophyOutlined,
   HeartOutlined,
   QuestionCircleOutlined,
   MenuOutlined,
@@ -92,6 +93,12 @@ const Navbar = ({ t }) => {
       icon: <HomeOutlined />,
       label: t("menu.main"),
       onClick: () => navigate("/"),
+    },
+    {
+      key: "leaderboards",
+      icon: <TrophyOutlined />,
+      label: t("menu.leaderboards"),
+      onClick: () => navigate("/leaderboards"),
     },
     {
       key: "favorites",

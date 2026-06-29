@@ -8,6 +8,7 @@ import BugReportPage from '../pages/BugReportPage'
 import Compare from '../pages/Compare'
 import Overlay from '../pages/Overlay'
 import MatchReplayPage from '../pages/MatchReplayPage'
+import Leaderboard from '../pages/Leaderboard'
 const routes = [
   {
     path: "/",
@@ -43,6 +44,12 @@ const routes = [
     path: "/favorites",
     layout: FavoritesPage,
     component: FavoritesPage,
+    exact: true,
+  },
+  {
+    path: "/leaderboards",
+    layout: Leaderboard,
+    component: Leaderboard,
     exact: true,
   },
   {
