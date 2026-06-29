@@ -49,6 +49,7 @@ test("coerces missing stats to safe defaults and tolerates empty input", () => {
     kda: 0,
     avgDamage: 0,
     avgRank: 0,
+    avgKills: 0,
     kills: 0,
   });
   assert.deepStrictEqual(mapLeaderboard(null), []);

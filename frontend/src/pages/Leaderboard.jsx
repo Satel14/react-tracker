@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Table, Select, Radio, Input, Spin, Alert } from "antd";
-import { LoadingOutlined } from "@ant-design/icons";
-import { Link, useSearchParams } from "react-router-dom";
+import { Table, Select, Radio, Input, Spin, Alert, Button, Tooltip } from "antd";
+import { LoadingOutlined, ReloadOutlined, SwapOutlined } from "@ant-design/icons";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { getLeaderboard, getSeasons } from "../api/leaderboard";
 
@@ -16,12 +16,15 @@ const REGIONS = [
 const GAME_MODES = ["solo", "solo-fpp", "duo", "duo-fpp", "squad", "squad-fpp"];
 const DEFAULT_PLATFORM = "pc-eu";
 const DEFAULT_MODE = "squad-fpp";
+const MAX_COMPARE = 3;
 
 const pct = (ratio) => `${(Number(ratio || 0) * 100).toFixed(1)}%`;
 const round = (n) => Math.round(Number(n || 0));
+const dec1 = (n) => Number(n || 0).toFixed(1);
 
 const Leaderboard = ({ t }) => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const platform = searchParams.get("platform") || DEFAULT_PLATFORM;
   const gameMode = searchParams.get("mode") || DEFAULT_MODE;
   const seasonParam = searchParams.get("season") || null;
@@ -31,7 +34,17 @@ const Leaderboard = ({ t }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [searchInput, setSearchInput] = useState("");
   const [nameFilter, setNameFilter] = useState("");
+  const [selected, setSelected] = useState([]);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  // Debounce the search box (6).
+  useEffect(() => {
+    const id = setTimeout(() => setNameFilter(searchInput), 250);
+    return () => clearTimeout(id);
+  }, [searchInput]);
 
   const patchParams = useCallback(
     (patch) => {
@@ -63,7 +76,7 @@ const Leaderboard = ({ t }) => {
     };
   }, [platform, seasonParam]);
 
-  // Load the leaderboard whenever platform / mode / season changes.
+  // Load the leaderboard whenever platform / mode / season / manual reload changes.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -73,6 +86,7 @@ const Leaderboard = ({ t }) => {
         if (cancelled) return;
         if (res?.data?.entries) {
           setEntries(res.data.entries);
+          setUpdatedAt(new Date());
         } else {
           setEntries([]);
           if (res?.message) setError(t("pages.leaderboards.error"));
@@ -90,7 +104,12 @@ const Leaderboard = ({ t }) => {
     return () => {
       cancelled = true;
     };
-  }, [platform, gameMode, season, t]);
+  }, [platform, gameMode, season, reloadToken, t]);
+
+  // Clear selection when the dataset changes.
+  useEffect(() => {
+    setSelected([]);
+  }, [platform, gameMode, season]);
 
   const filtered = useMemo(() => {
     const q = nameFilter.trim().toLowerCase();
@@ -111,6 +130,7 @@ const Leaderboard = ({ t }) => {
         title: t("pages.leaderboards.tier"),
         dataIndex: "tier",
         key: "tier",
+        responsive: ["md"],
         render: (tier, row) => {
           if (!tier) return <span className="leaderboard-page__tier-empty">—</span>;
           const label = `${tier}${row.subTier ? ` ${row.subTier}` : ""}`;
@@ -135,14 +155,40 @@ const Leaderboard = ({ t }) => {
         },
       },
       { title: t("pages.leaderboards.rp"), dataIndex: "rankPoints", key: "rankPoints", render: round, sorter: (a, b) => a.rankPoints - b.rankPoints },
-      { title: t("pages.leaderboards.games"), dataIndex: "games", key: "games", render: round, sorter: (a, b) => a.games - b.games },
-      { title: t("pages.leaderboards.wins"), dataIndex: "wins", key: "wins", render: round, sorter: (a, b) => a.wins - b.wins },
-      { title: t("pages.leaderboards.winRate"), dataIndex: "winRatio", key: "winRatio", render: pct, sorter: (a, b) => a.winRatio - b.winRatio },
-      { title: t("pages.leaderboards.avgDamage"), dataIndex: "avgDamage", key: "avgDamage", render: round, sorter: (a, b) => a.avgDamage - b.avgDamage },
+      { title: t("pages.leaderboards.games"), dataIndex: "games", key: "games", responsive: ["sm"], render: round, sorter: (a, b) => a.games - b.games },
+      { title: t("pages.leaderboards.wins"), dataIndex: "wins", key: "wins", responsive: ["lg"], render: round, sorter: (a, b) => a.wins - b.wins },
+      { title: t("pages.leaderboards.winRate"), dataIndex: "winRatio", key: "winRatio", responsive: ["sm"], render: pct, sorter: (a, b) => a.winRatio - b.winRatio },
+      { title: t("pages.leaderboards.avgRank"), dataIndex: "avgRank", key: "avgRank", responsive: ["lg"], render: (v) => (v ? `#${dec1(v)}` : "—"), sorter: (a, b) => a.avgRank - b.avgRank },
+      { title: t("pages.leaderboards.avgKills"), dataIndex: "avgKills", key: "avgKills", responsive: ["lg"], render: dec1, sorter: (a, b) => a.avgKills - b.avgKills },
+      { title: t("pages.leaderboards.avgDamage"), dataIndex: "avgDamage", key: "avgDamage", responsive: ["md"], render: round, sorter: (a, b) => a.avgDamage - b.avgDamage },
       { title: t("pages.leaderboards.kills"), dataIndex: "kills", key: "kills", render: round, sorter: (a, b) => a.kills - b.kills },
     ],
     [t]
   );
+
+  const rowSelection = {
+    selectedRowKeys: selected,
+    onChange: (keys) => {
+      // Cap the selection at MAX_COMPARE.
+      setSelected(keys.slice(-MAX_COMPARE));
+    },
+    getCheckboxProps: (row) => ({
+      disabled: !selected.includes(rowKeyOf(row)) && selected.length >= MAX_COMPARE,
+    }),
+  };
+
+  const handleCompare = () => {
+    const byKey = new Map(entries.map((e) => [rowKeyOf(e), e]));
+    const params = new URLSearchParams();
+    selected
+      .map((key) => byKey.get(key))
+      .filter(Boolean)
+      .slice(0, MAX_COMPARE)
+      .forEach((row, i) => {
+        params.set(`p${i + 1}`, `steam:${row.name}`);
+      });
+    navigate(`/compare?${params.toString()}`);
+  };
 
   return (
     <div className="content leaderboard-page">
@@ -176,10 +222,41 @@ const Leaderboard = ({ t }) => {
         <Input
           className="leaderboard-page__search"
           placeholder={t("pages.leaderboards.search")}
-          value={nameFilter}
-          onChange={(e) => setNameFilter(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           allowClear
         />
+        <Tooltip title={t("pages.leaderboards.refresh")}>
+          <Button
+            className="leaderboard-page__icon-btn"
+            aria-label={t("pages.leaderboards.refresh")}
+            icon={<ReloadOutlined spin={loading} />}
+            onClick={() => setReloadToken((n) => n + 1)}
+            disabled={loading}
+          />
+        </Tooltip>
+      </div>
+
+      <div className="leaderboard-page__meta">
+        <span className="leaderboard-page__count">
+          {t("pages.leaderboards.showing", { count: filtered.length, total: entries.length })}
+        </span>
+        {updatedAt ? (
+          <span className="leaderboard-page__updated">
+            {t("pages.leaderboards.updated", { time: updatedAt.toLocaleTimeString() })}
+          </span>
+        ) : null}
+        {selected.length >= 2 ? (
+          <Button
+            className="leaderboard-page__compare-btn"
+            type="primary"
+            size="small"
+            icon={<SwapOutlined />}
+            onClick={handleCompare}
+          >
+            {t("pages.leaderboards.compare", { count: selected.length })}
+          </Button>
+        ) : null}
       </div>
 
       {error ? <Alert type="error" message={error} showIcon /> : null}
@@ -191,16 +268,22 @@ const Leaderboard = ({ t }) => {
       ) : (
         <Table
           className="leaderboard-page__table"
-          rowKey={(row) => row.accountId || `${row.rank}-${row.name}`}
+          rowKey={rowKeyOf}
+          rowSelection={rowSelection}
           columns={columns}
           dataSource={filtered}
           pagination={{ pageSize: 50, showSizeChanger: false }}
           locale={{ emptyText: t("pages.leaderboards.empty") }}
+          scroll={{ x: 720 }}
           size="middle"
         />
       )}
     </div>
   );
 };
+
+function rowKeyOf(row) {
+  return row.accountId || `${row.rank}-${row.name}`;
+}
 
 export default translate(Leaderboard);

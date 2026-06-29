@@ -35,6 +35,7 @@ function mapLeaderboard(raw) {
         kda: toNum(stats.kda),
         avgDamage: toNum(stats.averageDamage),
         avgRank: toNum(stats.averageRank),
+        avgKills: toNum(stats.averageKill),
         kills: toNum(stats.kills),
       };
     })
