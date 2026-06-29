@@ -4333,13 +4333,25 @@ body {
       color: #6c7090;
     }
 
+    // Hovering a sortable header must not turn it light
+    .ant-table-thead > tr > th.ant-table-column-has-sorters:hover {
+      background: #222c45;
+    }
+
+    .ant-table-thead > tr > th.ant-table-column-sort,
+    .ant-table-thead > tr > th.ant-table-column-has-sorters.ant-table-column-sort:hover {
+      background: #232e49;
+    }
+
+    // Active sort arrow in the accent color
+    .ant-table-column-sorter-up.active,
+    .ant-table-column-sorter-down.active {
+      color: #fde82b;
+    }
+
     // Sorted column must not get Ant's default light background
     .ant-table-tbody > tr > td.ant-table-column-sort {
       background: rgba(120, 247, 168, 0.05);
-    }
-
-    .ant-table-thead > tr > th.ant-table-column-sort {
-      background: #1a2235;
     }
 
     // Hover keeps the dark hover tint even on the sorted column
