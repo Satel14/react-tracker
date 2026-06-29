@@ -24,14 +24,24 @@ test("maps included players into flat rows sorted by rank", () => {
 
 test("ignores non-player included entries", () => {
   const rows = mapLeaderboard(sample);
+  assert.strictEqual(rows.length, 2);
   assert.ok(rows.every((r) => r.accountId && r.accountId.startsWith("account.")));
 });
 
 test("coerces missing stats to safe defaults and tolerates empty input", () => {
   const rows = mapLeaderboard({ included: [{ type: "player", id: "account.x", attributes: { rank: 3 } }] });
-  assert.strictEqual(rows[0].name, "");
-  assert.strictEqual(rows[0].rankPoints, 0);
-  assert.strictEqual(rows[0].kda, 0);
+  assert.deepStrictEqual(rows[0], {
+    rank: 3,
+    accountId: "account.x",
+    name: "",
+    rankPoints: 0,
+    games: 0,
+    wins: 0,
+    winRatio: 0,
+    kda: 0,
+    avgDamage: 0,
+    kills: 0,
+  });
   assert.deepStrictEqual(mapLeaderboard(null), []);
   assert.deepStrictEqual(mapLeaderboard({}), []);
 });
