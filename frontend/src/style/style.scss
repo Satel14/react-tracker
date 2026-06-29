@@ -4183,6 +4183,24 @@ body {
 
   &__search { max-width: 240px; }
 
+  &__tier {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  &__tier-icon {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  &__tier-empty {
+    color: #6c7090;
+  }
+
   &__loading {
     display: flex;
     justify-content: center;

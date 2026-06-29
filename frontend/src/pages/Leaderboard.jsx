@@ -111,7 +111,28 @@ const Leaderboard = ({ t }) => {
         title: t("pages.leaderboards.tier"),
         dataIndex: "tier",
         key: "tier",
-        render: (tier, row) => (tier ? `${tier}${row.subTier ? ` ${row.subTier}` : ""}` : "—"),
+        render: (tier, row) => {
+          if (!tier) return <span className="leaderboard-page__tier-empty">—</span>;
+          const label = `${tier}${row.subTier ? ` ${row.subTier}` : ""}`;
+          return (
+            <span className="leaderboard-page__tier">
+              <img
+                className="leaderboard-page__tier-icon"
+                src={row.tierIconUrl || row.tierIconFallbackUrl || "/images/ranks/opgg/unranked.png"}
+                alt={label}
+                loading="lazy"
+                onError={(e) => {
+                  if (row.tierIconFallbackUrl && e.currentTarget.src.indexOf(row.tierIconFallbackUrl) === -1) {
+                    e.currentTarget.src = row.tierIconFallbackUrl;
+                  } else {
+                    e.currentTarget.src = "/images/ranks/opgg/unranked.png";
+                  }
+                }}
+              />
+              <span>{label}</span>
+            </span>
+          );
+        },
       },
       { title: t("pages.leaderboards.rp"), dataIndex: "rankPoints", key: "rankPoints", render: round, sorter: (a, b) => a.rankPoints - b.rankPoints },
       { title: t("pages.leaderboards.games"), dataIndex: "games", key: "games", render: round, sorter: (a, b) => a.games - b.games },

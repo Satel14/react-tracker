@@ -20,6 +20,8 @@ test("maps included players into flat rows sorted by rank", () => {
   assert.strictEqual(rows[0].rankPoints, 6000);
   assert.strictEqual(rows[0].tier, "Master");
   assert.strictEqual(rows[0].subTier, "1");
+  assert.strictEqual(rows[0].tierIconUrl, "/images/ranks/opgg/master-1.png");
+  assert.strictEqual(rows[1].tierIconUrl, "/images/ranks/opgg/diamond-2.png");
   assert.strictEqual(rows[1].rank, 2);
   assert.strictEqual(rows[1].name, "Bravo");
 });
@@ -39,6 +41,8 @@ test("coerces missing stats to safe defaults and tolerates empty input", () => {
     rankPoints: 0,
     tier: "",
     subTier: "",
+    tierIconUrl: null,
+    tierIconFallbackUrl: null,
     games: 0,
     wins: 0,
     winRatio: 0,
