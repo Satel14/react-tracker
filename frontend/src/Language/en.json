@@ -41,6 +41,24 @@
       "moreStats": "More Stats",
       "placeinTheWorld": "Place in the world"
     },
+    "leaderboards": {
+      "title": "Leaderboards",
+      "subtitle": "Top 500 ranked players by season and mode",
+      "platform": "Platform",
+      "mode": "Mode",
+      "season": "Season",
+      "search": "Search player",
+      "rank": "#",
+      "player": "Player",
+      "rp": "RP",
+      "games": "Games",
+      "winRate": "Win %",
+      "kda": "KDA",
+      "avgDamage": "Avg DMG",
+      "kills": "Kills",
+      "empty": "No leaderboard data for this season and mode.",
+      "error": "Could not load the leaderboard. Please try again."
+    },
     "compare": {
       "title": "Player Comparison",
       "empty": "Pick two or three players from your Favorites and tap Compare.",

@@ -10,11 +10,13 @@ const masteryCache = new Map();
 const matchSummaryCache = new Map();
 const inFlightRankRequests = new Map();
 const stalePlayerDataCache = new Map();
+const leaderboardCache = new Map();
 
 const CACHE_DURATION = 10 * 60 * 1000;
 const CURRENT_SEASON_CACHE_DURATION = 60 * 60 * 1000;
 const STEAM_CACHE_DURATION = 6 * 60 * 60 * 1000;
 const STALE_PLAYER_DATA_CACHE_DURATION = 30 * 60 * 1000;
+const LEADERBOARD_CACHE_DURATION = 2 * 60 * 60 * 1000;
 const RATE_LIMIT_COOLDOWN_MS = 20 * 1000;
 
 let rateLimitedUntil = 0;
@@ -65,4 +67,6 @@ module.exports = {
   isRateLimited,
   getStalePlayerData,
   setStalePlayerData,
+  leaderboardCache,
+  LEADERBOARD_CACHE_DURATION,
 };
