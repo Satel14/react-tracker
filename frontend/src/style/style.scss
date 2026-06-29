@@ -4416,15 +4416,18 @@ body {
       background: rgba(120, 247, 168, 0.08);
     }
 
-    // Selected rows (compare picker) must stay dark, not Ant's default light blue
+    // Selected rows (compare picker) must stay dark, not Ant's default light blue.
+    // AntD v5 sets the selected background via CSS-in-JS, so override with a solid
+    // dark tone + !important (a transparent tint over their light base still reads light).
     .ant-table-tbody > tr.ant-table-row-selected > td,
-    .ant-table-tbody > tr.ant-table-row-selected > td.ant-table-column-sort {
-      background: rgba(253, 232, 43, 0.12);
+    .ant-table-tbody > tr.ant-table-row-selected > td.ant-table-column-sort,
+    .ant-table-tbody > tr.ant-table-row-selected > td.ant-table-cell-row-hover {
+      background: #2a2c1a !important;
     }
 
     .ant-table-tbody > tr.ant-table-row-selected:hover > td,
-    .ant-table-tbody > tr.ant-table-row-selected > td.ant-table-cell-row-hover {
-      background: rgba(253, 232, 43, 0.18);
+    .ant-table-tbody > tr.ant-table-row-selected:hover > td.ant-table-cell-row-hover {
+      background: #34361f !important;
     }
 
     // Player links
