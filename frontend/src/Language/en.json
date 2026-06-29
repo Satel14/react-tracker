@@ -64,6 +64,7 @@
       "showing": "Showing {count} of {total}",
       "updated": "Updated {time}",
       "compare": "Compare ({count})",
+      "compareLimit": "You can compare up to {max} players",
       "empty": "No leaderboard data for this season and mode.",
       "error": "Could not load the leaderboard. Please try again."
     },

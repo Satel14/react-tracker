@@ -4302,6 +4302,18 @@ body {
     padding: 64px 0;
   }
 
+  // Disabled checkbox blocks pointer events, so the wrapper must capture hover
+  // for the tooltip while the checkbox itself stays non-interactive.
+  &__cb-disabled {
+    display: inline-flex;
+    pointer-events: auto;
+
+    .ant-checkbox-wrapper,
+    .ant-checkbox {
+      pointer-events: none;
+    }
+  }
+
   &__icon-btn {
     background: rgba(0, 0, 0, 0.35);
     border: 1px solid rgba(120, 247, 168, 0.3);

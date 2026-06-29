@@ -166,6 +166,8 @@ const Leaderboard = ({ t }) => {
     [t]
   );
 
+  const selectionFull = selected.length >= MAX_COMPARE;
+
   const rowSelection = {
     selectedRowKeys: selected,
     // No select-all: Compare takes at most MAX_COMPARE players.
@@ -175,8 +177,18 @@ const Leaderboard = ({ t }) => {
       setSelected(keys.slice(-MAX_COMPARE));
     },
     getCheckboxProps: (row) => ({
-      disabled: !selected.includes(rowKeyOf(row)) && selected.length >= MAX_COMPARE,
+      disabled: !selected.includes(rowKeyOf(row)) && selectionFull,
     }),
+    renderCell: (checked, row, index, node) => {
+      const isDisabled = !checked && selectionFull;
+      if (!isDisabled) return node;
+      return (
+        <Tooltip title={t("pages.leaderboards.compareLimit", { max: MAX_COMPARE })}>
+          {/* wrap in a span so the tooltip still fires over the disabled checkbox */}
+          <span className="leaderboard-page__cb-disabled">{node}</span>
+        </Tooltip>
+      );
+    },
   };
 
   const handleCompare = () => {
