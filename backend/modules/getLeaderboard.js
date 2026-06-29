@@ -1,6 +1,5 @@
 const { createPubgApiClient } = require("./playerRank/pubgApi");
 const { createSeasonCatalogService } = require("./playerRank/seasonCatalog");
-const { resolveShard } = require("./playerRank/platform");
 const { createLeaderboardService } = require("./leaderboard/leaderboardService");
 const {
   seasonCatalogCache,
@@ -26,7 +25,6 @@ const { getSeasonCatalog } = createSeasonCatalogService({
 const { getLeaderboard, getSeasons } = createLeaderboardService({
   doRequest,
   getSeasonCatalog,
-  resolveShard,
   leaderboardCache,
   cacheDuration: LEADERBOARD_CACHE_DURATION,
 });

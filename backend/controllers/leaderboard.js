@@ -1,7 +1,7 @@
 const { param, validationResult } = require("express-validator");
 const MESSAGE = require("../constant/responseMessage");
-const ANY_CONFIG = require("../constant/anyConfig");
 const { getLeaderboard, getSeasons } = require("../modules/getLeaderboard");
+const { LEADERBOARD_REGIONS } = require("../modules/leaderboard/regions");
 
 const GAME_MODES = ["solo", "solo-fpp", "duo", "duo-fpp", "squad", "squad-fpp"];
 
@@ -36,7 +36,7 @@ module.exports.validate = (method) => {
   switch (method) {
     case "getLeaderboard":
       return [
-        param("platform").isIn(ANY_CONFIG.PLATFORMS),
+        param("platform").isIn(LEADERBOARD_REGIONS),
         param("gameMode").isIn(GAME_MODES),
       ];
     default:

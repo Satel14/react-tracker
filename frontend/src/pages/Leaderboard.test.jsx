@@ -22,7 +22,7 @@ beforeEach(() => {
   getLeaderboard.mockReset();
   getSeasons.mockReset();
   getSeasons.mockResolvedValue({ status: 200, data: { seasons: [{ id: "s-current", label: "Season 30" }], currentSeasonId: "s-current" } });
-  getLeaderboard.mockResolvedValue({ status: 200, data: { platform: "steam", gameMode: "squad-fpp", seasonId: "s-current", entries: sampleEntries } });
+  getLeaderboard.mockResolvedValue({ status: 200, data: { platform: "pc-na", gameMode: "squad-fpp", seasonId: "s-current", entries: sampleEntries } });
   window.matchMedia = window.matchMedia || ((query) => ({
     matches: false, media: query, onchange: null,
     addListener: () => {}, removeListener: () => {},
@@ -57,6 +57,6 @@ test("refetches when the game mode changes", async () => {
   const soloRadio = screen.getByText("solo", { selector: "*" });
   fireEvent.click(soloRadio);
   await waitFor(() => {
-    expect(getLeaderboard).toHaveBeenLastCalledWith("steam", "solo", "s-current");
+    expect(getLeaderboard).toHaveBeenLastCalledWith("pc-na", "solo", "s-current");
   });
 });

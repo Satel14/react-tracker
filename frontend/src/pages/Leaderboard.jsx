@@ -5,9 +5,16 @@ import { Link, useSearchParams } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { getLeaderboard, getSeasons } from "../api/leaderboard";
 
-const PLATFORMS = ["steam", "psn", "xbox", "kakao", "stadia"];
+const REGIONS = [
+  { value: "pc-na", label: "PC · NA" },
+  { value: "pc-eu", label: "PC · EU" },
+  { value: "pc-as", label: "PC · AS" },
+  { value: "pc-sea", label: "PC · SEA" },
+  { value: "pc-sa", label: "PC · SA" },
+  { value: "pc-kakao", label: "PC · KAKAO" },
+];
 const GAME_MODES = ["solo", "solo-fpp", "duo", "duo-fpp", "squad", "squad-fpp"];
-const DEFAULT_PLATFORM = "steam";
+const DEFAULT_PLATFORM = "pc-na";
 const DEFAULT_MODE = "squad-fpp";
 
 const pct = (ratio) => `${(Number(ratio || 0) * 100).toFixed(1)}%`;
@@ -99,7 +106,7 @@ const Leaderboard = ({ t }) => {
         title: t("pages.leaderboards.player"),
         dataIndex: "name",
         key: "name",
-        render: (name) => <Link to={`/player/${platform}/${encodeURIComponent(name)}`}>{name}</Link>,
+        render: (name) => <Link to={`/player/steam/${encodeURIComponent(name)}`}>{name}</Link>,
       },
       { title: t("pages.leaderboards.rp"), dataIndex: "rankPoints", key: "rankPoints", render: round, sorter: (a, b) => a.rankPoints - b.rankPoints },
       { title: t("pages.leaderboards.games"), dataIndex: "games", key: "games", render: round, sorter: (a, b) => a.games - b.games },
@@ -108,7 +115,7 @@ const Leaderboard = ({ t }) => {
       { title: t("pages.leaderboards.avgDamage"), dataIndex: "avgDamage", key: "avgDamage", render: round, sorter: (a, b) => a.avgDamage - b.avgDamage },
       { title: t("pages.leaderboards.kills"), dataIndex: "kills", key: "kills", render: round, sorter: (a, b) => a.kills - b.kills },
     ],
-    [t, platform]
+    [t]
   );
 
   return (
@@ -123,7 +130,7 @@ const Leaderboard = ({ t }) => {
           className="leaderboard-page__platform"
           value={platform}
           onChange={(value) => patchParams({ platform: value })}
-          options={PLATFORMS.map((p) => ({ value: p, label: p.toUpperCase() }))}
+          options={REGIONS}
         />
         <Radio.Group
           value={gameMode}
