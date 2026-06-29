@@ -95,12 +95,6 @@ const Navbar = ({ t }) => {
       onClick: () => navigate("/"),
     },
     {
-      key: "leaderboards",
-      icon: <TrophyOutlined />,
-      label: t("menu.leaderboards"),
-      onClick: () => navigate("/leaderboards"),
-    },
-    {
       key: "favorites",
       icon: <HeartOutlined />,
       label: (
@@ -123,6 +117,17 @@ const Navbar = ({ t }) => {
       onClick: () => navigate("/help"),
     },
   ];
+
+  const rightItems = [
+    {
+      key: "leaderboards",
+      icon: <TrophyOutlined />,
+      label: t("menu.leaderboards"),
+      onClick: () => navigate("/leaderboards"),
+    },
+  ];
+
+  const mobileItems = [...items, ...rightItems];
 
   const handleMobileNav = (path, key) => {
     setCurrent(key);
@@ -163,7 +168,7 @@ const Navbar = ({ t }) => {
             selectedKeys={[current]}
             mode="horizontal"
             className="right-menu"
-            items={[]}
+            items={rightItems}
           />
           <div className="navbar_theme">
             <SetTheme />
@@ -216,7 +221,7 @@ const Navbar = ({ t }) => {
             >
               <div className="navbar__mobile-drawer">
                 <div className="navbar__mobile-items">
-                  {items.map((item) => {
+                  {mobileItems.map((item) => {
                     const path = item.key === "main" ? "/" : `/${item.key}`;
                     return (
                       <div

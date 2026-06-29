@@ -1,15 +1,15 @@
 {
-  "updatedAt": "2026-06-17",
+  "updatedAt": "2026-06-29",
   "defaults": {
     "cycleDays": 56
   },
   "seasons": {
     "division.bro.official.pc-2018-42": {
       "startDate": "2026-06-17T00:00:00Z",
-      "cycleDays": 92,
-      "isEstimated": true,
-      "source": "manual-json-estimate",
-      "note": "Season 42 runs ~3 months (Update 42.1 through 42.3). Estimated endDate by 3-month cadence. Replace with official endDate when announced."
+      "endDate": "2026-09-09T00:00:00Z",
+      "isEstimated": false,
+      "source": "esportstales",
+      "note": "Season 42 runs ~3 months (Update 42.1 through 42.3). End date from Esports Tales ranked season tracker."
     }
   }
 }

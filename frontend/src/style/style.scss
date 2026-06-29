@@ -1800,6 +1800,31 @@ body {
       }
     }
 
+    .right-menu {
+      position: absolute;
+      right: 140px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      line-height: 1;
+      min-width: 0;
+
+      &.ant-menu-horizontal {
+        border-bottom: none;
+      }
+
+      .ant-menu-item {
+        top: 0;
+        padding-inline: 0;
+        color: #fff;
+
+        &::after {
+          display: none;
+        }
+      }
+    }
+
     svg {
       font-size: 24px;
     }
@@ -4123,11 +4148,26 @@ body {
 }
 
 .leaderboard-page {
-  &__head {
-    margin-bottom: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
 
-    h2 { margin-bottom: 4px; }
-    p { opacity: 0.75; }
+  &__head {
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0 0 6px;
+      color: #fff;
+      font-size: 28px;
+      font-weight: 700;
+      font-family: "Avenir Next LT Pro Bold", sans-serif;
+    }
+
+    p {
+      margin: 0;
+      color: #8d91b2;
+      font-size: 14px;
+    }
   }
 
   &__filters {
@@ -4135,21 +4175,395 @@ body {
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+
+    // Mode toggle (solo / solo-fpp / duo / ...)
+    .ant-radio-group {
+      display: inline-flex;
+      flex-wrap: wrap;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .ant-radio-button-wrapper {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(120, 247, 168, 0.22);
+      color: #d6d9ee;
+      font-size: 13px;
+      transition: 0.15s ease;
+
+      &::before {
+        background-color: rgba(120, 247, 168, 0.22) !important;
+      }
+
+      &:hover {
+        color: #fff;
+        background: rgba(120, 247, 168, 0.12);
+      }
+    }
+
+    .ant-radio-button-wrapper-checked {
+      background: #fde82b !important;
+      border-color: #fde82b !important;
+      color: #0d0918 !important;
+      font-weight: 700;
+
+      &::before {
+        background-color: #fde82b !important;
+      }
+
+      &:hover {
+        background: #fde82b !important;
+        color: #0d0918 !important;
+      }
+    }
+
+    // Dropdowns (platform / season)
+    .ant-select {
+      .ant-select-selector {
+        background: rgba(0, 0, 0, 0.35) !important;
+        border: 1px solid rgba(120, 247, 168, 0.3) !important;
+        border-radius: 8px !important;
+        color: #fff;
+      }
+
+      .ant-select-selection-item,
+      .ant-select-selection-placeholder {
+        color: #fff;
+      }
+
+      .ant-select-arrow {
+        color: #9fa3bf;
+      }
+
+      &:hover .ant-select-selector {
+        border-color: #78f7a8 !important;
+      }
+
+      &.ant-select-focused .ant-select-selector {
+        border-color: #78f7a8 !important;
+        box-shadow: 0 0 0 2px rgba(120, 247, 168, 0.15) !important;
+      }
+    }
+
+    // Search input
+    .ant-input-affix-wrapper,
+    .ant-input {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(120, 247, 168, 0.3);
+      border-radius: 8px;
+      color: #fff;
+
+      &:hover { border-color: #78f7a8; }
+
+      &:focus,
+      &.ant-input-affix-wrapper-focused {
+        border-color: #78f7a8;
+        box-shadow: 0 0 0 2px rgba(120, 247, 168, 0.15);
+      }
+    }
+
+    .ant-input-affix-wrapper .ant-input {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+
+    .ant-input::placeholder { color: #6c7090; }
+    .ant-input-clear-icon { color: #8d91b2; }
   }
 
   &__platform,
-  &__season { min-width: 140px; }
+  &__season { min-width: 150px; }
 
-  &__search { max-width: 220px; }
+  &__search { max-width: 240px; }
+
+  &__tier {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  &__tier-icon {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  &__tier-empty {
+    color: #6c7090;
+  }
 
   &__loading {
     display: flex;
     justify-content: center;
-    padding: 48px 0;
+    padding: 64px 0;
+  }
+
+  // Disabled checkbox blocks pointer events, so the wrapper must capture hover
+  // for the tooltip while the checkbox itself stays non-interactive.
+  &__cb-disabled {
+    display: inline-flex;
+    pointer-events: auto;
+
+    .ant-checkbox-wrapper,
+    .ant-checkbox {
+      pointer-events: none;
+    }
+  }
+
+  &__icon-btn {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(120, 247, 168, 0.3);
+    color: #d6d9ee;
+
+    &:hover,
+    &:focus {
+      color: #fde82b !important;
+      border-color: #78f7a8 !important;
+      background: rgba(120, 247, 168, 0.1) !important;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #8d91b2;
+  }
+
+  &__count {
+    color: #d6d9ee;
+  }
+
+  &__compare-btn {
+    margin-left: auto;
+    background: #fde82b;
+    border-color: #fde82b;
+    color: #0d0918;
+    font-weight: 700;
+
+    &:hover,
+    &:focus {
+      background: #ffe94d !important;
+      border-color: #ffe94d !important;
+      color: #0d0918 !important;
+    }
   }
 
   &__table {
-    .ant-table { background: transparent; }
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(120, 247, 168, 0.12);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+
+    .ant-table {
+      background: linear-gradient(180deg, #15182b 0%, #11132099 100%);
+      color: #d6d9ee;
+      font-size: 14px;
+    }
+
+    // Header
+    .ant-table-thead > tr > th {
+      background: #1a2235;
+      color: #fde82b;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 12px;
+      border-bottom: 1px solid rgba(120, 247, 168, 0.18);
+
+      &::before {
+        display: none;
+      }
+    }
+
+    .ant-table-column-sorter {
+      color: #6c7090;
+    }
+
+    // Hovering a sortable header must not turn it light
+    .ant-table-thead > tr > th.ant-table-column-has-sorters:hover {
+      background: #222c45;
+    }
+
+    .ant-table-thead > tr > th.ant-table-column-sort,
+    .ant-table-thead > tr > th.ant-table-column-has-sorters.ant-table-column-sort:hover {
+      background: #232e49;
+    }
+
+    // Active sort arrow in the accent color
+    .ant-table-column-sorter-up.active,
+    .ant-table-column-sorter-down.active {
+      color: #fde82b;
+    }
+
+    // Sorted column must not get Ant's default light background
+    .ant-table-tbody > tr > td.ant-table-column-sort {
+      background: rgba(120, 247, 168, 0.05);
+    }
+
+    // Hover keeps the dark hover tint even on the sorted column
+    .ant-table-tbody > tr.ant-table-row:hover > td.ant-table-column-sort {
+      background: rgba(120, 247, 168, 0.1);
+    }
+
+    // Body cells
+    .ant-table-tbody > tr > td {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    // Zebra + hover
+    .ant-table-tbody > tr:nth-child(even) > td {
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .ant-table-tbody > tr.ant-table-row:hover > td,
+    .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+      background: rgba(120, 247, 168, 0.08);
+    }
+
+    // Selected rows (compare picker) must stay dark, not Ant's default light blue.
+    // AntD v5 sets the selected background via CSS-in-JS, so override with a solid
+    // dark tone + !important (a transparent tint over their light base still reads light).
+    .ant-table-tbody > tr.ant-table-row-selected > td,
+    .ant-table-tbody > tr.ant-table-row-selected > td.ant-table-column-sort,
+    .ant-table-tbody > tr.ant-table-row-selected > td.ant-table-cell-row-hover {
+      background: #2a2c1a !important;
+    }
+
+    .ant-table-tbody > tr.ant-table-row-selected:hover > td,
+    .ant-table-tbody > tr.ant-table-row-selected:hover > td.ant-table-cell-row-hover {
+      background: #34361f !important;
+    }
+
+    // Player links
+    .ant-table-tbody a {
+      color: #78f7a8;
+      font-weight: 600;
+      transition: 0.15s ease;
+
+      &:hover {
+        color: #fde82b;
+      }
+    }
+
+    // Row-selection checkboxes
+    .ant-checkbox-inner {
+      background: rgba(0, 0, 0, 0.35);
+      border-color: rgba(120, 247, 168, 0.4);
+    }
+
+    .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+    .ant-checkbox:hover .ant-checkbox-inner {
+      border-color: #78f7a8;
+    }
+
+    .ant-checkbox-checked .ant-checkbox-inner {
+      background: #fde82b;
+      border-color: #fde82b;
+    }
+
+    .ant-checkbox-checked .ant-checkbox-inner::after {
+      border-color: #0d0918;
+    }
+
+    // Pagination
+    .ant-pagination {
+      margin: 16px 0 4px;
+      color: #d6d9ee;
+
+      .ant-pagination-item,
+      .ant-pagination-prev .ant-pagination-item-link,
+      .ant-pagination-next .ant-pagination-item-link {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(120, 247, 168, 0.18);
+        border-radius: 6px;
+        transition: 0.15s ease;
+      }
+
+      .ant-pagination-item a {
+        color: #d6d9ee;
+      }
+
+      .ant-pagination-item:hover,
+      .ant-pagination-prev:hover .ant-pagination-item-link,
+      .ant-pagination-next:hover .ant-pagination-item-link {
+        background: rgba(120, 247, 168, 0.12);
+        border-color: #78f7a8;
+
+        a { color: #fff; }
+      }
+
+      .ant-pagination-item-active {
+        background: #fde82b;
+        border-color: #fde82b;
+
+        a { color: #0d0918; font-weight: 700; }
+
+        &:hover {
+          background: #fde82b;
+          border-color: #fde82b;
+
+          a { color: #0d0918; }
+        }
+      }
+
+      .ant-pagination-prev .ant-pagination-item-link,
+      .ant-pagination-next .ant-pagination-item-link {
+        color: #d6d9ee;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      // Disabled prev/next at list edges
+      .ant-pagination-disabled .ant-pagination-item-link {
+        background: rgba(255, 255, 255, 0.02);
+        border-color: rgba(255, 255, 255, 0.08);
+        color: #4a4e66;
+      }
+
+      // The "..." jump ellipsis
+      .ant-pagination-jump-prev,
+      .ant-pagination-jump-next {
+        .ant-pagination-item-ellipsis { color: #8d91b2; }
+        .ant-pagination-item-link-icon { color: #78f7a8; }
+      }
+    }
+
+    // Empty state
+    .ant-table-placeholder {
+      .ant-table-cell { background: transparent; }
+      .ant-empty-description { color: #8d91b2; }
+    }
+  }
+}
+
+// Select dropdown popup is portaled to <body>, so it must be styled at top level
+.leaderboard-page__dropdown {
+  &.ant-select-dropdown {
+    background: #15182b !important;
+    border: 1px solid rgba(120, 247, 168, 0.25);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  .ant-select-item {
+    color: #d6d9ee !important;
+  }
+
+  .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+    background: rgba(120, 247, 168, 0.12) !important;
+  }
+
+  .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: rgba(253, 232, 43, 0.16) !important;
+    color: #fde82b !important;
+    font-weight: 700;
   }
 }

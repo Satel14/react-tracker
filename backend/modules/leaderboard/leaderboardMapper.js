@@ -1,3 +1,5 @@
+const { buildRankBadgeData } = require("../playerRank/ranked");
+
 function toNum(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -15,16 +17,25 @@ function mapLeaderboard(raw) {
     .map((item) => {
       const attrs = item.attributes || {};
       const stats = attrs.stats || {};
+      const tier = typeof stats.tier === "string" ? stats.tier : "";
+      const subTier = stats.subTier != null ? String(stats.subTier) : "";
+      const badge = tier ? buildRankBadgeData(tier, subTier) : null;
       return {
         rank: toRank(attrs.rank),
         accountId: item.id || null,
         name: typeof attrs.name === "string" ? attrs.name : "",
         rankPoints: toNum(stats.rankPoints),
+        tier,
+        subTier,
+        tierIconUrl: badge ? badge.iconUrl : null,
+        tierIconFallbackUrl: badge ? badge.iconFallbackUrl : null,
         games: toNum(stats.games),
         wins: toNum(stats.wins),
         winRatio: toNum(stats.winRatio),
         kda: toNum(stats.kda),
         avgDamage: toNum(stats.averageDamage),
+        avgRank: toNum(stats.averageRank),
+        avgKills: toNum(stats.averageKill),
         kills: toNum(stats.kills),
       };
     })
