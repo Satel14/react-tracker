@@ -1800,6 +1800,31 @@ body {
       }
     }
 
+    .right-menu {
+      position: absolute;
+      right: 140px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      line-height: 1;
+      min-width: 0;
+
+      &.ant-menu-horizontal {
+        border-bottom: none;
+      }
+
+      .ant-menu-item {
+        top: 0;
+        padding-inline: 0;
+        color: #fff;
+
+        &::after {
+          display: none;
+        }
+      }
+    }
+
     svg {
       font-size: 24px;
     }
@@ -4123,11 +4148,26 @@ body {
 }
 
 .leaderboard-page {
-  &__head {
-    margin-bottom: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
 
-    h2 { margin-bottom: 4px; }
-    p { opacity: 0.75; }
+  &__head {
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0 0 6px;
+      color: #fff;
+      font-size: 28px;
+      font-weight: 700;
+      font-family: "Avenir Next LT Pro Bold", sans-serif;
+    }
+
+    p {
+      margin: 0;
+      color: #8d91b2;
+      font-size: 14px;
+    }
   }
 
   &__filters {
@@ -4135,18 +4175,18 @@ body {
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
   }
 
   &__platform,
-  &__season { min-width: 140px; }
+  &__season { min-width: 150px; }
 
-  &__search { max-width: 220px; }
+  &__search { max-width: 240px; }
 
   &__loading {
     display: flex;
     justify-content: center;
-    padding: 48px 0;
+    padding: 64px 0;
   }
 
   &__table {
