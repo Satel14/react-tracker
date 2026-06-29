@@ -84,9 +84,9 @@ test("navigates to compare with the selected players", async () => {
   renderPage();
   await screen.findByText("Alpha");
   const checkboxes = screen.getAllByRole("checkbox");
-  // checkboxes[0] is the header select-all; rows start at index 1
+  // select-all header is hidden, so row checkboxes start at index 0
+  fireEvent.click(checkboxes[0]);
   fireEvent.click(checkboxes[1]);
-  fireEvent.click(checkboxes[2]);
   const compareBtn = await screen.findByRole("button", { name: /pages.leaderboards.compare/ });
   fireEvent.click(compareBtn);
   await waitFor(() => {

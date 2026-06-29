@@ -4533,22 +4533,22 @@ body {
 // Select dropdown popup is portaled to <body>, so it must be styled at top level
 .leaderboard-page__dropdown {
   &.ant-select-dropdown {
-    background: #15182b;
+    background: #15182b !important;
     border: 1px solid rgba(120, 247, 168, 0.25);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   }
 
   .ant-select-item {
-    color: #d6d9ee;
+    color: #d6d9ee !important;
   }
 
   .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
-    background: rgba(120, 247, 168, 0.12);
+    background: rgba(120, 247, 168, 0.12) !important;
   }
 
   .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
-    background: rgba(253, 232, 43, 0.16);
-    color: #fde82b;
+    background: rgba(253, 232, 43, 0.16) !important;
+    color: #fde82b !important;
     font-weight: 700;
   }
 }

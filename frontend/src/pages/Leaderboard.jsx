@@ -168,8 +168,10 @@ const Leaderboard = ({ t }) => {
 
   const rowSelection = {
     selectedRowKeys: selected,
+    // No select-all: Compare takes at most MAX_COMPARE players.
+    hideSelectAll: true,
     onChange: (keys) => {
-      // Cap the selection at MAX_COMPARE.
+      // Cap the selection at MAX_COMPARE (keep the most recently picked).
       setSelected(keys.slice(-MAX_COMPARE));
     },
     getCheckboxProps: (row) => ({
