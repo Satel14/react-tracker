@@ -69,13 +69,13 @@ const Leaderboard = ({ t }) => {
           setEntries(res.data.entries);
         } else {
           setEntries([]);
-          if (res?.message) setError(res.message);
+          if (res?.message) setError(t("pages.leaderboards.error"));
         }
       })
-      .catch((err) => {
+      .catch(() => {
         if (!cancelled) {
           setEntries([]);
-          setError(err?.message || t("pages.leaderboards.error"));
+          setError(t("pages.leaderboards.error"));
         }
       })
       .finally(() => {
