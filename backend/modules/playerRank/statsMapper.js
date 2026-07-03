@@ -173,6 +173,38 @@ function mergeModeStatsMaps(normal = {}, ranked = {}) {
   return merged;
 }
 
+// DATA-GATED: PUBG's rankedGameModeStats uses a different schema than the
+// lifetime/season gameModeStats. Ranked exposes playTime (seconds), top10Ratio
+// and avgSurvivalTime instead of timeSurvived / top10s, and omits roadKills,
+// vehicleDestroys, suicides and longestTimeSurvived. Map ranked field names onto
+// the normal-mode schema so aggregation and merging sum compatible units.
+// TODO(validate-before-deploy): confirm rankedGameModeStats field names/mapping against a real ranked API sample
+function normalizeRankedModeStats(rankedGameModeStats = {}) {
+  const normalized = {};
+  Object.entries(rankedGameModeStats || {}).forEach(([modeKey, stats]) => {
+    const source = stats || {};
+    const roundsPlayed = Number(source.roundsPlayed) || 0;
+    const top10Ratio = Number(source.top10Ratio) || 0;
+    normalized[modeKey] = {
+      kills: Number(source.kills) || 0,
+      wins: Number(source.wins) || 0,
+      timeSurvived: Number(source.playTime) || 0,
+      damageDealt: Number(source.damageDealt) || 0,
+      roundsPlayed,
+      headshotKills: Number(source.headshotKills) || 0,
+      revives: Number(source.revives) || 0,
+      assists: Number(source.assists) || 0,
+      dBNOs: Number(source.dBNOs) || 0,
+      heals: Number(source.heals) || 0,
+      boosts: Number(source.boosts) || 0,
+      teamKills: Number(source.teamKills) || 0,
+      top10s: Math.round(top10Ratio * roundsPlayed),
+      longestKill: Number(source.longestKill) || 0,
+    };
+  });
+  return normalized;
+}
+
 function aggregateByModePrefix(gameModeStats = {}, prefix) {
   const filteredStats = {};
   Object.entries(gameModeStats || {}).forEach(([modeKey, modeStats]) => {
@@ -365,15 +397,20 @@ function mapPubgStatsToFrontend(
     const normalModeStats = seasonData.attributes.gameModeStats || {};
     const rankedModeStats = rankedSeasonData?.attributes?.rankedGameModeStats || {};
     const hasRanked = Object.keys(rankedModeStats).length > 0;
+    // extractRankedInfo needs the RAW ranked payload (currentTier, rank points),
+    // so read tier info before remapping ranked stats onto the normal schema.
     const rankedInfo = hasRanked ? extractRankedInfo(rankedModeStats) : null;
+    const normalizedRankedModeStats = hasRanked ? normalizeRankedModeStats(rankedModeStats) : {};
 
     const normalAggregated = aggregateModeStats(normalModeStats);
-    const rankedAggregated = hasRanked ? aggregateModeStats(rankedModeStats) : null;
+    const rankedAggregated = hasRanked ? aggregateModeStats(normalizedRankedModeStats) : null;
     const combinedAggregated = hasRanked
       ? combineAggregatedStats(normalAggregated, rankedAggregated)
       : normalAggregated;
 
-    const combinedModeStats = hasRanked ? mergeModeStatsMaps(normalModeStats, rankedModeStats) : normalModeStats;
+    const combinedModeStats = hasRanked
+      ? mergeModeStatsMaps(normalModeStats, normalizedRankedModeStats)
+      : normalModeStats;
 
     data.season = {
       id: seasonData.id,
@@ -395,4 +432,8 @@ function mapPubgStatsToFrontend(
 
 module.exports = {
   mapPubgStatsToFrontend,
+  aggregateModeStats,
+  combineAggregatedStats,
+  mergeModeStatsMaps,
+  normalizeRankedModeStats,
 };
