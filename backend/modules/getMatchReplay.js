@@ -129,7 +129,8 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
 async function getMatchReplay({ shard, matchId, accountId, playerName }) {
   if (!matchId) throw new Error("matchId is required");
   const { matchShard, matchAttributes, telemetry } = await loadMatchBundle({ shard, matchId });
-  const cacheKey = `${matchShard}:${matchId}`;
+  const focalTag = accountId || playerName || "-";
+  const cacheKey = `${matchShard}:${matchId}:${focalTag}`;
   if (replayCache.has(cacheKey)) return replayCache.get(cacheKey);
 
   const parsed = parseReplayTelemetry(telemetry, { matchAttributes, accountId, playerName });
