@@ -5,7 +5,7 @@ const { parsePlayerRank } = require("../modules/getPlayerRank")
 const { getLiveSnapshot } = require("../modules/getLiveSnapshot")
 const { getPlayerReports } = require("../modules/getPlayerReports")
 const { addRecentSearch, getRecentSearches } = require("../modules/recentSearches")
-const { getPlayerSteamNameByUrl } = require("../modules/getPlayerSteamNameByUrl")
+const { getPlayerSteamNameByUrl, isAllowedSteamUrl } = require("../modules/getPlayerSteamNameByUrl")
 const { isAccountIdentifier } = require("../modules/playerIdentity");
 const { getMatchHeatmap, shardForMatch } = require("../modules/getMatchHeatmap");
 const { getMatchReplay } = require("../modules/getMatchReplay");
@@ -97,9 +97,9 @@ module.exports.getPlayerSteamName = async (req, res) => {
 
     let { text } = req.body;
 
-    if (text.search(/steamcommunity.com/) !== -1) {
-      text = await getPlayerSteamNameByUrl(text);
-      return res.status(200).json({ status: 200, data: text });
+    if (isAllowedSteamUrl(text) && text.search(/steamcommunity\.com/) !== -1) {
+      const data = await getPlayerSteamNameByUrl(text);
+      return res.status(200).json({ status: 200, data });
     }
 
     return res.status(200).json({ status: 200 });
