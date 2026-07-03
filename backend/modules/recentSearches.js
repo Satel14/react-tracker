@@ -6,8 +6,10 @@ const {
   stripPlatformPrefix,
 } = require("./playerIdentity");
 
-const RECENT_SEARCHES_FILE = path.join(__dirname, "..", "json", "last-searcheds.json");
+const DEFAULT_RECENT_SEARCHES_FILE = path.join(__dirname, "..", "json", "last-searcheds.json");
 const MAX_RECENT_SEARCHES = 20;
+let recentSearchesFile = DEFAULT_RECENT_SEARCHES_FILE;
+let tmpWriteCounter = 0;
 let mutationQueue = Promise.resolve();
 
 function enqueueMutation(task) {
@@ -18,7 +20,7 @@ function enqueueMutation(task) {
 
 async function readRecentSearches() {
   try {
-    const raw = await fs.readFile(RECENT_SEARCHES_FILE, "utf8");
+    const raw = await fs.readFile(recentSearchesFile, "utf8");
     if (!raw || !raw.trim()) return [];
 
     const parsed = JSON.parse(raw);
@@ -39,8 +41,11 @@ async function readRecentSearches() {
 
 async function writeRecentSearches(list) {
   try {
-    await fs.mkdir(path.dirname(RECENT_SEARCHES_FILE), { recursive: true });
-    await fs.writeFile(RECENT_SEARCHES_FILE, JSON.stringify(list, null, 2), "utf8");
+    await fs.mkdir(path.dirname(recentSearchesFile), { recursive: true });
+    tmpWriteCounter += 1;
+    const tmpFile = `${recentSearchesFile}.${process.pid}.${tmpWriteCounter}.tmp`;
+    await fs.writeFile(tmpFile, JSON.stringify(list, null, 2), "utf8");
+    await fs.rename(tmpFile, recentSearchesFile);
   } catch (e) {
     console.log(`[RECENT] Failed to write file: ${e.message}`);
   }
@@ -83,7 +88,7 @@ function normalizeRecentEntry(entry = {}) {
   };
 }
 
-async function getRecentSearches(limit = 10) {
+async function loadRecentSearches(limit) {
   const records = (await readRecentSearches())
     .map((item) => normalizeRecentEntry(item))
     .filter(Boolean)
@@ -98,10 +103,14 @@ async function getRecentSearches(limit = 10) {
   return records.slice(0, safeLimit);
 }
 
+async function getRecentSearches(limit = 10) {
+  return enqueueMutation(() => loadRecentSearches(limit));
+}
+
 async function addRecentSearch(entry, maxItems = MAX_RECENT_SEARCHES) {
   return enqueueMutation(async () => {
     const normalized = normalizeRecentEntry(entry);
-    if (!normalized) return getRecentSearches(maxItems);
+    if (!normalized) return loadRecentSearches(maxItems);
 
     const current = (await readRecentSearches())
       .map((item) => normalizeRecentEntry(item))
@@ -122,7 +131,12 @@ async function addRecentSearch(entry, maxItems = MAX_RECENT_SEARCHES) {
   });
 }
 
+function __setRecentSearchesFile(filePath) {
+  recentSearchesFile = filePath || DEFAULT_RECENT_SEARCHES_FILE;
+}
+
 module.exports = {
   addRecentSearch,
   getRecentSearches,
+  __setRecentSearchesFile,
 };
