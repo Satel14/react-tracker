@@ -4257,6 +4257,25 @@ body {
     a:hover { color: #78f7a8; text-decoration: underline; }
   }
   &__empty { opacity: 0.7; padding: 12px; }
+
+  // On phones the fixed 7-column grid overflows; let every cell shrink
+  // (min-width:0) and ellipsize, and drop the type scale so all columns
+  // fit the viewport without clipping the row or the page.
+  @media (max-width: 600px) {
+    &__row {
+      font-size: 11px;
+      padding: 7px 8px;
+      gap: 3px;
+
+      > * {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+    &__row--head { font-size: 10px; letter-spacing: 0.2px; }
+  }
 }
 
 .kill-feed {
@@ -4810,6 +4829,7 @@ body {
   }
   &__cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   &__col {
+    min-width: 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     padding: 12px 14px;
