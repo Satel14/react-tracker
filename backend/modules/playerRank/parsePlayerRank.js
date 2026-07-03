@@ -1,4 +1,5 @@
 const { isAccountIdentifier } = require("../playerIdentity");
+const { isStrictAccountId, encodeSegment } = require("../pubgUrlSafety");
 const { buildRankBadgeData } = require("./ranked");
 const { mapPubgStatsToFrontend } = require("./statsMapper");
 const { normalizeSeasonId } = require("./season");
@@ -247,7 +248,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
         let playerRecord = null;
 
         if (!accountId) {
-          if (isAccountIdentifier(requestedPlayerId)) {
+          if (isStrictAccountId(requestedPlayerId)) {
             accountId = requestedPlayerId;
             playerName = await ensurePlayerName(shard, accountId, requestedPlayerId);
           } else {
@@ -258,8 +259,8 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
 
             console.log(`[PUBG] Resolving player: ${requestedPlayerId}`);
             const searchUrl =
-              `https://api.pubg.com/shards/${shard}/players?` +
-              `filter[playerNames]=${encodeURIComponent(requestedPlayerId)}`;
+              `https://api.pubg.com/shards/${encodeSegment(shard)}/players?` +
+              `filter[playerNames]=${encodeSegment(requestedPlayerId)}`;
             const searchData = await doRequest(searchUrl);
 
             if (!searchData.data || searchData.data.length === 0) {
@@ -354,7 +355,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
           lifetimeAttributes = cachedLifetime.data;
         } else {
           console.log(`[PUBG] Fetching fresh stats for ${playerName}`);
-          const lifetimeUrl = `https://api.pubg.com/shards/${shard}/players/${accountId}/seasons/lifetime`;
+          const lifetimeUrl = `https://api.pubg.com/shards/${encodeSegment(shard)}/players/${encodeSegment(accountId)}/seasons/lifetime`;
           const lifetimeData = await doRequest(lifetimeUrl);
 
           if (!lifetimeData.data || !lifetimeData.data.attributes) {
@@ -372,7 +373,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
         let rankedSeasonData = null;
         if (targetSeasonId) {
           try {
-            const seasonStatsUrl = `https://api.pubg.com/shards/${shard}/players/${accountId}/seasons/${targetSeasonId}`;
+            const seasonStatsUrl = `https://api.pubg.com/shards/${encodeSegment(shard)}/players/${encodeSegment(accountId)}/seasons/${encodeSegment(targetSeasonId)}`;
             const seasonStatsData = await doRequest(seasonStatsUrl);
 
             if (seasonStatsData && seasonStatsData.data && seasonStatsData.data.attributes) {
@@ -384,7 +385,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
 
             try {
               const rankedSeasonStatsUrl =
-                `https://api.pubg.com/shards/${shard}/players/${accountId}/seasons/${targetSeasonId}/ranked`;
+                `https://api.pubg.com/shards/${encodeSegment(shard)}/players/${encodeSegment(accountId)}/seasons/${encodeSegment(targetSeasonId)}/ranked`;
               const rankedSeasonStatsData = await doRequest(rankedSeasonStatsUrl);
               if (
                 rankedSeasonStatsData &&

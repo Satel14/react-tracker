@@ -1,6 +1,35 @@
-const { test } = require("node:test");
+const { test, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
-const { shouldReenrich, createProfileExtrasError } = require("./parsePlayerRank");
+const { shouldReenrich, createProfileExtrasError, createParsePlayerRank } = require("./parsePlayerRank");
+
+const realFetch = global.fetch;
+afterEach(() => { global.fetch = realFetch; });
+
+function stub404() {
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(url);
+    return { ok: false, status: 404, statusText: "Not Found", json: async () => ({}) };
+  };
+  return calls;
+}
+
+const parse = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
+
+test("a malformed account.* handle is treated as a name, never interpolated raw into /players/<id>", async () => {
+  const calls = stub404();
+  await assert.rejects(parse("steam", "account.evil/../../secret", {}));
+  assert.match(calls[0], /\/players\?filter\[playerNames\]=/);
+  assert.ok(!calls[0].includes("/players/account.evil"));
+  assert.ok(calls[0].includes(encodeURIComponent("account.evil/../../secret")));
+});
+
+test("a strict account.<32hex> id still takes the account-id branch (profile lookup by id)", async () => {
+  const calls = stub404();
+  const strictId = "account." + "a".repeat(32);
+  await assert.rejects(parse("steam", strictId, {}));
+  assert.equal(calls[0], `https://api.pubg.com/shards/steam/players/${strictId}`);
+});
 
 test("shouldReenrich short-circuits only for an 'ok' profile", () => {
   assert.equal(shouldReenrich({ status: "ok" }), false);
