@@ -6,6 +6,7 @@ import { translate } from "react-switch-lang";
 import MapField from "../component/charts/MapField";
 import ReplayRoster from "../component/charts/ReplayRoster";
 import MatchScoreboard from "../component/match/MatchScoreboard";
+import KillFeed from "../component/match/KillFeed";
 import { getMatchReplay, getMatchAnalysis } from "../api/player";
 import { useReplayClock } from "../component/charts/useReplayClock";
 import { playersAt, activeKills, zoneAt, rosterAt } from "../component/charts/replayEngine";
@@ -157,6 +158,13 @@ const MatchReplayPage = ({ t }) => {
           label: t("pages.match.tabScoreboard"),
           children: renderAnalysisPane((a) => (
             <MatchScoreboard scoreboard={a.scoreboard} platform={platform} t={t} />
+          )),
+        },
+        {
+          key: "kills",
+          label: t("pages.match.tabKills"),
+          children: renderAnalysisPane((a) => (
+            <KillFeed kills={a.killFeed} t={t} />
           )),
         },
       ]

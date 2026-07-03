@@ -4150,6 +4150,24 @@ body {
   &__empty { opacity: 0.7; padding: 12px; }
 }
 
+.kill-feed {
+  &__empty { opacity: 0.7; padding: 12px; }
+  &__list { list-style: none; margin: 10px 0 0; padding: 0; }
+  &__row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 5px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 13px;
+    &.is-kill { color: #78f7a8; }
+    &.is-death { color: #ff9b9b; }
+  }
+  &__time { opacity: 0.6; min-width: 44px; }
+  &__weapon { opacity: 0.85; }
+  &__distance { opacity: 0.6; }
+}
+
 .maps-tab {
   max-width: 720px;
 

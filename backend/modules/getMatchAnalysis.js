@@ -1,6 +1,7 @@
 const { getMapMeta } = require("./mapMeta");
 const { loadMatchBundle } = require("./matchLoader");
-const { isFocalActor } = require("./telemetryUtils");
+const { isFocalActor, readXY, eventTime } = require("./telemetryUtils");
+const { telemetryWeaponName } = require("./weaponMeta");
 
 const analysisCache = new Map();
 const ANALYSIS_CACHE_LIMIT = 30;
@@ -62,6 +63,57 @@ function parseScoreboard(matchPayload, { accountId = null, playerName = null } =
   return { teams, totalTeams: teams.length, totalPlayers, focalAccountId, focalTeamId };
 }
 
+function buildNameToTeam(telemetry) {
+  const map = new Map();
+  for (const ev of Array.isArray(telemetry) ? telemetry : []) {
+    if (ev?._T !== "LogMatchStart") continue;
+    for (const c of ev.characters || []) {
+      const ch = c?.character || c;
+      if (ch?.name != null && ch?.teamId != null) map.set(ch.name, ch.teamId);
+    }
+  }
+  return map;
+}
+
+function parseKillFeed(telemetry, { matchStartMs = 0, accountId = null, playerName = null } = {}) {
+  const { accountKey, lowerName } = focalKeys({ accountId, playerName });
+  const nameToTeam = buildNameToTeam(telemetry);
+  const kills = [];
+  for (const ev of Array.isArray(telemetry) ? telemetry : []) {
+    if (ev?._T !== "LogPlayerKillV2") continue;
+    const t = eventTime(ev, matchStartMs);
+    const victim = ev.victim || null;
+    const killer = ev.killer ?? ev.finisher ?? ev.dBNOMaker ?? null;
+    const dmgInfo = ev.killerDamageInfo || ev.finishDamageInfo || {};
+    const weaponKey = dmgInfo.damageCauserName || ev.damageCauserName || null;
+    const rawDistance = dmgInfo.distance;
+    const distance = Number.isFinite(Number(rawDistance)) ? Math.round(Number(rawDistance) / 100) : null;
+    const killerName = killer?.name || null;
+    const victimName = victim?.name || null;
+    const kxy = readXY(killer?.location);
+    const vxy = readXY(victim?.location);
+    kills.push({
+      t,
+      killerName,
+      killerTeamId: killerName != null ? (nameToTeam.get(killerName) ?? null) : null,
+      victimName,
+      victimTeamId: victimName != null ? (nameToTeam.get(victimName) ?? null) : null,
+      weapon: telemetryWeaponName(weaponKey),
+      weaponKey,
+      distance,
+      damageReason: dmgInfo.damageReason || null,
+      kx: kxy ? kxy.x : null,
+      ky: kxy ? kxy.y : null,
+      vx: vxy ? vxy.x : null,
+      vy: vxy ? vxy.y : null,
+      isFocalKill: isFocalActor(killer, accountKey, lowerName),
+      isFocalDeath: isFocalActor(victim, accountKey, lowerName),
+    });
+  }
+  kills.sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
+  return kills;
+}
+
 async function getMatchAnalysis({ shard, matchId, accountId = null, playerName = null }) {
   if (!matchId) throw new Error("matchId is required");
   const { matchShard, matchAttributes, matchPayload, telemetry } = await loadMatchBundle({ shard, matchId });
@@ -71,7 +123,9 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
 
   const rawMapName = matchAttributes.mapName || "";
   const meta = getMapMeta(rawMapName);
+  const matchStartMs = Date.parse(matchAttributes.createdAt || "");
   const scoreboard = parseScoreboard(matchPayload, { accountId, playerName });
+  const killFeed = parseKillFeed(telemetry, { matchStartMs, accountId, playerName });
 
   const result = {
     matchId,
@@ -83,7 +137,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
     focalAccountId: scoreboard.focalAccountId,
     focalTeamId: scoreboard.focalTeamId,
     scoreboard,
-    killFeed: [], // Task 5
+    killFeed,
     damage: null, // Task 7
   };
 
@@ -96,4 +150,4 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   return result;
 }
 
-module.exports = { getMatchAnalysis, parseScoreboard };
+module.exports = { getMatchAnalysis, parseScoreboard, parseKillFeed };

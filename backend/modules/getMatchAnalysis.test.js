@@ -41,3 +41,43 @@ test("parseScoreboard resolves focal by name when accountId is absent", () => {
   const sb = parseScoreboard(matchPayload, { playerName: "foe" });
   assert.equal(sb.focalTeamId, 20);
 });
+
+const { parseKillFeed } = require("./getMatchAnalysis");
+
+const killTelemetry = [
+  { _T: "LogMatchStart", characters: [
+    { character: { accountId: "account.me", name: "Me", teamId: 1 } },
+    { character: { accountId: "account.foe", name: "Foe", teamId: 2 } },
+  ] },
+  { _T: "LogPlayerKillV2", elapsedTime: 30,
+    killer: { accountId: "account.me", name: "Me", location: { x: 100000, y: 100000, z: 0 } },
+    victim: { accountId: "account.foe", name: "Foe", location: { x: 130000, y: 140000, z: 0 } },
+    killerDamageInfo: { damageCauserName: "WeapHK416_C", distance: 5000, damageReason: "HeadShot" } },
+  // killer field null, only finisher present — must still resolve a killer
+  { _T: "LogPlayerKillV2", elapsedTime: 60,
+    killer: null, finisher: { accountId: "account.foe", name: "Foe", location: { x: 200000, y: 200000, z: 0 } },
+    victim: { accountId: "account.me", name: "Me", location: { x: 210000, y: 205000, z: 0 } },
+    finishDamageInfo: { damageCauserName: "WeapKar98k_C", distance: 12000, damageReason: "TorsoShot" } },
+];
+
+test("parseKillFeed lists all lobby kills sorted by time with weapon + metre distance", () => {
+  const feed = parseKillFeed(killTelemetry, { matchStartMs: 0, accountId: "account.me" });
+  assert.equal(feed.length, 2);
+  assert.deepEqual(feed.map((k) => k.t), [30, 60]);
+  assert.equal(feed[0].weapon, "M416");
+  assert.equal(feed[0].distance, 50); // 5000 cm -> 50 m
+  assert.equal(feed[0].isFocalKill, true);
+});
+
+test("parseKillFeed resolves killer from finisher when killer is absent", () => {
+  const feed = parseKillFeed(killTelemetry, { matchStartMs: 0, accountId: "account.me" });
+  assert.equal(feed[1].killerName, "Foe");
+  assert.equal(feed[1].isFocalDeath, true);
+  assert.equal(feed[1].weapon, "Kar98k");
+});
+
+test("parseKillFeed attaches team ids from LogMatchStart", () => {
+  const feed = parseKillFeed(killTelemetry, { matchStartMs: 0, accountId: "account.me" });
+  assert.equal(feed[0].killerTeamId, 1);
+  assert.equal(feed[0].victimTeamId, 2);
+});
