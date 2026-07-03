@@ -118,11 +118,12 @@ function buildSvg(player) {
 
 async function buildCardPng({ platform, gameId }) {
   const data = await parsePlayerRank(platform, gameId, {});
-  if (!data || !data.platformInfo) {
+  const player = data?.data;
+  if (!player || !player.platformInfo) {
     throw new Error("Player not found");
   }
 
-  const svg = buildSvg(data);
+  const svg = buildSvg(player);
   const resvg = new Resvg(svg, {
     fitTo: { mode: "width", value: 1200 },
     background: "rgba(0, 0, 0, 0)",
@@ -158,4 +159,5 @@ async function getPlayerCard({ platform, gameId }) {
 
 module.exports = {
   getPlayerCard,
+  buildCardPng,
 };
