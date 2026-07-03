@@ -5,7 +5,8 @@ const MAP_META = {
   Tiger_Main: { displayName: "Taego", mapMax: 8160 },
   Kiki_Main: { displayName: "Deston", mapMax: 8160 },
   Neon_Main: { displayName: "Rondo", mapMax: 8160 },
-  DihorOtok_Main: { displayName: "Vikendi", mapMax: 8160 },
+  // TODO(validate-before-deploy): confirm Vikendi mapMax against a real telemetry sample max x/y
+  DihorOtok_Main: { displayName: "Vikendi", mapMax: 6120 },
   Savage_Main: { displayName: "Sanhok", mapMax: 4080 },
   Chimera_Main: { displayName: "Paramo", mapMax: 3060 },
   Summerland_Main: { displayName: "Karakin", mapMax: 2040 },
