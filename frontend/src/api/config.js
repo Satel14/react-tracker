@@ -6,12 +6,8 @@ const DEFAULT_API_URL =
 export const API_URL = import.meta.env.VITE_API_URL || DEFAULT_API_URL;
 
 export const resolveAbsoluteApiUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (
-    typeof window !== "undefined" &&
-    /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)
-  ) {
-    return `${window.location.origin}/api`;
+  if (typeof window !== "undefined" && API_URL.startsWith("/")) {
+    return `${window.location.origin}${API_URL}`;
   }
-  return "https://pubgtracker-api.onrender.com/api";
+  return API_URL;
 };

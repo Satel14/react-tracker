@@ -1,23 +1,26 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { resolveAbsoluteApiUrl } from "./config";
 
-afterEach(() => { vi.unstubAllEnvs?.(); vi.unstubAllGlobals?.(); });
+afterEach(() => {
+  vi.unstubAllEnvs?.();
+  vi.unstubAllGlobals?.();
+  vi.resetModules();
+});
 
 describe("resolveAbsoluteApiUrl", () => {
-  it("prefers VITE_API_URL when set", () => {
-    vi.stubEnv("VITE_API_URL", "https://custom.example/api");
-    expect(resolveAbsoluteApiUrl()).toBe("https://custom.example/api");
+  it("prefixes API_URL with window.location.origin when API_URL is relative (dev mode)", async () => {
+    vi.stubEnv("MODE", "development");
+    vi.stubGlobal("window", { location: { origin: "http://localhost:3000" } });
+    const { API_URL, resolveAbsoluteApiUrl } = await import("./config");
+
+    expect(API_URL).toBe("/api");
+    expect(resolveAbsoluteApiUrl()).toBe(`http://localhost:3000${API_URL}`);
   });
 
-  it("uses window origin on localhost", () => {
-    vi.stubEnv("VITE_API_URL", "");
-    vi.stubGlobal("window", { location: { hostname: "localhost", origin: "http://localhost:3000" } });
-    expect(resolveAbsoluteApiUrl()).toBe("http://localhost:3000/api");
-  });
+  it("returns API_URL unchanged when it is already absolute (prod mode)", async () => {
+    vi.stubEnv("MODE", "production");
+    const { API_URL, resolveAbsoluteApiUrl } = await import("./config");
 
-  it("falls back to the production URL otherwise", () => {
-    vi.stubEnv("VITE_API_URL", "");
-    vi.stubGlobal("window", { location: { hostname: "pubgtracker.example", origin: "https://pubgtracker.example" } });
-    expect(resolveAbsoluteApiUrl()).toBe("https://pubgtracker-api.onrender.com/api");
+    expect(API_URL.startsWith("/")).toBe(false);
+    expect(resolveAbsoluteApiUrl()).toBe(API_URL);
   });
 });
