@@ -51,3 +51,12 @@ export const getMatchReplay = (matchId, shard, accountId, playerName) => {
   const query = params.toString();
   return get(`/match/${encodeURIComponent(matchId)}/replay${query ? `?${query}` : ""}`, true);
 };
+
+export const getMatchAnalysis = (matchId, shard, accountId, playerName) => {
+  const params = new URLSearchParams();
+  if (shard) params.set("shard", shard);
+  if (accountId) params.set("accountId", accountId);
+  if (playerName) params.set("playerName", playerName);
+  const query = params.toString();
+  return get(`/match/${encodeURIComponent(matchId)}/analysis${query ? `?${query}` : ""}`, true);
+};

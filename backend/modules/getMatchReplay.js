@@ -1,25 +1,9 @@
-const { shardForMatch, fetchPubgJson, fetchTelemetryJson, findTelemetryUrl } = require("./pubgTelemetry");
 const { getMapMeta } = require("./mapMeta");
+const { readXY, eventTime } = require("./telemetryUtils");
+const { loadMatchBundle } = require("./matchLoader");
 
 const replayCache = new Map();
 const REPLAY_CACHE_LIMIT = 30;
-
-function readXY(loc) {
-  if (!loc) return null;
-  const x = Number(loc.x);
-  const y = Number(loc.y);
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-  return { x: Math.round(x / 100), y: Math.round(y / 100) };
-}
-
-function eventTime(ev, matchStartMs) {
-  if (Number.isFinite(ev?.elapsedTime)) return Math.round(ev.elapsedTime);
-  const ms = Date.parse(ev?._D);
-  if (Number.isFinite(ms) && Number.isFinite(matchStartMs)) {
-    return Math.max(0, Math.round((ms - matchStartMs) / 1000));
-  }
-  return null;
-}
 
 function lower(s) {
   return typeof s === "string" ? s.trim().toLowerCase() : null;
@@ -144,17 +128,10 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
 
 async function getMatchReplay({ shard, matchId, accountId, playerName }) {
   if (!matchId) throw new Error("matchId is required");
-  const matchShard = shardForMatch(shard);
+  const { matchShard, matchAttributes, telemetry } = await loadMatchBundle({ shard, matchId });
   const cacheKey = `${matchShard}:${matchId}`;
   if (replayCache.has(cacheKey)) return replayCache.get(cacheKey);
 
-  const matchUrl = `https://api.pubg.com/shards/${matchShard}/matches/${encodeURIComponent(matchId)}`;
-  const matchPayload = await fetchPubgJson(matchUrl, true);
-  const matchAttributes = matchPayload?.data?.attributes || {};
-  const telemetryUrl = findTelemetryUrl(matchPayload);
-  if (!telemetryUrl) throw new Error("Telemetry asset unavailable for this match");
-
-  const telemetry = await fetchTelemetryJson(telemetryUrl);
   const parsed = parseReplayTelemetry(telemetry, { matchAttributes, accountId, playerName });
   const result = { matchId, ...parsed };
 

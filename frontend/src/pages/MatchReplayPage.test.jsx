@@ -14,6 +14,17 @@ vi.mock("../api/player", () => ({
       },
     })
   ),
+  getMatchAnalysis: vi.fn(() =>
+    Promise.resolve({
+      data: {
+        scoreboard: { teams: [{ rank: 1, teamId: 1, won: true, isFocalTeam: true, players: [
+          { name: "ScoreboardGuy", accountId: "account.sg", kills: 2, damageDealt: 200, assists: 0, DBNOs: 0, headshotKills: 0, timeSurvived: 100, isFocal: true },
+        ] }] },
+        killFeed: [], damage: null, timeline: null,
+        focalAccountId: "account.sg", rawMapName: "Baltic_Main", mapMax: 8160, duration: 100,
+      },
+    })
+  ),
 }));
 
 const renderAt = (path) =>
@@ -62,4 +73,11 @@ test("shows a back-to-profile link pointing at the player page", () => {
   renderAt("/match/steam/m1/replay?playerName=Me&accountId=account.me");
   const back = screen.getByRole("link", { name: "pages.replay.back" });
   expect(back).toHaveAttribute("href", "/player/steam/Me");
+});
+
+test("switching to the Scoreboard tab loads and renders analysis", async () => {
+  renderAt("/match/steam/m1/replay?accountId=account.me");
+  await screen.findByRole("img", { name: /erangel/i });
+  fireEvent.click(screen.getByRole("tab", { name: "pages.match.tabScoreboard" }));
+  expect(await screen.findByText("ScoreboardGuy")).toBeInTheDocument();
 });
