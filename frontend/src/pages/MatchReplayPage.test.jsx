@@ -1,7 +1,8 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useNavigate } from "react-router-dom";
 import MatchReplayPage from "./MatchReplayPage";
+import { getMatchAnalysis } from "../api/player";
 
 vi.mock("../api/player", () => ({
   getMatchReplay: vi.fn(() =>
@@ -80,4 +81,43 @@ test("switching to the Scoreboard tab loads and renders analysis", async () => {
   await screen.findByRole("img", { name: /erangel/i });
   fireEvent.click(screen.getByRole("tab", { name: "pages.match.tabScoreboard" }));
   expect(await screen.findByText("ScoreboardGuy")).toBeInTheDocument();
+});
+
+test("re-fetches analysis when the match identity changes while a non-replay tab is active", async () => {
+  getMatchAnalysis.mockImplementation((id) =>
+    Promise.resolve({
+      data: {
+        scoreboard: { teams: [{ rank: 1, teamId: 1, won: true, isFocalTeam: true, players: [
+          { name: id === "m2" ? "SecondMatchGuy" : "ScoreboardGuy", accountId: "account.sg", kills: 2, damageDealt: 200, assists: 0, DBNOs: 0, headshotKills: 0, timeSurvived: 100, isFocal: true },
+        ] }] },
+        killFeed: [], damage: null, timeline: null,
+        focalAccountId: "account.sg", rawMapName: "Baltic_Main", mapMax: 8160, duration: 100,
+      },
+    })
+  );
+
+  const Harness = () => {
+    const navigate = useNavigate();
+    return (
+      <>
+        <button onClick={() => navigate("/match/steam/m2/replay?accountId=account.me")}>go-m2</button>
+        <Routes>
+          <Route path="/match/:platform/:matchId/replay" element={<MatchReplayPage />} />
+        </Routes>
+      </>
+    );
+  };
+
+  render(
+    <MemoryRouter initialEntries={["/match/steam/m1/replay?accountId=account.me"]}>
+      <Harness />
+    </MemoryRouter>
+  );
+
+  await screen.findByRole("img", { name: /erangel/i });
+  fireEvent.click(screen.getByRole("tab", { name: "pages.match.tabScoreboard" }));
+  expect(await screen.findByText("ScoreboardGuy")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByText("go-m2"));
+  expect(await screen.findByText("SecondMatchGuy")).toBeInTheDocument();
 });

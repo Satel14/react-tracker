@@ -89,9 +89,10 @@ const MatchReplayPage = ({ t }) => {
     if (tab !== "replay") setWantAnalysis(true);
   }, [tab]);
 
-  // Reset when the match/focal identity changes so a new match re-fetches.
+  // Reset when the match/focal identity changes; re-arm analysis if a
+  // non-replay tab is already active so the new match re-fetches.
   useEffect(() => {
-    setWantAnalysis(false);
+    setWantAnalysis(tab !== "replay");
     setAnalysis({ loading: false, error: null, data: null });
   }, [matchId, platform, accountId, playerName]);
 
