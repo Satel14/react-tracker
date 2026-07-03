@@ -4115,7 +4115,68 @@ body {
   .replay-roster { width: 100%; flex-basis: auto; max-height: 240px; }
 }
 
-.match-replay__tabs { margin-top: 12px; }
+.match-replay__tabs {
+  margin-top: 12px;
+
+  .ant-tabs-nav {
+    margin-bottom: 12px;
+  }
+
+  .ant-tabs-nav-wrap {
+    padding-bottom: 10px;
+  }
+
+  .ant-tabs-nav-list {
+    flex-wrap: nowrap;
+  }
+
+  .ant-tabs-tab {
+    border-radius: 999px;
+    border: 1px solid rgba(120, 247, 168, 0.3);
+    background: rgba(0, 0, 0, 0.25);
+    padding: 6px 14px;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  .ant-tabs-tab .ant-tabs-tab-btn {
+    color: #8d91b2;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .ant-tabs-tab.ant-tabs-tab-active {
+    border-color: rgba(120, 247, 168, 0.8);
+    box-shadow: inset 0 0 10px rgba(120, 247, 168, 0.2);
+  }
+
+  .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: #fff;
+  }
+
+  .ant-tabs-ink-bar {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .ant-tabs-nav-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .ant-tabs-tab {
+      padding: 5px 10px;
+      font-size: 11px;
+    }
+  }
+}
 
 .match-scoreboard {
   display: flex;
