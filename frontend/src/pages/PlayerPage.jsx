@@ -26,6 +26,7 @@ import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from 
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
 import { getCurrentLocale } from "../helpers/locale";
 import { classifyPlayerError } from "../helpers/playerError";
+import { shouldRecordHistory } from "../helpers/playerHistory";
 import openNotification from "../component/Notification";
 import MapsTab from "./MapsTab";
 
@@ -446,6 +447,10 @@ const PlayerPage = ({ t }) => {
     const historyLookupId = playerName || accountId || null;
 
     if (!historyLookupId) return;
+
+    const activeSeasonId = data?.season?.id || data?.selectedSeasonId || null;
+    if (!shouldRecordHistory({ activeSeasonId, seasons: data?.seasons })) return;
+
     addHistory(
       platformSlug,
       historyLookupId,
@@ -460,10 +465,9 @@ const PlayerPage = ({ t }) => {
     data?.platformInfo?.platformUserHandle,
     data?.platformInfo?.avatarUrl,
     data?.platformInfo?.platformSlug,
-    data?.season?.rankedInfo,
     platform,
     gameId,
-  ]);
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     syncFavoriteState();
