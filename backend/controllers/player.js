@@ -9,6 +9,7 @@ const { getPlayerSteamNameByUrl } = require("../modules/getPlayerSteamNameByUrl"
 const { isAccountIdentifier } = require("../modules/playerIdentity");
 const { getMatchHeatmap, shardForMatch } = require("../modules/getMatchHeatmap");
 const { getMatchReplay } = require("../modules/getMatchReplay");
+const { getMatchAnalysis } = require("../modules/getMatchAnalysis");
 const { getMapMeta } = require("../modules/mapMeta");
 const { aggregateKey, getAggregate } = require("../modules/heatmapAggregate");
 const { getPlayerCard } = require("../modules/getPlayerCard");
@@ -179,6 +180,25 @@ module.exports.getMatchReplay = async (req, res) => {
       return res.status(400).json({ status: 400, message: "matchId is required" });
     }
     const data = await getMatchReplay({
+      shard: shard || "steam",
+      matchId,
+      accountId: accountId || null,
+      playerName: playerName || null,
+    });
+    return res.status(200).json({ status: 200, data });
+  } catch (e) {
+    return res.status(200).json({ status: 200, message: e.message });
+  }
+};
+
+module.exports.getMatchAnalysis = async (req, res) => {
+  try {
+    const { matchId } = req.params || {};
+    const { shard, accountId, playerName } = req.query || {};
+    if (!matchId) {
+      return res.status(400).json({ status: 400, message: "matchId is required" });
+    }
+    const data = await getMatchAnalysis({
       shard: shard || "steam",
       matchId,
       accountId: accountId || null,
