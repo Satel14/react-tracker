@@ -10,7 +10,11 @@ import "../style/style.scss";
 
 const RouterLayout = () => {
   const location = useLocation();
-  const [currentTheme, setCurrentTheme] = useState("brown");
+  const [currentTheme, setCurrentTheme] = useState(
+    () =>
+      (typeof window !== "undefined" && window.localStorage.getItem("theme")) ||
+      "brown"
+  );
 
   useEffect(() => {
     // Expose theme setter for legacy SetTheme component
@@ -20,7 +24,7 @@ const RouterLayout = () => {
     return () => {
       delete window.App;
     };
-  }, [location]);
+  }, []);
 
   const isChromeless = location.pathname.startsWith("/overlay/");
 
