@@ -54,3 +54,71 @@ test("extractHeatmapEvents ignores kills that do not involve the focal player", 
   const events = extractHeatmapEvents(telemetry, { matchStartMs: 0, accountId: "account.me" });
   assert.equal(events.length, 3); // drop + 1 kill + 1 death only
 });
+
+// --- dmgInfo killer fallback (killer object absent) ---
+const fallbackTelemetry = [
+  // focal is the VICTIM; killer object absent, only dmgInfo.killerName present
+  { _T: "LogPlayerKillV2", elapsedTime: 90,
+    killer: null, dmgInfo: { killerName: "Sniper" },
+    victim: { accountId: "account.me", name: "Me", location: { x: 600000, y: 700000, z: 0 } },
+    killerDamageInfo: { damageCauserName: "WeapKar98k_C", distance: 12000 } },
+  // focal is the KILLER by name only; killer object absent, dmgInfo.killerName == focal name
+  { _T: "LogPlayerKillV2", elapsedTime: 110,
+    killer: null, dmgInfo: { killerName: "Me" },
+    victim: { accountId: "account.enemy", name: "Enemy", location: { x: 800000, y: 900000, z: 0 } },
+    killerDamageInfo: { damageCauserName: "WeapMk14_C", distance: 3000 } },
+];
+
+test("extractHeatmapEvents resolves the killer name from dmgInfo when the killer object is absent (death)", () => {
+  const events = extractHeatmapEvents(fallbackTelemetry, { matchStartMs: 0, accountId: "account.me", playerName: "Me" });
+  const death = events.find((e) => e.type === "death");
+  assert.ok(death, "a death event should be produced when focal is the victim");
+  assert.equal(death.killer, "Sniper"); // fallback now resolves instead of null
+  assert.equal(death.x, 6000);
+});
+
+test("extractHeatmapEvents classifies a kill when the focal player is only named in dmgInfo", () => {
+  const events = extractHeatmapEvents(fallbackTelemetry, { matchStartMs: 0, accountId: "account.me", playerName: "Me" });
+  const kill = events.find((e) => e.type === "kill");
+  assert.ok(kill, "a kill event should be produced when dmgInfo.killerName matches the focal name");
+  assert.equal(kill.victim, "Enemy");
+  assert.equal(kill.distance, 30); // 3000 cm -> 30 m
+});
+
+// --- batch warming respects the rate-limit cooldown ---
+const { warmHeatmapMatches } = require("./getMatchHeatmap");
+
+test("warmHeatmapMatches builds each match id in order until rate-limited", async () => {
+  const calls = [];
+  let limited = false;
+  await warmHeatmapMatches(
+    { shard: "steam", matchIds: ["m1", "m2", "m3", "m4"], accountId: "account.me" },
+    {
+      buildOne: async ({ matchId }) => { calls.push(matchId); if (matchId === "m2") limited = true; },
+      isRateLimited: () => limited,
+    }
+  );
+  assert.deepEqual(calls, ["m1", "m2"]); // m3/m4 skipped once the cooldown trips
+});
+
+test("warmHeatmapMatches swallows per-match build errors and keeps going", async () => {
+  const calls = [];
+  await warmHeatmapMatches(
+    { shard: "steam", matchIds: ["m1", "m2"], accountId: "account.me" },
+    {
+      buildOne: async ({ matchId }) => { calls.push(matchId); throw new Error("build failed"); },
+      isRateLimited: () => false,
+    }
+  );
+  assert.deepEqual(calls, ["m1", "m2"]);
+});
+
+test("warmHeatmapMatches caps the batch at 12 matches", async () => {
+  const calls = [];
+  const ids = Array.from({ length: 20 }, (_, i) => `m${i}`);
+  await warmHeatmapMatches(
+    { shard: "steam", matchIds: ids, accountId: "account.me" },
+    { buildOne: async ({ matchId }) => { calls.push(matchId); }, isRateLimited: () => false }
+  );
+  assert.equal(calls.length, 12);
+});

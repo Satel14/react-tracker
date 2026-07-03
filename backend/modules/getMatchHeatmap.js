@@ -3,6 +3,7 @@ const { aggregateKey, addMatchPoints } = require("./heatmapAggregate");
 const { shardForMatch } = require("./pubgTelemetry");
 const { loadMatchBundle } = require("./matchLoader");
 const { readXY, eventTime, isFocalActor } = require("./telemetryUtils");
+const { isRateLimited } = require("./playerRank/state");
 
 const heatmapCache = new Map();
 const inFlightHeatmap = new Map();
@@ -47,7 +48,7 @@ function extractHeatmapEvents(telemetry, { matchStartMs = 0, accountId = null, p
     }
 
     if (type === "LogPlayerKillV2") {
-      const killer = event.killer || event.dmgInfo?.killerName ? event.killer : null;
+      const killer = event.killer || (event.dmgInfo?.killerName ? { name: event.dmgInfo.killerName } : null);
       const finisher = event.finisher || null;
       const victim = event.victim || null;
 
@@ -165,4 +166,18 @@ async function getMatchHeatmap({ shard, matchId, accountId, playerName }) {
   return run;
 }
 
-module.exports = { getMatchHeatmap, extractHeatmapEvents, shardForMatch };
+async function warmHeatmapMatches({ shard, matchIds, accountId = null, playerName = null }, deps = {}) {
+  const buildOne = deps.buildOne || getMatchHeatmap;
+  const rateLimited = deps.isRateLimited || isRateLimited;
+  const ids = Array.isArray(matchIds) ? matchIds.slice(0, 12) : [];
+  for (const matchId of ids) {
+    if (rateLimited()) break;
+    try {
+      await buildOne({ shard, matchId, accountId, playerName });
+    } catch (_e) {
+      // skip matches that fail to build (404 after retention, rate limit, etc.)
+    }
+  }
+}
+
+module.exports = { getMatchHeatmap, extractHeatmapEvents, warmHeatmapMatches, shardForMatch };

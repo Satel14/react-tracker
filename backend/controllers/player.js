@@ -7,7 +7,7 @@ const { getPlayerReports } = require("../modules/getPlayerReports")
 const { addRecentSearch, getRecentSearches } = require("../modules/recentSearches")
 const { getPlayerSteamNameByUrl, isAllowedSteamUrl } = require("../modules/getPlayerSteamNameByUrl")
 const { isAccountIdentifier } = require("../modules/playerIdentity");
-const { getMatchHeatmap, shardForMatch } = require("../modules/getMatchHeatmap");
+const { warmHeatmapMatches, shardForMatch } = require("../modules/getMatchHeatmap");
 const { getMatchReplay } = require("../modules/getMatchReplay");
 const { getMatchAnalysis } = require("../modules/getMatchAnalysis");
 const { getMapMeta } = require("../modules/mapMeta");
@@ -220,14 +220,7 @@ module.exports.getPlayerHeatmapAggregate = async (req, res) => {
       return res.status(400).json({ status: 400, message: "map is required" });
     }
 
-    const ids = Array.isArray(matchIds) ? matchIds.slice(0, 12) : [];
-    for (const matchId of ids) {
-      try {
-        await getMatchHeatmap({ shard, matchId, accountId, playerName });
-      } catch (_e) {
-        // skip matches that fail to build (404 after retention, rate limit, etc.)
-      }
-    }
+    await warmHeatmapMatches({ shard, matchIds, accountId, playerName });
 
     const key = aggregateKey({ shard: shardForMatch(shard), accountId, playerName, rawMapName: map });
     const aggregate = await getAggregate({ key });
