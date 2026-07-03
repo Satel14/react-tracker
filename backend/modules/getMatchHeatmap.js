@@ -1,34 +1,13 @@
 const { getMapMeta } = require("./mapMeta");
 const { aggregateKey, addMatchPoints } = require("./heatmapAggregate");
-const { shardForMatch, fetchPubgJson, fetchTelemetryJson, findTelemetryUrl } = require("./pubgTelemetry");
+const { shardForMatch } = require("./pubgTelemetry");
+const { loadMatchBundle } = require("./matchLoader");
+const { readXY, eventTime, isFocalActor } = require("./telemetryUtils");
 
 const heatmapCache = new Map();
 const inFlightHeatmap = new Map();
 
 const HEATMAP_CACHE_LIMIT = 200;
-
-function isOurPlayer(actor, accountId, lowerName) {
-  if (!actor) return false;
-  if (accountId && actor.accountId === accountId) return true;
-  if (lowerName && typeof actor.name === "string" && actor.name.toLowerCase() === lowerName) return true;
-  return false;
-}
-
-function readLocation(source) {
-  if (!source || !source.location) return null;
-  const x = Number(source.location.x);
-  const y = Number(source.location.y);
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-  return { x: Math.round(x / 100), y: Math.round(y / 100) };
-}
-
-function diffSeconds(eventTime, matchStart) {
-  if (!eventTime || !matchStart) return null;
-  const e = Date.parse(eventTime);
-  const s = Date.parse(matchStart);
-  if (Number.isNaN(e) || Number.isNaN(s)) return null;
-  return Math.max(0, Math.round((e - s) / 1000));
-}
 
 function trimCache() {
   while (heatmapCache.size > HEATMAP_CACHE_LIMIT) {
@@ -38,45 +17,30 @@ function trimCache() {
   }
 }
 
-async function buildHeatmap({ shard, matchId, accountId, playerName }) {
-  const matchShard = shardForMatch(shard);
-  const matchUrl = `https://api.pubg.com/shards/${matchShard}/matches/${encodeURIComponent(matchId)}`;
-  const matchPayload = await fetchPubgJson(matchUrl, true);
-
-  const matchAttributes = matchPayload?.data?.attributes || {};
-  const rawMapName = matchAttributes.mapName || "";
-  const mapMeta = getMapMeta(rawMapName);
-  const matchStart = matchAttributes.createdAt || null;
-
-  const telemetryUrl = findTelemetryUrl(matchPayload);
-  if (!telemetryUrl) throw new Error("Telemetry asset unavailable for this match");
-
-  const telemetry = await fetchTelemetryJson(telemetryUrl);
-  if (!Array.isArray(telemetry)) throw new Error("Telemetry payload malformed");
-
+function extractHeatmapEvents(telemetry, { matchStartMs = 0, accountId = null, playerName = null } = {}) {
   const lowerName = typeof playerName === "string" && playerName.trim()
     ? playerName.trim().toLowerCase()
     : null;
   const accountKey = typeof accountId === "string" && accountId.trim() ? accountId.trim() : null;
 
   const events = [];
-  let resolvedName = lowerName;
+  const resolvedName = lowerName;
   let dropPushed = false;
 
-  for (const event of telemetry) {
+  for (const event of Array.isArray(telemetry) ? telemetry : []) {
     const type = event?._T;
     if (!type) continue;
 
     if (type === "LogParachuteLanding") {
       if (dropPushed) continue;
-      if (!isOurPlayer(event.character, accountKey, resolvedName)) continue;
-      const loc = readLocation(event.character);
+      if (!isFocalActor(event.character, accountKey, resolvedName)) continue;
+      const loc = readXY(event.character?.location);
       if (!loc) continue;
       events.push({
         type: "drop",
         x: loc.x,
         y: loc.y,
-        time: diffSeconds(event._D, matchStart),
+        time: eventTime(event, matchStartMs),
       });
       dropPushed = true;
       continue;
@@ -88,9 +52,9 @@ async function buildHeatmap({ shard, matchId, accountId, playerName }) {
       const victim = event.victim || null;
 
       const meIsKiller =
-        isOurPlayer(killer, accountKey, resolvedName) ||
-        isOurPlayer(finisher, accountKey, resolvedName);
-      const meIsVictim = isOurPlayer(victim, accountKey, resolvedName);
+        isFocalActor(killer, accountKey, resolvedName) ||
+        isFocalActor(finisher, accountKey, resolvedName);
+      const meIsVictim = isFocalActor(victim, accountKey, resolvedName);
 
       if (!meIsKiller && !meIsVictim) continue;
 
@@ -108,13 +72,13 @@ async function buildHeatmap({ shard, matchId, accountId, playerName }) {
             : null;
 
       if (meIsKiller) {
-        const loc = readLocation(victim);
+        const loc = readXY(victim?.location);
         if (!loc) continue;
         events.push({
           type: "kill",
           x: loc.x,
           y: loc.y,
-          time: diffSeconds(event._D, matchStart),
+          time: eventTime(event, matchStartMs),
           victim: victim?.name || null,
           weapon,
           distance,
@@ -122,13 +86,13 @@ async function buildHeatmap({ shard, matchId, accountId, playerName }) {
       }
 
       if (meIsVictim) {
-        const loc = readLocation(victim);
+        const loc = readXY(victim?.location);
         if (!loc) continue;
         events.push({
           type: "death",
           x: loc.x,
           y: loc.y,
-          time: diffSeconds(event._D, matchStart),
+          time: eventTime(event, matchStartMs),
           killer: killer?.name || finisher?.name || null,
           weapon,
           distance,
@@ -138,6 +102,22 @@ async function buildHeatmap({ shard, matchId, accountId, playerName }) {
       continue;
     }
   }
+
+  return events;
+}
+
+async function buildHeatmap({ shard, matchId, accountId, playerName }) {
+  const bundle = await loadMatchBundle({ shard, matchId });
+  const matchAttributes = bundle.matchAttributes || {};
+  const rawMapName = matchAttributes.mapName || "";
+  const mapMeta = getMapMeta(rawMapName);
+  const matchStart = matchAttributes.createdAt || null;
+  const matchStartMs = matchStart ? Date.parse(matchStart) : NaN;
+
+  const telemetry = bundle.telemetry;
+  if (!Array.isArray(telemetry)) throw new Error("Telemetry payload malformed");
+
+  const events = extractHeatmapEvents(telemetry, { matchStartMs, accountId, playerName });
 
   const points = { drop: [], kill: [], death: [] };
   for (const ev of events) {
@@ -185,4 +165,4 @@ async function getMatchHeatmap({ shard, matchId, accountId, playerName }) {
   return run;
 }
 
-module.exports = { getMatchHeatmap, shardForMatch };
+module.exports = { getMatchHeatmap, extractHeatmapEvents, shardForMatch };
