@@ -82,18 +82,19 @@ const Main = ({ t }) => {
     let resolvedName;
 
     if (platform === "steam" && text.search(/steamcommunity.com/) !== -1) {
-      resolvedName = await getPlayerSteamName(text).then(({ data }) => {
-        if (!data) {
-          resolvedName = null;
+      try {
+        const resolved = (await getPlayerSteamName(text))?.data;
+        if (!resolved) {
+          openNotification("error", "Steam Error", "Account not found");
+          setExit(false);
+          return;
         }
-        return data;
-      });
-    }
-
-    if (resolvedName === null) {
-      openNotification("error", "Steam Error", "Account not found");
-      setExit(false);
-      return;
+        resolvedName = resolved;
+      } catch (_e) {
+        openNotification("error", "Steam Error", "Account not found");
+        setExit(false);
+        return;
+      }
     }
 
     let url;
