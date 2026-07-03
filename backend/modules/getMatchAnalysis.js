@@ -115,7 +115,7 @@ function parseKillFeed(telemetry, { matchStartMs = 0, accountId = null, playerNa
 }
 
 const BODY_REGIONS = ["HeadShot", "TorsoShot", "ArmShot", "LegShot", "PelvisShot"];
-const WEAPON_DAMAGE_CATEGORIES = new Set(["Damage_Gun", "Damage_Melee", "Damage_Throwable", "Damage_Groggy", "Damage_Instant_Fall"]);
+const WEAPON_DAMAGE_CATEGORIES = new Set(["Damage_Gun", "Damage_Melee", "Damage_Throwable", "Damage_Groggy"]);
 
 function emptyRegions() {
   return { HeadShot: 0, TorsoShot: 0, ArmShot: 0, LegShot: 0, PelvisShot: 0, total: 0, hitCount: 0 };
@@ -171,10 +171,11 @@ function parseDamage(telemetry, { accountId = null, playerName = null } = {}) {
 
 function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerName = null } = {}) {
   const { accountKey, lowerName } = focalKeys({ accountId, playerName });
+  const nameToTeam = buildNameToTeam(telemetry);
   const events = [];
   const shotsByWeapon = new Map(); // label -> shots
   const hitsByWeapon = new Map();  // label -> hits
-  const takenTeamsByBucket = new Map(); // 15s bucket -> Set(opponentName)
+  const takenTeamsByBucket = new Map(); // 15s bucket -> Set(teamId)
 
   for (const ev of Array.isArray(telemetry) ? telemetry : []) {
     const type = ev?._T;
@@ -198,9 +199,12 @@ function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerNa
       }
       if (meTaken && ev.attacker?.name) {
         events.push({ t, kind: "taken", opponent: ev.attacker.name, weapon: telemetryWeaponName(ev.damageCauserName), amount: Math.round(amount), region: ev.damageReason || null });
-        const bucket = Math.floor((t || 0) / 15);
-        if (!takenTeamsByBucket.has(bucket)) takenTeamsByBucket.set(bucket, new Set());
-        takenTeamsByBucket.get(bucket).add(ev.attacker.name);
+        const attackerTeam = nameToTeam.get(ev.attacker.name);
+        if (attackerTeam != null) {
+          const bucket = Math.floor((t || 0) / 15);
+          if (!takenTeamsByBucket.has(bucket)) takenTeamsByBucket.set(bucket, new Set());
+          takenTeamsByBucket.get(bucket).add(attackerTeam);
+        }
       }
     }
   }

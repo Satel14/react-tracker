@@ -257,7 +257,8 @@
       "shots": "Shots",
       "hits": "Hits",
       "thirdParty": "Third-party",
-      "timeRange": "Time range"
+      "timeRange": "Time range",
+      "weapon": "Weapon"
     },
     "help": {
       "title": "Help & FAQ",

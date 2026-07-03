@@ -139,3 +139,30 @@ test("parseTimeline records dealt combat events for the focal player", () => {
   assert.equal(dealt[0].opponent, "Foe");
   assert.equal(dealt[0].amount, 30);
 });
+
+const thirdPartyTelemetry = [
+  { _T: "LogMatchStart", characters: [
+    { character: { accountId: "account.me", name: "Me", teamId: 1 } },
+    { character: { accountId: "account.a1", name: "A1", teamId: 2 } },
+    { character: { accountId: "account.a2", name: "A2", teamId: 2 } },
+    { character: { accountId: "account.b1", name: "B1", teamId: 3 } },
+  ] },
+  // two hits from the same enemy squad (team 2) within the same 15s bucket
+  { _T: "LogPlayerTakeDamage", elapsedTime: 1, attacker: { accountId: "account.a1", name: "A1" }, victim: { accountId: "account.me", name: "Me" }, damage: 10, damageReason: "TorsoShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapHK416_C" },
+  { _T: "LogPlayerTakeDamage", elapsedTime: 2, attacker: { accountId: "account.a2", name: "A2" }, victim: { accountId: "account.me", name: "Me" }, damage: 10, damageReason: "TorsoShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapHK416_C" },
+];
+
+test("parseTimeline does not flag a third party when both attackers are on the same team", () => {
+  const tl = parseTimeline(thirdPartyTelemetry, { matchStartMs: 0, accountId: "account.me" });
+  assert.equal(tl.thirdParties.length, 0);
+});
+
+test("parseTimeline flags a third party when a second team hits the focal player in the same window", () => {
+  const withThirdTeam = [
+    ...thirdPartyTelemetry,
+    { _T: "LogPlayerTakeDamage", elapsedTime: 3, attacker: { accountId: "account.b1", name: "B1" }, victim: { accountId: "account.me", name: "Me" }, damage: 10, damageReason: "TorsoShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapKar98k_C" },
+  ];
+  const tl = parseTimeline(withThirdTeam, { matchStartMs: 0, accountId: "account.me" });
+  assert.equal(tl.thirdParties.length, 1);
+  assert.equal(tl.thirdParties[0].teamCount, 2);
+});

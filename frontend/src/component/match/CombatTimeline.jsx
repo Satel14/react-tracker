@@ -15,7 +15,7 @@ const CombatTimeline = ({ timeline, focalPresent, t }) => {
       <div className="timeline__accuracy">
         <div className="timeline__accuracy-head">{t("pages.match.accuracy")}</div>
         <div className="timeline__acc-row timeline__acc-row--head">
-          <span>{t("pages.match.tabDamage")}</span>
+          <span>{t("pages.match.weapon")}</span>
           <span>{t("pages.match.shots")}</span>
           <span>{t("pages.match.hits")}</span>
           <span>%</span>

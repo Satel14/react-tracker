@@ -44,7 +44,8 @@ const MatchReplayPage = ({ t }) => {
   const [{ loading, error, data }, dispatch] = useReducer(reducer, INITIAL);
   const [focusedAccountId, setFocusedAccountId] = useState(null);
   const [tab, setTab] = useState("replay");
-  const [analysis, setAnalysis] = useState({ loading: false, error: null, data: null, requested: false });
+  const [analysis, setAnalysis] = useState({ loading: false, error: null, data: null });
+  const [wantAnalysis, setWantAnalysis] = useState(false);
   const canvasRef = useRef(null);
   const clock = useReplayClock(data?.duration || 0);
 
@@ -83,23 +84,35 @@ const MatchReplayPage = ({ t }) => {
     return () => { cancelled = true; };
   }, [matchId, platform, accountId, playerName, t]);
 
-  // Lazily fetch analysis the first time a non-replay tab is opened.
+  // Mark analysis as wanted the first time a non-replay tab is opened.
   useEffect(() => {
-    if (tab === "replay" || analysis.requested) return;
+    if (tab !== "replay") setWantAnalysis(true);
+  }, [tab]);
+
+  // Reset when the match/focal identity changes so a new match re-fetches.
+  useEffect(() => {
+    setWantAnalysis(false);
+    setAnalysis({ loading: false, error: null, data: null });
+  }, [matchId, platform, accountId, playerName]);
+
+  // Fetch analysis once wanted; keyed on match identity, NOT on tab, so
+  // switching between analysis tabs never cancels or refetches it.
+  useEffect(() => {
+    if (!wantAnalysis) return;
     let cancelled = false;
-    setAnalysis((a) => ({ ...a, loading: true, requested: true, error: null }));
+    setAnalysis({ loading: true, error: null, data: null });
     getMatchAnalysis(matchId, platform, accountId, playerName)
       .then((res) => {
         if (cancelled) return;
         const payload = res?.data || null;
-        if (payload && payload.scoreboard) setAnalysis({ loading: false, error: null, data: payload, requested: true });
-        else setAnalysis({ loading: false, error: res?.message || t("pages.match.error"), data: null, requested: true });
+        if (payload && payload.scoreboard) setAnalysis({ loading: false, error: null, data: payload });
+        else setAnalysis({ loading: false, error: res?.message || t("pages.match.error"), data: null });
       })
       .catch((e) => {
-        if (!cancelled) setAnalysis({ loading: false, error: e?.message || t("pages.match.error"), data: null, requested: true });
+        if (!cancelled) setAnalysis({ loading: false, error: e?.message || t("pages.match.error"), data: null });
       });
     return () => { cancelled = true; };
-  }, [tab, analysis.requested, matchId, platform, accountId, playerName, t]);
+  }, [wantAnalysis, matchId, platform, accountId, playerName, t]);
 
   const renderReplay = () => (
     <>
