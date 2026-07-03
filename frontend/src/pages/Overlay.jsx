@@ -3,11 +3,12 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { getPlayerData } from "../api/player";
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
+import { statDisplay } from "../helpers/playerStats";
 
 const REFRESH_DEFAULT_SEC = 60;
 const REFRESH_MIN_SEC = 30;
 
-const getStat = (stats, key, fallback = "0") => stats?.[key]?.displayValue || fallback;
+const getStat = (stats, key, fallback = "0") => statDisplay(stats, key, fallback);
 
 const placementTier = (placement) => {
   const p = Number(placement);
