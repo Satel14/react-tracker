@@ -22,6 +22,7 @@ import {
 } from "@ant-design/icons";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { getPlayerData, getPlayerReports } from "../api/player";
+import { resolveAbsoluteApiUrl } from "../api/config";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
 import { getCurrentLocale } from "../helpers/locale";
@@ -1298,10 +1299,7 @@ const PlayerPage = ({ t }) => {
           icon={<ShareAltOutlined />}
           size="small"
           onClick={async () => {
-            const apiBase = import.meta.env.VITE_API_URL ||
-              (import.meta.env.MODE === "development"
-                ? `${window.location.origin}/api`
-                : "https://pubgtracker-api.onrender.com/api");
+            const apiBase = resolveAbsoluteApiUrl();
             const url = `${apiBase}/player/${platform}/${encodeURIComponent(gameId)}/card.png`;
             try {
               await navigator.clipboard.writeText(url);
