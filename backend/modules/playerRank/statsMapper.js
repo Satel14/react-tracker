@@ -333,6 +333,7 @@ function mapPubgStatsToFrontend(
     banType: null,
     clan: null,
     survivalMastery: null,
+    weaponMastery: null,
   };
 
   const data = {
