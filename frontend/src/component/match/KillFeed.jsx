@@ -1,10 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Segmented } from "antd";
-
-const fmt = (sec) => {
-  const s = Math.max(0, Math.floor(sec || 0));
-  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-};
+import { formatClock as fmt } from "../../helpers/formatClock";
 
 const KillFeed = ({ kills = [], t }) => {
   const [filter, setFilter] = useState("all");

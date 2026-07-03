@@ -14,11 +14,8 @@ import { getMatchReplay, getMatchAnalysis } from "../api/player";
 import { useReplayClock } from "../component/charts/useReplayClock";
 import { playersAt, activeKills, zoneAt, rosterAt } from "../component/charts/replayEngine";
 import { drawReplayFrame } from "../component/charts/replayDraw";
+import { formatClock as fmt } from "../helpers/formatClock";
 
-const fmt = (sec) => {
-  const s = Math.max(0, Math.floor(sec));
-  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-};
 const SPEEDS = [1, 2, 4, 8, 16];
 const CANVAS_SIZE = 1000;
 const INITIAL = { loading: false, error: null, data: null };

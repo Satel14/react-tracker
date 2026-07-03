@@ -1,13 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Slider } from "antd";
 import MapField from "../charts/MapField";
+import { formatClock as fmt } from "../../helpers/formatClock";
 
 const CANVAS_SIZE = 1000;
-
-const fmt = (sec) => {
-  const s = Math.max(0, Math.floor(sec || 0));
-  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-};
 
 const KillMap = ({ kills = [], rawMapName, mapMax = 8160, duration = 0, t }) => {
   const canvasRef = useRef(null);

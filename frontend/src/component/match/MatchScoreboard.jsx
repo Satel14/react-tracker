@@ -1,10 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-
-const fmtSurvival = (sec) => {
-  const s = Math.max(0, Math.floor(sec || 0));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-};
+import { formatClock as fmtSurvival } from "../../helpers/formatClock";
 
 const isHandle = (name) => typeof name === "string" && name && !/^account\./i.test(name);
 
