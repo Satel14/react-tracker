@@ -1,6 +1,6 @@
 const {
   aboutMe,
-  bugReportPage,
+  bugReportText,
   bugReportList,
   roadmapText,
   roadMapList,
@@ -35,11 +35,11 @@ module.exports.getRoadmap = async (req, res) => {
 module.exports.getBugReport = async (req, res) => {
   try {
     const data = {
-      bugReportPage,
+      bugReportText,
       bugReportList,
     }
     return res.status(200).json({ status: 200, data })
   } catch (e) {
-    return res.status(200).json({ statu: 200, message: e.message })
+    return res.status(200).json({ status: 200, message: e.message })
   }
 }
