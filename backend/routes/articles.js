@@ -16,6 +16,7 @@ module.exports = (router) => {
     );
     router.post(
         "/api/bugreport/send",
+        EmailController.validate("sendBugReport"),
         EmailController.sendBugReport
     );
 };

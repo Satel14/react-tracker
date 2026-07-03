@@ -1,10 +1,34 @@
 const { Resend } = require("resend");
+const { validationResult, body } = require("express-validator");
+const MESSAGE = require("../constant/responseMessage");
 const { escapeHtml } = require("../modules/escapeHtml");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+module.exports.validate = (method) => {
+    switch (method) {
+        case "sendBugReport": {
+            return [
+                body("name").optional({ nullable: true }).isString().isLength({ max: 100 }),
+                body("email")
+                    .optional({ nullable: true, checkFalsy: true })
+                    .isEmail()
+                    .isLength({ max: 254 }),
+                body("description").exists().isString().trim().isLength({ min: 1, max: 5000 }),
+            ];
+        }
+        default:
+            return [];
+    }
+};
+
 module.exports.sendBugReport = async (req, res) => {
     try {
+        const error = validationResult(req);
+        if (!error.isEmpty()) {
+            return res.status(422).json({ status: 422, message: MESSAGE.VALIDATOR.ERROR });
+        }
+
         const { name, email, description } = req.body;
 
         if (!description || !description.trim()) {
