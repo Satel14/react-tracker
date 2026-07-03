@@ -1,8 +1,10 @@
 const PUBG_API_KEY = process.env.PUBG_API_KEY || "";
+const { assertShard } = require("./pubgUrlSafety");
 
 function shardForMatch(shard) {
-  if (shard === "psn" || shard === "xbox") return "console";
-  return shard;
+  const normalized = assertShard(shard);
+  if (normalized === "psn" || normalized === "xbox") return "console";
+  return normalized;
 }
 
 async function fetchPubgJson(url, useApiKey = false) {
