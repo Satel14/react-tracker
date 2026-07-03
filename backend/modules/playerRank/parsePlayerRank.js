@@ -29,6 +29,24 @@ const {
   steamAvatarCache,
 } = require("./state");
 
+function shouldReenrich(profile) {
+  return !profile || profile.status !== "ok";
+}
+
+function createProfileExtrasError(error, fallbackProfile = null) {
+  return {
+    profile: {
+      status: "error",
+      error: error?.message || String(error || "Profile extras failed"),
+      banType: fallbackProfile?.banType || null,
+      clan: fallbackProfile?.clan || null,
+      survivalMastery: fallbackProfile?.survivalMastery || null,
+      weaponMastery: fallbackProfile?.weaponMastery || null,
+    },
+    matches: createEmptyMatches(),
+  };
+}
+
 function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
   const { doRequest } = createPubgApiClient({
     apiKey: pubgApiKey,
@@ -62,19 +80,6 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     cacheDuration: CACHE_DURATION,
   });
 
-  function createProfileExtrasError(error, fallbackProfile = null) {
-    return {
-      profile: {
-        status: "error",
-        error: error?.message || String(error || "Profile extras failed"),
-        banType: fallbackProfile?.banType || null,
-        clan: fallbackProfile?.clan || null,
-        survivalMastery: fallbackProfile?.survivalMastery || null,
-      },
-      matches: createEmptyMatches(),
-    };
-  }
-
   async function enrichCachedPayload({
     payload,
     statsCacheKey,
@@ -89,7 +94,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     const hasProfileExtras = Object.prototype.hasOwnProperty.call(cachedData, "profile");
     const hasMatchExtras = Object.prototype.hasOwnProperty.call(cachedData, "matches");
 
-    if (hasProfileExtras && cachedData.profile !== null && hasMatchExtras) {
+    if (hasProfileExtras && hasMatchExtras && !shouldReenrich(cachedData.profile)) {
       return payload;
     }
 
@@ -475,4 +480,6 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
 
 module.exports = {
   createParsePlayerRank,
+  shouldReenrich,
+  createProfileExtrasError,
 };
