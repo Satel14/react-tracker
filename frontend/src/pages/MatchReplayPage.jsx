@@ -7,6 +7,7 @@ import MapField from "../component/charts/MapField";
 import ReplayRoster from "../component/charts/ReplayRoster";
 import MatchScoreboard from "../component/match/MatchScoreboard";
 import KillFeed from "../component/match/KillFeed";
+import KillMap from "../component/match/KillMap";
 import { getMatchReplay, getMatchAnalysis } from "../api/player";
 import { useReplayClock } from "../component/charts/useReplayClock";
 import { playersAt, activeKills, zoneAt, rosterAt } from "../component/charts/replayEngine";
@@ -164,7 +165,10 @@ const MatchReplayPage = ({ t }) => {
           key: "kills",
           label: t("pages.match.tabKills"),
           children: renderAnalysisPane((a) => (
-            <KillFeed kills={a.killFeed} t={t} />
+            <>
+              <KillMap kills={a.killFeed} rawMapName={a.rawMapName} mapMax={a.mapMax} duration={a.duration} t={t} />
+              <KillFeed kills={a.killFeed} t={t} />
+            </>
           )),
         },
       ]
