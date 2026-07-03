@@ -14,6 +14,7 @@ vi.mock("../api/player", () => ({
       },
     })
   ),
+  getMatchAnalysis: vi.fn(() => Promise.resolve({ data: { scoreboard: { teams: [] } } })),
 }));
 
 const renderAt = (path) =>

@@ -1,0 +1,65 @@
+import React from "react";
+import { Link } from "react-router-dom";
+
+const fmtSurvival = (sec) => {
+  const s = Math.max(0, Math.floor(sec || 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+
+const isHandle = (name) => typeof name === "string" && name && !/^account\./i.test(name);
+
+const MatchScoreboard = ({ scoreboard, platform, t }) => {
+  const teams = scoreboard?.teams || [];
+  if (!teams.length) return <div className="match-scoreboard__empty">{t("pages.match.error")}</div>;
+
+  return (
+    <div className="match-scoreboard">
+      {teams.map((team) => (
+        <div
+          key={team.teamId ?? team.rank}
+          className={`match-scoreboard__team${team.isFocalTeam ? " is-focal" : ""}`}
+        >
+          <div className="match-scoreboard__team-head">
+            <span className="match-scoreboard__rank">
+              {t("pages.match.placement", { rank: team.rank ?? "?" })}
+            </span>
+            {team.won ? <span className="match-scoreboard__won">{t("pages.match.won")}</span> : null}
+          </div>
+          <div className="match-scoreboard__rows">
+            <div className="match-scoreboard__row match-scoreboard__row--head">
+              <span>{t("pages.match.colPlayer")}</span>
+              <span>{t("pages.match.colKills")}</span>
+              <span>{t("pages.match.colDamage")}</span>
+              <span>{t("pages.match.colAssists")}</span>
+              <span>{t("pages.match.colDbno")}</span>
+              <span>{t("pages.match.colHs")}</span>
+              <span>{t("pages.match.colSurvival")}</span>
+            </div>
+            {team.players.map((p) => (
+              <div
+                key={p.accountId || p.name}
+                className={`match-scoreboard__row${p.isFocal ? " is-focal" : ""}`}
+              >
+                <span className="match-scoreboard__name">
+                  {isHandle(p.name) ? (
+                    <Link to={`/player/${platform}/${encodeURIComponent(p.name)}`}>{p.name}</Link>
+                  ) : (
+                    p.name
+                  )}
+                </span>
+                <span>{p.kills}</span>
+                <span>{p.damageDealt}</span>
+                <span>{p.assists}</span>
+                <span>{p.DBNOs}</span>
+                <span>{p.headshotKills}</span>
+                <span>{fmtSurvival(p.timeSurvived)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default MatchScoreboard;
