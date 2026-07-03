@@ -41,3 +41,26 @@ test("falls back to the brown theme when no theme is saved", () => {
   const shell = container.querySelector(".app");
   expect(shell.className).toContain("brown");
 });
+
+test("falls back to the brown theme when the saved theme is not a known theme", () => {
+  window.localStorage.setItem("theme", "garbage");
+  const { container } = render(<RouterLayout />);
+  const shell = container.querySelector(".app");
+  expect(shell.className).toContain("app brown");
+});
+
+test("falls back to the brown theme when localStorage.getItem throws", () => {
+  const getItemSpy = vi
+    .spyOn(window.localStorage.__proto__, "getItem")
+    .mockImplementation(() => {
+      throw new Error("localStorage disabled");
+    });
+
+  try {
+    const { container } = render(<RouterLayout />);
+    const shell = container.querySelector(".app");
+    expect(shell.className).toContain("brown");
+  } finally {
+    getItemSpy.mockRestore();
+  }
+});

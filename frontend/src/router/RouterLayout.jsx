@@ -6,15 +6,24 @@ import routes from "./routes";
 import Navbar from "../component/Navbar";
 import Footer from "../component/Footer";
 import CookieRules from "../component/CookieRule";
+import themes from "../component/config/themes";
 import "../style/style.scss";
+
+const DEFAULT_THEME = "brown";
+
+const getInitialTheme = () => {
+  if (typeof window === "undefined") return DEFAULT_THEME;
+  try {
+    const savedTheme = window.localStorage?.getItem("theme");
+    return savedTheme && themes[savedTheme] ? savedTheme : DEFAULT_THEME;
+  } catch (_e) {
+    return DEFAULT_THEME;
+  }
+};
 
 const RouterLayout = () => {
   const location = useLocation();
-  const [currentTheme, setCurrentTheme] = useState(
-    () =>
-      (typeof window !== "undefined" && window.localStorage.getItem("theme")) ||
-      "brown"
-  );
+  const [currentTheme, setCurrentTheme] = useState(getInitialTheme);
 
   useEffect(() => {
     // Expose theme setter for legacy SetTheme component
