@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Row, Col, Input, Radio, Typography } from "antd";
-import CountUp from "react-countup";
 import { useNavigate } from "react-router-dom";
 
 const { Title } = Typography;
@@ -47,19 +46,6 @@ const Player = () => {
               onSearch={handleSearch}
               enterButton
             />
-
-            <div className="homepage_left__stats">
-              <div className="homepage_left__stats__seasonend">
-                {/* <FieldTimeOutlined /> */}
-                <div>
-                  Last Hour
-                  <span>
-                    Player Online<span></span>
-                    <CountUp separator="," end={1133462} />
-                  </span>
-                </div>
-              </div>
-            </div>
           </div>
         </Col>
         <Col span={12}>
