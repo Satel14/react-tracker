@@ -1,4 +1,5 @@
 const { Resend } = require("resend");
+const { escapeHtml } = require("../modules/escapeHtml");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -16,11 +17,11 @@ module.exports.sendBugReport = async (req, res) => {
             subject: `Bug Report from ${name || "Anonymous"}`,
             html: `
                 <h2>Bug Report</h2>
-                <p><strong>Name:</strong> ${name || "Not provided"}</p>
-                <p><strong>Email:</strong> ${email || "Not provided"}</p>
+                <p><strong>Name:</strong> ${escapeHtml(name) || "Not provided"}</p>
+                <p><strong>Email:</strong> ${escapeHtml(email) || "Not provided"}</p>
                 <hr/>
                 <h3>Description:</h3>
-                <p>${description.replace(/\n/g, "<br/>")}</p>
+                <p>${escapeHtml(description).replace(/\n/g, "<br/>")}</p>
             `,
         });
 
