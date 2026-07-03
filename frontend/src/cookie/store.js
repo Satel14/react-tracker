@@ -103,7 +103,7 @@ export const addHistory = async (
   const entryId = getHistoryEntryId(platformSlug, id);
   if (!entryId) return null;
 
-  const history = await getHistory();
+  const history = readObject(HISTORY_KEY);
   const next = { ...history };
   const existing = next[entryId] || {};
 
@@ -150,7 +150,7 @@ const addFavorite = async (payload) => {
   const item = normalizeFavorite(payload);
   if (!item) return null;
 
-  const favorites = await getFavorites();
+  const favorites = readObject(FAVORITES_KEY);
   const next = { ...favorites };
   const existing = next[item.id];
 
@@ -179,9 +179,9 @@ const addFavorite = async (payload) => {
 
 export const removeFavorite = async (id) => {
   const key = String(id || "").trim();
-  if (!key) return { removed: false, favorites: await getFavorites() };
+  if (!key) return { removed: false, favorites: readObject(FAVORITES_KEY) };
 
-  const favorites = await getFavorites();
+  const favorites = readObject(FAVORITES_KEY);
   if (!favorites[key]) {
     return {
       removed: false,
