@@ -25,6 +25,7 @@ import { getPlayerData, getPlayerReports } from "../api/player";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
 import { getCurrentLocale } from "../helpers/locale";
+import { classifyPlayerError } from "../helpers/playerError";
 import openNotification from "../component/Notification";
 import MapsTab from "./MapsTab";
 
@@ -353,17 +354,14 @@ const PlayerPage = ({ t }) => {
         setData(response.data);
         sessionDispatch({ type: "setSeason", id: response.data?.selectedSeasonId || response.data?.season?.id || seasonId || null });
       } else {
-        setError({ code: "not_found", message: null });
+        setError(classifyPlayerError(response?.message));
       }
     } catch (err) {
-      const raw = err?.message || "";
-      const lower = raw.toLowerCase();
-      let code = "generic";
-      if (err?.status === 422 || lower.includes("not found")) code = "not_found";
-      else if (lower.includes("rate limit")) code = "rate_limit";
-      else if (lower.includes("private")) code = "private";
-      else if (lower.includes("network") || lower.includes("fetch")) code = "network";
-      setError({ code, message: raw || null });
+      if (err?.status === 422) {
+        setError({ code: "not_found", message: err?.message || null });
+      } else {
+        setError(classifyPlayerError(err?.message));
+      }
     } finally {
       setLoading(false);
     }
