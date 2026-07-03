@@ -1,4 +1,4 @@
-const { validationResult, body, check } = require("express-validator");
+const { validationResult, body, check, query, param } = require("express-validator");
 const MESSAGE = require("../constant/responseMessage")
 const ANY_CONFIG = require("../constant/anyConfig")
 const { parsePlayerRank } = require("../modules/getPlayerRank")
@@ -13,6 +13,7 @@ const { getMatchAnalysis } = require("../modules/getMatchAnalysis");
 const { getMapMeta } = require("../modules/mapMeta");
 const { aggregateKey, getAggregate } = require("../modules/heatmapAggregate");
 const { getPlayerCard } = require("../modules/getPlayerCard");
+const { ALLOWED_SHARDS } = require("../modules/pubgUrlSafety");
 
 const getNormalDate = (time) => {
   const date = new Date(time);
@@ -174,6 +175,10 @@ module.exports.getPlayerCard = async (req, res) => {
 
 module.exports.getMatchReplay = async (req, res) => {
   try {
+    const error = validationResult(req);
+    if (!error.isEmpty()) {
+      return res.status(422).json({ status: 422, message: MESSAGE.VALIDATOR.ERROR });
+    }
     const { matchId } = req.params || {};
     const { shard, accountId, playerName } = req.query || {};
     if (!matchId) {
@@ -193,6 +198,10 @@ module.exports.getMatchReplay = async (req, res) => {
 
 module.exports.getMatchAnalysis = async (req, res) => {
   try {
+    const error = validationResult(req);
+    if (!error.isEmpty()) {
+      return res.status(422).json({ status: 422, message: MESSAGE.VALIDATOR.ERROR });
+    }
     const { matchId } = req.params || {};
     const { shard, accountId, playerName } = req.query || {};
     if (!matchId) {
@@ -243,8 +252,8 @@ module.exports.validate = (method) => {
     case "getPlayerData": {
       return [
         body("platform").exists().isIn(ANY_CONFIG.PLATFORMS),
-        body("gameId").exists().isString(),
-        body("seasonId").optional({ nullable: true }).isString(),
+        body("gameId").exists().isString().isLength({ min: 1, max: 64 }),
+        body("seasonId").optional({ nullable: true }).isString().isLength({ max: 64 }),
       ];
     }
     case "getPlayerSteamName": {
@@ -254,6 +263,15 @@ module.exports.validate = (method) => {
       return [
         body("accountId").optional({ nullable: true }).isString(),
         body("playerName").optional({ nullable: true }).isString(),
+      ];
+    }
+    case "getMatchReplay":
+    case "getMatchAnalysis": {
+      return [
+        param("matchId").exists().isString().trim().isLength({ min: 1, max: 64 }),
+        query("shard").optional({ nullable: true }).isIn(ALLOWED_SHARDS),
+        query("accountId").optional({ nullable: true }).isString().trim().isLength({ max: 64 }),
+        query("playerName").optional({ nullable: true }).isString().trim().isLength({ max: 64 }),
       ];
     }
     default:

@@ -26,10 +26,12 @@ module.exports = (router) => {
   );
   router.get(
     "/api/match/:matchId/replay",
+    PlayerController.validate("getMatchReplay"),
     PlayerController.getMatchReplay
   );
   router.get(
     "/api/match/:matchId/analysis",
+    PlayerController.validate("getMatchAnalysis"),
     PlayerController.getMatchAnalysis
   );
   router.post(
