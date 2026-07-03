@@ -3,15 +3,10 @@ import PlaystationIcon from './../component/icons/PlaystaionIcon';
 import XboxIcon from './../component/icons/XboxIcon';
 import KakaoIcon from "../component/icons/KakaoIcon";
 import StadiaIcon from "../component/icons/StadiaIcon";
-
-const normalizePlatformKey = (platform) => {
-  const normalized = String(platform || "steam").trim().toLowerCase();
-  if (normalized === "xbl") return "xbox";
-  return normalized || "steam";
-};
+import { normalizePlatform } from "./playerIdentity";
 
 const getPlatformAvatar = (platform) => {
-  const normalizedPlatform = normalizePlatformKey(platform);
+  const normalizedPlatform = normalizePlatform(platform);
   const avatars = {
     psn: "/images/psn_avatar.jpg",
     steam: "/images/steam_avatar.jpg",
@@ -24,7 +19,7 @@ const getPlatformAvatar = (platform) => {
 }
 
 const getIconComponentPlatfrom = (platform) => {
-  const normalizedPlatform = normalizePlatformKey(platform);
+  const normalizedPlatform = normalizePlatform(platform);
   const iconComponents = {
     steam: <SteamIcon />,
     psn: <PlaystationIcon />,
