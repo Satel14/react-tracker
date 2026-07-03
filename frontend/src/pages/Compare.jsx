@@ -11,6 +11,7 @@ import { translate } from "react-switch-lang";
 import { getPlayerData } from "../api/player";
 import { resolvePreferredPlayerName, normalizePlatform } from "../helpers/playerIdentity";
 import { getPlatformAvatar } from "../helpers/other";
+import { statNumber, statDisplay } from "../helpers/playerStats";
 
 const COMPARE_ROWS = [
   { key: "matchesPlayed", label: "Matches", direction: "higher" },
@@ -37,12 +38,9 @@ const parseSlot = (raw) => {
 
 const buildSlotParam = (slot) => `${slot.platform}:${slot.id}`;
 
-const getStatValue = (stats, key) => {
-  const parsed = Number(stats?.[key]?.value);
-  return Number.isFinite(parsed) ? parsed : null;
-};
+const getStatValue = (stats, key) => statNumber(stats, key);
 
-const getStatDisplay = (stats, key) => stats?.[key]?.displayValue || "-";
+const getStatDisplay = (stats, key) => statDisplay(stats, key, "-");
 
 function profilesReducer(state, action) {
   switch (action.type) {

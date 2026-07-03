@@ -27,6 +27,7 @@ import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
 import { getCurrentLocale } from "../helpers/locale";
 import { classifyPlayerError } from "../helpers/playerError";
 import { shouldRecordHistory } from "../helpers/playerHistory";
+import { statNumber, statDisplay } from "../helpers/playerStats";
 import openNotification from "../component/Notification";
 import MapsTab from "./MapsTab";
 
@@ -127,9 +128,7 @@ const REPORT_FILTER_OPTIONS = [
   { value: "death", label: "Deaths" },
 ];
 
-const getDisplay = (stats, key, fallback = "0") => {
-  return stats?.[key]?.displayValue || fallback;
-};
+const getDisplay = (stats, key, fallback = "0") => statDisplay(stats, key, fallback);
 
 const getSeasonLabel = (seasonId) => {
   if (typeof seasonId !== "string" || !seasonId.trim()) return "Current Season";
@@ -183,10 +182,7 @@ const formatRankPlacement = (rankedInfo) => {
   return `Top ${top}%`;
 };
 
-const getStatValue = (stats, key, fallback = 0) => {
-  const parsed = Number(stats?.[key]?.value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
+const getStatValue = (stats, key, fallback = 0) => statNumber(stats, key) ?? fallback;
 
 const clampPercent = (value, max) => {
   const parsedValue = Number(value);
