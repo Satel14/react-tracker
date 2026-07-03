@@ -1,15 +1,22 @@
 const express = require("express")
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const helmet = require("helmet");
 const compression = require("compression");
 const config = require("./config/serverConfig.js");
+const { createCorsOptions } = require("./modules/corsConfig");
 
 require("dotenv").config();
 const routes = require("./routes");
 
 const app = express();
 
-app.use(cors());
+// Render sits in front of the app as a reverse proxy; trust its X-Forwarded-For
+// so req.ip (used to key express-rate-limit) reflects the real client IP.
+app.set("trust proxy", 1);
+
+app.use(helmet());
+app.use(cors(createCorsOptions(process.env.CORS_ORIGIN)));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
