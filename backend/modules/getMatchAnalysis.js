@@ -114,6 +114,61 @@ function parseKillFeed(telemetry, { matchStartMs = 0, accountId = null, playerNa
   return kills;
 }
 
+const BODY_REGIONS = ["HeadShot", "TorsoShot", "ArmShot", "LegShot", "PelvisShot"];
+const WEAPON_DAMAGE_CATEGORIES = new Set(["Damage_Gun", "Damage_Melee", "Damage_Throwable", "Damage_Groggy", "Damage_Instant_Fall"]);
+
+function emptyRegions() {
+  return { HeadShot: 0, TorsoShot: 0, ArmShot: 0, LegShot: 0, PelvisShot: 0, total: 0, hitCount: 0 };
+}
+
+function parseDamage(telemetry, { accountId = null, playerName = null } = {}) {
+  const { accountKey, lowerName } = focalKeys({ accountId, playerName });
+  const dealt = emptyRegions();
+  const taken = emptyRegions();
+  const byWeapon = new Map();
+
+  for (const ev of Array.isArray(telemetry) ? telemetry : []) {
+    if (ev?._T !== "LogPlayerTakeDamage") continue;
+    const amount = Number(ev.damage);
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+    if (!WEAPON_DAMAGE_CATEGORIES.has(ev.damageTypeCategory)) continue; // exclude blue zone / drown / red zone
+
+    const attacker = ev.attacker || null;
+    const victim = ev.victim || null;
+    const region = BODY_REGIONS.includes(ev.damageReason) ? ev.damageReason : null;
+
+    const meDealt = isFocalActor(attacker, accountKey, lowerName) && !isFocalActor(victim, accountKey, lowerName);
+    const meTaken = isFocalActor(victim, accountKey, lowerName);
+
+    if (meDealt) {
+      if (region) dealt[region] += amount;
+      dealt.total += amount;
+      dealt.hitCount += 1;
+      const key = ev.damageCauserName || null;
+      const entry = byWeapon.get(key) || { weaponKey: key, weapon: telemetryWeaponName(key), damage: 0, hits: 0 };
+      entry.damage += amount;
+      entry.hits += 1;
+      byWeapon.set(key, entry);
+    }
+    if (meTaken) {
+      if (region) taken[region] += amount;
+      taken.total += amount;
+      taken.hitCount += 1;
+    }
+  }
+
+  for (const bucket of [dealt, taken]) {
+    for (const k of Object.keys(bucket)) bucket[k] = Math.round(bucket[k]);
+  }
+  const dealtByWeapon = [...byWeapon.values()]
+    .map((w) => ({ ...w, damage: Math.round(w.damage) }))
+    .sort((a, b) => b.damage - a.damage)
+    .slice(0, 8);
+  const headshotDamagePct = dealt.total ? Math.round((dealt.HeadShot / dealt.total) * 100) : 0;
+
+  return { dealt, taken, dealtByWeapon, headshotDamagePct };
+}
+
 async function getMatchAnalysis({ shard, matchId, accountId = null, playerName = null }) {
   if (!matchId) throw new Error("matchId is required");
   const { matchShard, matchAttributes, matchPayload, telemetry } = await loadMatchBundle({ shard, matchId });
@@ -126,6 +181,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   const matchStartMs = Date.parse(matchAttributes.createdAt || "");
   const scoreboard = parseScoreboard(matchPayload, { accountId, playerName });
   const killFeed = parseKillFeed(telemetry, { matchStartMs, accountId, playerName });
+  const damage = parseDamage(telemetry, { accountId, playerName });
 
   const result = {
     matchId,
@@ -138,7 +194,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
     focalTeamId: scoreboard.focalTeamId,
     scoreboard,
     killFeed,
-    damage: null, // Task 7
+    damage,
   };
 
   analysisCache.set(cacheKey, result);
@@ -150,4 +206,4 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   return result;
 }
 
-module.exports = { getMatchAnalysis, parseScoreboard, parseKillFeed };
+module.exports = { getMatchAnalysis, parseScoreboard, parseKillFeed, parseDamage };

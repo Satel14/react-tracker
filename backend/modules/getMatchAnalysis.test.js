@@ -81,3 +81,35 @@ test("parseKillFeed attaches team ids from LogMatchStart", () => {
   assert.equal(feed[0].killerTeamId, 1);
   assert.equal(feed[0].victimTeamId, 2);
 });
+
+const { parseDamage } = require("./getMatchAnalysis");
+
+const dmgTelemetry = [
+  { _T: "LogPlayerTakeDamage", attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 34, damageReason: "HeadShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapHK416_C" },
+  { _T: "LogPlayerTakeDamage", attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 20, damageReason: "TorsoShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapHK416_C" },
+  // taken by focal from an enemy
+  { _T: "LogPlayerTakeDamage", attacker: { accountId: "account.foe", name: "Foe" }, victim: { accountId: "account.me", name: "Me" }, damage: 18, damageReason: "LegShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapKar98k_C" },
+  // blue-zone damage taken — must be excluded from body-part totals
+  { _T: "LogPlayerTakeDamage", attacker: { accountId: "" }, victim: { accountId: "account.me", name: "Me" }, damage: 12, damageReason: "NonSpecific", damageTypeCategory: "Damage_BlueZone", damageCauserName: "Buff_DamageBluezone_C" },
+];
+
+test("parseDamage aggregates dealt damage by body region and rounds", () => {
+  const d = parseDamage(dmgTelemetry, { accountId: "account.me" });
+  assert.equal(d.dealt.HeadShot, 34);
+  assert.equal(d.dealt.TorsoShot, 20);
+  assert.equal(d.dealt.total, 54);
+  assert.equal(d.dealt.hitCount, 2);
+});
+
+test("parseDamage aggregates taken damage and excludes blue-zone from body totals", () => {
+  const d = parseDamage(dmgTelemetry, { accountId: "account.me" });
+  assert.equal(d.taken.LegShot, 18);
+  assert.equal(d.taken.total, 18); // blue-zone 12 excluded
+});
+
+test("parseDamage builds a weapon breakdown and headshot-damage percent", () => {
+  const d = parseDamage(dmgTelemetry, { accountId: "account.me" });
+  assert.equal(d.dealtByWeapon[0].weapon, "M416");
+  assert.equal(d.dealtByWeapon[0].damage, 54);
+  assert.equal(d.headshotDamagePct, 63); // round(34/54*100)
+});
