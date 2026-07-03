@@ -3951,6 +3951,17 @@ body {
 
   &:active { cursor: grabbing; }
 
+  // Height fallback: iOS Safari collapses an aspect-ratio box to 0 height
+  // when all its children are absolutely positioned (as ours are), so the
+  // map disappears on phones. A padding-ratio spacer forces the square
+  // height everywhere; on browsers where aspect-ratio works it matches, so
+  // there is no visual change.
+  &::before {
+    content: "";
+    display: block;
+    padding-top: 100%;
+  }
+
   &__viewport {
     position: absolute;
     inset: 0;
