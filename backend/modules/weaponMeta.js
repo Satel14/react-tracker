@@ -197,6 +197,16 @@ function telemetryWeaponCategory(name) {
   return itemKey ? weaponCategory(itemKey) : "other";
 }
 
+// LogPlayerAttack.weapon.itemId uses the "Item_Weapon_*" key while
+// LogPlayerTakeDamage.damageCauserName uses the "Weap*" form. Collapse both to the
+// canonical "Item_Weapon_*" key so shots and hits for the same gun join on one row.
+// TODO(validate-before-deploy): confirm weapon normalizer keys against a real telemetry sample
+function canonicalWeaponKey(rawName) {
+  if (typeof rawName !== "string" || !rawName) return null;
+  if (rawName.startsWith("Weap")) return telemetryToItemKey(rawName) || rawName;
+  return rawName;
+}
+
 module.exports = {
   WEAPON_LABELS,
   WEAPON_CATEGORY,
@@ -207,4 +217,5 @@ module.exports = {
   telemetryToItemKey,
   telemetryWeaponName,
   telemetryWeaponCategory,
+  canonicalWeaponKey,
 };

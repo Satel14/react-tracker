@@ -1,7 +1,7 @@
 const { getMapMeta } = require("./mapMeta");
 const { loadMatchBundle } = require("./matchLoader");
 const { isFocalActor, readXY, eventTime } = require("./telemetryUtils");
-const { telemetryWeaponName, readableWeaponName } = require("./weaponMeta");
+const { telemetryWeaponName, readableWeaponName, canonicalWeaponKey } = require("./weaponMeta");
 
 const analysisCache = new Map();
 const ANALYSIS_CACHE_LIMIT = 30;
@@ -173,17 +173,18 @@ function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerNa
   const { accountKey, lowerName } = focalKeys({ accountId, playerName });
   const nameToTeam = buildNameToTeam(telemetry);
   const events = [];
-  const shotsByWeapon = new Map(); // label -> shots
-  const hitsByWeapon = new Map();  // label -> hits
+  const shotsByWeapon = new Map(); // canonical item key -> shots
+  const hitsByWeapon = new Map();  // canonical item key -> hits
   const takenTeamsByBucket = new Map(); // 15s bucket -> Set(teamId)
 
   for (const ev of Array.isArray(telemetry) ? telemetry : []) {
     const type = ev?._T;
     if (type === "LogPlayerAttack") {
       if (!isFocalActor(ev.attacker, accountKey, lowerName)) continue;
-      const label = readableWeaponName(ev.weapon?.itemId);
+      // TODO(validate-before-deploy): confirm weapon normalizer keys against a real telemetry sample
+      const key = canonicalWeaponKey(ev.weapon?.itemId);
       const count = Number(ev.fireWeaponStackCount) || 1;
-      shotsByWeapon.set(label, (shotsByWeapon.get(label) || 0) + count);
+      shotsByWeapon.set(key, (shotsByWeapon.get(key) || 0) + count);
       continue;
     }
     if (type === "LogPlayerTakeDamage") {
@@ -193,9 +194,9 @@ function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerNa
       const meDealt = isFocalActor(ev.attacker, accountKey, lowerName) && !isFocalActor(ev.victim, accountKey, lowerName);
       const meTaken = isFocalActor(ev.victim, accountKey, lowerName);
       if (meDealt) {
-        const label = telemetryWeaponName(ev.damageCauserName);
-        hitsByWeapon.set(label, (hitsByWeapon.get(label) || 0) + 1);
-        events.push({ t, kind: "dealt", opponent: ev.victim?.name || null, weapon: label, amount: Math.round(amount), region: ev.damageReason || null });
+        const key = canonicalWeaponKey(ev.damageCauserName);
+        hitsByWeapon.set(key, (hitsByWeapon.get(key) || 0) + 1);
+        events.push({ t, kind: "dealt", opponent: ev.victim?.name || null, weapon: telemetryWeaponName(ev.damageCauserName), amount: Math.round(amount), region: ev.damageReason || null });
       }
       if (meTaken && ev.attacker?.name) {
         events.push({ t, kind: "taken", opponent: ev.attacker.name, weapon: telemetryWeaponName(ev.damageCauserName), amount: Math.round(amount), region: ev.damageReason || null });
@@ -211,11 +212,14 @@ function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerNa
 
   events.sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
 
-  const labels = new Set([...shotsByWeapon.keys(), ...hitsByWeapon.keys()]);
-  const accuracy = [...labels].map((label) => {
-    const shots = shotsByWeapon.get(label) || 0;
-    const hits = hitsByWeapon.get(label) || 0;
-    return { weapon: label, shots, hits, pct: shots ? Math.round((hits / shots) * 100) : 0 };
+  const keys = new Set([...shotsByWeapon.keys(), ...hitsByWeapon.keys()]);
+  const accuracy = [...keys].map((key) => {
+    const shots = shotsByWeapon.get(key) || 0;
+    const hits = hitsByWeapon.get(key) || 0;
+    // Shotgun pellets produce more hits than trigger pulls, so raw accuracy can
+    // exceed 100%; clamp for display sanity.
+    const pct = shots ? Math.min(100, Math.round((hits / shots) * 100)) : 0;
+    return { weapon: readableWeaponName(key), shots, hits, pct };
   }).sort((a, b) => b.shots - a.shots);
 
   const thirdParties = [...takenTeamsByBucket.entries()]
