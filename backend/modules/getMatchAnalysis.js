@@ -115,7 +115,17 @@ function parseKillFeed(telemetry, { matchStartMs = 0, accountId = null, playerNa
 }
 
 const BODY_REGIONS = ["HeadShot", "TorsoShot", "ArmShot", "LegShot", "PelvisShot"];
-const WEAPON_DAMAGE_CATEGORIES = new Set(["Damage_Gun", "Damage_Melee", "Damage_Throwable", "Damage_Groggy"]);
+// TODO(validate-before-deploy): confirm damageTypeCategory/damageCauserName exclude-list against a real telemetry sample
+// We now exclude ONLY environmental / non-combat sources so that grenade, molotov, vehicle and
+// other explosion damage still counts toward combat totals.
+const NON_COMBAT_DAMAGE_CATEGORIES = new Set([
+  "Damage_BlueZone",
+  "Damage_Drown",
+  "Damage_RedZone",
+  "Damage_Explosion_RedZone",
+  "Damage_Fall",
+  "Damage_Instant_Fall",
+]);
 
 function emptyRegions() {
   return { HeadShot: 0, TorsoShot: 0, ArmShot: 0, LegShot: 0, PelvisShot: 0, total: 0, hitCount: 0 };
@@ -131,7 +141,7 @@ function parseDamage(telemetry, { accountId = null, playerName = null } = {}) {
     if (ev?._T !== "LogPlayerTakeDamage") continue;
     const amount = Number(ev.damage);
     if (!Number.isFinite(amount) || amount <= 0) continue;
-    if (!WEAPON_DAMAGE_CATEGORIES.has(ev.damageTypeCategory)) continue; // exclude blue zone / drown / red zone
+    if (NON_COMBAT_DAMAGE_CATEGORIES.has(ev.damageTypeCategory)) continue; // exclude blue zone / drown / red zone / fall
 
     const attacker = ev.attacker || null;
     const victim = ev.victim || null;
