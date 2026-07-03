@@ -1,7 +1,7 @@
 const { getMapMeta } = require("./mapMeta");
 const { loadMatchBundle } = require("./matchLoader");
 const { isFocalActor, readXY, eventTime } = require("./telemetryUtils");
-const { telemetryWeaponName } = require("./weaponMeta");
+const { telemetryWeaponName, readableWeaponName } = require("./weaponMeta");
 
 const analysisCache = new Map();
 const ANALYSIS_CACHE_LIMIT = 30;
@@ -169,6 +169,59 @@ function parseDamage(telemetry, { accountId = null, playerName = null } = {}) {
   return { dealt, taken, dealtByWeapon, headshotDamagePct };
 }
 
+function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerName = null } = {}) {
+  const { accountKey, lowerName } = focalKeys({ accountId, playerName });
+  const events = [];
+  const shotsByWeapon = new Map(); // label -> shots
+  const hitsByWeapon = new Map();  // label -> hits
+  const takenTeamsByBucket = new Map(); // 15s bucket -> Set(opponentName)
+
+  for (const ev of Array.isArray(telemetry) ? telemetry : []) {
+    const type = ev?._T;
+    if (type === "LogPlayerAttack") {
+      if (!isFocalActor(ev.attacker, accountKey, lowerName)) continue;
+      const label = readableWeaponName(ev.weapon?.itemId);
+      const count = Number(ev.fireWeaponStackCount) || 1;
+      shotsByWeapon.set(label, (shotsByWeapon.get(label) || 0) + count);
+      continue;
+    }
+    if (type === "LogPlayerTakeDamage") {
+      const amount = Number(ev.damage);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      const t = eventTime(ev, matchStartMs);
+      const meDealt = isFocalActor(ev.attacker, accountKey, lowerName) && !isFocalActor(ev.victim, accountKey, lowerName);
+      const meTaken = isFocalActor(ev.victim, accountKey, lowerName);
+      if (meDealt) {
+        const label = telemetryWeaponName(ev.damageCauserName);
+        hitsByWeapon.set(label, (hitsByWeapon.get(label) || 0) + 1);
+        events.push({ t, kind: "dealt", opponent: ev.victim?.name || null, weapon: label, amount: Math.round(amount), region: ev.damageReason || null });
+      }
+      if (meTaken && ev.attacker?.name) {
+        events.push({ t, kind: "taken", opponent: ev.attacker.name, weapon: telemetryWeaponName(ev.damageCauserName), amount: Math.round(amount), region: ev.damageReason || null });
+        const bucket = Math.floor((t || 0) / 15);
+        if (!takenTeamsByBucket.has(bucket)) takenTeamsByBucket.set(bucket, new Set());
+        takenTeamsByBucket.get(bucket).add(ev.attacker.name);
+      }
+    }
+  }
+
+  events.sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
+
+  const labels = new Set([...shotsByWeapon.keys(), ...hitsByWeapon.keys()]);
+  const accuracy = [...labels].map((label) => {
+    const shots = shotsByWeapon.get(label) || 0;
+    const hits = hitsByWeapon.get(label) || 0;
+    return { weapon: label, shots, hits, pct: shots ? Math.round((hits / shots) * 100) : 0 };
+  }).sort((a, b) => b.shots - a.shots);
+
+  const thirdParties = [...takenTeamsByBucket.entries()]
+    .filter(([, set]) => set.size >= 2)
+    .map(([bucket, set]) => ({ t: bucket * 15, teamCount: set.size }))
+    .sort((a, b) => a.t - b.t);
+
+  return { events, accuracy, thirdParties };
+}
+
 async function getMatchAnalysis({ shard, matchId, accountId = null, playerName = null }) {
   if (!matchId) throw new Error("matchId is required");
   const { matchShard, matchAttributes, matchPayload, telemetry } = await loadMatchBundle({ shard, matchId });
@@ -182,6 +235,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   const scoreboard = parseScoreboard(matchPayload, { accountId, playerName });
   const killFeed = parseKillFeed(telemetry, { matchStartMs, accountId, playerName });
   const damage = parseDamage(telemetry, { accountId, playerName });
+  const timeline = parseTimeline(telemetry, { matchStartMs, accountId, playerName });
 
   const result = {
     matchId,
@@ -195,6 +249,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
     scoreboard,
     killFeed,
     damage,
+    timeline,
   };
 
   analysisCache.set(cacheKey, result);
@@ -206,4 +261,4 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   return result;
 }
 
-module.exports = { getMatchAnalysis, parseScoreboard, parseKillFeed, parseDamage };
+module.exports = { getMatchAnalysis, parseScoreboard, parseKillFeed, parseDamage, parseTimeline };

@@ -113,3 +113,29 @@ test("parseDamage builds a weapon breakdown and headshot-damage percent", () => 
   assert.equal(d.dealtByWeapon[0].damage, 54);
   assert.equal(d.headshotDamagePct, 63); // round(34/54*100)
 });
+
+const { parseTimeline } = require("./getMatchAnalysis");
+
+const timelineTelemetry = [
+  // focal fires HK416 twice (2 shots in one attack event) and once more
+  { _T: "LogPlayerAttack", elapsedTime: 10, attacker: { accountId: "account.me", name: "Me" }, weapon: { itemId: "Item_Weapon_HK416_C" }, fireWeaponStackCount: 2 },
+  { _T: "LogPlayerAttack", elapsedTime: 12, attacker: { accountId: "account.me", name: "Me" }, weapon: { itemId: "Item_Weapon_HK416_C" }, fireWeaponStackCount: 1 },
+  // one of those shots lands
+  { _T: "LogPlayerTakeDamage", elapsedTime: 12, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 30, damageReason: "TorsoShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapHK416_C" },
+];
+
+test("parseTimeline computes per-weapon accuracy from shots and hits", () => {
+  const tl = parseTimeline(timelineTelemetry, { matchStartMs: 0, accountId: "account.me" });
+  const hk = tl.accuracy.find((a) => a.weapon === "M416");
+  assert.equal(hk.shots, 3); // 2 + 1
+  assert.equal(hk.hits, 1);
+  assert.equal(hk.pct, 33); // round(1/3*100)
+});
+
+test("parseTimeline records dealt combat events for the focal player", () => {
+  const tl = parseTimeline(timelineTelemetry, { matchStartMs: 0, accountId: "account.me" });
+  const dealt = tl.events.filter((e) => e.kind === "dealt");
+  assert.equal(dealt.length, 1);
+  assert.equal(dealt[0].opponent, "Foe");
+  assert.equal(dealt[0].amount, 30);
+});

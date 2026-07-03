@@ -4641,3 +4641,17 @@ body {
   &__weapons-head { font-weight: 600; margin-bottom: 6px; }
   &__weapon { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); font-size: 13px; }
 }
+
+.timeline {
+  &__empty { opacity: 0.7; padding: 12px; }
+  &__accuracy-head { font-weight: 600; margin-bottom: 6px; }
+  &__acc-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 6px; padding: 3px 0; font-size: 13px; }
+  &__acc-row--head { opacity: 0.6; text-transform: uppercase; font-size: 11px; }
+  &__third { margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  &__third-tag { background: rgba(255, 155, 155, 0.18); color: #ff9b9b; border-radius: 4px; padding: 2px 8px; font-size: 12px; }
+  &__events { list-style: none; margin: 10px 0 0; padding: 0; }
+  &__event { display: grid; grid-template-columns: 60px 1.5fr 1.5fr 60px; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); font-size: 13px; }
+  &__event.is-dealt { color: #78f7a8; }
+  &__event.is-taken { color: #ff9b9b; }
+  &__event-amount { text-align: right; }
+}

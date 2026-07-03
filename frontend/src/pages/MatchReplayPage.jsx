@@ -9,6 +9,7 @@ import MatchScoreboard from "../component/match/MatchScoreboard";
 import KillFeed from "../component/match/KillFeed";
 import KillMap from "../component/match/KillMap";
 import DamageBreakdown from "../component/match/DamageBreakdown";
+import CombatTimeline from "../component/match/CombatTimeline";
 import { getMatchReplay, getMatchAnalysis } from "../api/player";
 import { useReplayClock } from "../component/charts/useReplayClock";
 import { playersAt, activeKills, zoneAt, rosterAt } from "../component/charts/replayEngine";
@@ -177,6 +178,13 @@ const MatchReplayPage = ({ t }) => {
           label: t("pages.match.tabDamage"),
           children: renderAnalysisPane((a) => (
             <DamageBreakdown damage={a.damage} focalPresent={!!a.focalAccountId} t={t} />
+          )),
+        },
+        {
+          key: "timeline",
+          label: t("pages.match.tabTimeline"),
+          children: renderAnalysisPane((a) => (
+            <CombatTimeline timeline={a.timeline} focalPresent={!!a.focalAccountId} t={t} />
           )),
         },
       ]
