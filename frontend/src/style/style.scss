@@ -56,6 +56,7 @@ body {
     &-buttons {
       align-items: center;
       display: flex;
+      flex-wrap: wrap;
       justify-content: flex-end;
       gap: 8px;
 
@@ -405,13 +406,33 @@ body {
         }
 
         @media (max-width: 768px) {
+          // Horizontal scroll for the pill tabs, with a slim always-visible
+          // scrollbar so it's obvious more tabs sit off-screen. (Forcing
+          // flex-wrap here fights AntD's stretched-flex nav layout and makes
+          // wrapped rows overlap the content below, so we scroll instead.)
           .ant-tabs-nav-wrap {
             overflow-x: auto;
+            overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(120, 247, 168, 0.55) transparent;
 
             &::-webkit-scrollbar {
-              display: none;
+              height: 4px;
             }
+
+            &::-webkit-scrollbar-thumb {
+              background: rgba(120, 247, 168, 0.55);
+              border-radius: 2px;
+            }
+
+            &::-webkit-scrollbar-track {
+              background: transparent;
+            }
+          }
+
+          .ant-tabs-nav-operations {
+            display: none;
           }
 
           .ant-tabs-tab {
@@ -1502,6 +1523,16 @@ body {
       }
 
       @media (max-width: 480px) {
+        .playerpage-buttons {
+          justify-content: flex-start;
+          gap: 2px 6px;
+
+          .ant-btn {
+            padding-inline: 4px;
+            font-size: 12px;
+          }
+        }
+
         .player-card {
           padding: 12px;
         }
@@ -3917,6 +3948,10 @@ body {
     text-align: left;
     flex-direction: column;
 
+    > div {
+      overflow-wrap: anywhere;
+    }
+
     button {
       margin-top: 10px;
       display: block;
@@ -3934,6 +3969,7 @@ body {
     bottom: 16px;
     max-width: none;
     width: auto;
+    box-sizing: border-box;
     font-size: 13px;
     padding: 12px;
   }
@@ -3942,20 +3978,21 @@ body {
 .map-field {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
   overflow: hidden;
   border-radius: 12px;
   background: #080e18;
   cursor: grab;
   user-select: none;
+  touch-action: none;
 
   &:active { cursor: grabbing; }
 
-  // Height fallback: iOS Safari collapses an aspect-ratio box to 0 height
-  // when all its children are absolutely positioned (as ours are), so the
-  // map disappears on phones. A padding-ratio spacer forces the square
-  // height everywhere; on browsers where aspect-ratio works it matches, so
-  // there is no visual change.
+  // Square sizing via a padding-ratio spacer only (NO aspect-ratio). On iOS
+  // Safari, aspect-ratio makes the box height "definite" and — because every
+  // real child is absolutely positioned — it collapses to 0, so the map
+  // vanished on iPhone widths. The in-flow spacer (padding-top:100% of the
+  // width) is the canonical square technique and holds the height on every
+  // engine, including iOS.
   &::before {
     content: "";
     display: block;
@@ -4014,6 +4051,11 @@ body {
     pointer-events: none;
   }
   &__empty, &__loading { padding: 24px; text-align: center; opacity: 0.8; color: #d6e0f0; }
+
+  @media (max-width: 480px) {
+    &__controls { gap: 6px 12px; }
+    &__count { margin-left: 0; flex-basis: 100%; }
+  }
 }
 
 .match-replay {
@@ -4123,6 +4165,11 @@ body {
 
 @media (max-width: 760px) {
   .match-replay__layout { flex-direction: column; }
+  // In the column layout the stage no longer stretches (align-items:flex-start
+  // is inherited), so without an explicit width it shrinks to its content —
+  // and the map's children are all zero-width (absolute + padding spacer),
+  // collapsing the stage and the map to 0. Force full width.
+  .match-replay__stage { width: 100%; }
   .replay-roster { width: 100%; flex-basis: auto; max-height: 240px; }
 }
 
@@ -4175,11 +4222,27 @@ body {
   @media (max-width: 768px) {
     .ant-tabs-nav-wrap {
       overflow-x: auto;
+      overflow-y: hidden;
       -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(120, 247, 168, 0.55) transparent;
 
       &::-webkit-scrollbar {
-        display: none;
+        height: 4px;
       }
+
+      &::-webkit-scrollbar-thumb {
+        background: rgba(120, 247, 168, 0.55);
+        border-radius: 2px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+    }
+
+    .ant-tabs-nav-operations {
+      display: none;
     }
 
     .ant-tabs-tab {
@@ -4373,6 +4436,21 @@ body {
 
   &__select {
     min-width: 180px;
+  }
+
+  @media (max-width: 480px) {
+    max-width: none;
+
+    &__controls {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+
+    &__select {
+      min-width: 0;
+      width: 100%;
+    }
   }
 }
 
@@ -4807,7 +4885,8 @@ body {
     border-radius: 12px;
     overflow: hidden;
   }
-  &__field { aspect-ratio: 1 / 1; }
+  // No aspect-ratio here — the .map-field padding-spacer squares the box
+  // (aspect-ratio collapses to 0 on iOS Safari; see .map-field).
   &__canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   &__range {
     display: flex;
