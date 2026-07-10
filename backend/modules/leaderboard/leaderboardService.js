@@ -27,7 +27,7 @@ function createLeaderboardService({ doRequest, getSeasonCatalog, leaderboardCach
     }
 
     try {
-      const url = `https://api.pubg.com/shards/${region}/leaderboards/${targetSeasonId}/${gameMode}`;
+      const url = `https://api.pubg.com/shards/${region}/leaderboards/${encodeURIComponent(targetSeasonId)}/${gameMode}`;
       const raw = await doRequest(url);
       const data = {
         platform: region,

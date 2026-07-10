@@ -16,6 +16,11 @@ function createCorsOptions(rawValue) {
   const allowedOrigins = parseAllowedOrigins(rawValue);
 
   if (allowedOrigins.length === 0) {
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        "CORS_ORIGIN is not set; reflecting any origin. Set CORS_ORIGIN to a comma-separated whitelist in production."
+      );
+    }
     return { origin: true };
   }
 
