@@ -30,6 +30,9 @@ class Footer extends React.Component {
             <span>{t("footer.bugReport")}</span>
           </Link>
         </div>
+        <div className="copyright">
+          PUBG Tracker is not affiliated with KRAFTON, Inc. PUBG is a registered trademark of KRAFTON, Inc.
+        </div>
       </div>
     );
   }
