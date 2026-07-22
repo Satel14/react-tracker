@@ -289,8 +289,7 @@ function mapWeaponMastery(payload) {
     const damage = Math.round(toNumber(stats.DamagePlayer));
     const defeats = toInteger(stats.Defeats);
     const groggies = toInteger(stats.Groggies);
-    const longestKill = Math.round(toNumber(stats.LongestKill));
-    const longestDefeat = Math.round(toNumber(stats.LongestDefeat));
+    const longestKill = Math.round(toNumber(stats.LongestDefeat));
     return {
       raw: rawName,
       imageKey: weaponImageKey(rawName),
@@ -305,7 +304,6 @@ function mapWeaponMastery(payload) {
       defeats,
       groggies,
       longestKill,
-      longestDefeat,
       headshotRate: kills > 0 ? Number(((headshots / kills) * 100).toFixed(1)) : 0,
       avgDamagePerKill: kills > 0 ? Math.round(damage / kills) : 0,
     };
@@ -518,4 +516,5 @@ function createPlayerEnrichmentService({
 module.exports = {
   createPlayerEnrichmentService,
   createEmptyMatches,
+  mapWeaponMastery,
 };
