@@ -1,7 +1,7 @@
 const { validationResult, body, check, query, param } = require("express-validator");
 const MESSAGE = require("../constant/responseMessage")
 const ANY_CONFIG = require("../constant/anyConfig")
-const { parsePlayerRank } = require("../modules/getPlayerRank")
+const { parsePlayerRank, getPlayerExtras } = require("../modules/getPlayerRank")
 const { getLiveSnapshot } = require("../modules/getLiveSnapshot")
 const { getPlayerReports } = require("../modules/getPlayerReports")
 const { addRecentSearch, getRecentSearches } = require("../modules/recentSearches")
@@ -154,6 +154,24 @@ module.exports.getRecentSearches = async (_req, res) => {
   }
 };
 
+module.exports.getPlayerExtras = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res
+        .status(422)
+        .json({ status: 422, message: MESSAGE.VALIDATOR.ERROR });
+    }
+
+    const { platform, gameId } = req.body;
+    const data = await getPlayerExtras(platform, gameId);
+    return res.status(200).json({ status: 200, data });
+  } catch (e) {
+    return res.status(200).json({ status: 200, message: e.message });
+  }
+};
+
 module.exports.getPlayerCard = async (req, res) => {
   try {
     const { platform, gameId } = req.params || {};
@@ -263,6 +281,12 @@ module.exports.validate = (method) => {
       return [
         body("accountId").optional({ nullable: true }).isString(),
         body("playerName").optional({ nullable: true }).isString(),
+      ];
+    }
+    case "getPlayerExtras": {
+      return [
+        body("platform").exists().isIn(ANY_CONFIG.PLATFORMS),
+        body("gameId").exists().isString().isLength({ min: 1, max: 64 }),
       ];
     }
     case "getMatchReplay":
