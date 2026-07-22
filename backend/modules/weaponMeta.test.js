@@ -13,6 +13,11 @@ test("readableWeaponName maps Item_Weapon_* ids and falls back", () => {
   assert.equal(readableWeaponName(null), "Unknown");
 });
 
+test("readableWeaponName maps FNFal (the real SLR id) to the in-game name", () => {
+  assert.equal(readableWeaponName("Item_Weapon_FNFal_C"), "SLR");
+  assert.equal(telemetryWeaponName("WeapFNFal_C"), "SLR");
+});
+
 test("telemetryWeaponName bridges Weap*_C telemetry names to labels", () => {
   assert.equal(telemetryWeaponName("WeapAK47_C"), "AKM");
   assert.equal(telemetryWeaponName("WeapHK416_C"), "M416");
