@@ -283,13 +283,27 @@ function mapWeaponMastery(payload) {
     const xpTotal = toInteger(weaponData?.XPTotal);
     const levelCurrent = toInteger(weaponData?.LevelCurrent);
     const tierCurrent = toInteger(weaponData?.TierCurrent);
-    const stats = weaponData?.StatsTotal || {};
-    const kills = toInteger(stats.Kills);
-    const headshots = toInteger(stats.HeadShots);
-    const damage = Math.round(toNumber(stats.DamagePlayer));
-    const defeats = toInteger(stats.Defeats);
-    const groggies = toInteger(stats.Groggies);
-    const longestKill = Math.round(toNumber(stats.LongestDefeat));
+    // StatsTotal froze at patch 18.2 (2022); since then normal and ranked stats
+    // accumulate separately in OfficialStatsTotal / CompetitiveStatsTotal, so
+    // career totals are the sum of all three disjoint blocks.
+    const legacy = weaponData?.StatsTotal || {};
+    const official = weaponData?.OfficialStatsTotal || {};
+    const competitive = weaponData?.CompetitiveStatsTotal || {};
+    const blocks = [legacy, official, competitive];
+    const sumStat = (key) => blocks.reduce((acc, block) => acc + toNumber(block?.[key]), 0);
+
+    const kills = Math.round(sumStat("Kills"));
+    const headshots = Math.round(sumStat("HeadShots"));
+    const damage = Math.round(sumStat("DamagePlayer"));
+    const defeats = Math.round(sumStat("Defeats"));
+    const groggies = Math.round(sumStat("Groggies"));
+    const longestKill = Math.round(
+      Math.max(
+        toNumber(legacy.LongestDefeat),
+        toNumber(official.LongestKill),
+        toNumber(competitive.LongestKill)
+      )
+    );
     return {
       raw: rawName,
       imageKey: weaponImageKey(rawName),
