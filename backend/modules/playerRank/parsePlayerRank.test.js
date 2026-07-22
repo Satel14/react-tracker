@@ -31,8 +31,9 @@ test("a strict account.<32hex> id still takes the account-id branch (profile loo
   assert.equal(calls[0], `https://api.pubg.com/shards/steam/players/${strictId}`);
 });
 
-test("shouldReenrich short-circuits only for an 'ok' profile", () => {
+test("shouldReenrich short-circuits for 'ok' and 'deferred' profiles only", () => {
   assert.equal(shouldReenrich({ status: "ok" }), false);
+  assert.equal(shouldReenrich({ status: "deferred" }), false);
   assert.equal(shouldReenrich({ status: "partial" }), true);
   assert.equal(shouldReenrich({ status: "error" }), true);
   assert.equal(shouldReenrich({ status: "not_loaded" }), true);

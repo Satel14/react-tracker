@@ -31,7 +31,7 @@ const {
 } = require("./state");
 
 function shouldReenrich(profile) {
-  return !profile || profile.status !== "ok";
+  return !profile || (profile.status !== "ok" && profile.status !== "deferred");
 }
 
 function createProfileExtrasError(error, fallbackProfile = null) {
@@ -72,7 +72,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     doRequest,
   });
 
-  const { getProfileExtras } = createPlayerEnrichmentService({
+  const { getPlayerProfile, getMatchExtras } = createPlayerEnrichmentService({
     doRequest,
     clanCache,
     masteryCache,
@@ -100,7 +100,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     }
 
     try {
-      const profileExtras = await getProfileExtras({
+      const profileExtras = await getMatchExtras({
         shard,
         accountId,
         playerName,
@@ -230,14 +230,18 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     const requestKey = `${shard}:${requestedPlayerId}:${requestedSeasonId || "current"}`;
     const staleByRequest = getStalePlayerData(requestKey);
 
-    if (isRateLimited() && staleByRequest) {
-      console.log(`[PUBG] Rate-limit cooldown, serving stale cache for ${requestedPlayerId}`);
-      return staleByRequest;
-    }
-
     const inFlight = inFlightRankRequests.get(requestKey);
     if (inFlight) {
       return inFlight;
+    }
+
+    if (isRateLimited()) {
+      if (staleByRequest) {
+        console.log(`[PUBG] Rate-limit cooldown, serving stale cache for ${requestedPlayerId}`);
+        return staleByRequest;
+      }
+      console.log(`[PUBG] Rate-limit cooldown, failing fast for ${requestedPlayerId}`);
+      throw new Error("Rate Limit Reached");
     }
 
     const run = (async () => {
@@ -250,13 +254,19 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
         if (!accountId) {
           if (isStrictAccountId(requestedPlayerId)) {
             accountId = requestedPlayerId;
-            playerName = await ensurePlayerName(shard, accountId, requestedPlayerId);
-          } else {
-            if (isRateLimited() && staleByRequest) {
-              console.log(`[PUBG] Skipping resolve due to cooldown, stale cache for ${requestedPlayerId}`);
-              return staleByRequest;
+            try {
+              playerRecord = await getPlayerProfile(shard, accountId);
+            } catch (profileError) {
+              console.log(`[PUBG] Player profile unavailable for ${accountId}: ${profileError.message}`);
             }
-
+            const resolvedName = playerRecord?.attributes?.name;
+            if (typeof resolvedName === "string" && resolvedName.trim()) {
+              playerName = resolvedName.trim();
+              setCachedPlayerName(shard, accountId, playerName);
+            } else {
+              playerName = await ensurePlayerName(shard, accountId, requestedPlayerId);
+            }
+          } else {
             console.log(`[PUBG] Resolving player: ${requestedPlayerId}`);
             const searchUrl =
               `https://api.pubg.com/shards/${encodeSegment(shard)}/players?` +
@@ -420,7 +430,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
 
         let profileExtras = null;
         try {
-          profileExtras = await getProfileExtras({
+          profileExtras = await getMatchExtras({
             shard,
             accountId,
             playerName: displayPlayerName,

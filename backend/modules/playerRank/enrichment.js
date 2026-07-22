@@ -466,62 +466,6 @@ function createPlayerEnrichmentService({
     };
   }
 
-  async function getProfileExtras({ shard, accountId, playerName, playerRecord }) {
-    let profileRecord = playerRecord || null;
-    const errors = [];
-
-    if (!profileRecord) {
-      try {
-        profileRecord = await getPlayerProfile(shard, accountId);
-      } catch (e) {
-        console.log(`[PUBG] Player profile extras unavailable for ${accountId}: ${e.message}`);
-        errors.push(`profile: ${e.message}`);
-      }
-    }
-
-    const clanId = getClanIdFromPlayer(profileRecord);
-    const matchIds = getRecentMatchIds(profileRecord);
-
-    const [clanResult, masteryResult, weaponResult, matchesResult] = await Promise.allSettled([
-      getClan(shard, clanId),
-      getSurvivalMastery(shard, accountId),
-      getWeaponMastery(shard, accountId),
-      getRecentMatches(shard, matchIds, accountId, playerName),
-    ]);
-
-    if (clanResult.status === "rejected") {
-      console.log(`[PUBG] Clan data unavailable for ${playerName}: ${clanResult.reason.message}`);
-      errors.push(`clan: ${clanResult.reason.message}`);
-    }
-    if (masteryResult.status === "rejected") {
-      console.log(`[PUBG] Survival mastery unavailable for ${playerName}: ${masteryResult.reason.message}`);
-      errors.push(`survival mastery: ${masteryResult.reason.message}`);
-    }
-    if (weaponResult.status === "rejected") {
-      console.log(`[PUBG] Weapon mastery unavailable for ${playerName}: ${weaponResult.reason.message}`);
-      errors.push(`weapon mastery: ${weaponResult.reason.message}`);
-    }
-    if (matchesResult.status === "rejected") {
-      console.log(`[PUBG] Match history unavailable for ${playerName}: ${matchesResult.reason.message}`);
-      errors.push(`matches: ${matchesResult.reason.message}`);
-    }
-
-    return {
-      profile: {
-        status: errors.length > 0 ? "partial" : "ok",
-        error: errors.length > 0 ? errors.join("; ") : null,
-        banType: normalizeString(profileRecord?.attributes?.banType) || null,
-        clan: clanResult.status === "fulfilled" ? clanResult.value : null,
-        survivalMastery: masteryResult.status === "fulfilled" ? masteryResult.value : null,
-        weaponMastery: weaponResult.status === "fulfilled" ? weaponResult.value : null,
-      },
-      matches:
-        matchesResult.status === "fulfilled"
-          ? matchesResult.value
-          : createEmptyMatches(),
-    };
-  }
-
   async function getMatchExtras({ shard, accountId, playerName, playerRecord }) {
     let profileRecord = playerRecord || null;
     let profileError = null;
@@ -600,7 +544,6 @@ function createPlayerEnrichmentService({
 
   return {
     getPlayerProfile,
-    getProfileExtras,
     getMatchExtras,
     getMasteryExtras,
   };
