@@ -1,4 +1,4 @@
-import { normalizePlatform } from "../helpers/playerIdentity";
+import { isAccountIdentifier, normalizePlatform } from "../helpers/playerIdentity";
 
 const HISTORY_KEY = "history";
 const FAVORITES_KEY = "favorites";
@@ -87,7 +87,30 @@ function normalizeFavorite(payload = {}) {
   };
 }
 
-export const getHistory = async () => readObject(HISTORY_KEY);
+const isAccountOnlyHistoryEntry = (entry = {}) =>
+  isAccountIdentifier(String(entry?.nickname || "")) &&
+  (!entry?.gameId || isAccountIdentifier(String(entry.gameId)));
+
+export const getHistory = async () => {
+  const history = readObject(HISTORY_KEY);
+  const cleaned = {};
+  let dropped = false;
+
+  for (const [key, entry] of Object.entries(history)) {
+    if (isAccountOnlyHistoryEntry(entry)) {
+      dropped = true;
+      continue;
+    }
+    cleaned[key] = entry;
+  }
+
+  if (dropped) {
+    writeObject(HISTORY_KEY, cleaned);
+    emitHistoryUpdated(cleaned);
+  }
+
+  return cleaned;
+};
 
 export const addHistory = async (
   platform,

@@ -33,3 +33,45 @@ test("interleaved toggleFavorite calls keep every write (no lost update)", async
     "account.charlie",
   ]);
 });
+
+test("getHistory drops entries whose nickname and gameId are both account ids and persists the cleanup", async () => {
+  const bogusKey = "steam:account.fa405e76bea343a59dc8bc4d3cece7a6";
+  window.localStorage.setItem(
+    "history",
+    JSON.stringify({
+      [bogusKey]: {
+        id: bogusKey,
+        gameId: "account.fa405e76bea343a59dc8bc4d3cece7a6",
+        platform: "steam",
+        nickname: "account.fa405e76bea343a59dc8bc4d3cece7a6",
+        searchedAt: 1,
+      },
+      "steam:Neo": { id: "steam:Neo", gameId: "Neo", platform: "steam", nickname: "Neo", searchedAt: 2 },
+    })
+  );
+
+  const history = await getHistory();
+
+  expect(Object.keys(history)).toEqual(["steam:Neo"]);
+  expect(JSON.parse(window.localStorage.getItem("history"))).not.toHaveProperty(bogusKey);
+});
+
+test("getHistory keeps entries whose gameId is a proper handle even when the nickname is account-like", async () => {
+  window.localStorage.setItem(
+    "history",
+    JSON.stringify({
+      "steam:Trinity": {
+        id: "steam:Trinity",
+        gameId: "Trinity",
+        platform: "steam",
+        nickname: "account.aaaabbbbccccddddeeeeffff00001111",
+        searchedAt: 1,
+      },
+    })
+  );
+
+  const history = await getHistory();
+
+  expect(Object.keys(history)).toEqual(["steam:Trinity"]);
+  expect(JSON.parse(window.localStorage.getItem("history"))).toHaveProperty("steam:Trinity");
+});
