@@ -522,8 +522,87 @@ function createPlayerEnrichmentService({
     };
   }
 
+  async function getMatchExtras({ shard, accountId, playerName, playerRecord }) {
+    let profileRecord = playerRecord || null;
+    let profileError = null;
+
+    if (!profileRecord) {
+      try {
+        profileRecord = await getPlayerProfile(shard, accountId);
+      } catch (e) {
+        console.log(`[PUBG] Player profile unavailable for ${accountId}: ${e.message}`);
+        profileError = `profile: ${e.message}`;
+      }
+    }
+
+    const matchIds = getRecentMatchIds(profileRecord);
+    let matches = createEmptyMatches();
+    try {
+      matches = await getRecentMatches(shard, matchIds, accountId, playerName);
+    } catch (e) {
+      console.log(`[PUBG] Match history unavailable for ${playerName}: ${e.message}`);
+    }
+
+    return {
+      profile: {
+        status: "deferred",
+        error: profileError,
+        banType: normalizeString(profileRecord?.attributes?.banType) || null,
+        clan: null,
+        survivalMastery: null,
+        weaponMastery: null,
+      },
+      matches,
+    };
+  }
+
+  async function getMasteryExtras({ shard, accountId, playerName }) {
+    let profileRecord = null;
+    const errors = [];
+
+    try {
+      profileRecord = await getPlayerProfile(shard, accountId);
+    } catch (e) {
+      console.log(`[PUBG] Player profile unavailable for ${accountId}: ${e.message}`);
+      errors.push(`profile: ${e.message}`);
+    }
+
+    const clanId = getClanIdFromPlayer(profileRecord);
+
+    const [clanResult, masteryResult, weaponResult] = await Promise.allSettled([
+      getClan(shard, clanId),
+      getSurvivalMastery(shard, accountId),
+      getWeaponMastery(shard, accountId),
+    ]);
+
+    if (clanResult.status === "rejected") {
+      console.log(`[PUBG] Clan data unavailable for ${playerName}: ${clanResult.reason.message}`);
+      errors.push(`clan: ${clanResult.reason.message}`);
+    }
+    if (masteryResult.status === "rejected") {
+      console.log(`[PUBG] Survival mastery unavailable for ${playerName}: ${masteryResult.reason.message}`);
+      errors.push(`survival mastery: ${masteryResult.reason.message}`);
+    }
+    if (weaponResult.status === "rejected") {
+      console.log(`[PUBG] Weapon mastery unavailable for ${playerName}: ${weaponResult.reason.message}`);
+      errors.push(`weapon mastery: ${weaponResult.reason.message}`);
+    }
+
+    return {
+      status: errors.length > 0 ? "partial" : "ok",
+      error: errors.length > 0 ? errors.join("; ") : null,
+      banType: normalizeString(profileRecord?.attributes?.banType) || null,
+      clan: clanResult.status === "fulfilled" ? clanResult.value : null,
+      survivalMastery: masteryResult.status === "fulfilled" ? masteryResult.value : null,
+      weaponMastery: weaponResult.status === "fulfilled" ? weaponResult.value : null,
+    };
+  }
+
   return {
+    getPlayerProfile,
     getProfileExtras,
+    getMatchExtras,
+    getMasteryExtras,
   };
 }
 

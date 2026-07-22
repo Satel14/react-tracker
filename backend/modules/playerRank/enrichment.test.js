@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { mapWeaponMastery } = require("./enrichment");
+const { createPlayerEnrichmentService, mapWeaponMastery } = require("./enrichment");
 
 // Shape and values captured from a live weapon_mastery response (steam/Satel14, 2026-07-22).
 const REAL_PAYLOAD = {
@@ -125,4 +125,150 @@ test("handles a post-18.2-only weapon with an empty legacy block", () => {
   assert.equal(weapon.kills, 10);
   assert.equal(weapon.longestKill, 210);
   assert.equal(weapon.damage, 1301);
+});
+
+function createFakeDoRequest(routes) {
+  const calls = [];
+  const doRequest = async (url) => {
+    calls.push(url);
+    for (const [pattern, responder] of routes) {
+      if (url.includes(pattern)) {
+        const value = typeof responder === "function" ? responder(url) : responder;
+        if (value instanceof Error) throw value;
+        return value;
+      }
+    }
+    throw new Error(`unexpected url: ${url}`);
+  };
+  return { doRequest, calls };
+}
+
+function createService(doRequest) {
+  return createPlayerEnrichmentService({
+    doRequest,
+    clanCache: new Map(),
+    masteryCache: new Map(),
+    matchSummaryCache: new Map(),
+    profileCache: new Map(),
+    cacheDuration: 10 * 60 * 1000,
+  });
+}
+
+const ENRICH_ACCOUNT = "account." + "e".repeat(32);
+const PROFILE_WITH_CLAN = {
+  data: {
+    id: ENRICH_ACCOUNT,
+    attributes: { name: "EnrichNeo", banType: "Innocent", clanId: "clan.11" },
+    relationships: { matches: { data: [] } },
+  },
+};
+const PROFILE_NO_CLAN = {
+  data: {
+    id: ENRICH_ACCOUNT,
+    attributes: { name: "EnrichNeo", banType: "Innocent" },
+    relationships: { matches: { data: [] } },
+  },
+};
+
+test("getMatchExtras returns a deferred profile and fetches no clan/mastery", async () => {
+  const { doRequest, calls } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, status: 200, json: async () => PROFILE_WITH_CLAN }],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMatchExtras({
+    shard: "steam",
+    accountId: ENRICH_ACCOUNT,
+    playerName: "EnrichNeo",
+    playerRecord: null,
+  });
+
+  assert.equal(extras.profile.status, "deferred");
+  assert.equal(extras.profile.banType, "Innocent");
+  assert.equal(extras.profile.clan, null);
+  assert.equal(extras.profile.survivalMastery, null);
+  assert.equal(extras.profile.weaponMastery, null);
+  assert.equal(extras.matches.summary.total, 0);
+  assert.deepEqual(extras.matches.items, []);
+  assert.ok(calls.every((u) => !u.includes("clans") && !u.includes("mastery")));
+});
+
+test("getMatchExtras skips the profile fetch when a playerRecord is provided", async () => {
+  const { doRequest, calls } = createFakeDoRequest([]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMatchExtras({
+    shard: "steam",
+    accountId: ENRICH_ACCOUNT,
+    playerName: "EnrichNeo",
+    playerRecord: PROFILE_WITH_CLAN.data,
+  });
+
+  assert.equal(extras.profile.status, "deferred");
+  assert.equal(calls.length, 0);
+});
+
+test("getMasteryExtras returns ok with clan and both masteries", async () => {
+  const { doRequest, calls } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}/survival_mastery`, { ok: true, json: async () => ({ data: { attributes: {} } }) }],
+    [`/players/${ENRICH_ACCOUNT}/weapon_mastery`, { ok: true, json: async () => ({ data: { attributes: { weaponSummaries: {} } } }) }],
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => PROFILE_WITH_CLAN }],
+    ["/clans/clan.11", { ok: true, json: async () => ({ data: { attributes: { clanName: "Navi", clanTag: "NAVI", clanLevel: 5, clanMemberCount: 10 } } }) }],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMasteryExtras({
+    shard: "steam",
+    accountId: ENRICH_ACCOUNT,
+    playerName: "EnrichNeo",
+  });
+
+  assert.equal(extras.status, "ok");
+  assert.equal(extras.error, null);
+  assert.equal(extras.clan?.tag, "NAVI");
+  assert.ok(Array.isArray(extras.weaponMastery));
+  assert.ok(!("matches" in extras), "mastery extras must not carry matches");
+  assert.ok(calls.some((u) => u.includes("/clans/clan.11")));
+});
+
+test("getMasteryExtras degrades to partial when one sub-fetch fails, without throwing", async () => {
+  const { doRequest } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}/survival_mastery`, { ok: true, json: async () => ({ data: { attributes: {} } }) }],
+    [`/players/${ENRICH_ACCOUNT}/weapon_mastery`, new Error("boom 500")],
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => PROFILE_NO_CLAN }],
+  ]);
+  const service = createService(async (url) => {
+    const res = await doRequest(url);
+    return res.json();
+  });
+
+  const extras = await service.getMasteryExtras({
+    shard: "steam",
+    accountId: ENRICH_ACCOUNT,
+    playerName: "EnrichNeo",
+  });
+
+  assert.equal(extras.status, "partial");
+  assert.match(extras.error, /weapon mastery: boom 500/);
+  assert.notEqual(extras.survivalMastery, null);
+  assert.equal(extras.weaponMastery, null);
+});
+
+test("getMasteryExtras skips the clan fetch entirely when the player has no clan", async () => {
+  const { doRequest, calls } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}/survival_mastery`, { ok: true, json: async () => ({ data: { attributes: {} } }) }],
+    [`/players/${ENRICH_ACCOUNT}/weapon_mastery`, { ok: true, json: async () => ({ data: { attributes: { weaponSummaries: {} } } }) }],
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => PROFILE_NO_CLAN }],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMasteryExtras({
+    shard: "steam",
+    accountId: ENRICH_ACCOUNT,
+    playerName: "EnrichNeo",
+  });
+
+  assert.equal(extras.status, "ok");
+  assert.equal(extras.clan, null);
+  assert.ok(calls.every((u) => !u.includes("/clans/")));
 });
