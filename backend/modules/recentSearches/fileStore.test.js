@@ -7,11 +7,14 @@ const {
   addRecentSearch,
   getRecentSearches,
   __setRecentSearchesFile,
-} = require("./recentSearches");
+} = require("./index");
 
 let tmpFile;
+let savedDatabaseUrl;
 
 beforeEach(() => {
+  savedDatabaseUrl = process.env.DATABASE_URL;
+  delete process.env.DATABASE_URL; // force the file-store path
   tmpFile = path.join(
     os.tmpdir(),
     `recent-searches-${process.pid}-${Math.random().toString(36).slice(2)}.json`
@@ -20,6 +23,9 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  if (savedDatabaseUrl !== undefined) {
+    process.env.DATABASE_URL = savedDatabaseUrl;
+  }
   __setRecentSearchesFile(null); // restore the production target
   await fs.rm(tmpFile, { force: true });
 });
