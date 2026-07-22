@@ -37,3 +37,10 @@ test("ignores malformed extras payloads", () => {
 test("passes through null data", () => {
   expect(mergeProfileExtras(null, EXTRAS)).toBeNull();
 });
+
+test("keeps the known banType when partial extras carry null", () => {
+  const partial = { ...EXTRAS, status: "partial", banType: null };
+  const merged = mergeProfileExtras(DEFERRED_DATA, partial);
+  expect(merged.profile.banType).toBe("Innocent");
+  expect(merged.profile.status).toBe("partial");
+});

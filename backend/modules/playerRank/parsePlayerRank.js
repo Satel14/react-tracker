@@ -285,6 +285,10 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
             playerName = playerRecord.attributes.name;
             playerCache.set(playerCacheKey, accountId);
             setCachedPlayerName(shard, accountId, playerName);
+            playerProfileCache.set(`${shard}:${accountId}`, {
+              data: playerRecord,
+              timestamp: Date.now(),
+            });
           }
         } else {
           console.log(`[PUBG] Cache hit for player ID: ${requestedPlayerId} -> ${accountId}`);

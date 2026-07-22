@@ -7,6 +7,7 @@ export const mergeProfileExtras = (data, extras) => {
     profile: {
       ...data.profile,
       ...extras,
+      banType: extras.banType ?? data.profile.banType,
     },
   };
 };
