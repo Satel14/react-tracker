@@ -1,4 +1,5 @@
 backend/json/heatmap-points.json
+backend/json/last-searcheds.json
 
 # Local-only brainstorming specs/plans
 docs/superpowers/
