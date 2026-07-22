@@ -21,10 +21,11 @@ import {
   HomeOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getPlayerData, getPlayerReports } from "../api/player";
+import { getPlayerData, getPlayerReports, getPlayerExtras } from "../api/player";
 import { resolveAbsoluteApiUrl } from "../api/config";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
+import { mergeProfileExtras } from "../helpers/playerExtras";
 import { getCurrentLocale } from "../helpers/locale";
 import { classifyPlayerError } from "../helpers/playerError";
 import { resolveHistoryCandidate } from "../helpers/playerHistory";
@@ -436,6 +437,27 @@ const PlayerPage = ({ t }) => {
   }, [data?.platformInfo?.platformUserId, data?.platformInfo?.platformUserHandle, gameId, fetchReports]);
 
   useEffect(() => {
+    if (data?.profile?.status !== "deferred") return undefined;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await getPlayerExtras(platform, gameId);
+        const payload = response?.data ?? null;
+        if (!cancelled && payload) {
+          setData((prev) => mergeProfileExtras(prev, payload));
+        }
+      } catch (_e) {
+        // Extras are optional enrichment; the page keeps its deferred state.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data?.profile?.status, platform, gameId]);
+
+  useEffect(() => {
     const candidate = resolveHistoryCandidate({ data, routeGameId: gameId, routePlatform: platform });
     if (!candidate) return;
 
@@ -771,7 +793,9 @@ const PlayerPage = ({ t }) => {
 
   const renderWeaponsCard = () => {
     if (!weaponMastery.length) {
-      return renderEmptyCard(t("pages.weapons.title"), t("pages.weapons.empty"));
+      const emptyMessage =
+        profile?.status === "deferred" ? t("pages.weapons.loading") : t("pages.weapons.empty");
+      return renderEmptyCard(t("pages.weapons.title"), emptyMessage);
     }
 
     const maxKills = Math.max(...weaponMastery.map((w) => w.kills || 0), 1);

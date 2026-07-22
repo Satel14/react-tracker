@@ -116,6 +116,7 @@
       "title": "Weapon Mastery",
       "subtitle": "{count} weapons tracked",
       "empty": "Weapon mastery data is not available yet.",
+      "loading": "Loading weapon stats…",
       "kills": "Kills",
       "headshots": "Headshots",
       "headshotRate": "HS %",

@@ -30,6 +30,9 @@ export const getPlayerReports = (accountId, playerName) =>
     true
   );
 
+export const getPlayerExtras = (platform, gameId) =>
+  post("/player/extras", { platform, gameId }, false);
+
 export const getLiveSnapshot = () =>
   get("/player/live", true);
 
