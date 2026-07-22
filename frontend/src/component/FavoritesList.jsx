@@ -17,6 +17,7 @@ import {
   removeFavorite,
 } from "../cookie/store";
 import { getIconComponentPlatfrom, getPlatformAvatar } from "../helpers/other";
+import { resolveRouteIdentifier } from "../helpers/playerIdentity";
 
 const MAX_COMPARE_SLOTS = 3;
 
@@ -85,7 +86,7 @@ const FavoritesList = ({ t }) => {
     selectedIds.slice(0, MAX_COMPARE_SLOTS).forEach((id, index) => {
       const item = lookup[id];
       if (!item) return;
-      const playerId = item.gameId || item.accountId || item.id;
+      const playerId = resolveRouteIdentifier(item) || item.id;
       const platform = item.platform || "steam";
       params.set(`p${index + 1}`, `${platform}:${playerId}`);
     });
@@ -161,7 +162,7 @@ const FavoritesList = ({ t }) => {
 
         <div className="favorites-list__grid">
           {entries.map((item, index) => {
-            const playerId = item?.gameId || item?.accountId || item?.id;
+            const playerId = resolveRouteIdentifier(item) || item?.id;
             const playerNickname = item?.nickname || playerId || "Unknown";
             const playerPlatform = item?.platform || "steam";
             const displayPlatform = playerPlatform === "xbl" ? "xbox" : playerPlatform;

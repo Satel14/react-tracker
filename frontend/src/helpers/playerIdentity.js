@@ -46,3 +46,9 @@ export const resolvePreferredPlayerName = (apiHandle, routeHandle) => {
 
   return resolved || "";
 };
+
+export const resolveRouteIdentifier = (item = {}) => {
+  const nickname = String(item?.nickname || "").trim();
+  if (nickname && !isAccountIdentifier(nickname)) return nickname;
+  return String(item?.gameId || item?.accountId || item?.id || "").trim();
+};
