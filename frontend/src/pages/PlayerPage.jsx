@@ -27,7 +27,7 @@ import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from 
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
 import { getCurrentLocale } from "../helpers/locale";
 import { classifyPlayerError } from "../helpers/playerError";
-import { shouldRecordHistory } from "../helpers/playerHistory";
+import { resolveHistoryCandidate } from "../helpers/playerHistory";
 import { statNumber, statDisplay } from "../helpers/playerStats";
 import openNotification from "../component/Notification";
 import MapsTab from "./MapsTab";
@@ -436,35 +436,19 @@ const PlayerPage = ({ t }) => {
   }, [data?.platformInfo?.platformUserId, data?.platformInfo?.platformUserHandle, gameId, fetchReports]);
 
   useEffect(() => {
-    const accountId = data?.platformInfo?.platformUserId || gameId || null;
-    const playerName = resolvePreferredPlayerName(data?.platformInfo?.platformUserHandle, gameId) || null;
-    const avatarUrl = data?.platformInfo?.avatarUrl || null;
-    const rankedInfo = data?.season?.rankedInfo || null;
-    const platformSlug = platform || data?.platformInfo?.platformSlug || "steam";
-    const historyLookupId = playerName || accountId || null;
-
-    if (!historyLookupId) return;
-
-    const activeSeasonId = data?.season?.id || data?.selectedSeasonId || null;
-    if (!shouldRecordHistory({ activeSeasonId, seasons: data?.seasons })) return;
+    const candidate = resolveHistoryCandidate({ data, routeGameId: gameId, routePlatform: platform });
+    if (!candidate) return;
 
     addHistory(
-      platformSlug,
-      historyLookupId,
-      playerName || historyLookupId,
-      avatarUrl,
-      rankedInfo?.iconUrl || rankedInfo?.iconFallbackUrl || null,
-      rankedInfo?.label || null,
-      rankedInfo?.currentRankPoint ?? null
+      candidate.platform,
+      candidate.gameId,
+      candidate.nickname,
+      candidate.avatar,
+      candidate.rankIconUrl,
+      candidate.rankLabel,
+      candidate.rating
     );
-  }, [
-    data?.platformInfo?.platformUserId,
-    data?.platformInfo?.platformUserHandle,
-    data?.platformInfo?.avatarUrl,
-    data?.platformInfo?.platformSlug,
-    platform,
-    gameId,
-  ]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, platform, gameId]);
 
   useEffect(() => {
     syncFavoriteState();
