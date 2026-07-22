@@ -44,7 +44,7 @@ function stubRouter() {
 
 test("an account-id lookup fetches /players/{id} exactly once across resolve and enrichment", async () => {
   const calls = stubRouter();
-  const parse = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
+  const { parsePlayerRank: parse } = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
 
   const payload = await parse("kakao", STRICT_ID, {});
 

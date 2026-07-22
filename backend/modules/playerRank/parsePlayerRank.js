@@ -28,6 +28,9 @@ const {
   setStalePlayerData,
   statsCache,
   steamAvatarCache,
+  extrasCache,
+  inFlightExtrasRequests,
+  EXTRAS_RETRY_COOLDOWN_MS,
 } = require("./state");
 
 function shouldReenrich(profile) {
@@ -72,7 +75,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     doRequest,
   });
 
-  const { getPlayerProfile, getMatchExtras } = createPlayerEnrichmentService({
+  const { getPlayerProfile, getMatchExtras, getMasteryExtras } = createPlayerEnrichmentService({
     doRequest,
     clanCache,
     masteryCache,
@@ -223,7 +226,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     };
   }
 
-  return async (platform, gameid, options = {}) => {
+  const parsePlayerRank = async (platform, gameid, options = {}) => {
     const shard = resolveShard(platform);
     const requestedSeasonId = normalizeSeasonId(options?.seasonId);
     const requestedPlayerId = String(gameid || "").trim();
@@ -487,6 +490,72 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     inFlightRankRequests.set(requestKey, run);
     return run;
   };
+
+  async function resolveAccountId(shard, requestedPlayerId) {
+    const playerCacheKey = `${shard}:${requestedPlayerId}`;
+    const cached = playerCache.get(playerCacheKey);
+    if (cached) return cached;
+    if (isStrictAccountId(requestedPlayerId)) return requestedPlayerId;
+
+    const searchUrl =
+      `https://api.pubg.com/shards/${encodeSegment(shard)}/players?` +
+      `filter[playerNames]=${encodeSegment(requestedPlayerId)}`;
+    const searchData = await doRequest(searchUrl);
+    if (!searchData.data || searchData.data.length === 0) {
+      throw new Error("Player not found");
+    }
+    const record = searchData.data[0];
+    playerCache.set(playerCacheKey, record.id);
+    setCachedPlayerName(shard, record.id, record.attributes.name);
+    return record.id;
+  }
+
+  async function getPlayerExtras(platform, gameid) {
+    const shard = resolveShard(platform);
+    const requestedPlayerId = String(gameid || "").trim();
+    if (!requestedPlayerId) throw new Error("Player not found");
+
+    let accountId;
+    if (isRateLimited()) {
+      accountId = playerCache.get(`${shard}:${requestedPlayerId}`) ||
+        (isStrictAccountId(requestedPlayerId) ? requestedPlayerId : null);
+      if (!accountId) throw new Error("Rate Limit Reached");
+    } else {
+      accountId = await resolveAccountId(shard, requestedPlayerId);
+    }
+
+    const extrasKey = `${shard}:${accountId}`;
+    const cached = extrasCache.get(extrasKey);
+    if (cached) {
+      const age = Date.now() - cached.timestamp;
+      const maxAge = cached.data?.status === "ok" ? CACHE_DURATION : EXTRAS_RETRY_COOLDOWN_MS;
+      if (age < maxAge) return cached.data;
+    }
+
+    if (isRateLimited()) {
+      if (cached) return cached.data;
+      throw new Error("Rate Limit Reached");
+    }
+
+    const inFlight = inFlightExtrasRequests.get(extrasKey);
+    if (inFlight) return inFlight;
+
+    const run = (async () => {
+      try {
+        const playerName = getCachedPlayerName(shard, accountId) || requestedPlayerId;
+        const extras = await getMasteryExtras({ shard, accountId, playerName });
+        extrasCache.set(extrasKey, { data: extras, timestamp: Date.now() });
+        return extras;
+      } finally {
+        inFlightExtrasRequests.delete(extrasKey);
+      }
+    })();
+
+    inFlightExtrasRequests.set(extrasKey, run);
+    return run;
+  }
+
+  return { parsePlayerRank, getPlayerExtras };
 }
 
 module.exports = {

@@ -14,7 +14,7 @@ function stub404() {
   return calls;
 }
 
-const parse = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
+const { parsePlayerRank: parse } = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
 
 test("a malformed account.* handle is treated as a name, never interpolated raw into /players/<id>", async () => {
   const calls = stub404();

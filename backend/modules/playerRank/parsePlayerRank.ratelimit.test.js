@@ -12,9 +12,21 @@ test("during cooldown with no stale data the lookup fails fast without upstream 
     calls.push(url);
     return { ok: false, status: 429, statusText: "Too Many Requests", json: async () => ({}) };
   };
-  const parse = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
+  const { parsePlayerRank: parse } = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
 
   setRateLimited();
   await assert.rejects(parse("steam", "CooldownNoStaleNeo", {}), /Rate Limit/);
   assert.equal(calls.length, 0, "no upstream request may fire during cooldown");
+});
+
+test("getPlayerExtras fails fast during cooldown when nothing is cached", async () => {
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(url);
+    return { ok: false, status: 429, statusText: "Too Many Requests", json: async () => ({}) };
+  };
+  const { getPlayerExtras } = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
+
+  await assert.rejects(getPlayerExtras("steam", "CooldownExtrasNeo"), /Rate Limit/);
+  assert.equal(calls.length, 0);
 });
