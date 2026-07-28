@@ -845,7 +845,6 @@ const PlayerPage = ({ t }) => {
                   <div className="player-weapon-card__stats">
                     <div><span>{t("pages.weapons.kills")}</span><strong>{weapon.kills.toLocaleString()}</strong></div>
                     <div><span>{t("pages.weapons.headshots")}</span><strong>{weapon.headshots.toLocaleString()}</strong></div>
-                    <div><span>{t("pages.weapons.headshotRate")}</span><strong>{weapon.headshotRate}%</strong></div>
                     <div><span>{t("pages.weapons.damage")}</span><strong>{weapon.damage.toLocaleString()}</strong></div>
                     <div><span>{t("pages.weapons.dmgPerKill")}</span><strong>{weapon.avgDamagePerKill}</strong></div>
                     <div><span>{t("pages.weapons.knockouts")}</span><strong>{weapon.groggies.toLocaleString()}</strong></div>

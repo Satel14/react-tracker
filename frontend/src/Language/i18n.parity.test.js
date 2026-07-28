@@ -36,3 +36,13 @@ test("the menu block exposes identical keys in en and ua", () => {
   const uaMenuKeys = [...flattenKeys(ua.menu ?? {})].sort();
   expect(uaMenuKeys).toEqual(enMenuKeys);
 });
+
+// The weapon-mastery payload counts headshot HITS, so no HS % tile exists and
+// neither locale may keep a label for one.
+test("the weapons block matches across locales and defines no headshot rate label", () => {
+  const enWeaponKeys = [...flattenKeys(en.pages?.weapons ?? {})].sort();
+  const uaWeaponKeys = [...flattenKeys(ua.pages?.weapons ?? {})].sort();
+  expect(uaWeaponKeys).toEqual(enWeaponKeys);
+  expect(enWeaponKeys).not.toContain("headshotRate");
+  expect(uaWeaponKeys).not.toContain("headshotRate");
+});

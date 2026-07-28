@@ -2,6 +2,27 @@ const { buildFallbackAvatarDataUri } = require("./avatar");
 const { extractRankedInfo } = require("./ranked");
 const { toSeasonLabel } = require("./season");
 
+const UNKNOWN_DISPLAY = "—";
+
+// Verified against live rankedGameModeStats payloads (steam/Satel14 and
+// steam/CHESTER93, 2026-07-28): ranked only populates kills, deaths, damageDealt,
+// dBNOs, assists, wins, roundsPlayed and top10Ratio. Every aggregate listed here
+// comes back as a literal 0, so a ranked source must never feed it — summing the
+// zeros in poisoned the combined season rates (a 75% headshot rate read as 1.9%).
+const RANKED_UNREPORTED_FIELDS = [
+  "totalHeadshots",
+  "totalTime",
+  "maxKillDistance",
+  "longestSurvival",
+  "totalRevives",
+  "totalHeals",
+  "totalBoosts",
+  "totalTeamKills",
+  "totalVehicleDestroys",
+  "totalRoadKills",
+  "totalSuicides",
+];
+
 function formatSurvivalTime(seconds) {
   const totalSeconds = Number(seconds) || 0;
   const hours = Math.floor(totalSeconds / 3600);
@@ -9,7 +30,23 @@ function formatSurvivalTime(seconds) {
   return `${hours}h ${minutes}m`;
 }
 
-function aggregateModeStats(gameModeStats = {}) {
+function isReported(source, field) {
+  return Boolean(source) && source[field] !== null && source[field] !== undefined;
+}
+
+const sumValues = (values) => values.reduce((acc, value) => acc + value, 0);
+const maxValues = (values) => values.reduce((acc, value) => Math.max(acc, value), 0);
+
+// Only the sources that report a field may contribute to it; when none of them
+// has a single match behind it there is nothing to show, hence null (em dash).
+function combineReportedField(sources, field, reduce) {
+  const reporting = sources.filter((source) => isReported(source, field));
+  if (!reporting.length) return null;
+  if (!reporting.some((source) => (source.totalMatches || 0) > 0)) return null;
+  return reduce(reporting.map((source) => Number(source[field]) || 0));
+}
+
+function aggregateModeStats(gameModeStats = {}, { unreportedFields = [] } = {}) {
   let totalKills = 0;
   let totalWins = 0;
   let totalTime = 0;
@@ -60,7 +97,7 @@ function aggregateModeStats(gameModeStats = {}) {
   const top10Rate = totalMatches > 0 ? Number(((totalTop10s / totalMatches) * 100).toFixed(1)) : 0;
   const headshotRate = totalKills > 0 ? Number(((totalHeadshots / totalKills) * 100).toFixed(1)) : 0;
 
-  return {
+  const aggregated = {
     totalKills,
     totalDeaths,
     totalWins,
@@ -87,29 +124,44 @@ function aggregateModeStats(gameModeStats = {}) {
     top10Rate,
     headshotRate,
   };
+
+  unreportedFields.forEach((field) => {
+    aggregated[field] = null;
+  });
+  if (aggregated.totalHeadshots === null) aggregated.headshotRate = null;
+
+  return aggregated;
 }
 
 function combineAggregatedStats(a, b) {
+  const sources = [a, b].filter(Boolean);
   const merged = {
     totalKills: (a?.totalKills || 0) + (b?.totalKills || 0),
     totalWins: (a?.totalWins || 0) + (b?.totalWins || 0),
-    totalTime: (a?.totalTime || 0) + (b?.totalTime || 0),
+    totalTime: combineReportedField(sources, "totalTime", sumValues),
     totalDamage: (a?.totalDamage || 0) + (b?.totalDamage || 0),
     totalMatches: (a?.totalMatches || 0) + (b?.totalMatches || 0),
-    totalHeadshots: (a?.totalHeadshots || 0) + (b?.totalHeadshots || 0),
-    maxKillDistance: Math.max(a?.maxKillDistance || 0, b?.maxKillDistance || 0),
-    totalRevives: (a?.totalRevives || 0) + (b?.totalRevives || 0),
+    totalHeadshots: combineReportedField(sources, "totalHeadshots", sumValues),
+    maxKillDistance: combineReportedField(sources, "maxKillDistance", maxValues),
+    totalRevives: combineReportedField(sources, "totalRevives", sumValues),
     totalAssists: (a?.totalAssists || 0) + (b?.totalAssists || 0),
     totalDBNOs: (a?.totalDBNOs || 0) + (b?.totalDBNOs || 0),
-    totalHeals: (a?.totalHeals || 0) + (b?.totalHeals || 0),
-    totalBoosts: (a?.totalBoosts || 0) + (b?.totalBoosts || 0),
-    totalVehicleDestroys: (a?.totalVehicleDestroys || 0) + (b?.totalVehicleDestroys || 0),
-    totalRoadKills: (a?.totalRoadKills || 0) + (b?.totalRoadKills || 0),
+    totalHeals: combineReportedField(sources, "totalHeals", sumValues),
+    totalBoosts: combineReportedField(sources, "totalBoosts", sumValues),
+    totalVehicleDestroys: combineReportedField(sources, "totalVehicleDestroys", sumValues),
+    totalRoadKills: combineReportedField(sources, "totalRoadKills", sumValues),
     totalTop10s: (a?.totalTop10s || 0) + (b?.totalTop10s || 0),
-    totalTeamKills: (a?.totalTeamKills || 0) + (b?.totalTeamKills || 0),
-    totalSuicides: (a?.totalSuicides || 0) + (b?.totalSuicides || 0),
-    longestSurvival: Math.max(a?.longestSurvival || 0, b?.longestSurvival || 0),
+    totalTeamKills: combineReportedField(sources, "totalTeamKills", sumValues),
+    totalSuicides: combineReportedField(sources, "totalSuicides", sumValues),
+    longestSurvival: combineReportedField(sources, "longestSurvival", maxValues),
   };
+
+  // Headshots are only known for the kills of the sources that report them, so
+  // ranked kills must stay out of the denominator.
+  const headshotKillSample = sources.reduce(
+    (acc, source) => acc + (isReported(source, "totalHeadshots") ? source.totalKills || 0 : 0),
+    0
+  );
 
   const totalDeaths = Math.max(merged.totalMatches - merged.totalWins, 0);
   const kd = totalDeaths > 0 ? Number((merged.totalKills / totalDeaths).toFixed(2)) : Number(merged.totalKills.toFixed(2));
@@ -117,7 +169,12 @@ function combineAggregatedStats(a, b) {
   const wlPercentage = merged.totalMatches > 0 ? Number(((merged.totalWins / merged.totalMatches) * 100).toFixed(1)) : 0;
   const killsPerMatch = merged.totalMatches > 0 ? Number((merged.totalKills / merged.totalMatches).toFixed(2)) : 0;
   const top10Rate = merged.totalMatches > 0 ? Number(((merged.totalTop10s / merged.totalMatches) * 100).toFixed(1)) : 0;
-  const headshotRate = merged.totalKills > 0 ? Number(((merged.totalHeadshots / merged.totalKills) * 100).toFixed(1)) : 0;
+  const headshotRate =
+    merged.totalHeadshots === null
+      ? null
+      : headshotKillSample > 0
+        ? Number(((merged.totalHeadshots / headshotKillSample) * 100).toFixed(1))
+        : 0;
 
   return {
     ...merged,
@@ -178,7 +235,10 @@ function mergeModeStatsMaps(normal = {}, ranked = {}) {
 // and avgSurvivalTime instead of timeSurvived / top10s, and omits roadKills,
 // vehicleDestroys, suicides and longestTimeSurvived. Map ranked field names onto
 // the normal-mode schema so aggregation and merging sum compatible units.
-// TODO(validate-before-deploy): confirm rankedGameModeStats field names/mapping against a real ranked API sample
+// Validated against live ranked payloads (2026-07-28): these field names are
+// correct, but PUBG returns a literal 0 for headshotKills, longestKill, playTime,
+// revives, heals, boosts and teamKills, so the derived rates were the broken part
+// — see RANKED_UNREPORTED_FIELDS, which keeps those zeros out of the totals.
 function normalizeRankedModeStats(rankedGameModeStats = {}) {
   const normalized = {};
   Object.entries(rankedGameModeStats || {}).forEach(([modeKey, stats]) => {
@@ -233,12 +293,19 @@ function mapModeGroupsToFrontend(gameModeStats = {}) {
   return modes;
 }
 
+// An unknown stat must never render as a real measurement (0 / 0% / 0h).
+function statOrUnknown(value, format) {
+  if (value === null || value === undefined) {
+    return { displayValue: UNKNOWN_DISPLAY, value: null };
+  }
+  return { displayValue: format(value), value };
+}
+
+const asCount = (value) => value.toLocaleString();
+
 function mapAggregatedStatsToFrontend(aggregated) {
   return {
-    timePlayed: {
-      displayValue: Math.round(aggregated.totalTime / 3600) + "h",
-      value: aggregated.totalTime,
-    },
+    timePlayed: statOrUnknown(aggregated.totalTime, (value) => Math.round(value / 3600) + "h"),
     kills: {
       displayValue: aggregated.totalKills.toLocaleString(),
       value: aggregated.totalKills,
@@ -263,18 +330,9 @@ function mapAggregatedStatsToFrontend(aggregated) {
       displayValue: aggregated.totalMatches.toLocaleString(),
       value: aggregated.totalMatches,
     },
-    mvp: {
-      displayValue: aggregated.totalRevives.toLocaleString(),
-      value: aggregated.totalRevives,
-    },
-    headshotPct: {
-      displayValue: aggregated.totalHeadshots.toLocaleString(),
-      value: aggregated.totalHeadshots,
-    },
-    headshotRate: {
-      displayValue: aggregated.headshotRate + "%",
-      value: aggregated.headshotRate,
-    },
+    mvp: statOrUnknown(aggregated.totalRevives, asCount),
+    headshotPct: statOrUnknown(aggregated.totalHeadshots, asCount),
+    headshotRate: statOrUnknown(aggregated.headshotRate, (value) => value + "%"),
     damage: {
       displayValue: Math.round(aggregated.totalDamage).toLocaleString(),
       value: aggregated.totalDamage,
@@ -295,14 +353,8 @@ function mapAggregatedStatsToFrontend(aggregated) {
       displayValue: aggregated.killsPerMatch.toFixed(2),
       value: aggregated.killsPerMatch,
     },
-    longestKill: {
-      displayValue: Math.round(aggregated.maxKillDistance) + "m",
-      value: aggregated.maxKillDistance,
-    },
-    longestSurvival: {
-      displayValue: formatSurvivalTime(aggregated.longestSurvival),
-      value: aggregated.longestSurvival,
-    },
+    longestKill: statOrUnknown(aggregated.maxKillDistance, (value) => Math.round(value) + "m"),
+    longestSurvival: statOrUnknown(aggregated.longestSurvival, formatSurvivalTime),
     assists: {
       displayValue: aggregated.totalAssists.toLocaleString(),
       value: aggregated.totalAssists,
@@ -315,30 +367,12 @@ function mapAggregatedStatsToFrontend(aggregated) {
       displayValue: aggregated.totalTop10s.toLocaleString(),
       value: aggregated.totalTop10s,
     },
-    heals: {
-      displayValue: aggregated.totalHeals.toLocaleString(),
-      value: aggregated.totalHeals,
-    },
-    boosts: {
-      displayValue: aggregated.totalBoosts.toLocaleString(),
-      value: aggregated.totalBoosts,
-    },
-    vehicleDestroys: {
-      displayValue: aggregated.totalVehicleDestroys.toLocaleString(),
-      value: aggregated.totalVehicleDestroys,
-    },
-    roadKills: {
-      displayValue: aggregated.totalRoadKills.toLocaleString(),
-      value: aggregated.totalRoadKills,
-    },
-    teamKills: {
-      displayValue: aggregated.totalTeamKills.toLocaleString(),
-      value: aggregated.totalTeamKills,
-    },
-    suicides: {
-      displayValue: aggregated.totalSuicides.toLocaleString(),
-      value: aggregated.totalSuicides,
-    },
+    heals: statOrUnknown(aggregated.totalHeals, asCount),
+    boosts: statOrUnknown(aggregated.totalBoosts, asCount),
+    vehicleDestroys: statOrUnknown(aggregated.totalVehicleDestroys, asCount),
+    roadKills: statOrUnknown(aggregated.totalRoadKills, asCount),
+    teamKills: statOrUnknown(aggregated.totalTeamKills, asCount),
+    suicides: statOrUnknown(aggregated.totalSuicides, asCount),
   };
 }
 
@@ -403,7 +437,9 @@ function mapPubgStatsToFrontend(
     const normalizedRankedModeStats = hasRanked ? normalizeRankedModeStats(rankedModeStats) : {};
 
     const normalAggregated = aggregateModeStats(normalModeStats);
-    const rankedAggregated = hasRanked ? aggregateModeStats(normalizedRankedModeStats) : null;
+    const rankedAggregated = hasRanked
+      ? aggregateModeStats(normalizedRankedModeStats, { unreportedFields: RANKED_UNREPORTED_FIELDS })
+      : null;
     const combinedAggregated = hasRanked
       ? combineAggregatedStats(normalAggregated, rankedAggregated)
       : normalAggregated;

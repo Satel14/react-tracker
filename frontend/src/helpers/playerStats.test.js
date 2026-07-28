@@ -13,6 +13,10 @@ describe("statNumber", () => {
     expect(statNumber({ kd: { value: "x" } }, "kd")).toBeNull();
     expect(statNumber({ kd: {} }, "kd")).toBeNull();
   });
+  it("returns null for a deliberately unknown stat instead of a fake zero", () => {
+    expect(statNumber({ heals: { displayValue: "—", value: null } }, "heals")).toBeNull();
+    expect(statNumber({ heals: { displayValue: "—", value: "" } }, "heals")).toBeNull();
+  });
 });
 
 describe("statDisplay", () => {
@@ -23,5 +27,9 @@ describe("statDisplay", () => {
     expect(statDisplay({}, "kd", "0")).toBe("0");
     expect(statDisplay({}, "kd", "-")).toBe("-");
     expect(statDisplay(null, "kd", "-")).toBe("-");
+  });
+  it("lets an em dash through instead of the numeric fallback", () => {
+    expect(statDisplay({ heals: { displayValue: "—", value: null } }, "heals", "0")).toBe("—");
+    expect(statDisplay({ headshotRate: { displayValue: "—", value: null } }, "headshotRate", "0%")).toBe("—");
   });
 });

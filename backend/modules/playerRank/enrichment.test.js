@@ -43,8 +43,39 @@ test("maps the remaining StatsTotal keys the weapons tab consumes", () => {
   assert.equal(weapon.damage, 6284);
   assert.equal(weapon.defeats, 58);
   assert.equal(weapon.groggies, 50);
-  assert.equal(weapon.headshotRate, 71.8);
   assert.equal(weapon.avgDamagePerKill, 161);
+});
+
+// HeadShots counts headshot HITS, not headshot kills (live Dragunov totals:
+// 92 kills / 154 headshots / 133 groggies), so no headshot percentage is
+// derivable from this payload and none must be emitted.
+test("no headshot rate is derived from the hit-based HeadShots counter", () => {
+  const [weapon] = mapWeaponMastery({
+    data: {
+      attributes: {
+        weaponSummaries: {
+          Item_Weapon_Dragunov_C: {
+            XPTotal: 40000,
+            LevelCurrent: 20,
+            TierCurrent: 3,
+            StatsTotal: {
+              Kills: 92,
+              HeadShots: 154,
+              DamagePlayer: 30084,
+              Groggies: 133,
+              LongestDefeat: 415.5,
+            },
+          },
+        },
+      },
+    },
+  });
+  assert.equal(weapon.kills, 92);
+  assert.equal(weapon.headshots, 154);
+  assert.equal(weapon.damage, 30084);
+  assert.equal(weapon.groggies, 133);
+  assert.equal(weapon.longestKill, 416);
+  assert.equal("headshotRate" in weapon, false);
 });
 
 // StatsTotal froze at patch 18.2; OfficialStatsTotal (normal) and
@@ -95,7 +126,6 @@ test("sums career stats across the frozen legacy block and both post-18.2 blocks
   assert.equal(weapon.damage, 62583);
   assert.equal(weapon.defeats, 35);
   assert.equal(weapon.groggies, 395);
-  assert.equal(weapon.headshotRate, 65.1);
   assert.equal(weapon.avgDamagePerKill, 138);
 });
 
