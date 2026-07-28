@@ -115,3 +115,18 @@ test("the aggregate limiter returns 429 once the per-window limit is spent", asy
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("the registered route itself is rate limited, not just the limiter module", async () => {
+  const { server, port } = await startRouteServer();
+  try {
+    const statuses = [];
+    for (let i = 0; i < 11; i += 1) {
+      const { status } = await postAggregate(port, validBody, "203.0.113.7");
+      statuses.push(status);
+    }
+    assert.equal(statuses.filter((s) => s === 429).length > 0, true, `no 429 in ${statuses.join(",")}`);
+    assert.equal(statuses[statuses.length - 1], 429);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

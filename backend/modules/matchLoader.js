@@ -8,9 +8,10 @@ const { setRateLimited, isRateLimited } = require("./playerRank/state");
 
 const bundleCache = new Map();
 const inFlight = new Map();
-const BUNDLE_TTL_MS = 120 * 1000;
-// Budgeted in telemetry JSON bytes; measured retained heap runs 0.8-1.3x that, so this caps the cache near 125 MB of Render's 512 MB.
+const BUNDLE_TTL_MS = 10 * 60 * 1000;
+// Budgeted in telemetry JSON bytes; measured retained heap runs ~1.3x that, so this caps the cache near 125 MB of Render's 512 MB.
 const BUNDLE_CACHE_BYTES = 96 * 1024 * 1024;
+const BUNDLE_CACHE_ENTRIES = 24;
 
 let now = () => Date.now();
 let cachedBytes = 0;
@@ -31,6 +32,7 @@ function __matchCacheStats() {
     keys: [...bundleCache.keys()],
     budgetBytes: BUNDLE_CACHE_BYTES,
     ttlMs: BUNDLE_TTL_MS,
+    maxEntries: BUNDLE_CACHE_ENTRIES,
   };
 }
 
@@ -59,13 +61,14 @@ function readCached(cacheKey, at) {
   return entry.bundle;
 }
 
-function store(cacheKey, bundle, bytes, at) {
+function store(cacheKey, bundle, rawBytes, at) {
   dropExpired(at);
+  const bytes = Number.isFinite(rawBytes) && rawBytes > 0 ? rawBytes : BUNDLE_CACHE_BYTES;
   if (bytes > BUNDLE_CACHE_BYTES) return;
   evict(cacheKey);
   bundleCache.set(cacheKey, { bundle, bytes, storedAt: at });
   cachedBytes += bytes;
-  while (cachedBytes > BUNDLE_CACHE_BYTES) {
+  while (cachedBytes > BUNDLE_CACHE_BYTES || bundleCache.size > BUNDLE_CACHE_ENTRIES) {
     const leastRecent = bundleCache.keys().next().value;
     if (leastRecent === undefined || leastRecent === cacheKey) break;
     evict(leastRecent);

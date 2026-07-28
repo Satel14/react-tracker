@@ -32,7 +32,32 @@ const {
   __matchCacheStats,
 } = require("./matchLoader");
 
-const { budgetBytes, ttlMs } = __matchCacheStats();
+const { budgetBytes, ttlMs, maxEntries } = __matchCacheStats();
+
+// The whole fix is these policy numbers, so assert them absolutely — every other
+// case below scales off them and would survive setting them to Infinity.
+test("the cache policy stays inside what a 512 MB instance can hold", () => {
+  assert.ok(budgetBytes <= 128 * 1024 * 1024, `budget ${budgetBytes} exceeds 128 MiB`);
+  assert.ok(budgetBytes >= 16 * 1024 * 1024, `budget ${budgetBytes} is too small to be useful`);
+  assert.ok(ttlMs <= 30 * 60 * 1000, `ttl ${ttlMs} exceeds 30 minutes`);
+  assert.ok(maxEntries <= 48, `entry cap ${maxEntries} is too high to bound small-asset growth`);
+});
+
+test("many tiny bundles are bounded by the entry cap, not just by bytes", async () => {
+  reportedBytes = 1024;
+  for (let i = 0; i < maxEntries + 6; i += 1) {
+    await loadMatchBundle({ shard: "steam", matchId: `tiny-${i}` });
+  }
+  assert.ok(__matchCacheStats().keys.length <= maxEntries);
+});
+
+test("a bundle reporting a non-finite size is not cached as if it were free", async () => {
+  reportedBytes = Number.NaN;
+  await loadMatchBundle({ shard: "steam", matchId: "nan-1" });
+  const stats = __matchCacheStats();
+  assert.ok(stats.bytes >= 0 && Number.isFinite(stats.bytes), `accounted bytes went non-finite: ${stats.bytes}`);
+  assert.ok(stats.bytes <= stats.budgetBytes);
+});
 
 let clockMs = 0;
 
