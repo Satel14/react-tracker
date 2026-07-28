@@ -6,7 +6,16 @@ function parseSeasonNumber(seasonId) {
 
 function toSeasonLabel(seasonId) {
   const number = parseSeasonNumber(seasonId);
-  return Number.isFinite(number) ? `Season #${number}` : "Current Season";
+  if (Number.isFinite(number)) return `Season #${number}`;
+
+  if (typeof seasonId === "string" && seasonId.trim()) {
+    const trimmed = seasonId.trim();
+    const segments = trimmed.split(".").filter(Boolean);
+    const trailingSegment = segments[segments.length - 1] || trimmed;
+    return `Season ${trailingSegment}`;
+  }
+
+  return "Unknown Season";
 }
 
 function normalizeSeasonId(seasonId) {
