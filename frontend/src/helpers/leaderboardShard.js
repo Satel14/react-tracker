@@ -10,10 +10,14 @@ const REGION_SHARDS = {
 
 export const DEFAULT_LEADERBOARD_SHARD = "steam";
 
+const warnedRegions = new Set();
+
 export const shardForRegion = (region) => {
   const key = String(region || "").trim().toLowerCase();
-  const shard = REGION_SHARDS[key];
-  if (shard) return shard;
-  console.warn(`shardForRegion: unrecognized region "${region}", defaulting to "${DEFAULT_LEADERBOARD_SHARD}"`);
+  if (Object.prototype.hasOwnProperty.call(REGION_SHARDS, key)) return REGION_SHARDS[key];
+  if (!warnedRegions.has(key)) {
+    warnedRegions.add(key);
+    console.warn(`shardForRegion: unrecognized region "${region}", defaulting to "${DEFAULT_LEADERBOARD_SHARD}"`);
+  }
   return DEFAULT_LEADERBOARD_SHARD;
 };

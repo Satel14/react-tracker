@@ -33,8 +33,20 @@ test("falls back to steam for null or undefined", () => {
 });
 
 test("warns when falling back so a new region can't silently break player links", () => {
-  shardForRegion("pc-oc");
+  shardForRegion("pc-antarctica");
   expect(console.warn).toHaveBeenCalled();
+});
+
+test("warns only once per unrecognized region", () => {
+  shardForRegion("pc-moon");
+  shardForRegion("pc-moon");
+  expect(console.warn).toHaveBeenCalledTimes(1);
+});
+
+test("falls back to steam for inherited object keys", () => {
+  expect(shardForRegion("constructor")).toBe(DEFAULT_LEADERBOARD_SHARD);
+  expect(shardForRegion("__proto__")).toBe(DEFAULT_LEADERBOARD_SHARD);
+  expect(shardForRegion("toString")).toBe(DEFAULT_LEADERBOARD_SHARD);
 });
 
 test("is case-insensitive", () => {

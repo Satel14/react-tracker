@@ -117,3 +117,41 @@ test("links a KAKAO-region row to the kakao shard, not steam", async () => {
   const link = await screen.findByRole("link", { name: "Alpha" });
   expect(link).toHaveAttribute("href", "/player/kakao/Alpha");
 });
+
+test("compares selected players on the region's own shard", async () => {
+  getLeaderboard.mockResolvedValue({
+    status: 200,
+    data: { platform: "pc-kakao", gameMode: "squad-fpp", seasonId: "s-current", entries: sampleEntries },
+  });
+  render(
+    <MemoryRouter initialEntries={["/leaderboards?platform=pc-kakao"]}>
+      <Leaderboard t={t} />
+    </MemoryRouter>
+  );
+  await screen.findByText("Alpha");
+  const checkboxes = screen.getAllByRole("checkbox");
+  fireEvent.click(checkboxes[0]);
+  fireEvent.click(checkboxes[1]);
+  fireEvent.click(await screen.findByRole("button", { name: /pages.leaderboards.compare/ }));
+  await waitFor(() => {
+    expect(navigate).toHaveBeenCalled();
+  });
+  const dest = navigate.mock.calls[0][0];
+  expect(dest).toContain("kakao%3AAlpha");
+  expect(dest).not.toContain("steam%3A");
+});
+
+test("re-links rows when the region dropdown switches to KAKAO", async () => {
+  renderPage();
+  await screen.findByRole("link", { name: "Alpha" });
+
+  fireEvent.mouseDown(document.querySelector(".leaderboard-page__platform .ant-select-selector"));
+  fireEvent.click(await screen.findByText("PC · KAKAO"));
+
+  await waitFor(() => {
+    expect(getLeaderboard).toHaveBeenLastCalledWith("pc-kakao", "squad-fpp", "s-current");
+  });
+  await waitFor(async () => {
+    expect(await screen.findByRole("link", { name: "Alpha" })).toHaveAttribute("href", "/player/kakao/Alpha");
+  });
+});
