@@ -2,7 +2,7 @@ const { getMapMeta } = require("./mapMeta");
 const { loadMatchBundle } = require("./matchLoader");
 const { shardForMatch } = require("./pubgTelemetry");
 const { isFocalActor, readXY, eventTime } = require("./telemetryUtils");
-const { telemetryWeaponName, readableWeaponName, canonicalWeaponKey } = require("./weaponMeta");
+const { telemetryWeaponName, canonicalWeaponKey } = require("./weaponMeta");
 
 const analysisCache = new Map();
 const ANALYSIS_CACHE_LIMIT = 30;
@@ -223,14 +223,13 @@ function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerNa
 
   events.sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
 
-  const keys = new Set([...shotsByWeapon.keys(), ...hitsByWeapon.keys()]);
-  const accuracy = [...keys].map((key) => {
+  const accuracy = [...shotsByWeapon.keys()].map((key) => {
     const shots = shotsByWeapon.get(key) || 0;
     const hits = hitsByWeapon.get(key) || 0;
     // Shotgun pellets produce more hits than trigger pulls, so raw accuracy can
     // exceed 100%; clamp for display sanity.
     const pct = shots ? Math.min(100, Math.round((hits / shots) * 100)) : 0;
-    return { weapon: readableWeaponName(key), shots, hits, pct };
+    return { weapon: telemetryWeaponName(key), shots, hits, pct };
   }).sort((a, b) => b.shots - a.shots);
 
   const thirdParties = [...takenTeamsByBucket.entries()]

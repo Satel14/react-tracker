@@ -1,7 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { parseTimeline } = require("./getMatchAnalysis");
-const { canonicalWeaponKey, readableWeaponName, weaponCategory } = require("./weaponMeta");
+const { canonicalWeaponKey, readableWeaponName, telemetryWeaponName, weaponCategory } = require("./weaponMeta");
 
 // LogPlayerAttack names a gun "Item_Weapon_FooBar_C"; LogPlayerTakeDamage names the
 // SAME gun "WeapFooBar_C". For an unmapped weapon the two prettifiers diverge
@@ -136,4 +136,54 @@ test("parseTimeline ignores attack events with no weapon itemId", () => {
   assert.equal(tl.accuracy[0].shots, 1);
   assert.equal(tl.accuracy[0].hits, 1);
   assert.equal(tl.accuracy[0].pct, 100);
+});
+
+// Rondo capture (bug #9): a vehicle and a molotov fire debuff only ever appear in
+// LogPlayerTakeDamage, never LogPlayerAttack, so they must not become accuracy rows.
+const nonFirearmTimeline = [
+  attack("Item_Weapon_HK416_C", 1, 1),
+  { _T: "LogPlayerTakeDamage", elapsedTime: 1, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 30, damageReason: "TorsoShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapHK416_C" },
+  { _T: "LogPlayerTakeDamage", elapsedTime: 5, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe2", name: "Foe2" }, damage: 45, damageTypeCategory: "Damage_VehicleHit", damageCauserName: "Dacia_A_03_v2_Esports_C" },
+  { _T: "LogPlayerTakeDamage", elapsedTime: 8, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe3", name: "Foe3" }, damage: 10, damageTypeCategory: "Damage_Burning", damageCauserName: "BP_MolotovFireDebuff_C" },
+];
+
+test("parseTimeline drops vehicle and fire-debuff causers from accuracy rows but keeps the fired gun's row", () => {
+  const tl = parseTimeline(nonFirearmTimeline, { matchStartMs: 0, accountId: "account.me" });
+  assert.equal(tl.accuracy.length, 1);
+  assert.equal(tl.accuracy[0].weapon, "M416");
+  assert.equal(tl.accuracy[0].shots, 1);
+  assert.equal(tl.accuracy[0].hits, 1);
+  const dealtWeapons = tl.events.filter((e) => e.kind === "dealt").map((e) => e.weapon);
+  assert.ok(dealtWeapons.includes(telemetryWeaponName("Dacia_A_03_v2_Esports_C")));
+  assert.ok(dealtWeapons.includes(telemetryWeaponName("BP_MolotovFireDebuff_C")));
+});
+
+const grenadeThrowTimeline = [
+  attack("Item_Weapon_Grenade_C", 10, 1),
+  { _T: "LogPlayerTakeDamage", elapsedTime: 12, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 60, damageTypeCategory: "Damage_Explosion_Grenade", damageCauserName: "Item_Weapon_Grenade_C" },
+];
+
+test("parseTimeline keeps a thrown grenade's accuracy row with its real shot count", () => {
+  const tl = parseTimeline(grenadeThrowTimeline, { matchStartMs: 0, accountId: "account.me" });
+  const nade = tl.accuracy.find((a) => a.weapon === "Frag Grenade");
+  assert.ok(nade);
+  assert.equal(nade.shots, 1);
+  assert.equal(nade.hits, 1);
+  assert.equal(nade.pct, 100);
+});
+
+// Fires and hits with the same non-weapon causer key so the row's label and the
+// event log's label can be compared directly; BP_FireEffectController_C would never
+// carry a real LogPlayerAttack, but the label functions must agree when it does.
+const fireControllerTimeline = [
+  attack("BP_FireEffectController_C", 1, 1),
+  { _T: "LogPlayerTakeDamage", elapsedTime: 2, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 5, damageCauserName: "BP_FireEffectController_C" },
+];
+
+test("accuracy row and event log agree on the label for a non-weapon causer", () => {
+  const tl = parseTimeline(fireControllerTimeline, { matchStartMs: 0, accountId: "account.me" });
+  const row = tl.accuracy.find((a) => a.shots > 0);
+  const dealtEvent = tl.events.find((e) => e.kind === "dealt");
+  assert.equal(row.weapon, "Fire Effect Controller");
+  assert.equal(row.weapon, dealtEvent.weapon);
 });
