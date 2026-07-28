@@ -133,9 +133,12 @@ const REPORT_FILTER_OPTIONS = [
 const getDisplay = (stats, key, fallback = "0") => statDisplay(stats, key, fallback);
 
 const getSeasonLabel = (seasonId) => {
-  if (typeof seasonId !== "string" || !seasonId.trim()) return "Current Season";
+  if (typeof seasonId !== "string" || !seasonId.trim()) return "Unknown Season";
   const match = seasonId.match(/(\d+)\s*$/);
-  if (!match) return "Current Season";
+  if (!match) {
+    const segments = seasonId.trim().split(".").filter(Boolean);
+    return `Season ${segments[segments.length - 1] || seasonId.trim()}`;
+  }
   return `Season #${match[1]}`;
 };
 

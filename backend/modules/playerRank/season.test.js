@@ -12,6 +12,12 @@ test("the unnumbered 2017-beta id gets an honest label, not Current Season", () 
   assert.notEqual(label, "Current Season");
 });
 
+test("degenerate ids are never labelled as the current season", () => {
+  assert.equal(toSeasonLabel(""), "Unknown Season");
+  assert.equal(toSeasonLabel(null), "Unknown Season");
+  assert.equal(toSeasonLabel(42), "Unknown Season");
+});
+
 test("degenerate ids do not throw", () => {
   assert.doesNotThrow(() => toSeasonLabel(""));
   assert.doesNotThrow(() => toSeasonLabel(null));
