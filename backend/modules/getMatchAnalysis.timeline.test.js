@@ -1,7 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { parseTimeline } = require("./getMatchAnalysis");
-const { canonicalWeaponKey } = require("./weaponMeta");
+const { canonicalWeaponKey, readableWeaponName, weaponCategory } = require("./weaponMeta");
 
 // LogPlayerAttack names a gun "Item_Weapon_FooBar_C"; LogPlayerTakeDamage names the
 // SAME gun "WeapFooBar_C". For an unmapped weapon the two prettifiers diverge
@@ -25,6 +25,61 @@ test("parseTimeline joins shots and hits for an unmapped weapon on a single row"
   assert.equal(rows[0].shots, 2);
   assert.equal(rows[0].hits, 1);
   assert.equal(rows[0].pct, 50);
+});
+
+// LogPlayerAttack.weapon.itemId is "Item_Weapon_FAMASG2_C" (matches WEAPON_LABELS);
+// LogPlayerTakeDamage.damageCauserName is "WeapFamasG2_C", which telemetryToItemKey
+// turns into the differently-cased "Item_Weapon_FamasG2_C".
+test("canonicalWeaponKey folds the case-mismatched Famas pair onto one label and category", () => {
+  const fromItemId = canonicalWeaponKey("Item_Weapon_FAMASG2_C");
+  const fromTelemetry = canonicalWeaponKey("WeapFamasG2_C");
+  assert.equal(fromItemId, fromTelemetry);
+  assert.equal(readableWeaponName(fromItemId), "Famas");
+  assert.equal(weaponCategory(fromItemId), "ar");
+});
+
+const famasTimeline = [
+  { _T: "LogPlayerAttack", elapsedTime: 1, attacker: { accountId: "account.me", name: "Me" }, weapon: { itemId: "Item_Weapon_FAMASG2_C" }, fireWeaponStackCount: 1 },
+  { _T: "LogPlayerAttack", elapsedTime: 2, attacker: { accountId: "account.me", name: "Me" }, weapon: { itemId: "Item_Weapon_FAMASG2_C" }, fireWeaponStackCount: 2 },
+  { _T: "LogPlayerAttack", elapsedTime: 3, attacker: { accountId: "account.me", name: "Me" }, weapon: { itemId: "Item_Weapon_FAMASG2_C" }, fireWeaponStackCount: 3 },
+  { _T: "LogPlayerAttack", elapsedTime: 4, attacker: { accountId: "account.me", name: "Me" }, weapon: { itemId: "Item_Weapon_FAMASG2_C" }, fireWeaponStackCount: 4 },
+  { _T: "LogPlayerTakeDamage", elapsedTime: 3, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 30, damageReason: "TorsoShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapFamasG2_C" },
+  { _T: "LogPlayerTakeDamage", elapsedTime: 4, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 30, damageReason: "TorsoShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapFamasG2_C" },
+];
+
+test("parseTimeline joins Famas shots and hits on one row with a real accuracy percentage", () => {
+  const tl = parseTimeline(famasTimeline, { matchStartMs: 0, accountId: "account.me" });
+  const rows = tl.accuracy.filter((a) => a.shots > 0 || a.hits > 0);
+  assert.equal(rows.length, 1); // was Famas 4/0/0% + FamasG2 0/2/0% before the fix
+  assert.equal(rows[0].weapon, "Famas");
+  assert.equal(rows[0].shots, 4);
+  assert.equal(rows[0].hits, 2);
+  assert.equal(rows[0].pct, 50);
+});
+
+// Case-folding alone can't join PanzerFaust: the direct-hit causer carries a
+// trailing "1" (WeapPanzerFaust100M1_C) and the splash causer isn't Weap-prefixed
+// at all (PanzerFaust100M_Projectile_C), so both need an explicit alias.
+test("canonicalWeaponKey aliases both PanzerFaust telemetry causers to the canonical item key", () => {
+  const canonical = "Item_Weapon_PanzerFaust100M_C";
+  assert.equal(canonicalWeaponKey(canonical), canonical);
+  assert.equal(canonicalWeaponKey("WeapPanzerFaust100M1_C"), canonical);
+  assert.equal(canonicalWeaponKey("PanzerFaust100M_Projectile_C"), canonical);
+});
+
+const panzerTimeline = [
+  { _T: "LogPlayerAttack", elapsedTime: 1, attacker: { accountId: "account.me", name: "Me" }, weapon: { itemId: "Item_Weapon_PanzerFaust100M_C" }, fireWeaponStackCount: 1 },
+  { _T: "LogPlayerTakeDamage", elapsedTime: 2, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 60, damageCauserName: "WeapPanzerFaust100M1_C" },
+  { _T: "LogPlayerTakeDamage", elapsedTime: 2, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.bystander", name: "Bystander" }, damage: 40, damageCauserName: "PanzerFaust100M_Projectile_C" },
+];
+
+test("parseTimeline joins both PanzerFaust splash causers onto the single shot row", () => {
+  const tl = parseTimeline(panzerTimeline, { matchStartMs: 0, accountId: "account.me" });
+  const rows = tl.accuracy.filter((a) => a.shots > 0 || a.hits > 0);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].weapon, "PanzerFaust");
+  assert.equal(rows[0].shots, 1);
+  assert.equal(rows[0].hits, 2);
 });
 
 // One trigger pull, nine pellets land -> raw pct 900%. Must clamp to 100.

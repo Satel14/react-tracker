@@ -143,6 +143,14 @@ const WEAPON_IMAGE_ALIAS = {
   Item_Weapon_TacticalRifle_C: "Item_Weapon_Mk14_C",
 };
 
+// PanzerFaust's damageCauserName forms (trailing-1 direct hit, unprefixed splash) don't fold to its item key by case or by the Weap-prefix rule.
+const WEAPON_KEY_ALIASES = {
+  weappanzerfaust100m1_c: "Item_Weapon_PanzerFaust100M_C",
+  panzerfaust100m_projectile_c: "Item_Weapon_PanzerFaust100M_C",
+};
+
+const WEAPON_KEY_BY_LOWER = new Map(Object.keys(WEAPON_LABELS).map((key) => [key.toLowerCase(), key]));
+
 function readableWeaponName(rawName) {
   if (!rawName) return "Unknown";
   if (WEAPON_LABELS[rawName]) return WEAPON_LABELS[rawName];
@@ -185,24 +193,23 @@ function prettifyCauser(name) {
 
 function telemetryWeaponName(name) {
   if (!name) return "Unknown";
-  const itemKey = telemetryToItemKey(name);
-  if (itemKey && WEAPON_LABELS[itemKey]) return WEAPON_LABELS[itemKey];
+  const key = canonicalWeaponKey(name);
+  if (key && WEAPON_LABELS[key]) return WEAPON_LABELS[key];
   return prettifyCauser(name);
 }
 
 function telemetryWeaponCategory(name) {
-  const itemKey = telemetryToItemKey(name);
-  return itemKey ? weaponCategory(itemKey) : "other";
+  const key = canonicalWeaponKey(name);
+  return key ? weaponCategory(key) : "other";
 }
 
-// LogPlayerAttack.weapon.itemId uses the "Item_Weapon_*" key while
-// LogPlayerTakeDamage.damageCauserName uses the "Weap*" form. Collapse both to the
-// canonical "Item_Weapon_*" key so shots and hits for the same gun join on one row.
-// TODO(validate-before-deploy): confirm weapon normalizer keys against a real telemetry sample
+// itemId and damageCauserName can name the same gun with different case (FAMASG2 vs FamasG2); fold both to WEAPON_LABELS' casing so they join.
 function canonicalWeaponKey(rawName) {
   if (typeof rawName !== "string" || !rawName) return null;
-  if (rawName.startsWith("Weap")) return telemetryToItemKey(rawName) || rawName;
-  return rawName;
+  const aliased = WEAPON_KEY_ALIASES[rawName.toLowerCase()];
+  if (aliased) return aliased;
+  const itemKey = rawName.startsWith("Weap") ? telemetryToItemKey(rawName) || rawName : rawName;
+  return WEAPON_KEY_BY_LOWER.get(itemKey.toLowerCase()) || itemKey;
 }
 
 module.exports = {

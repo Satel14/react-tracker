@@ -36,6 +36,14 @@ test("maps LongestDefeat (the real PUBG key) into the longestKill field the UI r
   assert.equal(weapon.longestKill, 137);
 });
 
+test("mapWeaponMastery still resolves an exact-case Item_Weapon_* label after the telemetry case-join fix", () => {
+  const [weapon] = mapWeaponMastery({
+    data: { attributes: { weaponSummaries: { Item_Weapon_FAMASG2_C: { XPTotal: 1, LevelCurrent: 1, TierCurrent: 1, StatsTotal: { Kills: 1 } } } } },
+  });
+  assert.equal(weapon.name, "Famas");
+  assert.equal(weapon.category, "ar");
+});
+
 test("maps the remaining StatsTotal keys the weapons tab consumes", () => {
   const [weapon] = mapWeaponMastery(REAL_PAYLOAD);
   assert.equal(weapon.kills, 39);
