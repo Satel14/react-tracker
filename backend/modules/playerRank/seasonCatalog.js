@@ -4,13 +4,9 @@ function createSeasonCatalogService({
   seasonCatalogCache,
   currentSeasonCacheDuration,
   doRequest,
+  inFlightSeasonCatalogRequests = new Map(),
 }) {
-  async function getSeasonCatalog(shard) {
-    const cached = seasonCatalogCache.get(shard);
-    if (cached && Date.now() < cached.expiresAt) {
-      return cached.data;
-    }
-
+  async function fetchSeasonCatalog(shard) {
     const seasonsUrl = `https://api.pubg.com/shards/${shard}/seasons`;
     const seasonsData = await doRequest(seasonsUrl);
 
@@ -69,6 +65,29 @@ function createSeasonCatalogService({
     });
 
     return data;
+  }
+
+  async function getSeasonCatalog(shard) {
+    const cached = seasonCatalogCache.get(shard);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.data;
+    }
+
+    const inFlight = inFlightSeasonCatalogRequests.get(shard);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const run = (async () => {
+      try {
+        return await fetchSeasonCatalog(shard);
+      } finally {
+        inFlightSeasonCatalogRequests.delete(shard);
+      }
+    })();
+
+    inFlightSeasonCatalogRequests.set(shard, run);
+    return run;
   }
 
   return {

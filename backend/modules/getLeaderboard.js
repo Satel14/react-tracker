@@ -7,6 +7,7 @@ const {
   leaderboardCache,
   LEADERBOARD_CACHE_DURATION,
   setRateLimited,
+  inFlightSeasonCatalogRequests,
 } = require("./playerRank/state");
 
 const PUBG_API_KEY = process.env.PUBG_API_KEY;
@@ -20,6 +21,7 @@ const { getSeasonCatalog } = createSeasonCatalogService({
   seasonCatalogCache,
   currentSeasonCacheDuration: CURRENT_SEASON_CACHE_DURATION,
   doRequest,
+  inFlightSeasonCatalogRequests,
 });
 
 const { getLeaderboard, getSeasons } = createLeaderboardService({

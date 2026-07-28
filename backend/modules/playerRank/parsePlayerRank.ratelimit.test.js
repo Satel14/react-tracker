@@ -30,3 +30,19 @@ test("getPlayerExtras fails fast during cooldown when nothing is cached", async 
   await assert.rejects(getPlayerExtras("steam", "CooldownExtrasNeo"), /Rate Limit/);
   assert.equal(calls.length, 0);
 });
+
+test("resolvePlayerBatch makes no upstream call during cooldown and reports every id missing", async () => {
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(url);
+    return { ok: false, status: 429, statusText: "Too Many Requests", json: async () => ({}) };
+  };
+  const { resolvePlayerBatch } = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
+
+  const names = ["CooldownBatchAlpha", "CooldownBatchBeta"];
+  const { resolved, missing } = await resolvePlayerBatch("steam", names);
+
+  assert.equal(calls.length, 0, "batch resolve must not extend the cooldown with a fresh 429");
+  assert.equal(resolved.length, 0);
+  assert.deepEqual([...missing].sort(), [...names].sort());
+});

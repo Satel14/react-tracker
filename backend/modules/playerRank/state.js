@@ -13,6 +13,8 @@ const stalePlayerDataCache = new Map();
 const leaderboardCache = new Map();
 const extrasCache = new Map();
 const inFlightExtrasRequests = new Map();
+const inFlightResolveRequests = new Map();
+const inFlightSeasonCatalogRequests = new Map();
 
 const CACHE_DURATION = 10 * 60 * 1000;
 const CURRENT_SEASON_CACHE_DURATION = 60 * 60 * 1000;
@@ -74,5 +76,7 @@ module.exports = {
   LEADERBOARD_CACHE_DURATION,
   extrasCache,
   inFlightExtrasRequests,
+  inFlightResolveRequests,
+  inFlightSeasonCatalogRequests,
   EXTRAS_RETRY_COOLDOWN_MS,
 };

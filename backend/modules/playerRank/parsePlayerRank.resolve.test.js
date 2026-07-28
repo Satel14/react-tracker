@@ -1,5 +1,6 @@
 const { test, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
+const { playerCache } = require("./state");
 const { createParsePlayerRank } = require("./parsePlayerRank");
 
 const realFetch = global.fetch;
@@ -207,4 +208,88 @@ test("cached ids and strict account ids are skipped from the upstream request", 
   assert.ok(resolved.some((r) => r.gameId === cachedName && r.accountId === cachedId));
   assert.ok(resolved.some((r) => r.gameId === strictId && r.accountId === strictId));
   assert.ok(resolved.some((r) => r.gameId === freshName && r.accountId === freshId));
+});
+
+test("case collision where only the canonical spelling exists leaves the other spelling unresolved", async () => {
+  const canonicalName = "ResolveLambdaCanon";
+  const ghostName = canonicalName.toLowerCase();
+  const id = accountId(300);
+  const record = playerRecord(id, canonicalName);
+
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(url);
+    if (url.includes("filter[playerNames]=")) {
+      if (url.endsWith(`filter[playerNames]=${ghostName}`)) {
+        return { ok: false, status: 404, statusText: "Not Found", json: async () => ({}) };
+      }
+      return { ok: true, status: 200, json: async () => ({ data: [record] }) };
+    }
+    return { ok: false, status: 404, statusText: "Not Found", json: async () => ({}) };
+  };
+
+  const { resolvePlayerBatch, parsePlayerRank: parse } = createParsePlayerRank({
+    pubgApiKey: "test-key",
+    steamApiKey: "",
+  });
+
+  const { resolved, missing } = await resolvePlayerBatch("steam", [canonicalName, ghostName]);
+
+  assert.equal(resolved.length, 1, "only the canonical spelling exists upstream");
+  assert.equal(resolved[0].gameId, canonicalName);
+  assert.equal(resolved[0].accountId, id);
+  assert.deepEqual(missing, [ghostName]);
+  assert.equal(
+    playerCache.get(`steam:${ghostName}`),
+    undefined,
+    "a name that does not exist must never be cached against another player's account id"
+  );
+
+  await assert.rejects(parse("steam", ghostName, {}), /Player not found/);
+  const ghostSearches = calls.filter((u) => u.endsWith(`filter[playerNames]=${ghostName}`));
+  assert.equal(ghostSearches.length, 1, "the unresolved spelling must be re-resolved, not served from cache");
+});
+
+test("case collision where both spellings exist gives each requested id its own account id", async () => {
+  const upperName = "ResolveMuDup";
+  const lowerName = upperName.toLowerCase();
+  const upperId = accountId(301);
+  const lowerId = accountId(302);
+  const records = [playerRecord(upperId, upperName), playerRecord(lowerId, lowerName)];
+  const calls = batchRouter(records);
+  const { resolvePlayerBatch } = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
+
+  const { resolved, missing } = await resolvePlayerBatch("steam", [upperName, lowerName]);
+
+  assert.equal(calls.filter((u) => u.includes("filter[playerNames]=")).length, 1);
+  assert.equal(missing.length, 0);
+  assert.equal(resolved.length, 2, "each requested id must appear exactly once");
+  assert.equal(new Set(resolved.map((r) => r.gameId)).size, 2);
+  assert.equal(resolved.find((r) => r.gameId === upperName).accountId, upperId);
+  assert.equal(resolved.find((r) => r.gameId === lowerName).accountId, lowerId);
+  assert.equal(playerCache.get(`steam:${upperName}`), upperId);
+  assert.equal(playerCache.get(`steam:${lowerName}`), lowerId);
+});
+
+test("two simultaneous resolves for the same names coalesce into one upstream fetch", async () => {
+  const names = ["ResolveNuRace1", "ResolveNuRace2"];
+  const ids = [accountId(303), accountId(304)];
+  const records = names.map((name, i) => playerRecord(ids[i], name));
+  const calls = batchRouter(records);
+  const { resolvePlayerBatch } = createParsePlayerRank({ pubgApiKey: "test-key", steamApiKey: "" });
+
+  const [first, second] = await Promise.all([
+    resolvePlayerBatch("steam", names),
+    resolvePlayerBatch("steam", names),
+  ]);
+
+  const searchCalls = calls.filter((u) => u.includes("filter[playerNames]="));
+  assert.equal(searchCalls.length, 1, "concurrent pre-warms must share one upstream request");
+  [first, second].forEach((result) => {
+    assert.equal(result.missing.length, 0);
+    assert.equal(result.resolved.length, 2);
+    names.forEach((name, i) => {
+      assert.equal(result.resolved.find((r) => r.gameId === name).accountId, ids[i]);
+    });
+  });
 });

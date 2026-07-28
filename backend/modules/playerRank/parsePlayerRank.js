@@ -30,6 +30,8 @@ const {
   steamAvatarCache,
   extrasCache,
   inFlightExtrasRequests,
+  inFlightResolveRequests,
+  inFlightSeasonCatalogRequests,
   EXTRAS_RETRY_COOLDOWN_MS,
 } = require("./state");
 
@@ -73,6 +75,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     seasonCatalogCache,
     currentSeasonCacheDuration: CURRENT_SEASON_CACHE_DURATION,
     doRequest,
+    inFlightSeasonCatalogRequests,
   });
 
   const { getPlayerProfile, getMatchExtras, getMasteryExtras } = createPlayerEnrichmentService({
@@ -516,6 +519,94 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
 
   const MAX_BATCH_RESOLVE_NAMES = 10;
 
+  function seedResolvedRecord(shard, requestedId, record) {
+    const recordAccountId = record.id;
+    const name = record.attributes.name.trim();
+
+    setCachedPlayerName(shard, recordAccountId, name);
+    playerProfileCache.set(`${shard}:${recordAccountId}`, {
+      data: record,
+      timestamp: Date.now(),
+    });
+    playerCache.set(`${shard}:${name}`, recordAccountId);
+    playerCache.set(`${shard}:${requestedId}`, recordAccountId);
+  }
+
+  // Each returned record may satisfy at most one requested id: exact spellings win,
+  // then leftovers fall back to a case-insensitive match. Mapping one record onto
+  // every requested spelling would cache a different player's account id.
+  function matchRecordsToRequestedIds(requestedIds, records) {
+    const usable = records.filter(
+      (record) =>
+        record &&
+        record.id &&
+        typeof record?.attributes?.name === "string" &&
+        record.attributes.name.trim()
+    );
+
+    const matches = new Map();
+    const consumed = new Set();
+
+    const claim = (requestedId, predicate) => {
+      const record = usable.find((candidate) => !consumed.has(candidate) && predicate(candidate));
+      if (!record) return;
+      consumed.add(record);
+      matches.set(requestedId, record);
+    };
+
+    requestedIds.forEach((requestedId) => {
+      claim(requestedId, (candidate) => candidate.attributes.name.trim() === requestedId);
+    });
+
+    requestedIds.forEach((requestedId) => {
+      if (matches.has(requestedId)) return;
+      const lowered = requestedId.toLowerCase();
+      claim(requestedId, (candidate) => candidate.attributes.name.trim().toLowerCase() === lowered);
+    });
+
+    return matches;
+  }
+
+  async function fetchNameMatches(shard, toFetch) {
+    const resolveKey = `${shard}:${[...toFetch].sort().join(",")}`;
+    const inFlight = inFlightResolveRequests.get(resolveKey);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const run = (async () => {
+      try {
+        const searchUrl =
+          `https://api.pubg.com/shards/${encodeSegment(shard)}/players?` +
+          `filter[playerNames]=${toFetch.map(encodeSegment).join(",")}`;
+
+        let searchData;
+        try {
+          searchData = await doRequest(searchUrl);
+        } catch (e) {
+          if (e.message === "Player not found") return new Map();
+          throw e;
+        }
+
+        const matches = matchRecordsToRequestedIds(
+          toFetch,
+          Array.isArray(searchData?.data) ? searchData.data : []
+        );
+
+        matches.forEach((record, requestedId) => {
+          seedResolvedRecord(shard, requestedId, record);
+        });
+
+        return matches;
+      } finally {
+        inFlightResolveRequests.delete(resolveKey);
+      }
+    })();
+
+    inFlightResolveRequests.set(resolveKey, run);
+    return run;
+  }
+
   async function resolvePlayerBatch(platform, gameIds) {
     const shard = resolveShard(platform);
     const seen = new Set();
@@ -558,58 +649,28 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
       return { resolved, missing };
     }
 
+    if (isRateLimited()) {
+      console.log(`[PUBG] Rate-limit cooldown, skipping batch resolve of ${toResolve.length} name(s)`);
+      missing.push(...toResolve);
+      return { resolved, missing };
+    }
+
     const toFetch = toResolve.slice(0, MAX_BATCH_RESOLVE_NAMES);
     missing.push(...toResolve.slice(MAX_BATCH_RESOLVE_NAMES));
 
-    const searchUrl =
-      `https://api.pubg.com/shards/${encodeSegment(shard)}/players?` +
-      `filter[playerNames]=${toFetch.map(encodeSegment).join(",")}`;
+    const matches = await fetchNameMatches(shard, toFetch);
 
-    let searchData;
-    try {
-      searchData = await doRequest(searchUrl);
-    } catch (e) {
-      if (e.message === "Player not found") {
-        missing.push(...toFetch);
-        return { resolved, missing };
+    toFetch.forEach((id) => {
+      const record = matches.get(id);
+      if (!record) {
+        missing.push(id);
+        return;
       }
-      throw e;
-    }
-
-    const requestedByLowerName = new Map();
-    toFetch.forEach((id) => {
-      const key = id.toLowerCase();
-      if (!requestedByLowerName.has(key)) requestedByLowerName.set(key, []);
-      requestedByLowerName.get(key).push(id);
-    });
-
-    const matchedIds = new Set();
-    const records = Array.isArray(searchData?.data) ? searchData.data : [];
-
-    records.forEach((record) => {
-      const name = record?.attributes?.name;
-      const recordAccountId = record?.id;
-      if (!recordAccountId || typeof name !== "string" || !name.trim()) return;
-
-      const requestedIds = requestedByLowerName.get(name.trim().toLowerCase());
-      if (!requestedIds || requestedIds.length === 0) return;
-
-      setCachedPlayerName(shard, recordAccountId, name);
-      playerProfileCache.set(`${shard}:${recordAccountId}`, {
-        data: record,
-        timestamp: Date.now(),
+      resolved.push({
+        gameId: id,
+        accountId: record.id,
+        name: record.attributes.name.trim(),
       });
-      playerCache.set(`${shard}:${name}`, recordAccountId);
-
-      requestedIds.forEach((gameId) => {
-        playerCache.set(`${shard}:${gameId}`, recordAccountId);
-        matchedIds.add(gameId);
-        resolved.push({ gameId, accountId: recordAccountId, name });
-      });
-    });
-
-    toFetch.forEach((id) => {
-      if (!matchedIds.has(id)) missing.push(id);
     });
 
     return { resolved, missing };
