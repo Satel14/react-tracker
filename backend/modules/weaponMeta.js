@@ -144,9 +144,16 @@ const WEAPON_IMAGE_ALIAS = {
 };
 
 // PanzerFaust's damageCauserName forms (trailing-1 direct hit, unprefixed splash) don't fold to its item key by case or by the Weap-prefix rule.
+// Thrown and launched weapons fire under their item id but deal damage under a
+// projectile or effect-actor causer, which no case or prefix rule can fold together.
 const WEAPON_KEY_ALIASES = new Map([
   ["weappanzerfaust100m1_c", "Item_Weapon_PanzerFaust100M_C"],
   ["panzerfaust100m_projectile_c", "Item_Weapon_PanzerFaust100M_C"],
+  ["projgrenade_c", "Item_Weapon_Grenade_C"],
+  ["projc4_c", "Item_Weapon_C4_C"],
+  ["bluezonebomb_effectactor_c", "Item_Weapon_BluezoneGrenade_C"],
+  ["bp_fireeffectcontroller_c", "Item_Weapon_Molotov_C"],
+  ["bp_molotovfiredebuff_c", "Item_Weapon_Molotov_C"],
 ]);
 
 const WEAPON_KEY_BY_LOWER = new Map(Object.keys(WEAPON_LABELS).map((key) => [key.toLowerCase(), key]));

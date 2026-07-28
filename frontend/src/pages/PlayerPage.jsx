@@ -338,6 +338,7 @@ const PlayerPage = ({ t }) => {
   const [session, sessionDispatch] = useReducer(sessionReducer, INITIAL_SESSION);
   const { activeTabKey, selectedSeasonId, isFavorited, favoriteLoading } = session;
   const reportsRequestKeyRef = useRef(null);
+  const dataRequestKeyRef = useRef(null);
   const { platform, gameId } = useParams();
   const navigate = useNavigate();
 
@@ -351,15 +352,20 @@ const PlayerPage = ({ t }) => {
     setData(null);
     setError(null);
     setLoading(true);
+    dataRequestKeyRef.current = null;
+    reportsRequestKeyRef.current = null;
     reportsDispatch({ type: "reset" });
     sessionDispatch({ type: "reset" });
   }
 
   const fetchData = useCallback(async (seasonId = null) => {
+    const requestKey = `${platform}|${gameId}|${seasonId || ""}`;
+    dataRequestKeyRef.current = requestKey;
     setLoading(true);
     setError(null);
     try {
       const response = await getPlayerData(platform, gameId, seasonId);
+      if (dataRequestKeyRef.current !== requestKey) return;
       if (response && response.data && response.data.data) {
         const payload = response.data.data;
         setData(payload);
@@ -371,13 +377,14 @@ const PlayerPage = ({ t }) => {
         setError(classifyPlayerError(response?.message));
       }
     } catch (err) {
+      if (dataRequestKeyRef.current !== requestKey) return;
       if (err?.status === 422) {
         setError({ code: "not_found", message: err?.message || null });
       } else {
         setError(classifyPlayerError(err?.message));
       }
     } finally {
-      setLoading(false);
+      if (dataRequestKeyRef.current === requestKey) setLoading(false);
     }
   }, [platform, gameId]);
 

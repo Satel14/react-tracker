@@ -206,3 +206,53 @@ test("does not record the previous player under the new route's platform", async
   expect(phantom).toBeUndefined();
   expect(addHistory).toHaveBeenCalledWith("xbox", "PlayerB", "PlayerB", null, null, null, null);
 });
+
+test("ignores a late rank response for the previous player", async () => {
+  const staleRank = deferred();
+  getPlayerData.mockImplementation((_platform, gameId) =>
+    gameId === "PlayerA" ? staleRank.promise : Promise.resolve(rankPayload(gameId))
+  );
+  getPlayerReports.mockResolvedValue(reportsPayload("Nobody"));
+
+  renderAt();
+  await flush();
+
+  fireEvent.click(screen.getByTestId("go-b"));
+  await screen.findByText("PlayerB");
+  const reportsCallsBeforeLateA = getPlayerReports.mock.calls.length;
+
+  await act(async () => {
+    staleRank.resolve(rankPayload("PlayerA"));
+    await staleRank.promise;
+  });
+  await flush();
+
+  expect(screen.getByText("PlayerB")).toBeInTheDocument();
+  expect(screen.queryByText("PlayerA")).not.toBeInTheDocument();
+
+  const reportsAfterLateA = getPlayerReports.mock.calls.slice(reportsCallsBeforeLateA);
+  expect(reportsAfterLateA.map(([accountId]) => accountId)).not.toContain("account.PlayerA");
+  expect(addHistory.mock.calls.map(([, id]) => id)).not.toContain("PlayerA");
+});
+
+test("a late name-only reports response does not supersede the account-id result", async () => {
+  const lateNameOnly = deferred();
+  getPlayerData.mockImplementation((_platform, gameId) => Promise.resolve(rankPayload(gameId)));
+  getPlayerReports.mockImplementation((accountId) =>
+    accountId ? Promise.resolve(reportsPayload("FromAccountId")) : lateNameOnly.promise
+  );
+
+  renderAt();
+  await screen.findByText("PlayerA");
+  openReportsTab();
+  await screen.findByText("FromAccountId");
+
+  await act(async () => {
+    lateNameOnly.resolve(reportsPayload("FromNameOnly"));
+    await lateNameOnly.promise;
+  });
+  await flush();
+
+  expect(screen.getByText("FromAccountId")).toBeInTheDocument();
+  expect(screen.queryByText("FromNameOnly")).not.toBeInTheDocument();
+});
