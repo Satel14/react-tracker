@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useReducer, lazy, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useReducer, useRef, lazy, Suspense } from "react";
 import { Button, Spin, Tabs, Select } from "antd";
 import { translate } from "react-switch-lang";
 import {
@@ -337,8 +337,23 @@ const PlayerPage = ({ t }) => {
   const { loading: reportsLoading, error: reportsError, data: reportsData, filter: reportsFilter } = reports;
   const [session, sessionDispatch] = useReducer(sessionReducer, INITIAL_SESSION);
   const { activeTabKey, selectedSeasonId, isFavorited, favoriteLoading } = session;
+  const reportsRequestKeyRef = useRef(null);
   const { platform, gameId } = useParams();
   const navigate = useNavigate();
+
+  const routeKey = `${platform || ""}|${gameId || ""}`;
+  const [loadedRouteKey, setLoadedRouteKey] = useState(routeKey);
+  const routeChanged = loadedRouteKey !== routeKey;
+
+  // Must reset during render: an effect would let the effects below fire once with the previous player's payload.
+  if (routeChanged) {
+    setLoadedRouteKey(routeKey);
+    setData(null);
+    setError(null);
+    setLoading(true);
+    reportsDispatch({ type: "reset" });
+    sessionDispatch({ type: "reset" });
+  }
 
   const fetchData = useCallback(async (seasonId = null) => {
     setLoading(true);
@@ -366,18 +381,21 @@ const PlayerPage = ({ t }) => {
     }
   }, [platform, gameId]);
 
-  const fetchReports = useCallback(async (accountId, playerName) => {
+  const fetchReports = useCallback(async (accountId, playerName, requestKey) => {
     if (!accountId && !playerName) {
       reportsDispatch({ type: "clearData" });
       return;
     }
 
+    reportsRequestKeyRef.current = requestKey;
     reportsDispatch({ type: "loadStart" });
     try {
       const response = await getPlayerReports(accountId, playerName);
+      if (reportsRequestKeyRef.current !== requestKey) return;
       const payload = response?.data?.data ?? response?.data ?? null;
       reportsDispatch({ type: "loadResult", data: payload });
     } catch (err) {
+      if (reportsRequestKeyRef.current !== requestKey) return;
       reportsDispatch({ type: "loadError", error: err.message || "Failed to fetch PUBG Report data" });
     }
   }, []);
@@ -422,8 +440,6 @@ const PlayerPage = ({ t }) => {
 
   useEffect(() => {
     if (platform && gameId) {
-      sessionDispatch({ type: "reset" });
-      reportsDispatch({ type: "reset" });
       fetchData(null);
     }
   }, [platform, gameId, fetchData]);
@@ -433,8 +449,8 @@ const PlayerPage = ({ t }) => {
     const playerName = data?.platformInfo?.platformUserHandle || gameId || null;
 
     if (!accountId && !playerName) return;
-    fetchReports(accountId, playerName);
-  }, [data?.platformInfo?.platformUserId, data?.platformInfo?.platformUserHandle, gameId, fetchReports]);
+    fetchReports(accountId, playerName, `${routeKey}|${accountId || ""}`);
+  }, [data?.platformInfo?.platformUserId, data?.platformInfo?.platformUserHandle, gameId, routeKey, fetchReports]);
 
   useEffect(() => {
     if (data?.profile?.status !== "deferred") return undefined;
@@ -487,7 +503,7 @@ const PlayerPage = ({ t }) => {
     };
   }, [syncFavoriteState]);
 
-  if (loading) {
+  if (loading || routeChanged) {
     return (
       <div
         className="playerpage"
