@@ -46,9 +46,7 @@ test("maps the remaining StatsTotal keys the weapons tab consumes", () => {
   assert.equal(weapon.avgDamagePerKill, 161);
 });
 
-// HeadShots counts headshot HITS, not headshot kills (live Dragunov totals:
-// 92 kills / 154 headshots / 133 groggies), so no headshot percentage is
-// derivable from this payload and none must be emitted.
+// HeadShots counts headshot hits, not kills, so no percentage is derivable.
 test("no headshot rate is derived from the hit-based HeadShots counter", () => {
   const [weapon] = mapWeaponMastery({
     data: {

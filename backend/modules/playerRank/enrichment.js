@@ -318,8 +318,6 @@ function mapWeaponMastery(payload) {
       defeats,
       groggies,
       longestKill,
-      // No headshot percentage here: HeadShots counts hits, not kills, and the
-      // payload carries no total-hit counter to divide by.
       avgDamagePerKill: kills > 0 ? Math.round(damage / kills) : 0,
     };
   });

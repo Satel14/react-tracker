@@ -4,13 +4,8 @@ const { toSeasonLabel } = require("./season");
 
 const UNKNOWN_DISPLAY = "—";
 
-// PUBG's rankedGameModeStats cannot populate these. Verified against live payloads
-// (steam/Satel14 and steam/CHESTER93, 2026-07-28): each one comes back as a literal
-// 0 whatever the player actually did. normalizeRankedModeStats — the one place the
-// ranked schema is translated — emits null for them, and every step below treats
-// null as "this source does not measure this field" and propagates the ignorance.
-// Keeping the invariant here is what stops a call site from reintroducing the zeros
-// (a 75% headshot rate that read as 1.8%) by forgetting to opt out of them.
+// PUBG returns a literal 0 for these in rankedGameModeStats whatever the player did,
+// so a ranked source must report them as null rather than as a measured zero.
 const RANKED_UNREPORTED_FIELDS = [
   "timeSurvived",
   "headshotKills",
@@ -28,9 +23,6 @@ const RANKED_UNREPORTED_FIELDS = [
 const sumValues = (values) => values.reduce((acc, value) => acc + value, 0);
 const maxValues = (values) => values.reduce((acc, value) => Math.max(acc, value), 0);
 
-// The one table aggregation reads: mode-level field -> aggregate it feeds. A field
-// missing from a source's schema must be null there, never absent, so the tie
-// between this table and RANKED_UNREPORTED_FIELDS stays checkable.
 const MODE_STAT_FIELDS = [
   { field: "kills", total: "totalKills", combine: sumValues },
   { field: "wins", total: "totalWins", combine: sumValues },
@@ -60,7 +52,7 @@ function formatSurvivalTime(seconds) {
 }
 
 function isReported(source, field) {
-  return Boolean(source) && source[field] !== null && source[field] !== undefined;
+  return Boolean(source) && source[field] !== null;
 }
 
 const isUnknown = (...values) => values.some((value) => value === null || value === undefined);
@@ -68,43 +60,29 @@ const isUnknown = (...values) => values.some((value) => value === null || value 
 const modeHasActivity = (mode) => (Number(mode?.roundsPlayed) || 0) > 0;
 const aggregateHasActivity = (aggregated) => (Number(aggregated?.totalMatches) || 0) > 0;
 
-// A zero from a source with no matches behind it is filler, not a measurement, so
-// it cannot stand in for a source that never reports the field. Discounting it is
-// free: a zero changes neither a sum nor a max, it only decides whether anything
-// measured this field at all.
 function reportsMeasurement(source, field, hasActivity) {
   if (!isReported(source, field)) return false;
   return hasActivity(source) || (Number(source[field]) || 0) !== 0;
 }
 
-// One rule for every level of aggregation: a field is combined across the sources
-// that measure it. When none does, the value is unknown (null, an em dash) if there
-// was activity nobody covered, and a plain 0 when there was no activity at all — an
-// empty season is not ignorance.
 function combineSources(sources, field, reduce, hasActivity) {
   const contributors = sources.filter((source) => reportsMeasurement(source, field, hasActivity));
   if (contributors.length) return reduce(contributors.map((source) => Number(source[field]) || 0));
   return sources.some(hasActivity) ? null : 0;
 }
 
-// Headshots are only known for the kills of the sources that report them, so the
-// kill sample — never the kill total — is the denominator of the headshot rate.
 function headshotKillSampleOf(sources, { kills, headshots }) {
   return sumValues(
     sources.map((source) => (isReported(source, headshots) ? Number(source[kills]) || 0 : 0))
   );
 }
 
-// An empty kill sample is ignorance, not a measurement: 0% may only be claimed
-// when there were no kills anywhere to be headshots.
 function deriveHeadshotRate({ totalHeadshots, headshotKillSample, totalKills }) {
   if (isUnknown(totalHeadshots, headshotKillSample, totalKills)) return null;
   if (headshotKillSample > 0) return Number(((totalHeadshots / headshotKillSample) * 100).toFixed(1));
   return totalKills > 0 ? null : 0;
 }
 
-// Derived values are computed from the post-null totals, so an unreported input
-// can never surface as a measured number.
 function deriveStats(totals) {
   const { totalKills, totalWins, totalMatches, totalDamage, totalTop10s } = totals;
   const totalDeaths = isUnknown(totalMatches, totalWins) ? null : Math.max(totalMatches - totalWins, 0);
@@ -157,8 +135,6 @@ function combineAggregatedStats(a, b) {
   MODE_STAT_FIELDS.forEach(({ total, combine }) => {
     totals[total] = combineSources(sources, total, combine, aggregateHasActivity);
   });
-  // Each source already knows how many of its kills a headshot reporter stood
-  // behind, so combining keeps that attribution instead of re-deriving it.
   totals.headshotKillSample = combineSources(
     sources,
     "headshotKillSample",
@@ -169,13 +145,8 @@ function combineAggregatedStats(a, b) {
   return { ...totals, ...deriveStats(totals) };
 }
 
-// DATA-GATED: PUBG's rankedGameModeStats uses a different schema than the
-// lifetime/season gameModeStats. Ranked exposes top10Ratio instead of top10s, and
-// has no roadKills, vehicleDestroys, suicides or longestTimeSurvived at all. This
-// is the only translation point, so it is also where the "ranked cannot report X"
-// invariant lives: the fields in RANKED_UNREPORTED_FIELDS are emitted as null even
-// though PUBG sends a 0 (playTime, headshotKills, longestKill, revives, heals,
-// boosts and teamKills are always 0 — validated against live payloads 2026-07-28).
+// rankedGameModeStats has its own schema: top10Ratio instead of top10s, and no
+// roadKills, vehicleDestroys, suicides or longestTimeSurvived at all.
 function normalizeRankedModeStats(rankedGameModeStats = {}) {
   const normalized = {};
   Object.entries(rankedGameModeStats || {}).forEach(([modeKey, stats]) => {
@@ -210,9 +181,6 @@ function aggregateByModePrefix(gameModeStats = {}, prefix) {
   return aggregateModeStats(filteredStats);
 }
 
-// Sources are aggregated per mode group and then combined, exactly like the season
-// totals. Merging the maps first would fold ranked's kills into the normal slice's
-// measurements and lose which of them were ever measured.
 function mapModeGroupsToFrontend(...modeStatSources) {
   const sources = modeStatSources.filter(Boolean);
   const modePrefixes = ["solo", "duo", "squad"];
@@ -235,7 +203,6 @@ function mapModeGroupsToFrontend(...modeStatSources) {
   return modes;
 }
 
-// An unknown stat must never render as a real measurement (0 / 0% / 0h).
 function statOrUnknown(value, format) {
   if (value === null || value === undefined) {
     return { displayValue: UNKNOWN_DISPLAY, value: null };
@@ -247,8 +214,6 @@ const asCount = (value) => value.toLocaleString();
 const asFixed2 = (value) => value.toFixed(2);
 const asPercent = (value) => value + "%";
 
-// Every field goes through statOrUnknown, so a total or rate that turns out to be
-// unreported renders an em dash instead of throwing or inventing a measurement.
 function mapAggregatedStatsToFrontend(aggregated) {
   return {
     timePlayed: statOrUnknown(aggregated.totalTime, (value) => Math.round(value / 3600) + "h"),
