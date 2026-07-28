@@ -97,3 +97,23 @@ test("navigates to compare with the selected players", async () => {
   expect(dest).toContain("steam%3AAlpha");
   expect(dest).toContain("steam%3ABravo");
 });
+
+test("links a steam-region row to the steam shard", async () => {
+  renderPage();
+  const link = await screen.findByRole("link", { name: "Alpha" });
+  expect(link).toHaveAttribute("href", "/player/steam/Alpha");
+});
+
+test("links a KAKAO-region row to the kakao shard, not steam", async () => {
+  getLeaderboard.mockResolvedValue({
+    status: 200,
+    data: { platform: "pc-kakao", gameMode: "squad-fpp", seasonId: "s-current", entries: sampleEntries },
+  });
+  render(
+    <MemoryRouter initialEntries={["/leaderboards?platform=pc-kakao"]}>
+      <Leaderboard t={t} />
+    </MemoryRouter>
+  );
+  const link = await screen.findByRole("link", { name: "Alpha" });
+  expect(link).toHaveAttribute("href", "/player/kakao/Alpha");
+});

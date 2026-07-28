@@ -4,6 +4,7 @@ import { LoadingOutlined, ReloadOutlined, SwapOutlined } from "@ant-design/icons
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { getLeaderboard, getSeasons } from "../api/leaderboard";
+import { shardForRegion } from "../helpers/leaderboardShard";
 
 const REGIONS = [
   { value: "pc-na", label: "PC · NA" },
@@ -39,6 +40,7 @@ const Leaderboard = ({ t }) => {
   const [nameFilter, setNameFilter] = useState("");
   const [selected, setSelected] = useState([]);
   const [reloadToken, setReloadToken] = useState(0);
+  const shard = shardForRegion(platform);
 
   // Debounce the search box (6).
   useEffect(() => {
@@ -124,7 +126,7 @@ const Leaderboard = ({ t }) => {
         title: t("pages.leaderboards.player"),
         dataIndex: "name",
         key: "name",
-        render: (name) => <Link to={`/player/steam/${encodeURIComponent(name)}`}>{name}</Link>,
+        render: (name) => <Link to={`/player/${shard}/${encodeURIComponent(name)}`}>{name}</Link>,
       },
       {
         title: t("pages.leaderboards.tier"),
@@ -163,7 +165,7 @@ const Leaderboard = ({ t }) => {
       { title: t("pages.leaderboards.avgDamage"), dataIndex: "avgDamage", key: "avgDamage", responsive: ["md"], render: round, sorter: (a, b) => a.avgDamage - b.avgDamage },
       { title: t("pages.leaderboards.kills"), dataIndex: "kills", key: "kills", render: round, sorter: (a, b) => a.kills - b.kills },
     ],
-    [t]
+    [t, shard]
   );
 
   const selectionFull = selected.length >= MAX_COMPARE;
@@ -199,7 +201,7 @@ const Leaderboard = ({ t }) => {
       .filter(Boolean)
       .slice(0, MAX_COMPARE)
       .forEach((row, i) => {
-        params.set(`p${i + 1}`, `steam:${row.name}`);
+        params.set(`p${i + 1}`, `${shard}:${row.name}`);
       });
     navigate(`/compare?${params.toString()}`);
   };
