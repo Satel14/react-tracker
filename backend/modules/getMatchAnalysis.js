@@ -115,9 +115,8 @@ function parseKillFeed(telemetry, { matchStartMs = 0, accountId = null, playerNa
 }
 
 const BODY_REGIONS = ["HeadShot", "TorsoShot", "ArmShot", "LegShot", "PelvisShot"];
-// TODO(validate-before-deploy): confirm damageTypeCategory/damageCauserName exclude-list against a real telemetry sample
-// We now exclude ONLY environmental / non-combat sources so that grenade, molotov, vehicle and
-// other explosion damage still counts toward combat totals.
+// Validated against real telemetry (Rondo capture): PUBG's own stats.damageDealt
+// excludes Damage_VehicleHit but keeps grenade/molotov/explosion damage, so those stay in.
 const NON_COMBAT_DAMAGE_CATEGORIES = new Set([
   "Damage_BlueZone",
   "Damage_Drown",
@@ -125,6 +124,7 @@ const NON_COMBAT_DAMAGE_CATEGORIES = new Set([
   "Damage_Explosion_RedZone",
   "Damage_Fall",
   "Damage_Instant_Fall",
+  "Damage_VehicleHit",
 ]);
 
 function emptyRegions() {

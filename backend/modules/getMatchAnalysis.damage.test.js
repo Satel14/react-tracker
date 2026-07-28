@@ -25,3 +25,21 @@ test("parseDamage still excludes environmental damage (blue zone, red zone)", ()
   const d = parseDamage(environmentalTelemetry, { accountId: "account.me" });
   assert.equal(d.taken.total, 0);
 });
+
+// Real Rondo capture: 55/38/66 by category summed to 159 (bug #8) against
+// PUBG's official stats.damageDealt of 103.74; 159 - 55 (vehicle-hit) = 104.
+const rondoTelemetry = [
+  { _T: "LogPlayerTakeDamage", attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 55, damageReason: "None", damageTypeCategory: "Damage_VehicleHit", damageCauserName: "BP_Motorglider_C" },
+  { _T: "LogPlayerTakeDamage", attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 38, damageReason: "TorsoShot", damageTypeCategory: "Damage_Gun", damageCauserName: "WeapHK416_C" },
+  { _T: "LogPlayerTakeDamage", attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 66, damageReason: "None", damageTypeCategory: "Damage_Molotov", damageCauserName: "Molotov_C" },
+];
+
+test("parseDamage excludes vehicle-hit damage but keeps molotov (Rondo case: 104)", () => {
+  const d = parseDamage(rondoTelemetry, { accountId: "account.me" });
+  assert.equal(d.dealt.total, 104);
+  const molotov = d.dealtByWeapon.find((w) => w.weaponKey === "Molotov_C");
+  assert.ok(molotov, "molotov row must still be present in the per-weapon breakdown");
+  assert.equal(molotov.damage, 66);
+  const vehicle = d.dealtByWeapon.find((w) => w.weaponKey === "BP_Motorglider_C");
+  assert.equal(vehicle, undefined, "vehicle-hit damage must not appear in the per-weapon breakdown");
+});
