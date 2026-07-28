@@ -5,6 +5,8 @@ const {
   normalizeRankedModeStats,
   aggregateModeStats,
   combineAggregatedStats,
+  RANKED_UNREPORTED_FIELDS,
+  MODE_STAT_FIELDS,
 } = require("./statsMapper");
 
 test("default profile exposes a stable shape including weaponMastery", () => {
@@ -85,26 +87,70 @@ const rankedGameModeStats = {
   },
 };
 
-test("normalizeRankedModeStats maps playTime->timeSurvived and derives top10s from top10Ratio", () => {
+test("normalizeRankedModeStats derives top10s from top10Ratio and keeps the fields ranked reports", () => {
   const normalized = normalizeRankedModeStats(rankedGameModeStats);
   const squad = normalized["squad-fpp"];
-  assert.equal(squad.timeSurvived, 7200); // from playTime
   assert.equal(squad.top10s, 5); // round(0.5 * 10 roundsPlayed)
   assert.equal(squad.kills, 20);
   assert.equal(squad.wins, 3);
   assert.equal(squad.roundsPlayed, 10);
+  assert.equal(squad.damageDealt, 4000);
+  assert.equal(squad.assists, 4);
+  assert.equal(squad.dBNOs, 8);
 });
 
-// Raw combine contract: two sources that both report every field simply add up.
-test("combineAggregatedStats sums time and top10s across normal + ranked sources", () => {
+// The invariant lives in the schema translator, so it holds even for a payload
+// that carries non-zero values for fields ranked cannot actually measure.
+test("normalizeRankedModeStats emits null for every field the ranked schema cannot report", () => {
+  const normalized = normalizeRankedModeStats({
+    "squad-fpp": {
+      ...rankedGameModeStats["squad-fpp"],
+      longestTimeSurvived: 999,
+      vehicleDestroys: 9,
+      roadKills: 8,
+      suicides: 7,
+    },
+  });
+  const squad = normalized["squad-fpp"];
+  RANKED_UNREPORTED_FIELDS.forEach((field) => {
+    assert.equal(squad[field], null, `${field} must be null, got ${JSON.stringify(squad[field])}`);
+  });
+});
+
+// Anti-drift: the blacklist, the translator's output and the field set the
+// aggregation reads must describe exactly the same schema.
+test("the unreported set matches what normalizeRankedModeStats emits and what aggregation reads", () => {
+  const squad = normalizeRankedModeStats(rankedGameModeStats)["squad-fpp"];
+  const emitted = Object.keys(squad);
+  const nulled = emitted.filter((field) => squad[field] === null);
+  const reported = emitted.filter((field) => squad[field] !== null);
+
+  assert.deepEqual(nulled.slice().sort(), RANKED_UNREPORTED_FIELDS.slice().sort());
+  reported.forEach((field) => {
+    assert.ok(!RANKED_UNREPORTED_FIELDS.includes(field), `${field} is reported but listed as unreported`);
+    assert.equal(typeof squad[field], "number", `${field} must be a number`);
+  });
+
+  // Every field the aggregation reads is accounted for: either ranked reports it
+  // or it is explicitly nulled. A new aggregate cannot silently read a 0.
+  const aggregatedFields = MODE_STAT_FIELDS.map((entry) => entry.field).sort();
+  assert.deepEqual(emitted.slice().sort(), aggregatedFields);
+});
+
+// Raw combine contract: a field is summed across the sources that report it.
+test("combineAggregatedStats sums reported fields and keeps normal-only ones for the rest", () => {
   const normalAgg = aggregateModeStats(normalGameModeStats);
   const rankedAgg = aggregateModeStats(normalizeRankedModeStats(rankedGameModeStats));
   const combined = combineAggregatedStats(normalAgg, rankedAgg);
-  assert.equal(combined.totalTime, 10800); // 3600 + 7200
   assert.equal(combined.totalTop10s, 10); // 5 + 5
   assert.equal(combined.totalKills, 30); // 10 + 20
   assert.equal(combined.totalMatches, 18); // 8 + 10
   assert.equal(combined.totalWins, 5); // 2 + 3
+  assert.equal(combined.totalDamage, 5500); // 1500 + 4000
+  // Ranked cannot measure play time, so only the normal slice contributes.
+  assert.equal(combined.totalTime, 3600);
+  assert.equal(combined.totalHeadshots, 3);
+  assert.equal(combined.maxKillDistance, 120);
 });
 
 // Live capture (steam/CHESTER93 ranked squad + steam/Satel14, 2026-07-28):
@@ -284,6 +330,159 @@ test("a normal-only season is byte-for-byte what it was before the ranked fix", 
     teamKills: { displayValue: "0", value: 0 },
     suicides: { displayValue: "0", value: 0 },
   });
+});
+
+// Finding A: the normal slice has matches (so its 0 headshots is a real report)
+// but no kills, so the whole kill sample is unmeasurable ranked kills.
+const killlessNormalGameModeStats = {
+  squad: {
+    kills: 0,
+    wins: 0,
+    timeSurvived: 1800,
+    damageDealt: 320,
+    roundsPlayed: 5,
+    headshotKills: 0,
+    revives: 0,
+    assists: 1,
+    dBNOs: 0,
+    heals: 2,
+    boosts: 1,
+    vehicleDestroys: 0,
+    roadKills: 0,
+    top10s: 1,
+    teamKills: 0,
+    suicides: 0,
+    longestKill: 0,
+    longestTimeSurvived: 600,
+  },
+};
+
+test("an empty kill sample makes the headshot rate unknown instead of a measured 0%", () => {
+  const season = mapSeason(killlessNormalGameModeStats, liveRankedGameModeStats);
+  assert.equal(season.stats.kills.value, 334);
+  assert.equal(season.stats.matchesPlayed.value, 379);
+  // 0 measurable kills behind the 0 headshots: 0% would be a measurement of 334
+  // kills nobody measured.
+  assert.equal(season.stats.headshotRate.displayValue, "—");
+  assert.equal(season.stats.headshotRate.value, null);
+  assert.equal(season.modes.squad.stats.headshotRate.displayValue, "—");
+});
+
+test("a kill-less normal-only season still reports a real 0% headshot rate", () => {
+  const season = mapSeason(killlessNormalGameModeStats, null);
+  assert.equal(season.stats.kills.value, 0);
+  assert.equal(season.stats.headshotRate.displayValue, "0%");
+  assert.equal(season.stats.headshotRate.value, 0);
+});
+
+// Finding B: season.modes went through a merge that had no idea which kills were
+// measurable, so it contradicted season.stats in the same response.
+test("season.modes applies exactly the same reporting rule as season.stats", () => {
+  const season = mapSeason(liveNormalGameModeStats, liveRankedGameModeStats);
+  const squad = season.modes.squad.stats;
+
+  assert.equal(squad.headshotRate.displayValue, "75%"); // was 1.8%
+  assert.equal(squad.timePlayed.displayValue, "1h");
+  assert.equal(squad.heals.displayValue, "13");
+  assert.equal(squad.longestKill.displayValue, "64m");
+  // Every mode in this payload is squad, so the mode breakdown must be the
+  // season total field for field.
+  assert.deepEqual(squad, season.stats);
+});
+
+test("season.modes marks unreported fields unknown on a ranked-only season", () => {
+  const season = mapSeason({}, liveRankedGameModeStats);
+  const squad = season.modes.squad.stats;
+
+  assert.equal(squad.timePlayed.displayValue, "—"); // was "0h" beside season "—"
+  assert.equal(squad.headshotRate.displayValue, "—");
+  assert.equal(squad.longestKill.displayValue, "—");
+  assert.equal(squad.heals.displayValue, "—");
+  assert.deepEqual(squad, season.stats);
+});
+
+test("ranked's reported fields stay fully combined at season.stats and season.modes", () => {
+  const season = mapSeason(liveNormalGameModeStats, liveRankedGameModeStats);
+  [season.stats, season.modes.squad.stats].forEach((stats, index) => {
+    const where = index === 0 ? "season.stats" : "season.modes.squad";
+    assert.equal(stats.kills.value, 342, `${where} kills`);
+    assert.equal(stats.wins.value, 22, `${where} wins`);
+    assert.equal(stats.damage.value, 60320, `${where} damage`);
+    assert.equal(stats.matchesPlayed.value, 379, `${where} matches`);
+    assert.equal(stats.assists.value, 76, `${where} assists`);
+    assert.equal(stats.dbnos.value, 306, `${where} knockouts`);
+    assert.equal(stats.top10s.value, 153, `${where} top10s`);
+  });
+});
+
+const idleMode = {
+  kills: 0,
+  wins: 0,
+  timeSurvived: 0,
+  damageDealt: 0,
+  roundsPlayed: 0,
+  headshotKills: 0,
+  revives: 0,
+  assists: 0,
+  dBNOs: 0,
+  heals: 0,
+  boosts: 0,
+  vehicleDestroys: 0,
+  roadKills: 0,
+  top10s: 0,
+  teamKills: 0,
+  suicides: 0,
+  longestKill: 0,
+  longestTimeSurvived: 0,
+};
+
+test("an unplayed slice's zeros neither erase a measurement nor pass for a report", () => {
+  const withIdleMode = mapSeason({ ...liveNormalGameModeStats, solo: idleMode }, liveRankedGameModeStats);
+  assert.deepEqual(withIdleMode.stats, mapSeason(liveNormalGameModeStats, liveRankedGameModeStats).stats);
+  // The unplayed normal slice of a ranked-only season reports 0 for everything;
+  // those zeros must not stand in for the fields ranked cannot measure.
+  const rankedOnly = mapSeason({ solo: idleMode }, liveRankedGameModeStats);
+  assert.equal(rankedOnly.stats.timePlayed.displayValue, "—");
+  assert.equal(rankedOnly.stats.heals.displayValue, "—");
+  assert.equal(rankedOnly.stats.kills.value, 334);
+});
+
+// A tier-only ranked object (season rollover) is not a reporting source with
+// activity, so nothing is unknown: an empty season stays all zeros.
+test("a season with no activity anywhere renders zeros even when a ranked object exists", () => {
+  const tierOnlyRanked = {
+    squad: {
+      currentTier: { tier: "Master", subTier: "0" },
+      currentRankPoint: 4123,
+      roundsPlayed: 0,
+      kills: 0,
+      deaths: 0,
+      damageDealt: 0,
+      dBNOs: 0,
+      assists: 0,
+      wins: 0,
+      top10Ratio: 0,
+      headshotKills: 0,
+      longestKill: 0,
+      playTime: 0,
+      revives: 0,
+      heals: 0,
+      boosts: 0,
+      teamKills: 0,
+      avgSurvivalTime: 0,
+    },
+  };
+  const withRanked = mapSeason({}, tierOnlyRanked);
+  const withoutRanked = mapSeason({}, null);
+
+  assert.equal(withRanked.includesRanked, true);
+  assert.ok(withRanked.rankedInfo);
+  assert.equal(withRanked.stats.timePlayed.displayValue, "0h");
+  assert.equal(withRanked.stats.heals.displayValue, "0");
+  assert.equal(withRanked.stats.headshotRate.displayValue, "0%");
+  assert.equal(withRanked.stats.longestSurvival.displayValue, "0h 0m");
+  assert.deepEqual(withRanked.stats, withoutRanked.stats);
+  assert.deepEqual(withRanked.modes, {});
 });
 
 test("mapPubgStatsToFrontend combined season stats reflect both normal and ranked play", () => {
