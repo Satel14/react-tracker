@@ -191,10 +191,10 @@ function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerNa
     const type = ev?._T;
     if (type === "LogPlayerAttack") {
       if (!isFocalActor(ev.attacker, accountKey, lowerName)) continue;
-      // TODO(validate-before-deploy): confirm weapon normalizer keys against a real telemetry sample
+      // One event is one shot: fireWeaponStackCount is a cumulative per-magazine counter, and an empty itemId carries an uninitialised int32.
       const key = canonicalWeaponKey(ev.weapon?.itemId);
-      const count = Number(ev.fireWeaponStackCount) || 1;
-      shotsByWeapon.set(key, (shotsByWeapon.get(key) || 0) + count);
+      if (!key) continue;
+      shotsByWeapon.set(key, (shotsByWeapon.get(key) || 0) + 1);
       continue;
     }
     if (type === "LogPlayerTakeDamage") {
