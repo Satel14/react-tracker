@@ -8,10 +8,11 @@ import {
 } from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { translate } from "react-switch-lang";
-import { getPlayerData } from "../api/player";
+import { getPlayerData, resolvePlayers } from "../api/player";
 import { resolvePreferredPlayerName, normalizePlatform } from "../helpers/playerIdentity";
 import { getPlatformAvatar } from "../helpers/other";
 import { statNumber, statDisplay } from "../helpers/playerStats";
+import { buildCompareResolveBatches } from "../helpers/compareBatchResolve";
 
 const COMPARE_ROWS = [
   { key: "matchesPlayed", label: "Matches", direction: "higher" },
@@ -76,6 +77,16 @@ const Compare = ({ t }) => {
     let cancelled = false;
 
     const load = async () => {
+      const batches = buildCompareResolveBatches(slots);
+      if (batches.length) {
+        try {
+          await Promise.all(batches.map((batch) => resolvePlayers(batch.platform, batch.gameIds)));
+        } catch (_err) {
+          // best-effort cache warm-up; per-slot fetches below remain the source of truth
+        }
+      }
+      if (cancelled) return;
+
       await Promise.all(
         slots.map(async (slot) => {
           const slotKey = buildSlotParam(slot);
