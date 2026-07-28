@@ -114,6 +114,18 @@ test("parseDamage builds a weapon breakdown and headshot-damage percent", () => 
   assert.equal(d.headshotDamagePct, 63); // round(34/54*100)
 });
 
+test("parseDamage groups one weapon's differently-named causers into a single row", () => {
+  const panzerTelemetry = [
+    { _T: "LogPlayerTakeDamage", elapsedTime: 10, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 60, damageReason: "TorsoShot", damageTypeCategory: "Damage_Explosion_RedZone_Explode", damageCauserName: "WeapPanzerFaust100M1_C" },
+    { _T: "LogPlayerTakeDamage", elapsedTime: 11, attacker: { accountId: "account.me", name: "Me" }, victim: { accountId: "account.foe", name: "Foe" }, damage: 40, damageReason: "TorsoShot", damageTypeCategory: "Damage_Explosion_RedZone_Explode", damageCauserName: "PanzerFaust100M_Projectile_C" },
+  ];
+  const d = parseDamage(panzerTelemetry, { accountId: "account.me" });
+  const rows = d.dealtByWeapon.filter((w) => w.weapon === "PanzerFaust");
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].damage, 100);
+  assert.equal(rows[0].hits, 2);
+});
+
 const { parseTimeline } = require("./getMatchAnalysis");
 
 const timelineTelemetry = [

@@ -27,9 +27,6 @@ test("parseTimeline joins shots and hits for an unmapped weapon on a single row"
   assert.equal(rows[0].pct, 50);
 });
 
-// LogPlayerAttack.weapon.itemId is "Item_Weapon_FAMASG2_C" (matches WEAPON_LABELS);
-// LogPlayerTakeDamage.damageCauserName is "WeapFamasG2_C", which telemetryToItemKey
-// turns into the differently-cased "Item_Weapon_FamasG2_C".
 test("canonicalWeaponKey folds the case-mismatched Famas pair onto one label and category", () => {
   const fromItemId = canonicalWeaponKey("Item_Weapon_FAMASG2_C");
   const fromTelemetry = canonicalWeaponKey("WeapFamasG2_C");

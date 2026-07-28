@@ -5,6 +5,7 @@ const {
   weaponCategory,
   telemetryWeaponName,
   telemetryWeaponCategory,
+  canonicalWeaponKey,
 } = require("./weaponMeta");
 
 test("readableWeaponName maps Item_Weapon_* ids and falls back", () => {
@@ -33,4 +34,16 @@ test("telemetryWeaponName prettifies non-weapon causers", () => {
 test("telemetryWeaponCategory resolves category via the bridge", () => {
   assert.equal(telemetryWeaponCategory("WeapAK47_C"), "ar");
   assert.equal(weaponCategory("Item_Weapon_Kar98k_C"), "sr");
+});
+
+test("telemetry names and categories fold case-mismatched and aliased causers", () => {
+  assert.equal(telemetryWeaponName("WeapFamasG2_C"), "Famas");
+  assert.equal(telemetryWeaponCategory("WeapFamasG2_C"), "ar");
+  assert.equal(telemetryWeaponName("WeapPanzerFaust100M1_C"), "PanzerFaust");
+  assert.equal(telemetryWeaponName("PanzerFaust100M_Projectile_C"), "PanzerFaust");
+});
+
+test("canonicalWeaponKey returns a string for inherited object keys", () => {
+  assert.equal(canonicalWeaponKey("constructor"), "constructor");
+  assert.equal(canonicalWeaponKey("__proto__"), "__proto__");
 });

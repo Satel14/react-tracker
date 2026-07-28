@@ -144,10 +144,10 @@ const WEAPON_IMAGE_ALIAS = {
 };
 
 // PanzerFaust's damageCauserName forms (trailing-1 direct hit, unprefixed splash) don't fold to its item key by case or by the Weap-prefix rule.
-const WEAPON_KEY_ALIASES = {
-  weappanzerfaust100m1_c: "Item_Weapon_PanzerFaust100M_C",
-  panzerfaust100m_projectile_c: "Item_Weapon_PanzerFaust100M_C",
-};
+const WEAPON_KEY_ALIASES = new Map([
+  ["weappanzerfaust100m1_c", "Item_Weapon_PanzerFaust100M_C"],
+  ["panzerfaust100m_projectile_c", "Item_Weapon_PanzerFaust100M_C"],
+]);
 
 const WEAPON_KEY_BY_LOWER = new Map(Object.keys(WEAPON_LABELS).map((key) => [key.toLowerCase(), key]));
 
@@ -206,7 +206,7 @@ function telemetryWeaponCategory(name) {
 // itemId and damageCauserName can name the same gun with different case (FAMASG2 vs FamasG2); fold both to WEAPON_LABELS' casing so they join.
 function canonicalWeaponKey(rawName) {
   if (typeof rawName !== "string" || !rawName) return null;
-  const aliased = WEAPON_KEY_ALIASES[rawName.toLowerCase()];
+  const aliased = WEAPON_KEY_ALIASES.get(rawName.toLowerCase());
   if (aliased) return aliased;
   const itemKey = rawName.startsWith("Weap") ? telemetryToItemKey(rawName) || rawName : rawName;
   return WEAPON_KEY_BY_LOWER.get(itemKey.toLowerCase()) || itemKey;

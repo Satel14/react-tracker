@@ -154,8 +154,8 @@ function parseDamage(telemetry, { accountId = null, playerName = null } = {}) {
       if (region) dealt[region] += amount;
       dealt.total += amount;
       dealt.hitCount += 1;
-      const key = ev.damageCauserName || null;
-      const entry = byWeapon.get(key) || { weaponKey: key, weapon: telemetryWeaponName(key), damage: 0, hits: 0 };
+      const key = canonicalWeaponKey(ev.damageCauserName) || ev.damageCauserName || null;
+      const entry = byWeapon.get(key) || { weaponKey: key, weapon: telemetryWeaponName(ev.damageCauserName), damage: 0, hits: 0 };
       entry.damage += amount;
       entry.hits += 1;
       byWeapon.set(key, entry);

@@ -5,12 +5,14 @@ function getPlayerNameCacheKey(shard, accountId) {
 }
 
 function createPlayerNameService({ playerNameCache, nameCacheDuration, isRateLimited, doRequest }) {
+  const maxAge = Number.isFinite(nameCacheDuration) ? nameCacheDuration : 0;
+
   function getCachedPlayerName(shard, accountId) {
     if (!accountId) return null;
     const key = getPlayerNameCacheKey(shard, accountId);
     const cached = playerNameCache.get(key);
     if (!cached) return null;
-    if (Date.now() - cached.timestamp > nameCacheDuration) {
+    if (Date.now() - cached.timestamp > maxAge) {
       playerNameCache.delete(key);
       return null;
     }
