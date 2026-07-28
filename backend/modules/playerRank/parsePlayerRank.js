@@ -514,6 +514,107 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     return record.id;
   }
 
+  const MAX_BATCH_RESOLVE_NAMES = 10;
+
+  async function resolvePlayerBatch(platform, gameIds) {
+    const shard = resolveShard(platform);
+    const seen = new Set();
+    const normalizedIds = (Array.isArray(gameIds) ? gameIds : [])
+      .map((rawId) => String(rawId || "").trim())
+      .filter((id) => {
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+
+    const resolved = [];
+    const missing = [];
+    const toResolve = [];
+
+    normalizedIds.forEach((id) => {
+      const cachedAccountId = playerCache.get(`${shard}:${id}`);
+      if (cachedAccountId) {
+        resolved.push({
+          gameId: id,
+          accountId: cachedAccountId,
+          name: getCachedPlayerName(shard, cachedAccountId) || id,
+        });
+        return;
+      }
+
+      if (isStrictAccountId(id)) {
+        resolved.push({
+          gameId: id,
+          accountId: id,
+          name: getCachedPlayerName(shard, id) || null,
+        });
+        return;
+      }
+
+      toResolve.push(id);
+    });
+
+    if (toResolve.length === 0) {
+      return { resolved, missing };
+    }
+
+    const toFetch = toResolve.slice(0, MAX_BATCH_RESOLVE_NAMES);
+    missing.push(...toResolve.slice(MAX_BATCH_RESOLVE_NAMES));
+
+    const searchUrl =
+      `https://api.pubg.com/shards/${encodeSegment(shard)}/players?` +
+      `filter[playerNames]=${toFetch.map(encodeSegment).join(",")}`;
+
+    let searchData;
+    try {
+      searchData = await doRequest(searchUrl);
+    } catch (e) {
+      if (e.message === "Player not found") {
+        missing.push(...toFetch);
+        return { resolved, missing };
+      }
+      throw e;
+    }
+
+    const requestedByLowerName = new Map();
+    toFetch.forEach((id) => {
+      const key = id.toLowerCase();
+      if (!requestedByLowerName.has(key)) requestedByLowerName.set(key, []);
+      requestedByLowerName.get(key).push(id);
+    });
+
+    const matchedIds = new Set();
+    const records = Array.isArray(searchData?.data) ? searchData.data : [];
+
+    records.forEach((record) => {
+      const name = record?.attributes?.name;
+      const recordAccountId = record?.id;
+      if (!recordAccountId || typeof name !== "string" || !name.trim()) return;
+
+      const requestedIds = requestedByLowerName.get(name.trim().toLowerCase());
+      if (!requestedIds || requestedIds.length === 0) return;
+
+      setCachedPlayerName(shard, recordAccountId, name);
+      playerProfileCache.set(`${shard}:${recordAccountId}`, {
+        data: record,
+        timestamp: Date.now(),
+      });
+      playerCache.set(`${shard}:${name}`, recordAccountId);
+
+      requestedIds.forEach((gameId) => {
+        playerCache.set(`${shard}:${gameId}`, recordAccountId);
+        matchedIds.add(gameId);
+        resolved.push({ gameId, accountId: recordAccountId, name });
+      });
+    });
+
+    toFetch.forEach((id) => {
+      if (!matchedIds.has(id)) missing.push(id);
+    });
+
+    return { resolved, missing };
+  }
+
   async function getPlayerExtras(platform, gameid) {
     const shard = resolveShard(platform);
     const requestedPlayerId = String(gameid || "").trim();
@@ -559,7 +660,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     return run;
   }
 
-  return { parsePlayerRank, getPlayerExtras };
+  return { parsePlayerRank, getPlayerExtras, resolvePlayerBatch };
 }
 
 module.exports = {

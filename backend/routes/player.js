@@ -7,6 +7,7 @@ module.exports = (router) => {
     PlayerController.getPlayerData
   );
   router.post("/api/player/extras", PlayerController.validate("getPlayerExtras"), PlayerController.getPlayerExtras);
+  router.post("/api/player/resolve", PlayerController.validate("resolvePlayers"), PlayerController.resolvePlayers);
   router.post(
     "/api/player/steamid",
     PlayerController.validate("getPlayerSteamName"),

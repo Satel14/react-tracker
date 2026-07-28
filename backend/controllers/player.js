@@ -1,7 +1,7 @@
 const { validationResult, body, check, query, param } = require("express-validator");
 const MESSAGE = require("../constant/responseMessage")
 const ANY_CONFIG = require("../constant/anyConfig")
-const { parsePlayerRank, getPlayerExtras } = require("../modules/getPlayerRank")
+const { parsePlayerRank, getPlayerExtras, resolvePlayerBatch } = require("../modules/getPlayerRank")
 const { getLiveSnapshot } = require("../modules/getLiveSnapshot")
 const { getPlayerReports } = require("../modules/getPlayerReports")
 const { addRecentSearch, getRecentSearches } = require("../modules/recentSearches")
@@ -172,6 +172,24 @@ module.exports.getPlayerExtras = async (req, res) => {
   }
 };
 
+module.exports.resolvePlayers = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res
+        .status(422)
+        .json({ status: 422, message: MESSAGE.VALIDATOR.ERROR });
+    }
+
+    const { platform, gameIds } = req.body;
+    const data = await resolvePlayerBatch(platform, gameIds);
+    return res.status(200).json({ status: 200, data });
+  } catch (e) {
+    return res.status(200).json({ status: 200, message: e.message });
+  }
+};
+
 module.exports.getPlayerCard = async (req, res) => {
   try {
     const { platform, gameId } = req.params || {};
@@ -287,6 +305,13 @@ module.exports.validate = (method) => {
       return [
         body("platform").exists().isIn(ANY_CONFIG.PLATFORMS),
         body("gameId").exists().isString().isLength({ min: 1, max: 64 }),
+      ];
+    }
+    case "resolvePlayers": {
+      return [
+        body("platform").exists().isIn(ANY_CONFIG.PLATFORMS),
+        body("gameIds").exists().isArray({ min: 1, max: 10 }),
+        body("gameIds.*").isString().isLength({ min: 1, max: 64 }),
       ];
     }
     case "getMatchReplay":
