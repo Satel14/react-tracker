@@ -24,7 +24,8 @@ async function fetchPubgJson(url, useApiKey = false) {
 async function fetchTelemetryJson(url) {
   const response = await fetch(url, { headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error(`Telemetry fetch failed: ${response.status}`);
-  return response.json();
+  const text = await response.text();
+  return { telemetry: JSON.parse(text), bytes: Buffer.byteLength(text) };
 }
 
 function findTelemetryUrl(matchPayload) {

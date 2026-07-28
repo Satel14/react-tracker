@@ -16,6 +16,7 @@ function stubFetch(sequence) {
       ok: spec.ok !== false,
       status: spec.status || 200,
       json: async () => spec.json,
+      text: async () => JSON.stringify(spec.json),
     };
   };
   return calls;

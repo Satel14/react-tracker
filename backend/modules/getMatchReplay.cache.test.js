@@ -30,7 +30,7 @@ test("getMatchReplay keys its cache by focal identity so two players against the
   const first = await getMatchReplay({ shard: "steam", matchId: "m1", accountId: "account.alpha" });
   const second = await getMatchReplay({ shard: "steam", matchId: "m1", accountId: "account.bravo" });
 
-  // loadMatchBundle is called on every entry (it owns its own bundle cache), so both hit the stub.
+  // Two focal identities are two cache keys, so both miss the replay cache and reach the loader.
   assert.equal(loadCalls, 2);
 
   assert.equal(first.players.find((p) => p.accountId === "account.alpha").isFocal, true);
@@ -41,4 +41,27 @@ test("getMatchReplay keys its cache by focal identity so two players against the
 
   // A cache key of only `shard:matchId` would return the very same object for both focal players.
   assert.notEqual(first, second);
+});
+
+test("a warm replay result is served without loading the telemetry bundle", async () => {
+  bundle = { matchShard: "steam", matchAttributes, telemetry };
+
+  const before = loadCalls;
+  const first = await getMatchReplay({ shard: "steam", matchId: "warm-1", accountId: "account.alpha" });
+  assert.equal(loadCalls - before, 1);
+
+  const second = await getMatchReplay({ shard: "steam", matchId: "warm-1", accountId: "account.alpha" });
+  assert.equal(loadCalls - before, 1, "a cached replay must not re-download the telemetry bundle");
+  assert.equal(second, first);
+});
+
+test("psn and xbox fold to one console cache key, so the second platform reuses the result", async () => {
+  bundle = { matchShard: "console", matchAttributes, telemetry };
+
+  const before = loadCalls;
+  const viaPsn = await getMatchReplay({ shard: "psn", matchId: "warm-2", accountId: "account.alpha" });
+  const viaXbox = await getMatchReplay({ shard: "xbox", matchId: "warm-2", accountId: "account.alpha" });
+
+  assert.equal(loadCalls - before, 1);
+  assert.equal(viaXbox, viaPsn);
 });

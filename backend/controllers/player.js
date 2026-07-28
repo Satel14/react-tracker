@@ -257,6 +257,10 @@ module.exports.getMatchAnalysis = async (req, res) => {
 
 module.exports.getPlayerHeatmapAggregate = async (req, res) => {
   try {
+    const error = validationResult(req);
+    if (!error.isEmpty()) {
+      return res.status(422).json({ status: 422, message: MESSAGE.VALIDATOR.ERROR });
+    }
     const { shard = "steam", accountId = null, playerName = null, map = null, matchIds = [] } = req.body || {};
     if (!accountId && !playerName) {
       return res.status(400).json({ status: 400, message: "accountId or playerName is required" });
@@ -312,6 +316,16 @@ module.exports.validate = (method) => {
         body("platform").exists().isIn(ANY_CONFIG.PLATFORMS),
         body("gameIds").exists().isArray({ min: 1, max: 10 }),
         body("gameIds.*").isString().isLength({ min: 1, max: 64 }),
+      ];
+    }
+    case "getPlayerHeatmapAggregate": {
+      return [
+        body("shard").optional({ nullable: true }).isIn(ALLOWED_SHARDS),
+        body("accountId").optional({ nullable: true }).isString().trim().isLength({ max: 64 }),
+        body("playerName").optional({ nullable: true }).isString().trim().isLength({ max: 64 }),
+        body("map").optional({ nullable: true }).isString().trim().isLength({ max: 64 }),
+        body("matchIds").optional({ nullable: true }).isArray({ max: 12 }),
+        body("matchIds.*").isString().trim().isLength({ min: 1, max: 64 }),
       ];
     }
     case "getMatchReplay":

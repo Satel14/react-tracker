@@ -1,5 +1,6 @@
 const { getMapMeta } = require("./mapMeta");
 const { loadMatchBundle } = require("./matchLoader");
+const { shardForMatch } = require("./pubgTelemetry");
 const { isFocalActor, readXY, eventTime } = require("./telemetryUtils");
 const { telemetryWeaponName, readableWeaponName, canonicalWeaponKey } = require("./weaponMeta");
 
@@ -242,10 +243,11 @@ function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerNa
 
 async function getMatchAnalysis({ shard, matchId, accountId = null, playerName = null }) {
   if (!matchId) throw new Error("matchId is required");
-  const { matchShard, matchAttributes, matchPayload, telemetry } = await loadMatchBundle({ shard, matchId });
   const focalTag = accountId || playerName || "-";
-  const cacheKey = `${matchShard}:${matchId}:${focalTag}`;
+  const cacheKey = `${shardForMatch(shard)}:${matchId}:${focalTag}`;
   if (analysisCache.has(cacheKey)) return analysisCache.get(cacheKey);
+
+  const { matchAttributes, matchPayload, telemetry } = await loadMatchBundle({ shard, matchId });
 
   const rawMapName = matchAttributes.mapName || "";
   const meta = getMapMeta(rawMapName);

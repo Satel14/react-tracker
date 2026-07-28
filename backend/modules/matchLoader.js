@@ -8,18 +8,67 @@ const { setRateLimited, isRateLimited } = require("./playerRank/state");
 
 const bundleCache = new Map();
 const inFlight = new Map();
-const BUNDLE_CACHE_LIMIT = 30;
+const BUNDLE_TTL_MS = 120 * 1000;
+// Budgeted in telemetry JSON bytes; measured retained heap runs 0.8-1.3x that, so this caps the cache near 125 MB of Render's 512 MB.
+const BUNDLE_CACHE_BYTES = 96 * 1024 * 1024;
+
+let now = () => Date.now();
+let cachedBytes = 0;
 
 function __clearMatchCache() {
   bundleCache.clear();
   inFlight.clear();
+  cachedBytes = 0;
 }
 
-function trim() {
-  while (bundleCache.size > BUNDLE_CACHE_LIMIT) {
-    const oldest = bundleCache.keys().next().value;
-    if (!oldest) break;
-    bundleCache.delete(oldest);
+function __setMatchCacheClock(fn) {
+  now = typeof fn === "function" ? fn : () => Date.now();
+}
+
+function __matchCacheStats() {
+  return {
+    bytes: cachedBytes,
+    keys: [...bundleCache.keys()],
+    budgetBytes: BUNDLE_CACHE_BYTES,
+    ttlMs: BUNDLE_TTL_MS,
+  };
+}
+
+function evict(cacheKey) {
+  const entry = bundleCache.get(cacheKey);
+  if (!entry) return;
+  bundleCache.delete(cacheKey);
+  cachedBytes = Math.max(0, cachedBytes - entry.bytes);
+}
+
+function dropExpired(at) {
+  for (const [cacheKey, entry] of bundleCache) {
+    if (at - entry.storedAt >= BUNDLE_TTL_MS) evict(cacheKey);
+  }
+}
+
+function readCached(cacheKey, at) {
+  const entry = bundleCache.get(cacheKey);
+  if (!entry) return null;
+  if (at - entry.storedAt >= BUNDLE_TTL_MS) {
+    evict(cacheKey);
+    return null;
+  }
+  bundleCache.delete(cacheKey);
+  bundleCache.set(cacheKey, entry);
+  return entry.bundle;
+}
+
+function store(cacheKey, bundle, bytes, at) {
+  dropExpired(at);
+  if (bytes > BUNDLE_CACHE_BYTES) return;
+  evict(cacheKey);
+  bundleCache.set(cacheKey, { bundle, bytes, storedAt: at });
+  cachedBytes += bytes;
+  while (cachedBytes > BUNDLE_CACHE_BYTES) {
+    const leastRecent = bundleCache.keys().next().value;
+    if (leastRecent === undefined || leastRecent === cacheKey) break;
+    evict(leastRecent);
   }
 }
 
@@ -35,23 +84,23 @@ async function build({ matchShard, matchId }) {
   const matchAttributes = matchPayload?.data?.attributes || {};
   const telemetryUrl = findTelemetryUrl(matchPayload);
   if (!telemetryUrl) throw new Error("Telemetry asset unavailable for this match");
-  const telemetry = await fetchTelemetryJson(telemetryUrl);
-  return { matchShard, matchAttributes, matchPayload, telemetry };
+  const { telemetry, bytes } = await fetchTelemetryJson(telemetryUrl);
+  return { bundle: { matchShard, matchAttributes, matchPayload, telemetry }, bytes };
 }
 
 async function loadMatchBundle({ shard, matchId }) {
   if (!matchId) throw new Error("matchId is required");
   const matchShard = shardForMatch(shard);
   const cacheKey = `${matchShard}:${matchId}`;
-  if (bundleCache.has(cacheKey)) return bundleCache.get(cacheKey);
+  const cached = readCached(cacheKey, now());
+  if (cached) return cached;
   if (inFlight.has(cacheKey)) return inFlight.get(cacheKey);
   if (isRateLimited()) throw new Error("Rate Limit Reached");
 
   const run = (async () => {
     try {
-      const bundle = await build({ matchShard, matchId });
-      bundleCache.set(cacheKey, bundle);
-      trim();
+      const { bundle, bytes } = await build({ matchShard, matchId });
+      store(cacheKey, bundle, bytes, now());
       return bundle;
     } finally {
       inFlight.delete(cacheKey);
@@ -61,4 +110,9 @@ async function loadMatchBundle({ shard, matchId }) {
   return run;
 }
 
-module.exports = { loadMatchBundle, __clearMatchCache };
+module.exports = {
+  loadMatchBundle,
+  __clearMatchCache,
+  __setMatchCacheClock,
+  __matchCacheStats,
+};

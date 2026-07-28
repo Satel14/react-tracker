@@ -1,4 +1,5 @@
 const PlayerController = require("../controllers/player");
+const { heatmapAggregateLimiter } = require("../modules/heatmapAggregateRateLimiter");
 
 module.exports = (router) => {
   router.post(
@@ -38,6 +39,8 @@ module.exports = (router) => {
   );
   router.post(
     "/api/player/heatmap/aggregate",
+    heatmapAggregateLimiter,
+    PlayerController.validate("getPlayerHeatmapAggregate"),
     PlayerController.getPlayerHeatmapAggregate
   );
   router.get(

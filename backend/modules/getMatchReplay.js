@@ -1,6 +1,7 @@
 const { getMapMeta } = require("./mapMeta");
 const { readXY, eventTime } = require("./telemetryUtils");
 const { loadMatchBundle } = require("./matchLoader");
+const { shardForMatch } = require("./pubgTelemetry");
 
 const replayCache = new Map();
 const REPLAY_CACHE_LIMIT = 30;
@@ -128,10 +129,11 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
 
 async function getMatchReplay({ shard, matchId, accountId, playerName }) {
   if (!matchId) throw new Error("matchId is required");
-  const { matchShard, matchAttributes, telemetry } = await loadMatchBundle({ shard, matchId });
   const focalTag = accountId || playerName || "-";
-  const cacheKey = `${matchShard}:${matchId}:${focalTag}`;
+  const cacheKey = `${shardForMatch(shard)}:${matchId}:${focalTag}`;
   if (replayCache.has(cacheKey)) return replayCache.get(cacheKey);
+
+  const { matchAttributes, telemetry } = await loadMatchBundle({ shard, matchId });
 
   const parsed = parseReplayTelemetry(telemetry, { matchAttributes, accountId, playerName });
   const result = { matchId, ...parsed };
