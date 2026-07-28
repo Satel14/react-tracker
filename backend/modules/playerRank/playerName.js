@@ -4,13 +4,17 @@ function getPlayerNameCacheKey(shard, accountId) {
   return `${shard}:${accountId}`;
 }
 
-function createPlayerNameService({ playerNameCache, isRateLimited, doRequest }) {
+function createPlayerNameService({ playerNameCache, nameCacheDuration, isRateLimited, doRequest }) {
   function getCachedPlayerName(shard, accountId) {
     if (!accountId) return null;
     const key = getPlayerNameCacheKey(shard, accountId);
     const cached = playerNameCache.get(key);
-    if (typeof cached !== "string") return null;
-    const normalized = cached.trim();
+    if (!cached) return null;
+    if (Date.now() - cached.timestamp > nameCacheDuration) {
+      playerNameCache.delete(key);
+      return null;
+    }
+    const normalized = typeof cached.name === "string" ? cached.name.trim() : "";
     if (!normalized || isAccountIdentifier(normalized)) return null;
     return normalized;
   }
@@ -20,7 +24,7 @@ function createPlayerNameService({ playerNameCache, isRateLimited, doRequest }) 
     const normalized = playerName.trim();
     if (!normalized || isAccountIdentifier(normalized)) return;
     const key = getPlayerNameCacheKey(shard, accountId);
-    playerNameCache.set(key, normalized);
+    playerNameCache.set(key, { name: normalized, timestamp: Date.now() });
   }
 
   async function fetchPlayerNameByAccountId(shard, accountId) {

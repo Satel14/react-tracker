@@ -20,9 +20,11 @@ const {
   lifetimeStatsCache,
   masteryCache,
   matchSummaryCache,
-  playerCache,
+  getCachedAccountId,
+  setCachedAccountId,
   playerProfileCache,
   playerNameCache,
+  PLAYER_NAME_CACHE_DURATION,
   seasonCatalogCache,
   setRateLimited,
   setStalePlayerData,
@@ -61,6 +63,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
 
   const { ensurePlayerName, getCachedPlayerName, setCachedPlayerName } = createPlayerNameService({
     playerNameCache,
+    nameCacheDuration: PLAYER_NAME_CACHE_DURATION,
     isRateLimited,
     doRequest,
   });
@@ -153,30 +156,34 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     cachedPayload,
     requestedPlayerId,
     playerName,
-    accountId,
-    shard,
   }) {
     let nextPayload = cachedPayload;
     let changed = false;
     let nextPlayerName = playerName;
 
-    const cachedHandle = nextPayload?.data?.platformInfo?.platformUserHandle;
-    if (typeof cachedHandle === "string" && cachedHandle.trim() && !isAccountIdentifier(cachedHandle.trim())) {
-      nextPlayerName = cachedHandle.trim();
-      setCachedPlayerName(shard, accountId, nextPlayerName);
-    } else if (!isAccountIdentifier(requestedPlayerId)) {
-      nextPlayerName = requestedPlayerId;
-      nextPayload = {
-        ...nextPayload,
-        data: {
-          ...(nextPayload?.data || {}),
-          platformInfo: {
-            ...(nextPayload?.data?.platformInfo || {}),
-            platformUserHandle: nextPlayerName,
+    const rawCachedHandle = nextPayload?.data?.platformInfo?.platformUserHandle;
+    const cachedHandle = typeof rawCachedHandle === "string" ? rawCachedHandle.trim() : "";
+    const usableName = (candidate) =>
+      typeof candidate === "string" && candidate.trim() && !isAccountIdentifier(candidate.trim())
+        ? candidate.trim()
+        : "";
+    const repairedName = usableName(playerName) || usableName(cachedHandle) || usableName(requestedPlayerId);
+
+    if (repairedName) {
+      nextPlayerName = repairedName;
+      if (cachedHandle !== repairedName) {
+        nextPayload = {
+          ...nextPayload,
+          data: {
+            ...(nextPayload?.data || {}),
+            platformInfo: {
+              ...(nextPayload?.data?.platformInfo || {}),
+              platformUserHandle: repairedName,
+            },
           },
-        },
-      };
-      changed = true;
+        };
+        changed = true;
+      }
     }
 
     const cachedRankedInfo = nextPayload?.data?.season?.rankedInfo;
@@ -252,8 +259,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
 
     const run = (async () => {
       try {
-        const playerCacheKey = `${shard}:${requestedPlayerId}`;
-        let accountId = playerCache.get(playerCacheKey);
+        let accountId = getCachedAccountId(shard, requestedPlayerId);
         let playerName = requestedPlayerId;
         let playerRecord = null;
 
@@ -286,7 +292,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
             playerRecord = searchData.data[0];
             accountId = playerRecord.id;
             playerName = playerRecord.attributes.name;
-            playerCache.set(playerCacheKey, accountId);
+            setCachedAccountId(shard, requestedPlayerId, accountId);
             setCachedPlayerName(shard, accountId, playerName);
             playerProfileCache.set(`${shard}:${accountId}`, {
               data: playerRecord,
@@ -343,8 +349,6 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
             cachedPayload: cachedStats.data,
             requestedPlayerId,
             playerName,
-            accountId,
-            shard,
           });
 
           if (normalized.changed) {
@@ -499,8 +503,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
   };
 
   async function resolveAccountId(shard, requestedPlayerId) {
-    const playerCacheKey = `${shard}:${requestedPlayerId}`;
-    const cached = playerCache.get(playerCacheKey);
+    const cached = getCachedAccountId(shard, requestedPlayerId);
     if (cached) return cached;
     if (isStrictAccountId(requestedPlayerId)) return requestedPlayerId;
 
@@ -512,7 +515,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
       throw new Error("Player not found");
     }
     const record = searchData.data[0];
-    playerCache.set(playerCacheKey, record.id);
+    setCachedAccountId(shard, requestedPlayerId, record.id);
     setCachedPlayerName(shard, record.id, record.attributes.name);
     return record.id;
   }
@@ -528,8 +531,8 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
       data: record,
       timestamp: Date.now(),
     });
-    playerCache.set(`${shard}:${name}`, recordAccountId);
-    playerCache.set(`${shard}:${requestedId}`, recordAccountId);
+    setCachedAccountId(shard, name, recordAccountId);
+    setCachedAccountId(shard, requestedId, recordAccountId);
   }
 
   // Each returned record may satisfy at most one requested id: exact spellings win,
@@ -623,7 +626,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
     const toResolve = [];
 
     normalizedIds.forEach((id) => {
-      const cachedAccountId = playerCache.get(`${shard}:${id}`);
+      const cachedAccountId = getCachedAccountId(shard, id);
       if (cachedAccountId) {
         resolved.push({
           gameId: id,
@@ -683,7 +686,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
 
     let accountId;
     if (isRateLimited()) {
-      accountId = playerCache.get(`${shard}:${requestedPlayerId}`) ||
+      accountId = getCachedAccountId(shard, requestedPlayerId) ||
         (isStrictAccountId(requestedPlayerId) ? requestedPlayerId : null);
       if (!accountId) throw new Error("Rate Limit Reached");
     } else {

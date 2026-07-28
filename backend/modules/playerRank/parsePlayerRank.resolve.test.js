@@ -1,6 +1,6 @@
 const { test, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
-const { playerCache } = require("./state");
+const { getCachedAccountId } = require("./state");
 const { createParsePlayerRank } = require("./parsePlayerRank");
 
 const realFetch = global.fetch;
@@ -240,8 +240,8 @@ test("case collision where only the canonical spelling exists leaves the other s
   assert.equal(resolved[0].accountId, id);
   assert.deepEqual(missing, [ghostName]);
   assert.equal(
-    playerCache.get(`steam:${ghostName}`),
-    undefined,
+    getCachedAccountId("steam", ghostName),
+    null,
     "a name that does not exist must never be cached against another player's account id"
   );
 
@@ -267,8 +267,8 @@ test("case collision where both spellings exist gives each requested id its own 
   assert.equal(new Set(resolved.map((r) => r.gameId)).size, 2);
   assert.equal(resolved.find((r) => r.gameId === upperName).accountId, upperId);
   assert.equal(resolved.find((r) => r.gameId === lowerName).accountId, lowerId);
-  assert.equal(playerCache.get(`steam:${upperName}`), upperId);
-  assert.equal(playerCache.get(`steam:${lowerName}`), lowerId);
+  assert.equal(getCachedAccountId("steam", upperName), upperId);
+  assert.equal(getCachedAccountId("steam", lowerName), lowerId);
 });
 
 test("two simultaneous resolves for the same names coalesce into one upstream fetch", async () => {

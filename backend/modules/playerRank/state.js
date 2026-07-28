@@ -25,6 +25,8 @@ const STEAM_CACHE_DURATION = 6 * 60 * 60 * 1000;
 // the fresh entry expires.
 const STALE_PLAYER_DATA_CACHE_DURATION = 60 * 60 * 1000;
 const LEADERBOARD_CACHE_DURATION = 2 * 60 * 60 * 1000;
+// PUBG frees a renamed handle for anyone else to claim, so name mappings must expire.
+const PLAYER_NAME_CACHE_DURATION = 6 * 60 * 60 * 1000;
 const RATE_LIMIT_COOLDOWN_MS = 20 * 1000;
 const EXTRAS_RETRY_COOLDOWN_MS = 120 * 1000;
 
@@ -36,6 +38,27 @@ function setRateLimited() {
 
 function isRateLimited() {
   return Date.now() < rateLimitedUntil;
+}
+
+function getCachedAccountId(shard, requestedPlayerId) {
+  const key = `${shard}:${requestedPlayerId}`;
+  const entry = playerCache.get(key);
+  if (!entry) return null;
+
+  if (Date.now() - entry.timestamp > PLAYER_NAME_CACHE_DURATION) {
+    playerCache.delete(key);
+    return null;
+  }
+
+  return entry.accountId;
+}
+
+function setCachedAccountId(shard, requestedPlayerId, accountId) {
+  if (!requestedPlayerId || !accountId) return;
+  playerCache.set(`${shard}:${requestedPlayerId}`, {
+    accountId,
+    timestamp: Date.now(),
+  });
 }
 
 function getStalePlayerData(cacheKey) {
@@ -65,9 +88,11 @@ module.exports = {
   clanCache,
   masteryCache,
   matchSummaryCache,
-  playerCache,
   playerProfileCache,
   playerNameCache,
+  PLAYER_NAME_CACHE_DURATION,
+  getCachedAccountId,
+  setCachedAccountId,
   seasonCatalogCache,
   setRateLimited,
   statsCache,
