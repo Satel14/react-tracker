@@ -51,7 +51,7 @@ export default defineConfig({
           globals: true,
           css: false,
           setupFiles: "./src/setupTests.js",
-          include: ["src/**/*.test.{js,jsx}"],
+          include: ["**/*.{test,spec}.?(c|m)[jt]s?(x)"],
           exclude: [
             "node_modules/**",
             "build/**",
