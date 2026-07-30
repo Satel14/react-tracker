@@ -23,7 +23,7 @@ vi.mock("../component/HistoryChecking", () => ({
 
 vi.mock("framer-motion", () => ({
   m: {
-    div: ({ children, initial, animate, transition, ...rest }) => (
+    div: ({ children, initial: _initial, animate: _animate, transition: _transition, ...rest }) => (
       <div {...rest}>{children}</div>
     ),
   },
