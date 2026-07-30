@@ -26,9 +26,43 @@ export default defineConfig({
   },
   envPrefix: 'VITE_',
   test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/setupTests.js',
-    css: false,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "logic",
+          environment: "node",
+          globals: true,
+          css: false,
+          include: [
+            "src/helpers/**/*.test.js",
+            "src/api/**/*.test.js",
+            "src/Language/**/*.test.js",
+            "src/component/charts/replayEngine.test.js",
+            "src/testProjects.logic.test.js",
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "dom",
+          environment: "jsdom",
+          globals: true,
+          css: false,
+          setupFiles: "./src/setupTests.js",
+          include: ["src/**/*.test.{js,jsx}"],
+          exclude: [
+            "node_modules/**",
+            "build/**",
+            "src/helpers/**/*.test.js",
+            "src/api/**/*.test.js",
+            "src/Language/**/*.test.js",
+            "src/component/charts/replayEngine.test.js",
+            "src/testProjects.logic.test.js",
+          ],
+        },
+      },
+    ],
   },
 });
