@@ -12,67 +12,56 @@ import Leaderboard from '../pages/Leaderboard'
 const routes = [
   {
     path: "/",
-    layout: Main,
     component: Main,
     exact: true,
   },
   {
     path: "/404",
-    layout: ErrorPage,
     component: ErrorPage,
     exact: true,
   },
   {
     path: "/help",
-    layout: Help,
     component: Help,
     exact: true,
   },
   {
     path: "/player/:platform/:gameId",
-    layout: PlayerPage,
     component: PlayerPage,
     exact: true,
   },
   {
     path: "/player",
-    layout: Player,
     component: Player,
     exact: true,
   },
   {
     path: "/favorites",
-    layout: FavoritesPage,
     component: FavoritesPage,
     exact: true,
   },
   {
     path: "/leaderboards",
-    layout: Leaderboard,
     component: Leaderboard,
     exact: true,
   },
   {
     path: "/bugreport",
-    layout: BugReportPage,
     component: BugReportPage,
     exact: true,
   },
   {
     path: "/compare",
-    layout: Compare,
     component: Compare,
     exact: true,
   },
   {
     path: "/overlay/:platform/:gameId",
-    layout: Overlay,
     component: Overlay,
     exact: true,
   },
   {
     path: "/match/:platform/:matchId/replay",
-    layout: MatchReplayPage,
     component: MatchReplayPage,
     exact: true,
   },

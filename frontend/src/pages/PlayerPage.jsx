@@ -11,7 +11,6 @@ import {
   BarChartOutlined,
   HistoryOutlined,
   InboxOutlined,
-  EnvironmentOutlined,
   VideoCameraOutlined,
   ShareAltOutlined,
   UserOutlined,

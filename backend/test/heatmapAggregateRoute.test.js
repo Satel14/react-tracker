@@ -69,7 +69,7 @@ test("a well-formed body still passes validation and reaches the handler", async
     assert.equal(res.status, 200);
     assert.equal(warmCalls, 1);
 
-    const { matchIds, ...withoutMatchIds } = validBody;
+    const { matchIds, ...withoutMatchIds } = validBody; // eslint-disable-line no-unused-vars
     const omitted = await postAggregate(port, withoutMatchIds, "10.0.1.2");
     assert.equal(omitted.status, 200);
     assert.equal(warmCalls, 2);

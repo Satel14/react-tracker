@@ -1,4 +1,4 @@
-const { validationResult, body, check, query, param } = require("express-validator");
+const { validationResult, body, query, param } = require("express-validator");
 const MESSAGE = require("../constant/responseMessage")
 const ANY_CONFIG = require("../constant/anyConfig")
 const { parsePlayerRank, getPlayerExtras, resolvePlayerBatch } = require("../modules/getPlayerRank")
@@ -14,31 +14,6 @@ const { getMapMeta } = require("../modules/mapMeta");
 const { aggregateKey, getAggregate } = require("../modules/heatmapAggregate");
 const { getPlayerCard } = require("../modules/getPlayerCard");
 const { ALLOWED_SHARDS } = require("../modules/pubgUrlSafety");
-
-const getNormalDate = (time) => {
-  const date = new Date(time);
-  const monthOk = date.getUTCMonth();
-  const day = date.getUTCDate();
-
-  const month = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-
-  const n = month[monthOk];
-  const newdate = day + " " + n;
-  return newdate;
-};
 
 module.exports.getPlayerData = async (req, res) => {
   try {

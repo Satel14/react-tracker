@@ -6,7 +6,7 @@ function normalizeSteamCandidate(value) {
   const profileMatch = raw.match(/steamcommunity\.com\/profiles\/(\d{17})/i);
   if (profileMatch) return profileMatch[1];
 
-  const idMatch = raw.match(/steamcommunity\.com\/id\/([^\/\?\#]+)/i);
+  const idMatch = raw.match(/steamcommunity\.com\/id\/([^/?#]+)/i);
   if (idMatch) return idMatch[1];
 
   return raw;

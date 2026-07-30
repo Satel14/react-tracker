@@ -1,3 +1,5 @@
+process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test_key";
+
 const test = require("node:test");
 const assert = require("node:assert");
 const ArticlesController = require("../controllers/articles");
@@ -43,4 +45,24 @@ test("getBugReport includes the bugReportList", async () => {
   await ArticlesController.getBugReport({}, res);
   assert.ok(Array.isArray(res.body.data.bugReportList));
   assert.deepStrictEqual(res.body.data.bugReportList, articles.bugReportList);
+});
+
+test("the articles controller exposes only getBugReport", () => {
+  assert.deepStrictEqual(Object.keys(ArticlesController).sort(), [
+    "getBugReport",
+  ]);
+});
+
+test("the articles router registers only the bug-report paths", () => {
+  const registerRoutes = require("../routes/articles");
+  const registered = [];
+  const fakeRouter = {
+    get: (routePath) => registered.push(`GET ${routePath}`),
+    post: (routePath) => registered.push(`POST ${routePath}`),
+  };
+  registerRoutes(fakeRouter);
+  assert.deepStrictEqual(registered.sort(), [
+    "GET /api/articles/bugreport",
+    "POST /api/bugreport/send",
+  ]);
 });

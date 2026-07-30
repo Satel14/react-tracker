@@ -7,14 +7,6 @@ module.exports = (router) => {
         "/api/articles/bugreport",
         ArticlesController.getBugReport
     );
-    router.get(
-        "/api/articles/aboutme",
-        ArticlesController.getAboutMe
-    );
-    router.get(
-        "/api/articles/roadmap",
-        ArticlesController.getRoadmap
-    );
     router.post(
         "/api/bugreport/send",
         bugReportLimiter,
