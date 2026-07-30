@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const BACKEND_ROOT = path.join(__dirname, "..");
-const SKIP_DIRS = new Set(["node_modules", "json", ".git"]);
+const SKIP_DIRS = new Set(["node_modules", "json", ".git", "coverage"]);
 const REQUIRE_RE = /require\(\s*["']([^"']+)["']\s*\)/g;
 
 function collectJsFiles(dir, out = []) {
