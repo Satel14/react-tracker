@@ -266,7 +266,7 @@ function extractRankedInfo(rankedModeStats = {}) {
     iconFallbackUrl: best.iconFallbackUrl,
     byMode: modeSummaries
       .sort((a, b) => b.score - a.score)
-      .map(({ score, ...rest }) => rest),
+      .map(({ score: _score, ...rest }) => rest),
   };
 }
 

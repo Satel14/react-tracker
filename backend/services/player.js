@@ -1,9 +1,7 @@
-const MESSAGE = require("../constant/responeMessages");
-
 module.exports.getPlayerRank = async () => {
   try {
     return [];
-  } catch (e) {
+  } catch (e) { // eslint-disable-line no-unreachable
     throw Error(e.message);
   }
 };

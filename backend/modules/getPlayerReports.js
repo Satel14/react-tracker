@@ -183,7 +183,7 @@ module.exports.getPlayerReports = async ({ accountId, playerName }) => {
     .filter((item) => item.type === "kill" || item.type === "death")
     .sort((a, b) => b.sortTime - a.sortTime)
     .slice(0, MAX_ENCOUNTERS)
-    .map(({ sortTime, ...rest }) => rest);
+    .map(({ sortTime: _sortTime, ...rest }) => rest);
 
   const data = {
     player: {
