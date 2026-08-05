@@ -59,7 +59,7 @@ const Overlay = ({ t }) => {
   const rankedInfo = season?.rankedInfo || null;
   const platformInfo = data?.platformInfo || {};
   const nickname = resolvePreferredPlayerName(platformInfo.platformUserHandle, gameId) || gameId;
-  const rankBadge = rankedInfo?.iconUrl || rankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.png";
+  const rankBadge = rankedInfo?.iconUrl || rankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.webp";
   const rankLabel = rankedInfo?.label || "Unranked";
   const rp = Number(rankedInfo?.currentRankPoint);
   const matchItems = Array.isArray(data?.matches?.items) ? data.matches.items : [];
@@ -85,7 +85,7 @@ const Overlay = ({ t }) => {
                 className="overlay-card__rank"
                 onError={(e) => {
                   e.currentTarget.onerror = null;
-                  e.currentTarget.src = "/images/ranks/opgg/unranked.png";
+                  e.currentTarget.src = "/images/ranks/opgg/unranked.webp";
                 }}
               />
               <div className="overlay-card__identity">

@@ -59,18 +59,18 @@ function toTierScore(tier, subTier) {
 }
 
 const LOCAL_PUBG_RANK_ICON_URLS = {
-  unranked: "/images/ranks/opgg/unranked.png",
-  bronze: "/images/ranks/opgg/bronze-1.png",
-  silver: "/images/ranks/opgg/silver-1.png",
-  gold: "/images/ranks/opgg/gold-1.png",
-  platinum: "/images/ranks/opgg/platinum-1.png",
-  diamond: "/images/ranks/opgg/diamond-1.png",
-  elite: "/images/ranks/opgg/diamond-1.png",
-  crystal: "/images/ranks/opgg/crystal-1.png",
-  master: "/images/ranks/opgg/master-1.png",
-  grandmaster: "/images/ranks/opgg/survivor-1.png",
-  survivor: "/images/ranks/opgg/survivor-1.png",
-  top500: "/images/ranks/opgg/survivor-1.png",
+  unranked: "/images/ranks/opgg/unranked.webp",
+  bronze: "/images/ranks/opgg/bronze-1.webp",
+  silver: "/images/ranks/opgg/silver-1.webp",
+  gold: "/images/ranks/opgg/gold-1.webp",
+  platinum: "/images/ranks/opgg/platinum-1.webp",
+  diamond: "/images/ranks/opgg/diamond-1.webp",
+  elite: "/images/ranks/opgg/diamond-1.webp",
+  crystal: "/images/ranks/opgg/crystal-1.webp",
+  master: "/images/ranks/opgg/master-1.webp",
+  grandmaster: "/images/ranks/opgg/survivor-1.webp",
+  survivor: "/images/ranks/opgg/survivor-1.webp",
+  top500: "/images/ranks/opgg/survivor-1.webp",
 };
 
 function toSubTierNumber(value) {
@@ -100,16 +100,16 @@ function buildLocalOpggCompetitiveRankIconPath(tier, subTier) {
 
   if (withDivision.has(normalizedTier)) {
     const subTierNumber = toSubTierNumber(subTier) || 1;
-    return `/images/ranks/opgg/${normalizedTier}-${subTierNumber}.png`;
+    return `/images/ranks/opgg/${normalizedTier}-${subTierNumber}.webp`;
   }
 
   if (normalizedTier === "crystal") {
     const subTierNumber = Math.min(toSubTierNumber(subTier) || 1, 4);
-    return `/images/ranks/opgg/crystal-${subTierNumber}.png`;
+    return `/images/ranks/opgg/crystal-${subTierNumber}.webp`;
   }
 
   if (normalizedTier === "master") {
-    return "/images/ranks/opgg/master-1.png";
+    return "/images/ranks/opgg/master-1.webp";
   }
 
   if (normalizedTier === "grandmaster") {
@@ -120,7 +120,7 @@ function buildLocalOpggCompetitiveRankIconPath(tier, subTier) {
     return LOCAL_PUBG_RANK_ICON_URLS.top500;
   }
 
-  return "/images/ranks/opgg/unranked.png";
+  return "/images/ranks/opgg/unranked.webp";
 }
 
 function buildLocalRankIconUrl(tier) {
