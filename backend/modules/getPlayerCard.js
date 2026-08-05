@@ -111,7 +111,7 @@ function buildSvg(player) {
   </text>
 
   <text x="${W - 60}" y="${H - 50}" font-family="Arial, sans-serif" font-size="16" fill="#6a6e88" letter-spacing="2" font-weight="600" text-anchor="end">
-    pubgtracker.onrender.com
+    www.pubgtracker.top
   </text>
 </svg>`;
 }
