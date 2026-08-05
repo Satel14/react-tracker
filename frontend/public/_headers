@@ -1,0 +1,12 @@
+# Cloudflare Pages defaults every asset to max-age=14400 + must-revalidate, so
+# even content-hashed bundles pay a 304 round trip every few hours.
+
+# Vite fingerprints these filenames, so a changed file is a changed URL.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# NOT immutable: these filenames are stable across deploys (the backend builds
+# rank icon paths like /images/ranks/opgg/gold-1.webp), so they get overwritten
+# in place. immutable would pin whatever a visitor already cached, forever.
+/images/*
+  Cache-Control: public, max-age=604800

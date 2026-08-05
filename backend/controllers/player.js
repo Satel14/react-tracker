@@ -124,7 +124,11 @@ module.exports.getLiveSnapshot = async (_req, res) => {
 module.exports.getRecentSearches = async (_req, res) => {
   try {
     const data = await getRecentSearches();
-    res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
+    // Deliberately not cacheable by the browser. This list changes as a direct
+    // result of the visitor's own search, so a positive max-age hides their own
+    // entry from them until it expires. The 30s in-process cache already keeps
+    // this endpoint off Postgres, and it is invalidated on write.
+    res.set("Cache-Control", "no-cache");
     return res.status(200).json({ status: 200, data });
   } catch (e) {
     return res.status(200).json({ status: 200, message: e.message });
