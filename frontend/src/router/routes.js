@@ -1,14 +1,17 @@
+import { lazy } from "react";
 import ErrorPage from "../pages/ErrorPage";
-import PlayerPage from "../pages/PlayerPage";
 import Main from "../pages/Main";
-import Help from "../pages/Help"
-import Player from "../pages/Player";
-import FavoritesPage from '../pages/Favorites'
-import BugReportPage from '../pages/BugReportPage'
-import Compare from '../pages/Compare'
-import Overlay from '../pages/Overlay'
-import MatchReplayPage from '../pages/MatchReplayPage'
-import Leaderboard from '../pages/Leaderboard'
+
+const PlayerPage = lazy(() => import("../pages/PlayerPage"));
+const Help = lazy(() => import("../pages/Help"));
+const Player = lazy(() => import("../pages/Player"));
+const FavoritesPage = lazy(() => import("../pages/Favorites"));
+const BugReportPage = lazy(() => import("../pages/BugReportPage"));
+const Compare = lazy(() => import("../pages/Compare"));
+const Overlay = lazy(() => import("../pages/Overlay"));
+const MatchReplayPage = lazy(() => import("../pages/MatchReplayPage"));
+const Leaderboard = lazy(() => import("../pages/Leaderboard"));
+
 const routes = [
   {
     path: "/",

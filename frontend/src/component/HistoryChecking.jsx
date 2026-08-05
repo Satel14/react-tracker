@@ -3,7 +3,12 @@ import { m } from "framer-motion";
 import { Link } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { getRecentSearches } from "../api/player";
-import { getHistory, HISTORY_UPDATED_EVENT } from "../cookie/store";
+import {
+  cacheRecentSearches,
+  getHistory,
+  HISTORY_UPDATED_EVENT,
+  readCachedRecentSearches,
+} from "../cookie/store";
 import { getIconComponentPlatfrom, getPlatformAvatar } from "../helpers/other";
 import { normalizeDisplayName, stripPlatformPrefix } from "../helpers/playerIdentity";
 
@@ -64,8 +69,25 @@ const normalizeRecentEntries = (items = []) => {
     .sort((a, b) => (b?.searchedAt || 0) - (a?.searchedAt || 0));
 };
 
-const HistoryBlocks = ({ items, t }) => {
+const SKELETON_ROWS = [0, 1, 2];
+
+const HistorySkeleton = () =>
+  SKELETON_ROWS.map((row) => (
+    <div className="historycheck_block historycheck_block--loading" key={row}>
+      <div className="historycheck_block-left">
+        <span className="historycheck_skeleton historycheck_skeleton--avatar" />
+        <span className="historycheck_skeleton historycheck_skeleton--text" />
+      </div>
+      <span className="historycheck_skeleton historycheck_skeleton--badge" />
+    </div>
+  ));
+
+const HistoryBlocks = ({ items, t, loading = false }) => {
   if (!items.length) {
+    if (loading) {
+      return <HistorySkeleton />;
+    }
+
     return (
       <div className="historycheck_block historycheck_block--empty">
         <div className="historycheck_block-left">
@@ -102,12 +124,12 @@ const HistoryBlocks = ({ items, t }) => {
       </div>
       <div className="historycheck_block-mmr">
         <img
-          src={player.rankIconUrl || "/images/ranks/opgg/unranked.png"}
+          src={player.rankIconUrl || "/images/ranks/opgg/unranked.webp"}
           alt={player.rankLabel || "Rank"}
           title={player.rankLabel || "Unranked"}
           onError={(e) => {
             e.currentTarget.onerror = null;
-            e.currentTarget.src = "/images/ranks/opgg/unranked.png";
+            e.currentTarget.src = "/images/ranks/opgg/unranked.webp";
           }}
         />
       </div>
@@ -117,7 +139,10 @@ const HistoryBlocks = ({ items, t }) => {
 
 const HistoryChecking = ({ t }) => {
   const [historyList, setHistoryList] = useState(EMPTY_LIST);
-  const [recentList, setRecentList] = useState(EMPTY_LIST);
+  const [recentList, setRecentList] = useState(() =>
+    normalizeRecentEntries(readCachedRecentSearches())
+  );
+  const [recentLoading, setRecentLoading] = useState(true);
 
   const loadHistory = useCallback(async () => {
     const items = await getHistory();
@@ -128,9 +153,14 @@ const HistoryChecking = ({ t }) => {
     try {
       const response = await getRecentSearches();
       const payload = response?.data?.data || response?.data || [];
-      setRecentList(normalizeRecentEntries(payload));
+      const items = normalizeRecentEntries(payload);
+      setRecentList(items);
+      await cacheRecentSearches(items);
     } catch (_e) {
-      setRecentList(EMPTY_LIST);
+      // Keep whatever the cache seeded — replacing it with an empty list would
+      // swap real entries for the "N/A" placeholder.
+    } finally {
+      setRecentLoading(false);
     }
   }, []);
 
@@ -197,7 +227,7 @@ const HistoryChecking = ({ t }) => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.35 }}
         >
-          <HistoryBlocks items={recentList} t={t} />
+          <HistoryBlocks items={recentList} t={t} loading={recentLoading} />
         </m.div>
       </div>
     </>
