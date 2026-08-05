@@ -600,7 +600,7 @@ const PlayerPage = ({ t }) => {
   }));
   const headerRankedInfo = season?.rankedInfo || null;
   const headerRankPlacement = formatRankPlacement(headerRankedInfo);
-  const rankBadgeUrl = headerRankedInfo?.iconUrl || headerRankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.png";
+  const rankBadgeUrl = headerRankedInfo?.iconUrl || headerRankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.webp";
   const rankTitle = headerRankedInfo?.label || "Unranked";
   const rankProgress = getRankProgressMeta(headerRankedInfo);
   const profile = data?.profile || {};
@@ -718,7 +718,7 @@ const PlayerPage = ({ t }) => {
                   alt={rankedInfo.label || "Rank"}
                   className="player-rank__icon"
                   onError={(e) => {
-                    const fallback = rankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.png";
+                    const fallback = rankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.webp";
                     const usedFallback = e.currentTarget.dataset.fallbackApplied === "1";
 
                     if (!usedFallback && fallback) {
@@ -728,7 +728,7 @@ const PlayerPage = ({ t }) => {
                     }
 
                     e.currentTarget.onerror = null;
-                    e.currentTarget.src = "/images/ranks/opgg/unranked.png";
+                    e.currentTarget.src = "/images/ranks/opgg/unranked.webp";
                   }}
                 />
                 <div className="player-rank__text">
@@ -851,7 +851,7 @@ const PlayerPage = ({ t }) => {
                 <div className="player-weapon-card" key={weapon.raw}>
                   <div className="player-weapon-card__head">
                     <img
-                      src={`/images/weapons/${weapon.imageKey || weapon.raw}.png`}
+                      src={`/images/weapons/${weapon.imageKey || weapon.raw}.webp`}
                       alt={weapon.name}
                       className="player-weapon-card__image"
                       onError={(e) => {
@@ -1352,7 +1352,7 @@ const PlayerPage = ({ t }) => {
             src={rankBadgeUrl}
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = "/images/ranks/opgg/unranked.png";
+              e.currentTarget.src = "/images/ranks/opgg/unranked.webp";
             }}
             alt={rankTitle}
             className="player-hero-rank__badge"

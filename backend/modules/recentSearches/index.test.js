@@ -82,3 +82,96 @@ test("falls back to the file store when pg is not configured", async () => {
   const records = await getRecentSearches(10);
   assert.equal(records[0].id, "steam:Trinity");
 });
+
+const SELECT_ROW = {
+  id: "steam:Neo",
+  game_id: "Neo",
+  platform: "steam",
+  nickname: "Neo",
+  avatar: null,
+  rank_icon_url: null,
+  rank_label: null,
+  rating: 2100,
+  searched_at: "1783084548082",
+};
+
+function countSelects(pool) {
+  return pool.calls.filter((c) => c.text.includes("SELECT") && !c.text.includes("DELETE")).length;
+}
+
+function createSelectPool(rows) {
+  return createFakePool(async (text) => (text.includes("SELECT") ? { rows } : { rows: [] }));
+}
+
+test("serves a repeat read from cache instead of querying Postgres again", async () => {
+  const pool = createSelectPool([SELECT_ROW]);
+  __setRecentSearchesPool(pool);
+
+  const first = await getRecentSearches(10);
+  const second = await getRecentSearches(10);
+
+  assert.equal(first[0].id, "steam:Neo");
+  assert.deepEqual(second, first);
+  assert.equal(countSelects(pool), 1, "second read must be served from cache");
+});
+
+test("coalesces concurrent reads into a single Postgres query", async () => {
+  const pool = createSelectPool([SELECT_ROW]);
+  __setRecentSearchesPool(pool);
+
+  const [a, b, c] = await Promise.all([
+    getRecentSearches(10),
+    getRecentSearches(10),
+    getRecentSearches(10),
+  ]);
+
+  assert.deepEqual(b, a);
+  assert.deepEqual(c, a);
+  assert.equal(countSelects(pool), 1, "concurrent reads must share one in-flight query");
+});
+
+test("re-reads a populated list once the cache duration expires", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"] });
+  const pool = createSelectPool([SELECT_ROW]);
+  __setRecentSearchesPool(pool);
+
+  await getRecentSearches(10);
+  t.mock.timers.tick(31 * 1000);
+  await getRecentSearches(10);
+
+  assert.equal(countSelects(pool), 2, "cache must expire after its TTL");
+});
+
+test("expires a cached empty list quickly so a failed read cannot pin a blank widget", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"] });
+  // Both stores swallow storage errors and return [], so an empty answer may
+  // really be a failure in disguise.
+  const pool = createSelectPool([]);
+  __setRecentSearchesPool(pool);
+
+  await getRecentSearches(10);
+  t.mock.timers.tick(6 * 1000);
+  await getRecentSearches(10);
+
+  assert.equal(countSelects(pool), 2, "an empty result must not be held for the full TTL");
+});
+
+test("a write invalidates the cached list", async () => {
+  let rows = [SELECT_ROW];
+  const pool = createFakePool(async (text) => {
+    if (text.includes("SELECT")) return { rows };
+    if (text.includes("ON CONFLICT")) {
+      rows = [{ ...SELECT_ROW, id: "steam:Trinity", game_id: "Trinity", nickname: "Trinity" }];
+    }
+    return { rows: [] };
+  });
+  __setRecentSearchesPool(pool);
+
+  const before = await getRecentSearches(10);
+  assert.equal(before[0].id, "steam:Neo");
+
+  await addRecentSearch({ gameId: "Trinity", platform: "steam" });
+
+  const after = await getRecentSearches(10);
+  assert.equal(after[0].id, "steam:Trinity", "cached list must not survive a write");
+});

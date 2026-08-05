@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import ErrorPage from "../pages/ErrorPage";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { LazyMotion, domAnimation } from "framer-motion";
+import { Spin } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
 import routes from "./routes";
 import Navbar from "../component/Navbar";
 import Footer from "../component/Footer";
@@ -10,6 +12,12 @@ import themes from "../component/config/themes";
 import "../style/style.scss";
 
 const DEFAULT_THEME = "brown";
+
+const RouteFallback = () => (
+  <div className="content__loading">
+    <Spin indicator={<LoadingOutlined style={{ fontSize: 28, color: "#fde82b" }} spin />} />
+  </div>
+);
 
 const getInitialTheme = () => {
   if (typeof window === "undefined") return DEFAULT_THEME;
@@ -41,21 +49,7 @@ const RouterLayout = () => {
     <LazyMotion features={domAnimation}>
       {isChromeless ? (
         <div className="app app--chromeless">
-          <Routes location={location}>
-            {routes.map((route) => (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={<route.component />}
-              />
-            ))}
-            <Route path="*" element={<ErrorPage />} />
-          </Routes>
-        </div>
-      ) : (
-        <div className={"app " + currentTheme}>
-          <Navbar />
-          <div className="content">
+          <Suspense fallback={<RouteFallback />}>
             <Routes location={location}>
               {routes.map((route) => (
                 <Route
@@ -66,6 +60,24 @@ const RouterLayout = () => {
               ))}
               <Route path="*" element={<ErrorPage />} />
             </Routes>
+          </Suspense>
+        </div>
+      ) : (
+        <div className={"app " + currentTheme}>
+          <Navbar />
+          <div className="content">
+            <Suspense fallback={<RouteFallback />}>
+              <Routes location={location}>
+                {routes.map((route) => (
+                  <Route
+                    key={route.path}
+                    path={route.path}
+                    element={<route.component />}
+                  />
+                ))}
+                <Route path="*" element={<ErrorPage />} />
+              </Routes>
+            </Suspense>
           </div>
           <Footer />
           <CookieRules />

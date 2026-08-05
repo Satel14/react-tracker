@@ -206,7 +206,7 @@ const Compare = ({ t }) => {
           const displayName =
             resolvePreferredPlayerName(platformInfo.platformUserHandle, slot.id) || slot.id;
           const avatar = platformInfo.avatarUrl || getPlatformAvatar(slot.platform);
-          const rankBadge = rankedInfo?.iconUrl || rankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.png";
+          const rankBadge = rankedInfo?.iconUrl || rankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.webp";
 
           return (
             <div className="compare-column" key={slotKey}>
@@ -246,7 +246,7 @@ const Compare = ({ t }) => {
                       className="compare-column__rank"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
-                        e.currentTarget.src = "/images/ranks/opgg/unranked.png";
+                        e.currentTarget.src = "/images/ranks/opgg/unranked.webp";
                       }}
                     />
                   </Link>

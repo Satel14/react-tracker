@@ -114,6 +114,7 @@ module.exports.getPlayerReports = async (req, res) => {
 module.exports.getLiveSnapshot = async (_req, res) => {
   try {
     const data = await getLiveSnapshot();
+    res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
     return res.status(200).json({ status: 200, data });
   } catch (e) {
     return res.status(200).json({ status: 200, message: e.message });
@@ -122,7 +123,8 @@ module.exports.getLiveSnapshot = async (_req, res) => {
 
 module.exports.getRecentSearches = async (_req, res) => {
   try {
-    const data = await getRecentSearches(10);
+    const data = await getRecentSearches();
+    res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
     return res.status(200).json({ status: 200, data });
   } catch (e) {
     return res.status(200).json({ status: 200, message: e.message });

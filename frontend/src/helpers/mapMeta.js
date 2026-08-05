@@ -1,14 +1,14 @@
-import erangel from "../img/maps/erangel.png";
-import miramar from "../img/maps/miramar.png";
-import taego from "../img/maps/taego.png";
-import deston from "../img/maps/deston.png";
-import rondo from "../img/maps/rondo.png";
-import vikendi from "../img/maps/vikendi.png";
-import sanhok from "../img/maps/sanhok.png";
-import paramo from "../img/maps/paramo.png";
-import karakin from "../img/maps/karakin.png";
-import campJackal from "../img/maps/camp_jackal.png";
-import haven from "../img/maps/haven.png";
+import erangel from "../img/maps/erangel.webp";
+import miramar from "../img/maps/miramar.webp";
+import taego from "../img/maps/taego.webp";
+import deston from "../img/maps/deston.webp";
+import rondo from "../img/maps/rondo.webp";
+import vikendi from "../img/maps/vikendi.webp";
+import sanhok from "../img/maps/sanhok.webp";
+import paramo from "../img/maps/paramo.webp";
+import karakin from "../img/maps/karakin.webp";
+import campJackal from "../img/maps/camp_jackal.webp";
+import haven from "../img/maps/haven.webp";
 
 export const MAP_META = {
   Baltic_Main: { displayName: "Erangel", mapMax: 8160, image: erangel },

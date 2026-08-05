@@ -20,8 +20,8 @@ test("maps included players into flat rows sorted by rank", () => {
   assert.strictEqual(rows[0].rankPoints, 6000);
   assert.strictEqual(rows[0].tier, "Master");
   assert.strictEqual(rows[0].subTier, "1");
-  assert.strictEqual(rows[0].tierIconUrl, "/images/ranks/opgg/master-1.png");
-  assert.strictEqual(rows[1].tierIconUrl, "/images/ranks/opgg/diamond-2.png");
+  assert.strictEqual(rows[0].tierIconUrl, "/images/ranks/opgg/master-1.webp");
+  assert.strictEqual(rows[1].tierIconUrl, "/images/ranks/opgg/diamond-2.webp");
   assert.strictEqual(rows[1].rank, 2);
   assert.strictEqual(rows[1].name, "Bravo");
 });

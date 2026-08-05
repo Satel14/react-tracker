@@ -140,14 +140,14 @@ const Leaderboard = ({ t }) => {
             <span className="leaderboard-page__tier">
               <img
                 className="leaderboard-page__tier-icon"
-                src={row.tierIconUrl || row.tierIconFallbackUrl || "/images/ranks/opgg/unranked.png"}
+                src={row.tierIconUrl || row.tierIconFallbackUrl || "/images/ranks/opgg/unranked.webp"}
                 alt={label}
                 loading="lazy"
                 onError={(e) => {
                   if (row.tierIconFallbackUrl && e.currentTarget.src.indexOf(row.tierIconFallbackUrl) === -1) {
                     e.currentTarget.src = row.tierIconFallbackUrl;
                   } else {
-                    e.currentTarget.src = "/images/ranks/opgg/unranked.png";
+                    e.currentTarget.src = "/images/ranks/opgg/unranked.webp";
                   }
                 }}
               />

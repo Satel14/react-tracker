@@ -2,8 +2,10 @@ import { isAccountIdentifier, normalizePlatform } from "../helpers/playerIdentit
 
 const HISTORY_KEY = "history";
 const FAVORITES_KEY = "favorites";
+const RECENT_KEY = "recent";
 const MAX_HISTORY_ITEMS = 5;
 const MAX_FAVORITES_ITEMS = 50;
+const MAX_RECENT_ITEMS = 10;
 export const HISTORY_UPDATED_EVENT = "history:updated";
 export const FAVORITES_UPDATED_EVENT = "favorites:updated";
 
@@ -153,6 +155,23 @@ export const addHistory = async (
   writeObject(HISTORY_KEY, next);
   emitHistoryUpdated(next);
   return next[entryId];
+};
+
+// Unlike every other accessor here this one is synchronous: the home page seeds
+// its first render from it, and an async getter would resolve only after the
+// empty "N/A" state had already painted.
+export const readCachedRecentSearches = () => {
+  const cached = readObject(RECENT_KEY);
+  return Array.isArray(cached.items) ? cached.items.slice(0, MAX_RECENT_ITEMS) : [];
+};
+
+export const cacheRecentSearches = async (items) => {
+  if (!Array.isArray(items) || !items.length) return null;
+
+  return writeObject(RECENT_KEY, {
+    items: items.slice(0, MAX_RECENT_ITEMS),
+    cachedAt: Date.now(),
+  });
 };
 
 export const getFavorites = async () => readObject(FAVORITES_KEY);
