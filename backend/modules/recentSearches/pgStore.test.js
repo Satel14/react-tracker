@@ -4,6 +4,7 @@ const {
   isConfigured,
   getRecentSearches,
   addRecentSearch,
+  __createRecentSearchesPool,
   __setRecentSearchesPool,
 } = require("./pgStore");
 
@@ -144,4 +145,41 @@ test("table init retries after a failure instead of staying broken", async () =>
 
   const creates = pool.calls.filter((c) => c.text.includes("CREATE TABLE"));
   assert.equal(creates.length, 2, "one failed attempt + one successful retry");
+});
+
+test("an idle client error is handled instead of taking the process down", async () => {
+  const pool = __createRecentSearchesPool();
+
+  try {
+    assert.ok(
+      pool.listenerCount("error") > 0,
+      "the pool needs an 'error' listener — pg-pool emits on it when an idle client dies, and EventEmitter throws an unhandled 'error'"
+    );
+
+    // Exactly what pg-pool's makeIdleListener does when Neon drops a suspended
+    // connection. Without the listener above this crashes the process.
+    assert.doesNotThrow(() => {
+      pool.emit("error", new Error("connection terminated unexpectedly"), {});
+    });
+  } finally {
+    await pool.end().catch(() => {});
+  }
+});
+
+test("the idle timeout closes connections before Neon's autosuspend can drop them", async () => {
+  const pool = __createRecentSearchesPool();
+
+  try {
+    const idle = pool.options.idleTimeoutMillis;
+    assert.ok(
+      idle < 5 * 60 * 1000,
+      `idleTimeoutMillis (${idle}) must stay under Neon's ~5 min autosuspend so our side closes first`
+    );
+    assert.ok(
+      idle >= 60 * 1000,
+      `idleTimeoutMillis (${idle}) must outlive a typical gap between visitors, or every cache miss pays a full reconnect`
+    );
+  } finally {
+    await pool.end().catch(() => {});
+  }
 });

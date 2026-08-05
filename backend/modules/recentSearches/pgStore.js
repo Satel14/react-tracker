@@ -52,15 +52,32 @@ function isConfigured() {
   return Boolean(poolOverride || process.env.DATABASE_URL);
 }
 
+function createPool() {
+  const nextPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 3,
+    // Neon's serverless compute autosuspends after roughly 5 minutes idle and
+    // drops its connections. Stay under that so we always close first, while
+    // still surviving the usual gap between visitors — a 30s timeout meant
+    // almost every cache miss paid a full reconnect (measured 412ms vs 64ms).
+    idleTimeoutMillis: 180_000,
+    connectionTimeoutMillis: 10_000,
+  });
+
+  // pg-pool emits 'error' on the pool when an *idle* client dies. EventEmitter
+  // turns an unhandled 'error' into a thrown exception, so without this listener
+  // a dropped idle connection takes the whole process down.
+  nextPool.on("error", (e) => {
+    console.log(`[RECENT] Idle Postgres client dropped: ${e.message}`);
+  });
+
+  return nextPool;
+}
+
 function getPool() {
   if (poolOverride) return poolOverride;
   if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 3,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 10_000,
-    });
+    pool = createPool();
   }
   return pool;
 }
@@ -136,5 +153,6 @@ module.exports = {
   isConfigured,
   getRecentSearches,
   addRecentSearch,
+  __createRecentSearchesPool: createPool,
   __setRecentSearchesPool,
 };
