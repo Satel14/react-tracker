@@ -8,6 +8,7 @@ const { createCorsOptions } = require("./modules/corsConfig");
 
 require("dotenv").config();
 const routes = require("./routes");
+const { warmRecentSearches } = require("./modules/recentSearches");
 
 const app = express();
 
@@ -21,9 +22,18 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.use(compression());
+
+// Cheap liveness target for an uptime pinger: no upstream calls, no database.
+app.get("/healthz", (_req, res) =>
+  res.status(200).json({ status: 200, uptime: Math.round(process.uptime()) })
+);
+
 routes(app);
 
-app.listen(config.port, () => console.log(`Listening on port ${config.port}`));
+app.listen(config.port, () => {
+  console.log(`Listening on port ${config.port}`);
+  warmRecentSearches();
+});
 
 if (process.env.CI) {
   console.log(`Tested success`);
