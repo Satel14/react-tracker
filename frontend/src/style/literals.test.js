@@ -15,12 +15,13 @@ const RETIRED = [
   "#9da1bf", "#8d91b2", "#9fa3bf", "#9697b0", "#aeb8c8", "#aeb2cf", "#8e93b3",
   "#7d809e",
   "#0d0918", "#0c1422",
+  "#78f7a8", "#fde82b", "#e8fff3", "#d5ffe7",
 ];
 
 // Any `color:` hex nearer than this to a text token is a re-spelling of that
 // token, not a new colour. 15 clears every literal the migration retires and
 // leaves the legitimately distinct long tail alone — the nearest survivor is
-// #e8fff3 at 25.9.
+// #6b6f8a at 33.3.
 const MERGE_THRESHOLD = 15;
 
 const TEXT_TOKENS = {
@@ -86,6 +87,18 @@ describe("surface literals", () => {
   });
 });
 
+describe("brand alpha values", () => {
+  it("expresses translucent accent via color-mix, not rgba", () => {
+    expect(stylesheet).not.toMatch(/rgba\(120, 247, 168,/);
+    expect(stylesheet).not.toMatch(/rgba\(253, 232, 43,/);
+  });
+
+  it("no longer declares the legacy accent SCSS variables", () => {
+    expect(stylesheet).not.toContain("$colorFirst");
+    expect(stylesheet).not.toContain("$colorSecond");
+  });
+});
+
 describe("semantic colours", () => {
   const semanticLines = [
     "&--win { background: var(--win);",
@@ -109,6 +122,18 @@ describe("semantic colours", () => {
   it("uses --ok for the player-place-badge top10 tier, alphas preserved", () => {
     expect(stylesheet).toMatch(
       /&--top10 \{\s*color: var\(--ok\);\s*border-color: color-mix\(in srgb, var\(--ok\) 50%, transparent\);\s*background: color-mix\(in srgb, var\(--ok\) 12%, transparent\);\s*\}/,
+    );
+  });
+
+  it("keeps the won-match row border on --win", () => {
+    expect(stylesheet).toMatch(
+      /&--win \{\s*border-color: color-mix\(in srgb, var\(--win\) 45%, transparent\);/,
+    );
+  });
+
+  it("keeps the compare winner cell on --ok", () => {
+    expect(stylesheet).toMatch(
+      /&--winner \{\s*color: #62ec96;\s*background: color-mix\(in srgb, var\(--ok\) 16%, transparent\);\s*box-shadow: inset 0 0 0 1px color-mix\(in srgb, var\(--ok\) 40%, transparent\);\s*\}/,
     );
   });
 
