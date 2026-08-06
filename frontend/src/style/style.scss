@@ -1,3 +1,4 @@
+@import "tokens.scss";
 $backgroundColorFirst: #0d0918;
 $colorFirst: #fde82b;
 $colorSecond: #78f7a8;
@@ -32,6 +33,7 @@ body {
 }
 
 .app {
+  color: var(--text);
   max-width: 1200px;
   margin: auto;
   min-height: 100vh;
@@ -3253,6 +3255,12 @@ body {
   }
 }
 
+.compare-column__loading {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
 @media (max-width: 700px) {
   .compare-grid {
     &--cols-2,
@@ -4148,7 +4156,13 @@ body {
 
     &:hover { color: #fff; text-decoration: underline; }
   }
-  &__loading { display: flex; gap: 10px; align-items: center; padding: 24px; }
+  &__loading {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
   &__field .match-replay__canvas {
     position: absolute;
     inset: 0;

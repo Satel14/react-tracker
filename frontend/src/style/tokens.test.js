@@ -66,3 +66,20 @@ describe("colour tokens", () => {
     },
   );
 });
+
+const stylesheet = readFileSync(
+  fileURLToPath(new URL("./style.scss", import.meta.url)),
+  "utf8",
+);
+
+describe("stylesheet wiring", () => {
+  it("imports the token file before anything else", () => {
+    const firstImport = /@import\s+"([^"]+)"/.exec(stylesheet);
+    expect(firstImport?.[1]).toBe("tokens.scss");
+  });
+
+  it("gives .app a default text colour so nothing inherits the antd reset", () => {
+    const appBlock = /\n\.app \{([\s\S]*?)\n\}/.exec(stylesheet);
+    expect(appBlock?.[1]).toMatch(/color:\s*var\(--text\);/);
+  });
+});
