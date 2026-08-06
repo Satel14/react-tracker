@@ -99,4 +99,20 @@ describe("semantic colours", () => {
   it("uses --ok for the roster focal name", () => {
     expect(stylesheet).toMatch(/is-focal \.replay-roster__name \{ color: var\(--ok\); \}/);
   });
+
+  it("uses --win for the player-place-badge win tier, alphas preserved", () => {
+    expect(stylesheet).toMatch(
+      /&--win \{\s*color: var\(--win\);\s*border-color: color-mix\(in srgb, var\(--win\) 55%, transparent\);\s*background: color-mix\(in srgb, var\(--win\) 12%, transparent\);\s*box-shadow: 0 0 0 1px color-mix\(in srgb, var\(--win\) 8%, transparent\), 0 0 12px color-mix\(in srgb, var\(--win\) 18%, transparent\);\s*\}/,
+    );
+  });
+
+  it("uses --ok for the player-place-badge top10 tier, alphas preserved", () => {
+    expect(stylesheet).toMatch(
+      /&--top10 \{\s*color: var\(--ok\);\s*border-color: color-mix\(in srgb, var\(--ok\) 50%, transparent\);\s*background: color-mix\(in srgb, var\(--ok\) 12%, transparent\);\s*\}/,
+    );
+  });
+
+  it("keeps the scoreboard win badge on --win", () => {
+    expect(stylesheet).toMatch(/&__won \{\s*color: var\(--bg\);\s*background: var\(--win\);/);
+  });
 });
