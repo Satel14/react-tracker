@@ -16,6 +16,7 @@ const RETIRED = [
   "#7d809e",
   "#0d0918", "#0c1422",
   "#78f7a8", "#fde82b", "#e8fff3", "#d5ffe7",
+  "#ff9b9b",
 ];
 
 // Any `color:` hex nearer than this to a text token is a re-spelling of that

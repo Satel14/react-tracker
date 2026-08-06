@@ -519,7 +519,7 @@ const PlayerPage = ({ t }) => {
         className="playerpage"
         style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}
       >
-        <Skeleton variant="block" label={t("pages.player.loading")} />
+        <Skeleton variant="block" label={t("pages.player.loading")} className="playerpage__loading" />
       </div>
     );
   }

@@ -3146,6 +3146,7 @@ body {
     align-items: center;
     justify-content: center;
     min-height: 80px;
+    padding: 32px 0;
   }
 
   &__profile {
@@ -3260,12 +3261,6 @@ body {
     color: var(--text-faint);
     font-weight: 400;
   }
-}
-
-.compare-column__loading {
-  display: flex;
-  justify-content: center;
-  padding: 32px 0;
 }
 
 @media (max-width: 700px) {
@@ -4083,7 +4078,7 @@ body {
     height: 100%;
     pointer-events: none;
   }
-  &__empty, &__loading { padding: 24px; text-align: center; opacity: 0.8; color: var(--text); }
+  &__loading { padding: 24px; text-align: center; opacity: 0.8; color: var(--text); }
 
   @media (max-width: 480px) {
     &__controls { gap: 6px 12px; }
@@ -4135,6 +4130,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; }
 }
+
+// Definite width: the row-flex wrapper around this shrinks it to 0 otherwise.
+.playerpage__loading { width: 100%; }
 
 .empty-state {
   margin: 0;
@@ -4473,8 +4471,8 @@ body {
       .kill-feed__killer { color: var(--ok); }
     }
     &.is-death {
-      box-shadow: inset 3px 0 0 #ff9b9b;
-      .kill-feed__victim { color: #ff9b9b; }
+      box-shadow: inset 3px 0 0 var(--danger);
+      .kill-feed__victim { color: var(--danger); }
     }
   }
   &__time { opacity: 0.55; min-width: 46px; font-variant-numeric: tabular-nums; }
@@ -5039,7 +5037,7 @@ body {
   &__region-fill { display: block; height: 100%; border-radius: 999px; transition: width 0.3s ease; }
   &__region-val { text-align: right; color: var(--text-strong); font-variant-numeric: tabular-nums; }
   &__col:nth-child(1) &__region-fill { background: linear-gradient(90deg, #4fd08a, var(--ok)); }
-  &__col:nth-child(2) &__region-fill { background: linear-gradient(90deg, #e06b6b, #ff9b9b); }
+  &__col:nth-child(2) &__region-fill { background: linear-gradient(90deg, #e06b6b, var(--danger)); }
   &__weapons {
     margin-top: 16px;
     border: 1px solid var(--border);
@@ -5095,7 +5093,7 @@ body {
   &__third-tag {
     background: rgba(255, 155, 155, 0.16);
     border: 1px solid rgba(255, 155, 155, 0.35);
-    color: #ff9b9b;
+    color: var(--danger);
     border-radius: 999px;
     padding: 3px 10px;
     font-size: 12px;
@@ -5121,7 +5119,7 @@ body {
 
     &:last-child { border-bottom: none; }
     &.is-dealt { box-shadow: inset 3px 0 0 var(--ok); }
-    &.is-taken { box-shadow: inset 3px 0 0 #ff9b9b; }
+    &.is-taken { box-shadow: inset 3px 0 0 var(--danger); }
   }
   &__event-time { opacity: 0.55; font-variant-numeric: tabular-nums; }
   &__event-weapon { color: var(--text-muted); }
