@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import themes from "../component/config/themes";
 
 const source = readFileSync(
   fileURLToPath(new URL("./_tokens.scss", import.meta.url)),
@@ -86,8 +87,30 @@ describe("stylesheet wiring", () => {
 
 describe("focus states", () => {
   it("defines a single :focus-visible ring driven by the accent token", () => {
-    const matches = stylesheet.match(/:focus-visible/g) ?? [];
+    // Strip // comments before counting so a stray mention in prose can't
+    // inflate the match count (this already forced a comment reword once).
+    const withoutComments = stylesheet.replace(/\/\/.*$/gm, "");
+    const matches = withoutComments.match(/:focus-visible/g) ?? [];
     expect(matches).toHaveLength(1);
     expect(stylesheet).toMatch(/outline:\s*2px solid var\(--accent\);/);
+  });
+});
+
+describe("theme accents", () => {
+  const themeBlocks = Object.fromEntries(
+    [...source.matchAll(/\.app\.([\w-]+)\s*\{\s*--accent:\s*([^;]+);/g)]
+      .map((m) => [m[1], m[2].trim()]),
+  );
+
+  it("defines a class for every theme in themes.js and no others", () => {
+    expect(Object.keys(themeBlocks).sort()).toEqual(Object.keys(themes).sort());
+  });
+
+  it.each(Object.keys(themes))("%s matches the swatch value in themes.js", (name) => {
+    expect(themeBlocks[name]).toBe(themes[name]);
+  });
+
+  it.each(Object.keys(themes))("%s meets WCAG AA against --bg", (name) => {
+    expect(contrast(themes[name], tokens["--bg"])).toBeGreaterThanOrEqual(4.5);
   });
 });

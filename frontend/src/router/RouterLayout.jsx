@@ -11,7 +11,7 @@ import CookieRules from "../component/CookieRule";
 import themes from "../component/config/themes";
 import "../style/style.scss";
 
-const DEFAULT_THEME = "brown";
+const DEFAULT_THEME = "green";
 
 const RouteFallback = () => (
   <div className="content__loading">

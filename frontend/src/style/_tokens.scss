@@ -24,3 +24,11 @@
   --surface: #0c1422;
   --border: rgba(255, 255, 255, 0.08);
 }
+
+// The switcher writes these classes onto .app. Values must stay in step with
+// component/config/themes.js — tokens.test.js enforces that.
+.app.brown { --accent: #f8ccaf; }
+.app.green { --accent: #77f6a7; }
+.app.blue { --accent: #00d8d3; }
+.app.orange { --accent: #ffbe29; }
+.app.red { --accent: #f73b5d; }

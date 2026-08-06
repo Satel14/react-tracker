@@ -1,6 +1,7 @@
 import React from "react";
 import { render } from "@testing-library/react";
 import RouterLayout from "./RouterLayout";
+import themes from "../component/config/themes";
 
 vi.mock("react-router-dom", () => ({
   useLocation: () => ({ pathname: "/" }),
@@ -36,20 +37,20 @@ test("uses the saved theme from localStorage on first paint", () => {
   expect(shell.className).toContain("red");
 });
 
-test("falls back to the brown theme when no theme is saved", () => {
+test("falls back to the green theme when no theme is saved", () => {
   const { container } = render(<RouterLayout />);
   const shell = container.querySelector(".app");
-  expect(shell.className).toContain("brown");
+  expect(shell.className).toContain("green");
 });
 
-test("falls back to the brown theme when the saved theme is not a known theme", () => {
+test("falls back to the green theme when the saved theme is not a known theme", () => {
   window.localStorage.setItem("theme", "garbage");
   const { container } = render(<RouterLayout />);
   const shell = container.querySelector(".app");
-  expect(shell.className).toContain("app brown");
+  expect(shell.className).toContain("app green");
 });
 
-test("falls back to the brown theme when localStorage.getItem throws", () => {
+test("falls back to the green theme when localStorage.getItem throws", () => {
   const getItemSpy = vi
     .spyOn(window.localStorage.__proto__, "getItem")
     .mockImplementation(() => {
@@ -59,8 +60,15 @@ test("falls back to the brown theme when localStorage.getItem throws", () => {
   try {
     const { container } = render(<RouterLayout />);
     const shell = container.querySelector(".app");
-    expect(shell.className).toContain("brown");
+    expect(shell.className).toContain("green");
   } finally {
     getItemSpy.mockRestore();
   }
+});
+
+test("the theme class matches a theme that defines an accent", () => {
+  const { container } = render(<RouterLayout />);
+  const shell = container.querySelector(".app");
+  const applied = [...shell.classList].find((name) => name !== "app");
+  expect(Object.keys(themes)).toContain(applied);
 });
