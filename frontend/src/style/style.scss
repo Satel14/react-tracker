@@ -2120,6 +2120,16 @@ body {
   }
 }
 
+// One rule rather than a per-component mixin, so a new interactive element
+// cannot be shipped without a focus indicator. Keyboard focus only; mouse
+// clicks should not flash a ring.
+.app :is(a, button, [role="button"], input, select, textarea,
+         .ant-btn, .ant-tabs-tab, .ant-segmented-item-label):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
 .mainpage {
   display: flex;
   align-items: center;

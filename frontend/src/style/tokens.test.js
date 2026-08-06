@@ -83,3 +83,11 @@ describe("stylesheet wiring", () => {
     expect(appBlock?.[1]).toMatch(/color:\s*var\(--text\);/);
   });
 });
+
+describe("focus states", () => {
+  it("defines a single :focus-visible ring driven by the accent token", () => {
+    const matches = stylesheet.match(/:focus-visible/g) ?? [];
+    expect(matches).toHaveLength(1);
+    expect(stylesheet).toMatch(/outline:\s*2px solid var\(--accent\);/);
+  });
+});
