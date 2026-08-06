@@ -14,6 +14,7 @@ const RETIRED = [
   "#d6d9ee", "#d6e0f0", "#d6d9ed", "#c8cbe0", "#d2d6f0", "#cfd3e6",
   "#9da1bf", "#8d91b2", "#9fa3bf", "#9697b0", "#aeb8c8", "#aeb2cf", "#8e93b3",
   "#7d809e",
+  "#0d0918", "#0c1422",
 ];
 
 // Any `color:` hex nearer than this to a text token is a re-spelling of that
@@ -41,11 +42,12 @@ const distance = (a, b) => {
 };
 
 const occurrences = (literal) => {
+  const haystack = stylesheet.toLowerCase();
   const isHex = (c) => c !== undefined && /[0-9a-f]/.test(c);
   const found = [];
   let index = 0;
-  while ((index = stylesheet.indexOf(literal, index)) !== -1) {
-    if (!isHex(stylesheet[index + literal.length])) {
+  while ((index = haystack.indexOf(literal, index)) !== -1) {
+    if (!isHex(haystack[index + literal.length])) {
       found.push(stylesheet.slice(0, index).split("\n").length);
     }
     index += literal.length;
@@ -62,7 +64,7 @@ describe("retired literals", () => {
 describe("near-duplicate colours", () => {
   it("has no color: hex that restates a text token", () => {
     const offenders = [];
-    for (const match of stylesheet.matchAll(/color:\s*(#[0-9a-f]{3,6})\b/g)) {
+    for (const match of stylesheet.matchAll(/color:\s*(#[0-9a-f]{3,6})\b/gi)) {
       for (const [name, value] of Object.entries(TEXT_TOKENS)) {
         const gap = distance(match[1], value);
         if (gap < MERGE_THRESHOLD) {
@@ -71,5 +73,15 @@ describe("near-duplicate colours", () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("surface literals", () => {
+  it("uses the --border token for the hairline alpha", () => {
+    expect(stylesheet).not.toContain("rgba(255, 255, 255, 0.08)");
+  });
+
+  it("no longer declares the legacy background SCSS variable", () => {
+    expect(stylesheet).not.toContain("$backgroundColorFirst");
   });
 });
