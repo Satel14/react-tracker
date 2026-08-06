@@ -3028,8 +3028,8 @@ body {
   background: var(--rest);
   display: inline-block;
 
-  &--win { background: #fde82b; box-shadow: 0 0 6px rgba(253, 232, 43, 0.5); }
-  &--top10 { background: #78f7a8; }
+  &--win { background: var(--win); box-shadow: 0 0 6px color-mix(in srgb, var(--win) 50%, transparent); }
+  &--top10 { background: var(--ok); }
   &--top25 { background: #5ab4ff; }
   &--rest { background: var(--rest); }
   &--na { background: #3a3e58; }
@@ -4251,7 +4251,7 @@ body {
     cursor: pointer;
     border-radius: 6px;
 
-    &.is-focal .replay-roster__name { color: #78f7a8; }
+    &.is-focal .replay-roster__name { color: var(--ok); }
     &.is-dead { opacity: 0.4; }
     &.is-selected { border-color: #fde82b; background: rgba(253, 232, 43, 0.1); }
   }
@@ -4414,7 +4414,7 @@ body {
     }
     &.is-focal {
       background: rgba(120, 247, 168, 0.1);
-      box-shadow: inset 3px 0 0 #78f7a8;
+      box-shadow: inset 3px 0 0 var(--ok);
     }
   }
   &__name {
@@ -4471,8 +4471,8 @@ body {
     &:last-child { border-bottom: none; }
     &:hover { background: rgba(255, 255, 255, 0.03); }
     &.is-kill {
-      box-shadow: inset 3px 0 0 #78f7a8;
-      .kill-feed__killer { color: #78f7a8; }
+      box-shadow: inset 3px 0 0 var(--ok);
+      .kill-feed__killer { color: var(--ok); }
     }
     &.is-death {
       box-shadow: inset 3px 0 0 #ff9b9b;
@@ -5040,7 +5040,7 @@ body {
   &__region-track { background: var(--border); border-radius: 999px; height: 8px; overflow: hidden; }
   &__region-fill { display: block; height: 100%; border-radius: 999px; transition: width 0.3s ease; }
   &__region-val { text-align: right; color: var(--text-strong); font-variant-numeric: tabular-nums; }
-  &__col:nth-child(1) &__region-fill { background: linear-gradient(90deg, #4fd08a, #78f7a8); }
+  &__col:nth-child(1) &__region-fill { background: linear-gradient(90deg, #4fd08a, var(--ok)); }
   &__col:nth-child(2) &__region-fill { background: linear-gradient(90deg, #e06b6b, #ff9b9b); }
   &__weapons {
     margin-top: 16px;
@@ -5122,7 +5122,7 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
     &:last-child { border-bottom: none; }
-    &.is-dealt { box-shadow: inset 3px 0 0 #78f7a8; }
+    &.is-dealt { box-shadow: inset 3px 0 0 var(--ok); }
     &.is-taken { box-shadow: inset 3px 0 0 #ff9b9b; }
   }
   &__event-time { opacity: 0.55; font-variant-numeric: tabular-nums; }

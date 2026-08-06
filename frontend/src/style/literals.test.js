@@ -85,3 +85,18 @@ describe("surface literals", () => {
     expect(stylesheet).not.toContain("$backgroundColorFirst");
   });
 });
+
+describe("semantic colours", () => {
+  const semanticLines = [
+    "&--win { background: var(--win);",
+    "&--top10 { background: var(--ok); }",
+  ];
+
+  it.each(semanticLines)("keeps %s unthemed", (line) => {
+    expect(stylesheet).toContain(line);
+  });
+
+  it("uses --ok for the roster focal name", () => {
+    expect(stylesheet).toMatch(/is-focal \.replay-roster__name \{ color: var\(--ok\); \}/);
+  });
+});
