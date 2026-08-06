@@ -3586,54 +3586,6 @@ body {
     }
   }
 
-  .historycheck_skeleton {
-    display: block;
-    border-radius: 6px;
-    background: linear-gradient(
-      90deg,
-      rgba(120, 247, 168, 0.07) 25%,
-      rgba(120, 247, 168, 0.18) 37%,
-      rgba(120, 247, 168, 0.07) 63%
-    );
-    background-size: 400% 100%;
-    animation: historycheckShimmer 1.4s ease infinite;
-
-    &--avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      flex-shrink: 0;
-    }
-
-    &--text {
-      width: 100%;
-      max-width: 120px;
-      height: 12px;
-    }
-
-    &--badge {
-      width: 30px;
-      height: 30px;
-      border-radius: 7px;
-    }
-  }
-
-  @keyframes historycheckShimmer {
-    from {
-      background-position: 100% 50%;
-    }
-
-    to {
-      background-position: 0 50%;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .historycheck_skeleton {
-      animation: none;
-    }
-  }
-
   @media (max-width: 760px) {
     .history-list {
       grid-template-columns: 1fr;
