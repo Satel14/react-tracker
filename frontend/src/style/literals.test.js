@@ -97,6 +97,20 @@ describe("brand alpha values", () => {
     expect(stylesheet).not.toContain("$colorFirst");
     expect(stylesheet).not.toContain("$colorSecond");
   });
+
+  // Absence of `rgba(` proves nothing about the alpha that replaced it: a naive
+  // sed turns 0.5 into 5% and 0.05 into 5% alike, and every assertion above
+  // still passes. Pin the whole distinct set so a decimal shift fails loudly.
+  // A legitimate new alpha fails this too — update the list deliberately.
+  it("preserves every alpha through the percentage conversion", () => {
+    const percents = [
+      ...stylesheet.matchAll(/color-mix\(in srgb, var\(--[a-z-]+\) ([0-9.]+)%/g),
+    ].map((match) => Number(match[1]));
+    expect([...new Set(percents)].sort((a, b) => a - b)).toEqual([
+      5, 7, 8, 10, 12, 14, 15, 16, 18, 20, 22, 25, 26, 28, 30, 32,
+      35, 40, 45, 50, 55, 70, 75, 80, 85, 95,
+    ]);
+  });
 });
 
 describe("semantic colours", () => {
@@ -135,6 +149,24 @@ describe("semantic colours", () => {
     expect(stylesheet).toMatch(
       /&--winner \{\s*color: #62ec96;\s*background: color-mix\(in srgb, var\(--ok\) 16%, transparent\);\s*box-shadow: inset 0 0 0 1px color-mix\(in srgb, var\(--ok\) 40%, transparent\);\s*\}/,
     );
+  });
+
+  it("keeps the encounter kill stripe on --ok", () => {
+    expect(stylesheet).toMatch(
+      /&--kill::before \{\s*background: linear-gradient\(180deg, var\(--ok\), #2fa363\);\s*\}/,
+    );
+  });
+
+  // Seven of the eight rank tiers are hardcoded literals. Gold gets a token
+  // only because #fde82b is retired, and it must stay unthemed like its peers.
+  it("keeps the gold rank tier on its own unthemed token", () => {
+    expect(stylesheet).toMatch(
+      /color-mix\(in srgb, var\(--tier-gold\) 22%, transparent\)/,
+    );
+    expect(stylesheet).toMatch(
+      /box-shadow: inset 0 0 0 1px color-mix\(in srgb, var\(--tier-gold\) 32%, transparent\);/,
+    );
+    expect(stylesheet).not.toMatch(/player-card--tier-gold[\s\S]{0,400}var\(--brand\)/);
   });
 
   it("keeps the scoreboard win badge on --win", () => {

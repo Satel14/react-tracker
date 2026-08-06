@@ -648,9 +648,9 @@ body {
 
       .player-card--tier-gold {
         background:
-          radial-gradient(circle at 14% 12%, color-mix(in srgb, var(--brand) 22%, transparent), transparent 40%),
+          radial-gradient(circle at 14% 12%, color-mix(in srgb, var(--tier-gold) 22%, transparent), transparent 40%),
           linear-gradient(135deg, rgba(54, 47, 14, 0.96), rgba(8, 14, 19, 0.96));
-        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 32%, transparent);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tier-gold) 32%, transparent);
       }
 
       .player-card--tier-platinum {
@@ -970,7 +970,7 @@ body {
         }
 
         &--kill::before {
-          background: linear-gradient(180deg, var(--accent), #2fa363);
+          background: linear-gradient(180deg, var(--ok), #2fa363);
         }
 
         &--death::before {

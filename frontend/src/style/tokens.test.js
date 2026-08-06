@@ -49,7 +49,7 @@ describe("colour tokens", () => {
     expect(Object.keys(tokens).sort()).toEqual([
       "--accent", "--bg", "--border", "--brand", "--danger", "--ok",
       "--rest", "--surface", "--text", "--text-faint", "--text-muted",
-      "--text-strong", "--win",
+      "--text-strong", "--tier-gold", "--win",
     ]);
   });
 
