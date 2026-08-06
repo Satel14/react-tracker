@@ -1,12 +1,13 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { formatClock as fmtSurvival } from "../../helpers/formatClock";
+import EmptyState from "../EmptyState";
 
 const isHandle = (name) => typeof name === "string" && name && !/^account\./i.test(name);
 
 const MatchScoreboard = ({ scoreboard, platform, t }) => {
   const teams = scoreboard?.teams || [];
-  if (!teams.length) return <div className="match-scoreboard__empty">{t("pages.match.error")}</div>;
+  if (!teams.length) return <EmptyState className="match-scoreboard__empty">{t("pages.match.error")}</EmptyState>;
 
   return (
     <div className="match-scoreboard">

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Collapse, Input } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import { translate } from "react-switch-lang";
+import EmptyState from "../component/EmptyState";
 
 const FAQ_KEYS = [
   "search",
@@ -55,7 +56,7 @@ const Help = ({ t }) => {
       {items.length ? (
         <Collapse className="help-page__faq" accordion items={items} />
       ) : (
-        <div className="help-page__empty">{t("pages.help.empty")}</div>
+        <EmptyState className="help-page__empty">{t("pages.help.empty")}</EmptyState>
       )}
 
       <p className="help-page__note">{t("pages.help.contact")}</p>

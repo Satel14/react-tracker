@@ -3327,15 +3327,6 @@ body {
     }
   }
 
-  &__empty {
-    border: 1px dashed rgba(120, 247, 168, 0.3);
-    border-radius: 10px;
-    padding: 24px 16px;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 13px;
-  }
-
   &__faq {
     background: transparent;
 
@@ -4147,6 +4138,16 @@ body {
   .skeleton { animation: none; }
 }
 
+.empty-state {
+  margin: 0;
+  border: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 10px;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
 .match-replay {
   max-width: 960px;
   margin: 0 auto;
@@ -4425,7 +4426,6 @@ body {
     a { color: inherit; text-decoration: none; }
     a:hover { color: #78f7a8; text-decoration: underline; }
   }
-  &__empty { opacity: 0.7; padding: 12px; }
 
   // On phones the fixed 7-column grid overflows; let every cell shrink
   // (min-width:0) and ellipsize, and drop the type scale so all columns
@@ -4448,7 +4448,6 @@ body {
 }
 
 .kill-feed {
-  &__empty { opacity: 0.7; padding: 12px; }
   .ant-segmented { margin-bottom: 10px; }
   &__list {
     list-style: none;
@@ -5000,7 +4999,6 @@ body {
 }
 
 .damage {
-  &__empty { opacity: 0.7; padding: 12px; }
   &__headshot {
     display: inline-block;
     margin: 0 0 14px;
@@ -5068,7 +5066,6 @@ body {
 }
 
 .timeline {
-  &__empty { opacity: 0.7; padding: 12px; }
   &__accuracy {
     border: 1px solid var(--border);
     border-radius: 12px;
