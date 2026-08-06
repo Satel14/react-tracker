@@ -39,7 +39,8 @@
       "inTheWorld": "World",
       "inGameTitles": "In-game Titles",
       "moreStats": "More Stats",
-      "placeinTheWorld": "Place in the world"
+      "placeinTheWorld": "Place in the world",
+      "loading": "Loading profile…"
     },
     "leaderboards": {
       "title": "Leaderboards",
@@ -66,7 +67,8 @@
       "compare": "Compare ({count})",
       "compareLimit": "You can compare up to {max} players",
       "empty": "No leaderboard data for this season and mode.",
-      "error": "Could not load the leaderboard. Please try again."
+      "error": "Could not load the leaderboard. Please try again.",
+      "loading": "Loading leaderboard…"
     },
     "compare": {
       "title": "Player Comparison",
@@ -74,7 +76,8 @@
       "goFavorites": "Open Favorites",
       "back": "Back",
       "swap": "Swap",
-      "remove": "Remove player"
+      "remove": "Remove player",
+      "loading": "Loading player…"
     },
     "shareCard": {
       "button": "Share card",
