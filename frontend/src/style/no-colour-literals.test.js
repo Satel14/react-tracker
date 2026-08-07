@@ -24,6 +24,26 @@ const expand = (hex) => {
   return raw.length === 3 ? raw.split("").map((c) => c + c).join("") : raw;
 };
 
+const hexToRgb = (hex) => {
+  const full = expand(hex);
+  return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+};
+
+const distance = (a, b) => {
+  const [x, y] = [hexToRgb(a), hexToRgb(b)];
+  return Math.sqrt(x.reduce((sum, v, i) => sum + (v - y[i]) ** 2, 0));
+};
+
+// Read straight from the token source, not a copy — a second set of these
+// four values is the exact drift this policy file exists to prevent. Scoped
+// to :root the same way tokens.test.js is, so a `.app.<theme>` block that
+// later redeclares one of these can't be mistaken for the default.
+const tokensSource = read("style/_tokens.scss");
+const root = /:root\s*\{([\s\S]*?)\n\}/.exec(tokensSource);
+const TEXT_TOKENS = Object.fromEntries(
+  [...root[1].matchAll(/^\s*(--text[\w-]*):\s*([^;]+);/gm)].map((m) => [m[1], m[2].trim()]),
+);
+
 // In _tokens.scss a retired value is legal ONLY as the value of a --token
 // declaration. Exempting the file by path would let a fifth grey in unchallenged.
 const legalTokenHome = (file, source, index) => {
@@ -108,7 +128,12 @@ describe("colour literals across src", () => {
   });
 
   it("has no stale exemption — the list may only shrink", () => {
+    // "near-duplicate" exemptions belong to the proximity rule below, which
+    // never writes to `actual` — it would always read as 0 found here. One
+    // such row is a deliberate exception (PR C removes it); a second one
+    // means the rule should feed `actual` instead of growing this skip.
     const stale = [...allowed]
+      .filter(([k]) => !k.endsWith("|near-duplicate"))
       .filter(([k, n]) => (actual.get(k) || 0) < n)
       .map(([k, n]) => `${k}: ${n} allowed, only ${actual.get(k) || 0} found — lower it`);
     expect(stale).toEqual([]);
@@ -124,5 +149,33 @@ describe("modern rgb() syntax", () => {
   it("still canonicalises the legacy comma-separated form", () => {
     const hits = scanSource("fixture.jsx", "border: 1px solid rgba(255, 155, 155, 0.16);");
     expect(hits).toContain("#ff9b9b");
+  });
+});
+
+describe("near-duplicate colours", () => {
+  it("reads its four text tokens from _tokens.scss, not from a copy", () => {
+    expect(Object.keys(TEXT_TOKENS).sort()).toEqual([
+      "--text", "--text-faint", "--text-muted", "--text-strong",
+    ]);
+  });
+
+  it("has no color: hex across src that restates a text token", () => {
+    const offenders = [];
+    for (const file of files) {
+      const budget = allowed.get(key(file, "near-duplicate")) || 0;
+      let seen = 0;
+      const source = read(file).toLowerCase();
+      for (const m of source.matchAll(/color:\s*(#[0-9a-f]{3,6})\b/g)) {
+        for (const [name, value] of Object.entries(TEXT_TOKENS)) {
+          const gap = distance(m[1], value);
+          if (gap >= policy.mergeThreshold) continue;
+          seen += 1;
+          if (seen > budget) {
+            offenders.push(`${file}: ${m[1]} is ${gap.toFixed(1)} from ${name}`);
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });
