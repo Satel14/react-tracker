@@ -3631,8 +3631,16 @@ body {
     .ant-input-affix-wrapper {
       background: transparent !important;
       border-color: color-mix(in srgb, var(--accent) 55%, transparent) !important;
-      outline: none !important;
       box-shadow: none !important;
+    }
+
+    // Keeps the browser default off for mouse focus while letting the
+    // token-driven keyboard ring through. Without :not(), the !important
+    // here beats the ring unconditionally.
+    .ant-input-search .ant-input:not(:focus-visible),
+    .ant-input:not(:focus-visible),
+    .ant-input-affix-wrapper:not(:focus-visible) {
+      outline: none !important;
     }
 
     .ant-input:hover,
