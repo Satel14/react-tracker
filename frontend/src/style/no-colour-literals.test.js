@@ -108,6 +108,31 @@ for (const file of files) {
   }
 }
 
+// Proximity rule: any `color:` hex nearer than policy.mergeThreshold to a text
+// token is a re-spelling of that token, not a new colour. 15 clears every
+// literal the migration retired and leaves the legitimately distinct long
+// tail alone — the nearest survivor is #6b6f8a at 33.3.
+//
+// Recorded into `actual` under a "near-duplicate" id the same way scanSource's
+// hits are, so the ordinary two-directional ratchet below covers this rule
+// like any other id — no separate carve-out in the ratchet tests.
+const nearDuplicateHits = [];
+for (const file of files) {
+  const source = read(file).toLowerCase();
+  for (const m of source.matchAll(/color:\s*(#[0-9a-f]{3,6})\b/g)) {
+    for (const [name, value] of Object.entries(TEXT_TOKENS)) {
+      const gap = distance(m[1], value);
+      if (gap < policy.mergeThreshold) {
+        nearDuplicateHits.push({ file, hex: m[1], name, gap });
+      }
+    }
+  }
+}
+for (const hit of nearDuplicateHits) {
+  const nearDuplicateKey = key(hit.file, "near-duplicate");
+  actual.set(nearDuplicateKey, (actual.get(nearDuplicateKey) || 0) + 1);
+}
+
 const allowed = new Map(
   policy.exemptions.map((e) => [key(e.file, e.id), e.count]),
 );
@@ -128,12 +153,7 @@ describe("colour literals across src", () => {
   });
 
   it("has no stale exemption — the list may only shrink", () => {
-    // "near-duplicate" exemptions belong to the proximity rule below, which
-    // never writes to `actual` — it would always read as 0 found here. One
-    // such row is a deliberate exception (PR C removes it); a second one
-    // means the rule should feed `actual` instead of growing this skip.
     const stale = [...allowed]
-      .filter(([k]) => !k.endsWith("|near-duplicate"))
       .filter(([k, n]) => (actual.get(k) || 0) < n)
       .map(([k, n]) => `${k}: ${n} allowed, only ${actual.get(k) || 0} found — lower it`);
     expect(stale).toEqual([]);
@@ -160,20 +180,14 @@ describe("near-duplicate colours", () => {
   });
 
   it("has no color: hex across src that restates a text token", () => {
+    const seen = new Map();
     const offenders = [];
-    for (const file of files) {
-      const budget = allowed.get(key(file, "near-duplicate")) || 0;
-      let seen = 0;
-      const source = read(file).toLowerCase();
-      for (const m of source.matchAll(/color:\s*(#[0-9a-f]{3,6})\b/g)) {
-        for (const [name, value] of Object.entries(TEXT_TOKENS)) {
-          const gap = distance(m[1], value);
-          if (gap >= policy.mergeThreshold) continue;
-          seen += 1;
-          if (seen > budget) {
-            offenders.push(`${file}: ${m[1]} is ${gap.toFixed(1)} from ${name}`);
-          }
-        }
+    for (const hit of nearDuplicateHits) {
+      const k = key(hit.file, "near-duplicate");
+      const count = (seen.get(k) || 0) + 1;
+      seen.set(k, count);
+      if (count > (allowed.get(k) || 0)) {
+        offenders.push(`${hit.file}: ${hit.hex} is ${hit.gap.toFixed(1)} from ${hit.name}`);
       }
     }
     expect(offenders).toEqual([]);
