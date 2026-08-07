@@ -57,9 +57,43 @@ const occurrences = (literal) => {
   return found;
 };
 
+// RETIRED bans a string, so the same value written as rgba() slips through.
+// Alpha is ignored: rgba(255, 155, 155, 0.16) and (…, 0.35) are both #ff9b9b.
+//
+// #ffffff and #000000 are excluded from THIS check only. They stay banned as
+// literal hex, but their rgba() forms are the neutral overlay vocabulary the
+// token spec deliberately kept as literals — 34 of them across this file.
+// Without the exclusion this check is a false-positive wave, and the next
+// person deletes the whole thing.
+const NEUTRALS = new Set(["#ffffff", "#000000"]);
+
+const rgbaOccurrences = (literal) => {
+  const raw = literal.replace("#", "");
+  const full = raw.length === 3 ? raw.split("").map((c) => c + c).join("") : raw;
+  if (NEUTRALS.has(`#${full}`)) return [];
+  const found = [];
+  for (const m of stylesheet.matchAll(
+    /rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,[^)]*)?\)/g,
+  )) {
+    const hex = [m[1], m[2], m[3]]
+      .map((n) => Number(n).toString(16).padStart(2, "0"))
+      .join("");
+    if (hex === full) found.push(stylesheet.slice(0, m.index).split("\n").length);
+  }
+  return found;
+};
+
 describe("retired literals", () => {
   it.each(RETIRED)("%s no longer appears in style.scss", (literal) => {
     expect(occurrences(literal)).toEqual([]);
+    expect(rgbaOccurrences(literal)).toEqual([]);
+  });
+});
+
+describe("neutral overlays stay literal", () => {
+  it("does not flag translucent white, which the token spec kept as a literal", () => {
+    expect(stylesheet).toContain("rgba(255, 255, 255, 0.05)");
+    expect(rgbaOccurrences("#ffffff")).toEqual([]);
   });
 });
 
