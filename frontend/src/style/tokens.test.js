@@ -123,12 +123,12 @@ describe("theme accents", () => {
   });
 });
 
-describe("focus ring is not suppressed", () => {
-  const mixins = readFileSync(
-    fileURLToPath(new URL("./mixins.scss", import.meta.url)),
-    "utf8",
-  );
+const mixins = readFileSync(
+  fileURLToPath(new URL("./mixins.scss", import.meta.url)),
+  "utf8",
+);
 
+describe("focus ring is not suppressed", () => {
   it.each([
     ["style.scss", stylesheet],
     ["mixins.scss", mixins],
@@ -136,5 +136,12 @@ describe("focus ring is not suppressed", () => {
     const unguarded = [...source.matchAll(/([^\n]*)\n[^\n]*outline:\s*none\s*!important/g)]
       .filter((m) => !m[0].includes(":not(:focus-visible)"));
     expect(unguarded).toEqual([]);
+  });
+});
+
+describe("mixins text colour", () => {
+  it("no longer carries its own sub-AA grey", () => {
+    expect(mixins).not.toContain("#65656d");
+    expect(mixins).not.toContain("$colorSecond");
   });
 });
