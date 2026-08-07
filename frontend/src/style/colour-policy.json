@@ -8,7 +8,7 @@
     "#78f7a8", "#fde82b", "#e8fff3", "#d5ffe7",
     "#ff9b9b"
   ],
-  "bannedStrings": ["$colorFirst", "$backgroundColorFirst"],
+  "bannedStrings": ["$colorFirst", "$backgroundColorFirst", "$colorSecond"],
   "bannedPatterns": [],
   "mergeThreshold": 15,
   "exemptions": [

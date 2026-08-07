@@ -11,7 +11,7 @@ const read = (file) => readFileSync(join(SRC, file), "utf8");
 
 // .json is deliberately outside this list: the policy file must not scan itself.
 // Test files are excluded because they are not shipped.
-const files = globSync("**/*.{scss,jsx,js}", { cwd: SRC })
+const files = globSync("**/*.{scss,jsx,js,css}", { cwd: SRC })
   .filter((f) => !/\.test\.(js|jsx)$/.test(f))
   .map((f) => f.split("\\").join("/"))
   .sort();
