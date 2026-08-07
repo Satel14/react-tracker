@@ -193,3 +193,16 @@ describe("near-duplicate colours", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe("the scanner detects literals outside style.scss", () => {
+  it("catches a hex, an rgba re-spelling and a banned variable in a new file", () => {
+    const fixture = readFileSync(
+      fileURLToPath(new URL("./fixtures/known-bad.scss.txt", import.meta.url)),
+      "utf8",
+    );
+    const hits = scanSource("component/NewThing.scss", fixture);
+    expect(hits).toContain("#8d91b2");
+    expect(hits).toContain("#ff9b9b");
+    expect(hits).toContain("$colorFirst");
+  });
+});

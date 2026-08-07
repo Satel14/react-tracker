@@ -1,0 +1,8 @@
+// Not real stylesheet source. Fed to the scanner by no-colour-literals.test.js
+// to prove it detects a literal outside style.scss. The .txt suffix keeps it
+// out of the production glob and away from Sass.
+.some-new-component {
+  color: #8d91b2;
+  border-color: rgba(255, 155, 155, 0.4);
+  background: $colorFirst;
+}
