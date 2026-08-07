@@ -145,3 +145,18 @@ describe("mixins text colour", () => {
     expect(mixins).not.toContain("$colorSecond");
   });
 });
+
+describe("theme accent parity across all three sources", () => {
+  const fromIncludes = Object.fromEntries(
+    [...mixins.matchAll(/@include\s+styleCreator\(\s*"([\w-]+)"\s*,\s*(#[0-9a-fA-F]{6})/g)]
+      .map((m) => [m[1], m[2].toLowerCase()]),
+  );
+
+  it("mixins.scss declares one @include per theme", () => {
+    expect(Object.keys(fromIncludes).sort()).toEqual(Object.keys(themes).sort());
+  });
+
+  it.each(Object.keys(themes))("%s agrees in themes.js and mixins.scss", (name) => {
+    expect(fromIncludes[name]).toBe(themes[name].toLowerCase());
+  });
+});
