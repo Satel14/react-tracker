@@ -1,4 +1,5 @@
 import React from "react";
+import EmptyState from "../EmptyState";
 
 const REGIONS = ["HeadShot", "TorsoShot", "ArmShot", "LegShot", "PelvisShot"];
 
@@ -25,7 +26,7 @@ const RegionBars = ({ bucket, title, t }) => {
 
 const DamageBreakdown = ({ damage, focalPresent, t }) => {
   if (!focalPresent || !damage) {
-    return <div className="damage__empty">{t("pages.match.focalNotInMatch")}</div>;
+    return <EmptyState className="damage__empty">{t("pages.match.focalNotInMatch")}</EmptyState>;
   }
   return (
     <div className="damage">

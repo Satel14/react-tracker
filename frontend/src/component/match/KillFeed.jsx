@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Segmented } from "antd";
 import { formatClock as fmt } from "../../helpers/formatClock";
+import EmptyState from "../EmptyState";
 
 const KillFeed = ({ kills = [], t }) => {
   const [filter, setFilter] = useState("all");
@@ -9,7 +10,7 @@ const KillFeed = ({ kills = [], t }) => {
     [kills, filter]
   );
 
-  if (!kills.length) return <div className="kill-feed__empty">{t("pages.match.noKills")}</div>;
+  if (!kills.length) return <EmptyState className="kill-feed__empty">{t("pages.match.noKills")}</EmptyState>;
 
   return (
     <div className="kill-feed">

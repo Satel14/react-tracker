@@ -1,9 +1,10 @@
 import React from "react";
 import { formatClock as fmt } from "../../helpers/formatClock";
+import EmptyState from "../EmptyState";
 
 const CombatTimeline = ({ timeline, focalPresent, t }) => {
   if (!focalPresent || !timeline) {
-    return <div className="timeline__empty">{t("pages.match.focalNotInMatch")}</div>;
+    return <EmptyState className="timeline__empty">{t("pages.match.focalNotInMatch")}</EmptyState>;
   }
   const { events = [], accuracy = [], thirdParties = [] } = timeline;
   return (

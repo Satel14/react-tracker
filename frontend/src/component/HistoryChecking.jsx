@@ -75,10 +75,10 @@ const HistorySkeleton = () =>
   SKELETON_ROWS.map((row) => (
     <div className="historycheck_block historycheck_block--loading" key={row}>
       <div className="historycheck_block-left">
-        <span className="historycheck_skeleton historycheck_skeleton--avatar" />
-        <span className="historycheck_skeleton historycheck_skeleton--text" />
+        <span className="skeleton skeleton--avatar" aria-hidden="true" />
+        <span className="skeleton skeleton--text" aria-hidden="true" />
       </div>
-      <span className="historycheck_skeleton historycheck_skeleton--badge" />
+      <span className="skeleton skeleton--badge" aria-hidden="true" />
     </div>
   ));
 

@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useReducer } from "react";
-import { Alert, Button, Spin } from "antd";
+import { Alert, Button } from "antd";
 import {
   ArrowLeftOutlined,
   CloseOutlined,
-  LoadingOutlined,
   SwapOutlined,
 } from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -13,6 +12,7 @@ import { resolvePreferredPlayerName, normalizePlatform } from "../helpers/player
 import { getPlatformAvatar } from "../helpers/other";
 import { statNumber, statDisplay } from "../helpers/playerStats";
 import { buildCompareResolveBatches } from "../helpers/compareBatchResolve";
+import Skeleton from "../component/Skeleton";
 
 const COMPARE_ROWS = [
   { key: "matchesPlayed", label: "Matches", direction: "higher" },
@@ -221,9 +221,7 @@ const Compare = ({ t }) => {
                 </button>
 
                 {entry.loading ? (
-                  <div className="compare-column__loading">
-                    <Spin indicator={<LoadingOutlined style={{ fontSize: 24, color: "#fde82b" }} spin />} />
-                  </div>
+                  <Skeleton variant="text" count={5} label={t("pages.compare.loading")} className="compare-column__loading" />
                 ) : entry.error ? (
                   <Alert type="error" message={entry.error} showIcon />
                 ) : (

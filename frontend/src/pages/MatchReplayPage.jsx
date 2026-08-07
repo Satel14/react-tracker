@@ -1,9 +1,9 @@
 import React, { useEffect, useReducer, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Spin, Alert, Button, Slider, Segmented, Tabs } from "antd";
-import { LoadingOutlined } from "@ant-design/icons";
+import { Alert, Button, Slider, Segmented, Tabs } from "antd";
 import { translate } from "react-switch-lang";
 import MapField from "../component/charts/MapField";
+import Skeleton from "../component/Skeleton";
 import ReplayRoster from "../component/charts/ReplayRoster";
 import MatchScoreboard from "../component/match/MatchScoreboard";
 import KillFeed from "../component/match/KillFeed";
@@ -152,12 +152,7 @@ const MatchReplayPage = ({ t }) => {
 
   const renderAnalysisPane = (child) => {
     if (analysis.loading) {
-      return (
-        <div className="match-replay__loading">
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 28, color: "#fde82b" }} spin />} />
-          <span>{t("pages.match.loading")}</span>
-        </div>
-      );
+      return <Skeleton variant="text" count={6} label={t("pages.match.loading")} />;
     }
     if (analysis.error) return <Alert type="error" message={analysis.error} showIcon />;
     if (!analysis.data) return null;
@@ -208,10 +203,7 @@ const MatchReplayPage = ({ t }) => {
         {t("pages.match.title")}{data ? ` — ${data.mapName}` : ""}
       </h2>
       {loading ? (
-        <div className="match-replay__loading">
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 32, color: "#fde82b" }} spin />} />
-          <span>{t("pages.replay.loading")}</span>
-        </div>
+        <Skeleton variant="block" label={t("pages.replay.loading")} className="match-replay__loading" />
       ) : error ? (
         <Alert type="error" message={error} showIcon />
       ) : data ? (

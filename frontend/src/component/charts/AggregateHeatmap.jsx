@@ -3,6 +3,7 @@ import { Checkbox, Spin } from "antd";
 import MapField from "./MapField";
 import { drawHeat, buildGradient, DEFAULT_STOPS } from "./heatLayer";
 import { getAggregateHeatmap } from "../../api/player";
+import EmptyState from "../EmptyState";
 
 const CANVAS_SIZE = 1000;
 const LAYER_KEYS = ["drop", "kill", "death"];
@@ -70,7 +71,7 @@ const AggregateHeatmap = ({ rawMapName, matches = [], shard, accountId, playerNa
           <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} className="aggregate-heatmap__canvas" />
         </MapField>
       ) : (
-        <p className="aggregate-heatmap__empty">{t("pages.maps.aggregateEmpty")}</p>
+        <EmptyState className="aggregate-heatmap__empty">{t("pages.maps.aggregateEmpty")}</EmptyState>
       )}
     </div>
   );

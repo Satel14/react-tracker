@@ -30,6 +30,7 @@ import { classifyPlayerError } from "../helpers/playerError";
 import { resolveHistoryCandidate } from "../helpers/playerHistory";
 import { statNumber, statDisplay } from "../helpers/playerStats";
 import openNotification from "../component/Notification";
+import Skeleton from "../component/Skeleton";
 import MapsTab from "./MapsTab";
 
 const MapPerformanceChart = lazy(() =>
@@ -518,7 +519,7 @@ const PlayerPage = ({ t }) => {
         className="playerpage"
         style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}
       >
-        <Spin indicator={<LoadingOutlined style={{ fontSize: 50, color: "#fde82b" }} spin />} />
+        <Skeleton variant="block" label={t("pages.player.loading")} className="playerpage__loading" />
       </div>
     );
   }

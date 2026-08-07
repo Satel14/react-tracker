@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Table, Select, Radio, Input, Spin, Alert, Button, Tooltip } from "antd";
-import { LoadingOutlined, ReloadOutlined, SwapOutlined } from "@ant-design/icons";
+import { Table, Select, Radio, Input, Alert, Button, Tooltip } from "antd";
+import { ReloadOutlined, SwapOutlined } from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { getLeaderboard, getSeasons } from "../api/leaderboard";
 import { shardForRegion } from "../helpers/leaderboardShard";
+import Skeleton from "../component/Skeleton";
 
 const REGIONS = [
   { value: "pc-na", label: "PC · NA" },
@@ -278,9 +279,7 @@ const Leaderboard = ({ t }) => {
       {error ? <Alert type="error" message={error} showIcon /> : null}
 
       {loading ? (
-        <div className="leaderboard-page__loading">
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 28, color: "#fde82b" }} spin />} />
-        </div>
+        <Skeleton variant="text" count={10} label={t("pages.leaderboards.loading")} className="leaderboard-page__loading" />
       ) : (
         <Table
           className="leaderboard-page__table"
