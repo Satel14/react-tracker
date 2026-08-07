@@ -1,4 +1,4 @@
-@mixin styleCreator($name, $colorFirst, $colorSecond, $backgroundColorFirst) {
+@mixin styleCreator($name, $colorFirst, $backgroundColorFirst) {
   .app.#{$name} {
     .favorite-button {
       &.active {
@@ -26,11 +26,7 @@
       border-top: 1px solid $colorFirst;
 
       .copyright {
-        color: $colorSecond;
-
-        a {
-          color: $colorSecond;
-        }
+        color: var(--text-muted);
       }
 
       &-menu {
@@ -52,16 +48,6 @@
           }
         }
       }
-
-      &-text {
-        b {
-          color: $colorSecond;
-        }
-      }
-    }
-
-    .about {
-      color: $colorSecond;
     }
 
     .navbar {
@@ -121,8 +107,16 @@
         .ant-input,
         .ant-input-affix-wrapper {
           border-color: rgba($colorFirst, 0.55) !important;
-          outline: none !important;
           box-shadow: none !important;
+        }
+
+        // Keeps the browser default off for mouse focus while letting the
+        // token-driven keyboard ring through. Without :not(), the !important
+        // here beats the ring unconditionally.
+        .ant-input-search .ant-input:not(:focus-visible),
+        .ant-input:not(:focus-visible),
+        .ant-input-affix-wrapper:not(:focus-visible) {
+          outline: none !important;
         }
 
         .ant-input:hover,
@@ -156,7 +150,7 @@
       }
 
       .titlehistory {
-        color: rgba($colorSecond, 0.7);
+        color: color-mix(in srgb, var(--text-muted) 70%, transparent);
       }
 
       .historycheck_block {
@@ -173,17 +167,16 @@
 
         .nickname {
           span {
-            color: rgba($colorSecond, 0.62);
+            color: color-mix(in srgb, var(--text-muted) 62%, transparent);
           }
         }
 
         &-platform {
-          color: rgba($colorSecond, 0.62);
+          color: color-mix(in srgb, var(--text-muted) 62%, transparent);
           transition: color 0.2s ease;
         }
 
         &-mmr {
-          color: rgba($colorSecond, 0.62);
           transition: color 0.2s ease;
         }
 
@@ -255,8 +248,8 @@
   }
 }
 
-@include styleCreator("green", #77f6a7, #65656d, #222222);
-@include styleCreator("blue", #00d8d3, #65656d, #0b0b0b);
-@include styleCreator("orange", #ffbe29, #65656d, #0b0b0b);
-@include styleCreator("brown", #f8ccaf, #65656d, #0b0b0b);
-@include styleCreator("red", #f73b5d, #65656d, #161920);
+@include styleCreator("green", #77f6a7, #222222);
+@include styleCreator("blue", #00d8d3, #0b0b0b);
+@include styleCreator("orange", #ffbe29, #0b0b0b);
+@include styleCreator("brown", #f8ccaf, #0b0b0b);
+@include styleCreator("red", #f73b5d, #161920);

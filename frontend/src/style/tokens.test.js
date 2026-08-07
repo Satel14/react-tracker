@@ -90,8 +90,16 @@ describe("focus states", () => {
     // Strip // comments before counting so a stray mention in prose can't
     // inflate the match count (this already forced a comment reword once).
     const withoutComments = stylesheet.replace(/\/\/.*$/gm, "");
-    const matches = withoutComments.match(/:focus-visible/g) ?? [];
-    expect(matches).toHaveLength(1);
+    // Filter out :focus-visible when it appears in :not(:focus-visible), which
+    // guards the outline reset from killing the ring.
+    const regex = /:focus-visible/g;
+    const matches = [...withoutComments.matchAll(regex)];
+    const mainRingOnly = matches.filter((m) => {
+      const start = m.index;
+      const prefix = withoutComments.substring(Math.max(0, start - 5), start);
+      return !prefix.endsWith(':not(');
+    });
+    expect(mainRingOnly).toHaveLength(1);
     expect(stylesheet).toMatch(/outline:\s*2px solid var\(--accent\);/);
   });
 });
@@ -112,5 +120,28 @@ describe("theme accents", () => {
 
   it.each(Object.keys(themes))("%s meets WCAG AA against --bg", (name) => {
     expect(contrast(themes[name], tokens["--bg"])).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+const mixins = readFileSync(
+  fileURLToPath(new URL("./mixins.scss", import.meta.url)),
+  "utf8",
+);
+
+describe("focus ring is not suppressed", () => {
+  it.each([
+    ["style.scss", stylesheet],
+    ["mixins.scss", mixins],
+  ])("every outline reset in %s spares :focus-visible", (_name, source) => {
+    const unguarded = [...source.matchAll(/([^\n]*)\n[^\n]*outline:\s*none\s*!important/g)]
+      .filter((m) => !m[0].includes(":not(:focus-visible)"));
+    expect(unguarded).toEqual([]);
+  });
+});
+
+describe("mixins text colour", () => {
+  it("no longer carries its own sub-AA grey", () => {
+    expect(mixins).not.toContain("#65656d");
+    expect(mixins).not.toContain("$colorSecond");
   });
 });
