@@ -1355,7 +1355,7 @@ body {
           font-size: 10px;
           text-transform: uppercase;
           letter-spacing: 0.7px;
-          color: rgba(255, 255, 255, 0.92) !important;
+          color: color-mix(in srgb, var(--text-strong) 92%, transparent) !important;
         }
 
         &__value {
@@ -1779,7 +1779,7 @@ body {
     justify-content: space-between;
 
     &__logo {
-      color: #ffffffd9;
+      color: color-mix(in srgb, var(--text-strong) 85.098%, transparent);
       line-height: 1;
       font-size: 32px;
       text-align: center;
@@ -2962,7 +2962,7 @@ body {
     font-size: 9px;
     letter-spacing: 1.4px;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.5);
+    color: color-mix(in srgb, var(--text-strong) 50%, transparent);
     writing-mode: horizontal-tb;
     white-space: nowrap;
   }
@@ -2986,7 +2986,7 @@ body {
       font-size: 10px;
       letter-spacing: 0.6px;
       text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.55);
+      color: color-mix(in srgb, var(--text-strong) 55%, transparent);
       flex-shrink: 0;
     }
   }
@@ -3008,7 +3008,7 @@ body {
     font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 0.7px;
-    color: rgba(255, 255, 255, 0.55);
+    color: color-mix(in srgb, var(--text-strong) 55%, transparent);
   }
 
   strong {
@@ -3795,7 +3795,7 @@ body {
     padding-right: 35px !important;
 
     &::placeholder {
-      color: white;
+      color: var(--text-strong);
     }
   }
 
@@ -3902,7 +3902,7 @@ body {
 }
 
 .errorpage {
-  color: #ffffffd9;
+  color: color-mix(in srgb, var(--text-strong) 85.098%, transparent);
   line-height: 1.3;
   font-size: 32px;
   text-align: center;
@@ -3939,7 +3939,7 @@ body {
 }
 
 .can-add-favoritelist {
-  color: #ffffffd9;
+  color: color-mix(in srgb, var(--text-strong) 85.098%, transparent);
   line-height: 1;
   font-size: 18px;
   text-align: center;
