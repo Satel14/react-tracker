@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useReducer } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { Alert, Button } from "antd";
 import {
   ArrowLeftOutlined,
@@ -11,6 +11,7 @@ import { getPlayerData, resolvePlayers } from "../api/player";
 import { resolvePreferredPlayerName, normalizePlatform } from "../helpers/playerIdentity";
 import { getPlatformAvatar } from "../helpers/other";
 import { statNumber, statDisplay } from "../helpers/playerStats";
+import { classifyPlayerError } from "../helpers/playerError";
 import { buildCompareResolveBatches } from "../helpers/compareBatchResolve";
 import Skeleton from "../component/Skeleton";
 
@@ -49,9 +50,7 @@ function profilesReducer(state, action) {
       return { ...state, [action.slotKey]: { loading: true, error: null, data: null } };
     case "success":
       return { ...state, [action.slotKey]: { loading: false, error: null, data: action.data } };
-    case "notFound":
-      return { ...state, [action.slotKey]: { loading: false, error: "Player not found", data: null } };
-    case "error":
+    case "failed":
       return { ...state, [action.slotKey]: { loading: false, error: action.error, data: null } };
     default:
       return state;
@@ -72,12 +71,22 @@ const Compare = ({ t }) => {
   }, [searchParams]);
 
   const [profiles, profilesDispatch] = useReducer(profilesReducer, {});
+  const profilesRef = useRef(profiles);
+
+  useEffect(() => {
+    profilesRef.current = profiles;
+  }, [profiles]);
 
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
-      const batches = buildCompareResolveBatches(slots);
+      // Swapping or removing a column rebuilds `slots` from the query string but
+      // introduces no new players, so only fetch the ones we do not already hold.
+      const pending = slots.filter((slot) => !profilesRef.current[buildSlotParam(slot)]?.data);
+      if (!pending.length) return;
+
+      const batches = buildCompareResolveBatches(pending);
       if (batches.length) {
         try {
           await Promise.all(batches.map((batch) => resolvePlayers(batch.platform, batch.gameIds)));
@@ -88,7 +97,7 @@ const Compare = ({ t }) => {
       if (cancelled) return;
 
       await Promise.all(
-        slots.map(async (slot) => {
+        pending.map(async (slot) => {
           const slotKey = buildSlotParam(slot);
           profilesDispatch({ type: "start", slotKey });
           try {
@@ -98,11 +107,24 @@ const Compare = ({ t }) => {
             if (payload && payload.platformInfo) {
               profilesDispatch({ type: "success", slotKey, data: payload });
             } else {
-              profilesDispatch({ type: "notFound", slotKey });
+              // The rank endpoint reports failures as HTTP 200 with a message and no
+              // data, so the message is the only thing that says what went wrong.
+              profilesDispatch({
+                type: "failed",
+                slotKey,
+                error: classifyPlayerError(response?.message),
+              });
             }
           } catch (err) {
             if (cancelled) return;
-            profilesDispatch({ type: "error", slotKey, error: err?.message || "Load failed" });
+            profilesDispatch({
+              type: "failed",
+              slotKey,
+              error:
+                err?.status === 422
+                  ? { code: "not_found", message: err?.message || null }
+                  : classifyPlayerError(err?.message),
+            });
           }
         })
       );
@@ -142,29 +164,34 @@ const Compare = ({ t }) => {
     if (slots.length < 2) return {};
     const result = {};
     COMPARE_ROWS.forEach((row) => {
-      let bestIndex = -1;
-      let bestValue = null;
+      const comparable = [];
 
       slots.forEach((slot, index) => {
         const slotKey = buildSlotParam(slot);
         const data = profiles[slotKey]?.data;
         const stats = data?.segments?.[0]?.stats;
         const value = getStatValue(stats, row.key);
-        if (value === null) return;
-
-        if (bestValue === null) {
-          bestValue = value;
-          bestIndex = index;
-        } else if (row.direction === "higher" && value > bestValue) {
-          bestValue = value;
-          bestIndex = index;
-        } else if (row.direction === "lower" && value < bestValue) {
-          bestValue = value;
-          bestIndex = index;
-        }
+        if (value !== null) comparable.push({ index, value });
       });
 
-      result[row.key] = bestIndex;
+      // A winner needs something to win against, and a tie has no winner.
+      if (comparable.length < 2) {
+        result[row.key] = -1;
+        return;
+      }
+
+      const best = comparable.reduce((acc, current) =>
+        row.direction === "lower"
+          ? current.value < acc.value
+            ? current
+            : acc
+          : current.value > acc.value
+            ? current
+            : acc
+      );
+      const isTied = comparable.filter((entry) => entry.value === best.value).length > 1;
+
+      result[row.key] = isTied ? -1 : best.index;
     });
     return result;
   }, [slots, profiles]);
@@ -223,7 +250,12 @@ const Compare = ({ t }) => {
                 {entry.loading ? (
                   <Skeleton variant="text" count={5} label={t("pages.compare.loading")} className="compare-column__loading" />
                 ) : entry.error ? (
-                  <Alert type="error" message={entry.error} showIcon />
+                  <Alert
+                    type="error"
+                    message={t(`pages.playerError.${entry.error.code}.title`)}
+                    description={t(`pages.playerError.${entry.error.code}.description`)}
+                    showIcon
+                  />
                 ) : (
                   <Link to={`/player/${slot.platform}/${slot.id}`} className="compare-column__profile">
                     <img
