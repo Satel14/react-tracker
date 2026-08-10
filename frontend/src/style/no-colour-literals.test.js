@@ -67,12 +67,30 @@ const isColourValue = (source, index) => {
   return COLOUR_VALUE.test(before.slice(declStart + 1));
 };
 
+// Spellings are what the literal branch bans; canonical values are what the
+// rgba and hex branches compare against. #fff and #ffffff are two spellings
+// of one value, and without this a single rgba(255,255,255,…) books twice.
+//
+// Built by hand rather than `new Map(entries).values()`: that constructor
+// keeps the LAST write for a repeated key, which would report "#fff" (it
+// comes second in the policy) instead of "#ffffff". Skipping already-seen
+// keys keeps the first spelling as the reported id.
+const canonicalById = new Map();
+for (const c of policy.retiredColours) {
+  const full = expand(c);
+  if (!canonicalById.has(full)) canonicalById.set(full, c);
+}
+const CANONICAL = [...canonicalById.values()];
+
 // Takes the source as a parameter rather than reading it, so Task B4 can feed
 // it a fixture. Do not collapse this back into a read-inside function.
 const scanSource = (file, source) => {
   const lower = source.toLowerCase();
   const hits = [];
 
+  // Literal spellings: #fff and #ffffff are two distinct strings and both
+  // must be banned verbatim, so this iterates every entry, duplicates
+  // included.
   for (const colour of policy.retiredColours) {
     let i = 0;
     while ((i = lower.indexOf(colour, i)) !== -1) {
@@ -81,6 +99,12 @@ const scanSource = (file, source) => {
       }
       i += colour.length;
     }
+  }
+
+  // Canonicalising: rgba() has no spelling, only a value, so this iterates
+  // CANONICAL — one entry per distinct colour — or a single physical
+  // occurrence would be booked once per spelling that shares its value.
+  for (const colour of CANONICAL) {
     // Channels may be comma-separated (legacy) or space-separated (modern
     // rgb(255 155 155 / 16%) syntax); the trailing alpha separator is a comma
     // or a slash either way. No modern-syntax occurrence exists in this
@@ -235,5 +259,17 @@ describe("neutral overlays stay legal on paint properties", () => {
   it("does flag a neutral that is the color value", () => {
     const hits = scanSource("component/Multi.scss", ".x { color: rgba(255, 255, 255, 0.5); }");
     expect(hits).toContain("#ffffff");
+  });
+});
+
+// policy.retiredColours lists white under two spellings, "#ffffff" and
+// "#fff", which both expand to the same value. The literal branch must
+// iterate both — they are genuinely distinct strings to ban verbatim — but
+// the rgba (and, from Task 2, the hex) branch must iterate canonical values,
+// or one physical occurrence gets booked once per spelling that shares it.
+describe("one physical rgba occurrence books exactly one hit", () => {
+  it("does not double-count a single color: rgba(255, 255, 255, ...) under both white spellings", () => {
+    const hits = scanSource("component/Multi.scss", ".x { color: rgba(255, 255, 255, 0.5); }");
+    expect(hits).toHaveLength(1);
   });
 });
