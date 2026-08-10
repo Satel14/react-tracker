@@ -17,6 +17,9 @@ const files = globSync("**/*.{scss,jsx,js,css}", { cwd: SRC })
   .sort();
 
 const isHex = (c) => c !== undefined && /[0-9a-f]/.test(c);
+// #000000 is listed here even though retiredColours has no black entry yet, so
+// this half is currently unreached. Keep it: if black is ever retired, this is
+// what stops the 54 legitimate rgba(0,0,0,a) overlays failing on the same day.
 const NEUTRALS = new Set(["#ffffff", "#000000"]);
 
 const expand = (hex) => {
@@ -295,6 +298,25 @@ describe("neutral overlays stay legal on paint properties", () => {
   it("does flag a neutral that is the color value", () => {
     const hits = scanSource("component/Multi.scss", ".x { color: rgba(255, 255, 255, 0.5); }");
     expect(hits).toContain("#ffffff");
+  });
+});
+
+describe("the 103 legitimate overlays stay legal", () => {
+  const stylesheet = read("style/style.scss");
+
+  it("still contains the overlay vocabulary this rule must not touch", () => {
+    expect(stylesheet).toContain("rgba(255, 255, 255, 0.04)");
+    expect(stylesheet).toContain("#00000059");
+  });
+
+  it.each([
+    ["background", ".x { background: rgba(255, 255, 255, 0.04); }"],
+    ["border-color", ".x { border-color: rgba(255, 255, 255, 0.08); }"],
+    ["box-shadow", ".x { box-shadow: inset 2px 2px 20px rgba(255, 255, 255, 0.08); }"],
+    ["text-shadow", ".x { text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5); }"],
+    ["caret-color", ".x { caret-color: rgba(255, 255, 255, 0.6); }"],
+  ])("allows a translucent neutral on %s", (_name, source) => {
+    expect(scanSource("component/Paint.scss", source)).toEqual([]);
   });
 });
 
