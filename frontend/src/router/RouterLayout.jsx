@@ -8,6 +8,7 @@ import routes from "./routes";
 import Navbar from "../component/Navbar";
 import Footer from "../component/Footer";
 import CookieRules from "../component/CookieRule";
+import RouteErrorBoundary from "../component/RouteErrorBoundary";
 import themes from "../component/config/themes";
 import "../style/style.scss";
 
@@ -49,23 +50,7 @@ const RouterLayout = () => {
     <LazyMotion features={domAnimation}>
       {isChromeless ? (
         <div className="app app--chromeless">
-          <Suspense fallback={<RouteFallback />}>
-            <Routes location={location}>
-              {routes.map((route) => (
-                <Route
-                  key={route.path}
-                  path={route.path}
-                  element={<route.component />}
-                />
-              ))}
-              <Route path="*" element={<ErrorPage />} />
-            </Routes>
-          </Suspense>
-        </div>
-      ) : (
-        <div className={"app " + currentTheme}>
-          <Navbar />
-          <div className="content">
+          <RouteErrorBoundary resetKey={location.pathname}>
             <Suspense fallback={<RouteFallback />}>
               <Routes location={location}>
                 {routes.map((route) => (
@@ -78,6 +63,26 @@ const RouterLayout = () => {
                 <Route path="*" element={<ErrorPage />} />
               </Routes>
             </Suspense>
+          </RouteErrorBoundary>
+        </div>
+      ) : (
+        <div className={"app " + currentTheme}>
+          <Navbar />
+          <div className="content">
+            <RouteErrorBoundary resetKey={location.pathname}>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes location={location}>
+                  {routes.map((route) => (
+                    <Route
+                      key={route.path}
+                      path={route.path}
+                      element={<route.component />}
+                    />
+                  ))}
+                  <Route path="*" element={<ErrorPage />} />
+                </Routes>
+              </Suspense>
+            </RouteErrorBoundary>
           </div>
           <Footer />
           <CookieRules />

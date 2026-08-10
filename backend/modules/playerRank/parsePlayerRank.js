@@ -257,7 +257,9 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
       throw new Error("Rate Limit Reached");
     }
 
-    const run = (async () => {
+    // Deferred for the same reason as the resolve batch below: the map entry has to
+    // exist before anything in the body can throw synchronously.
+    const run = Promise.resolve().then(async () => {
       try {
         let accountId = getCachedAccountId(shard, requestedPlayerId);
         let playerName = requestedPlayerId;
@@ -496,7 +498,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
       } finally {
         inFlightRankRequests.delete(requestKey);
       }
-    })();
+    });
 
     inFlightRankRequests.set(requestKey, run);
     return run;
@@ -577,7 +579,10 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
       return inFlight;
     }
 
-    const run = (async () => {
+    // Deferred to a microtask so the map entry below is always in place before the
+    // body runs: a synchronous throw would otherwise reach the finally-block delete
+    // first and leave the rejected promise stuck in this TTL-less map forever.
+    const run = Promise.resolve().then(async () => {
       try {
         const searchUrl =
           `https://api.pubg.com/shards/${encodeSegment(shard)}/players?` +
@@ -604,7 +609,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
       } finally {
         inFlightResolveRequests.delete(resolveKey);
       }
-    })();
+    });
 
     inFlightResolveRequests.set(resolveKey, run);
     return run;

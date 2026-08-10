@@ -30,7 +30,11 @@ const FavoritesList = ({ t }) => {
 
   const loadFavorites = useCallback(async () => {
     const items = await getFavorites();
-    setFavoritesList(items || {});
+    const next = items || {};
+    setFavoritesList(next);
+    // A favorite removed elsewhere (another tab, another page) must leave the
+    // compare selection too, or startCompare silently builds too few slots.
+    setSelectedIds((prev) => prev.filter((id) => Object.prototype.hasOwnProperty.call(next, id)));
   }, []);
 
   useEffect(() => {
