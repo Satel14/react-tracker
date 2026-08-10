@@ -12,3 +12,6 @@
 .eight-digit-hex-on-paint {
   box-shadow: 0 0 4px #0d0918ff;
 }
+.four-digit-hex-on-text {
+  color: #fff8;
+}

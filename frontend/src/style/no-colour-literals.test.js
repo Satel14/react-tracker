@@ -24,6 +24,16 @@ const expand = (hex) => {
   return raw.length === 3 ? raw.split("").map((c) => c + c).join("") : raw;
 };
 
+// 4- and 8-digit hex literals carry the alpha in the string itself: #rgba and
+// #rrggbbaa. Drop the alpha nibble/byte and double what's left for the short
+// form. Nibble-doubling is NOT slicing: "0d09" is not "0d0918" with the tail
+// cut off, it decodes to "00dd00" — the digits look related but the maths
+// isn't a substring. Named and pinned separately so a later "simplification"
+// back into a slice fails loudly instead of silently under-matching.
+const hexBase = (raw) => (raw.length === 4
+  ? raw.slice(0, 3).split("").map((c) => c + c).join("")
+  : raw.slice(0, 6));
+
 const hexToRgb = (hex) => {
   const full = expand(hex);
   return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
@@ -126,10 +136,7 @@ const scanSource = (file, source) => {
     // base and ignore the alpha; the 6-digit branch above cannot see these
     // because its isHex lookahead deliberately steps over them.
     for (const m of lower.matchAll(/#([0-9a-f]{8}|[0-9a-f]{4})\b/g)) {
-      const raw = m[1];
-      const base = raw.length === 4
-        ? raw.slice(0, 3).split("").map((c) => c + c).join("")
-        : raw.slice(0, 6);
+      const base = hexBase(m[1]);
       if (base !== expand(colour)) continue;
       if (legalTokenHome(file, source, m.index)) continue;
       if (neutral && !isColourValue(lower, m.index)) continue;
@@ -258,8 +265,21 @@ describe("the scanner detects literals outside style.scss", () => {
     expect(hits).toContain("#8d91b2");
     expect(hits).toContain("#ff9b9b");
     expect(hits).toContain("$colorFirst");
-    expect(hits).toContain("#ffffff");   // neutral, on color: -> caught
+    expect(hits).toContain("#ffffff");   // neutral, on color: -> caught (8-digit)
     expect(hits).toContain("#0d0918");   // non-neutral, on box-shadow -> caught
+    // Both the 8-digit and 4-digit fixture lines resolve to the same
+    // canonical id, so a bare toContain above already passes off the 8-digit
+    // line alone — it would still pass if the 4-digit branch were deleted.
+    // Count the physical #ffffff hits to prove the 4-digit line is pulling
+    // its own weight.
+    expect(hits.filter((h) => h === "#ffffff")).toHaveLength(2);
+  });
+});
+
+describe("4-digit hex", () => {
+  it("catches #fff8 on its own, isolated from the 8-digit fixture line", () => {
+    const hits = scanSource("fixture.jsx", ".x { color: #fff8; }");
+    expect(hits).toEqual(["#ffffff"]);
   });
 });
 
@@ -287,6 +307,31 @@ describe("one physical rgba occurrence books exactly one hit", () => {
   it("does not double-count a single color: rgba(255, 255, 255, ...) under both white spellings", () => {
     const hits = scanSource("component/Multi.scss", ".x { color: rgba(255, 255, 255, 0.5); }");
     expect(hits).toHaveLength(1);
+  });
+});
+
+// Same guard as the rgba block above, for the hex branch: CANONICAL already
+// dedupes by value before either branch runs, so this can't fail today. It's
+// here so the two guards protecting the same class of bug read the same way.
+describe("one physical hex occurrence books exactly one hit", () => {
+  it("does not double-count a single color: #ffffffd9 under both white spellings", () => {
+    const hits = scanSource("component/Multi.scss", ".x { color: #ffffffd9; }");
+    expect(hits).toHaveLength(1);
+  });
+});
+
+describe("hex alpha decode", () => {
+  it("doubles nibbles for the 4-digit form rather than slicing", () => {
+    // "0d09" looks like the front of the retired "#0d0918", but the 4-digit
+    // form is #rgba (one nibble per channel): drop the alpha nibble ("9") and
+    // double each of the rest. The correct decode is "00dd00", a different
+    // colour entirely — proof that a future "simplify this" pass turning
+    // hexBase back into a slice would be a silent regression, not a no-op.
+    expect(hexBase("0d09")).toBe("00dd00");
+  });
+
+  it("takes the base 6 for the 8-digit form", () => {
+    expect(hexBase("ffffffd9")).toBe("ffffff");
   });
 });
 
