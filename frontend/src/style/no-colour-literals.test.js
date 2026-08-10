@@ -121,6 +121,20 @@ const scanSource = (file, source) => {
       if (neutral && !isColourValue(lower, m.index)) continue;
       hits.push(colour);
     }
+
+    // 4- and 8-digit hex carry the alpha in the literal. Compare the 6-digit
+    // base and ignore the alpha; the 6-digit branch above cannot see these
+    // because its isHex lookahead deliberately steps over them.
+    for (const m of lower.matchAll(/#([0-9a-f]{8}|[0-9a-f]{4})\b/g)) {
+      const raw = m[1];
+      const base = raw.length === 4
+        ? raw.slice(0, 3).split("").map((c) => c + c).join("")
+        : raw.slice(0, 6);
+      if (base !== expand(colour)) continue;
+      if (legalTokenHome(file, source, m.index)) continue;
+      if (neutral && !isColourValue(lower, m.index)) continue;
+      hits.push(colour);
+    }
   }
 
   for (const banned of policy.bannedStrings) {
@@ -244,6 +258,8 @@ describe("the scanner detects literals outside style.scss", () => {
     expect(hits).toContain("#8d91b2");
     expect(hits).toContain("#ff9b9b");
     expect(hits).toContain("$colorFirst");
+    expect(hits).toContain("#ffffff");   // neutral, on color: -> caught
+    expect(hits).toContain("#0d0918");   // non-neutral, on box-shadow -> caught
   });
 });
 
@@ -271,5 +287,13 @@ describe("one physical rgba occurrence books exactly one hit", () => {
   it("does not double-count a single color: rgba(255, 255, 255, ...) under both white spellings", () => {
     const hits = scanSource("component/Multi.scss", ".x { color: rgba(255, 255, 255, 0.5); }");
     expect(hits).toHaveLength(1);
+  });
+});
+
+describe("8-digit hex alpha fidelity", () => {
+  it("keeps the exact 0xd9 alpha rather than rounding to 85%", () => {
+    const stylesheet = read("style/style.scss");
+    expect(stylesheet).toContain("var(--text-strong) 85.098%");
+    expect(stylesheet).not.toContain("var(--text-strong) 85%");
   });
 });
