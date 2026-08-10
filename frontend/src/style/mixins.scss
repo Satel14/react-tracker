@@ -208,7 +208,11 @@
       }
 
       &__submit {
-        background: linear-gradient(135deg, var(--accent), darken($colorFirst, 10%)) !important;
+        background: linear-gradient(
+          135deg,
+          var(--accent),
+          hsl(from var(--accent) h s calc(l - 10))
+        ) !important;
 
         &:hover {
           box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 30%, transparent);
