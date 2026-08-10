@@ -59,7 +59,7 @@ describe("brand alpha values", () => {
     ].map((match) => Number(match[1]));
     expect([...new Set(percents)].sort((a, b) => a - b)).toEqual([
       5, 7, 8, 10, 12, 14, 15, 16, 18, 20, 22, 25, 26, 28, 30, 32,
-      35, 40, 45, 50, 55, 70, 75, 80, 85, 95,
+      35, 40, 45, 50, 55, 70, 75, 80, 85, 92, 95,
     ]);
   });
 });

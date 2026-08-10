@@ -52,6 +52,21 @@ const legalTokenHome = (file, source, index) => {
   return /^\s*--[\w-]+:/.test(line);
 };
 
+// A translucent neutral is the codebase's overlay vocabulary and is legal on
+// paint properties — 103 of them. On `color:` it is a re-spelling of a text
+// token. So the exemption is by position, not by value.
+//
+// Bound to the VALUE, not the line: `color: var(--x); background: rgba(...)`
+// is one line with both, and a line-level test would flag the background.
+const COLOUR_VALUE = /(?<![-\w])color\s*:\s*[^;{]*$/;
+
+const isColourValue = (source, index) => {
+  const lineStart = source.lastIndexOf("\n", index) + 1;
+  const before = source.slice(lineStart, index);
+  const declStart = Math.max(before.lastIndexOf(";"), before.lastIndexOf("{"));
+  return COLOUR_VALUE.test(before.slice(declStart + 1));
+};
+
 // Takes the source as a parameter rather than reading it, so Task B4 can feed
 // it a fixture. Do not collapse this back into a read-inside function.
 const scanSource = (file, source) => {
@@ -66,20 +81,21 @@ const scanSource = (file, source) => {
       }
       i += colour.length;
     }
-    if (NEUTRALS.has(`#${expand(colour)}`)) continue;
     // Channels may be comma-separated (legacy) or space-separated (modern
     // rgb(255 155 155 / 16%) syntax); the trailing alpha separator is a comma
     // or a slash either way. No modern-syntax occurrence exists in this
     // codebase today — this only widens what the scanner is ready to catch.
+    const neutral = NEUTRALS.has(`#${expand(colour)}`);
     for (const m of lower.matchAll(
       /rgba?\(\s*(\d{1,3})[,\s]+(\d{1,3})[,\s]+(\d{1,3})\s*(?:[,/][^)]*)?\)/g,
     )) {
       const hex = [m[1], m[2], m[3]]
         .map((n) => Number(n).toString(16).padStart(2, "0"))
         .join("");
-      if (hex === expand(colour) && !legalTokenHome(file, source, m.index)) {
-        hits.push(colour);
-      }
+      if (hex !== expand(colour)) continue;
+      if (legalTokenHome(file, source, m.index)) continue;
+      if (neutral && !isColourValue(lower, m.index)) continue;
+      hits.push(colour);
     }
   }
 
@@ -204,5 +220,20 @@ describe("the scanner detects literals outside style.scss", () => {
     expect(hits).toContain("#8d91b2");
     expect(hits).toContain("#ff9b9b");
     expect(hits).toContain("$colorFirst");
+  });
+});
+
+describe("neutral overlays stay legal on paint properties", () => {
+  it("does not flag a neutral that shares a line with a color declaration", () => {
+    const hits = scanSource(
+      "component/Multi.scss",
+      ".x { color: var(--text); background: rgba(255, 255, 255, 0.04); }",
+    );
+    expect(hits).toEqual([]);
+  });
+
+  it("does flag a neutral that is the color value", () => {
+    const hits = scanSource("component/Multi.scss", ".x { color: rgba(255, 255, 255, 0.5); }");
+    expect(hits).toContain("#ffffff");
   });
 });
