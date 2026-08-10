@@ -146,17 +146,24 @@ describe("mixins text colour", () => {
   });
 });
 
-describe("theme accent parity across all three sources", () => {
-  const fromIncludes = Object.fromEntries(
-    [...mixins.matchAll(/@include\s+styleCreator\(\s*"([\w-]+)"\s*,\s*(#[0-9a-fA-F]{6})/g)]
-      .map((m) => [m[1], m[2].toLowerCase()]),
-  );
-
-  it("mixins.scss declares one @include per theme", () => {
-    expect(Object.keys(fromIncludes).sort()).toEqual(Object.keys(themes).sort());
+// Two sources, not three. mixins.scss used to carry an accent as a positional
+// @include argument — a copy no file-glob guard could reach. Tokenising the
+// mixin removed it, so there is nothing left to compare there. The
+// _tokens.scss <-> themes.js parity that remains is asserted above, in
+// "theme accents".
+describe("mixins.scss theme registry", () => {
+  it("mixins.scss no longer carries a third accent value to compare", () => {
+    expect(mixins).not.toMatch(/@include\s+styleCreator\(\s*"[\w-]+"\s*,\s*#[0-9a-fA-F]{6}\s*,/);
   });
 
-  it.each(Object.keys(themes))("%s agrees in themes.js and mixins.scss", (name) => {
-    expect(fromIncludes[name]).toBe(themes[name].toLowerCase());
+  const includeNames = [...mixins.matchAll(/@include\s+styleCreator\(\s*"([\w-]+)"/g)].map((m) => m[1]);
+
+  it("declares one @include per theme in themes.js and no others", () => {
+    expect([...includeNames].sort()).toEqual(Object.keys(themes).sort());
+  });
+
+  it("keeps the unitless lightness channel — the percentage form is invalid and silently drops the declaration", () => {
+    expect(mixins).toContain("hsl(from var(--accent) h s calc(l - 10))");
+    expect(mixins).not.toMatch(/calc\(l\s*[-+]\s*[\d.]+%\)/);
   });
 });

@@ -14,7 +14,6 @@
   ],
   "mergeThreshold": 15,
   "exemptions": [
-    { "file": "style/mixins.scss", "id": "$colorFirst", "count": 47, "until": "PR C" },
     { "file": "style/mixins.scss", "id": "$backgroundColorFirst", "count": 3, "until": "PR C" },
     { "file": "style/mixins.scss", "id": "#fff", "count": 1, "until": "PR C" },
     { "file": "style/mixins.scss", "id": "near-duplicate", "count": 1, "until": "PR C" },
