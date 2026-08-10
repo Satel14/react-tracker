@@ -9,7 +9,9 @@
     "#ff9b9b"
   ],
   "bannedStrings": ["$colorFirst", "$backgroundColorFirst", "$colorSecond"],
-  "bannedPatterns": [],
+  "bannedPatterns": [
+    { "id": "named-white", "pattern": "(?<![-\\w])color\\s*:\\s*white\\b" }
+  ],
   "mergeThreshold": 15,
   "exemptions": [
     { "file": "style/mixins.scss", "id": "$colorFirst", "count": 47, "until": "PR C" },

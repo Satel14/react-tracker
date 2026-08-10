@@ -71,12 +71,27 @@ const legalTokenHome = (file, source, index) => {
 //
 // Bound to the VALUE, not the line: `color: var(--x); background: rgba(...)`
 // is one line with both, and a line-level test would flag the background.
-const COLOUR_VALUE = /(?<![-\w])color\s*:\s*[^;{]*$/;
+// Bound to the DECLARATION, not the line either: `color:` and its value can
+// be split across a line break, so the window must cross newlines too. `}`
+// is added to the negated class so a preceding closed block can't leak its
+// own `color:` through into the next declaration's window.
+//
+// Blind spots — zero-occurrence in src today, so nothing is silently missed
+// yet, but the next colour pasted this way will not be seen by this guard:
+//   - named colours other than "white" (only "named-white" is patterned;
+//     "red", "black", etc. reach `color:` unnoticed)
+//   - hsl(), color(), oklch() and other non-rgb() functional notations
+//   - percentage or non-integer channels, e.g. rgba(100%, 100%, 100%, 0.5)
+//     (the rgb()/rgba() branch only matches \d{1,3} integer channels)
+const COLOUR_VALUE = /(?<![-\w])color\s*:\s*[^;{}]*$/;
 
 const isColourValue = (source, index) => {
-  const lineStart = source.lastIndexOf("\n", index) + 1;
-  const before = source.slice(lineStart, index);
-  const declStart = Math.max(before.lastIndexOf(";"), before.lastIndexOf("{"));
+  const before = source.slice(0, index);
+  const declStart = Math.max(
+    before.lastIndexOf(";"),
+    before.lastIndexOf("{"),
+    before.lastIndexOf("}"),
+  );
   return COLOUR_VALUE.test(before.slice(declStart + 1));
 };
 
@@ -177,20 +192,32 @@ for (const file of files) {
 // literal the migration retired and leaves the legitimately distinct long
 // tail alone — the nearest survivor is #6b6f8a at 33.3.
 //
+// 3/4/6/8-digit hex all reach `color:` in this codebase — devtools hand you
+// the 8-digit form with alpha by default. hexBase strips the alpha
+// nibble/byte for the 4- and 8-digit forms; 3- and 6-digit forms have no
+// alpha to strip and pass through as-is.
+const nearDuplicatesIn = (file, source) => {
+  const lower = source.toLowerCase();
+  const hits = [];
+  for (const m of lower.matchAll(/color:\s*#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b/g)) {
+    const raw = m[1];
+    const base = raw.length === 4 || raw.length === 8 ? hexBase(raw) : raw;
+    for (const [name, value] of Object.entries(TEXT_TOKENS)) {
+      const gap = distance(base, value);
+      if (gap < policy.mergeThreshold) {
+        hits.push({ file, hex: `#${raw}`, name, gap });
+      }
+    }
+  }
+  return hits;
+};
+
 // Recorded into `actual` under a "near-duplicate" id the same way scanSource's
 // hits are, so the ordinary two-directional ratchet below covers this rule
 // like any other id — no separate carve-out in the ratchet tests.
 const nearDuplicateHits = [];
 for (const file of files) {
-  const source = read(file).toLowerCase();
-  for (const m of source.matchAll(/color:\s*(#[0-9a-f]{3,6})\b/g)) {
-    for (const [name, value] of Object.entries(TEXT_TOKENS)) {
-      const gap = distance(m[1], value);
-      if (gap < policy.mergeThreshold) {
-        nearDuplicateHits.push({ file, hex: m[1], name, gap });
-      }
-    }
-  }
+  nearDuplicateHits.push(...nearDuplicatesIn(file, read(file)));
 }
 for (const hit of nearDuplicateHits) {
   const nearDuplicateKey = key(hit.file, "near-duplicate");
@@ -236,11 +263,31 @@ describe("modern rgb() syntax", () => {
   });
 });
 
+describe("named colour keywords", () => {
+  it("catches color: white via the bannedPatterns named-white rule", () => {
+    const hits = scanSource("fixture.jsx", ".x { color: white; }");
+    expect(hits).toContain("named-white");
+  });
+
+  it("does not flag border-color: white — paint, not text", () => {
+    const hits = scanSource("fixture.jsx", ".x { border-color: white; }");
+    expect(hits).not.toContain("named-white");
+  });
+});
+
 describe("near-duplicate colours", () => {
   it("reads its four text tokens from _tokens.scss, not from a copy", () => {
     expect(Object.keys(TEXT_TOKENS).sort()).toEqual([
       "--text", "--text-faint", "--text-muted", "--text-strong",
     ]);
+  });
+
+  // Pins the 8-digit widening: browsers/devtools hand you this alpha-bearing
+  // spelling by default, and the old 3-6-digit-only regex could never see it
+  // (its trailing \b can't match past the 7th and 8th hex digit).
+  it("decodes an 8-digit color: hex to its base before measuring distance", () => {
+    const hits = nearDuplicatesIn("fixture.jsx", ".x { color: #9da1c0d9; }");
+    expect(hits.map((h) => h.name)).toContain("--text-muted");
   });
 
   it("has no color: hex across src that restates a text token", () => {
@@ -301,7 +348,25 @@ describe("neutral overlays stay legal on paint properties", () => {
   });
 });
 
-describe("the 103 legitimate overlays stay legal", () => {
+describe("colour value spans multiple lines", () => {
+  it("still recognises the value when color: and the literal are on a continuation line", () => {
+    const hits = scanSource(
+      "component/Multi.scss",
+      ".zz {\n  color:\n    rgba(255, 255, 255, 0.5);\n}",
+    );
+    expect(hits).toContain("#ffffff");
+  });
+
+  it("does not let a closed sibling block's color: leak into the next declaration", () => {
+    const hits = scanSource(
+      "component/Multi.scss",
+      ".a {\n  color: red;\n}\n.b {\n  background: rgba(255, 255, 255, 0.5);\n}",
+    );
+    expect(hits).toEqual([]);
+  });
+});
+
+describe("translucent neutrals stay legal on paint properties", () => {
   const stylesheet = read("style/style.scss");
 
   it("still contains the overlay vocabulary this rule must not touch", () => {
