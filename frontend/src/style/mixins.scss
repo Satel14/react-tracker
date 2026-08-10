@@ -1,4 +1,4 @@
-@mixin styleCreator($name, $colorFirst, $backgroundColorFirst) {
+@mixin styleCreator($name, $backgroundColorFirst) {
   .app.#{$name} {
     .site-cookie {
       background-color: $backgroundColorFirst;
@@ -235,8 +235,8 @@
   }
 }
 
-@include styleCreator("green", #77f6a7, #222222);
-@include styleCreator("blue", #00d8d3, #0b0b0b);
-@include styleCreator("orange", #ffbe29, #0b0b0b);
-@include styleCreator("brown", #f8ccaf, #0b0b0b);
-@include styleCreator("red", #f73b5d, #161920);
+@include styleCreator("green", #222222);
+@include styleCreator("blue", #0b0b0b);
+@include styleCreator("orange", #0b0b0b);
+@include styleCreator("brown", #0b0b0b);
+@include styleCreator("red", #161920);
