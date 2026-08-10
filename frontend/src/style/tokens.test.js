@@ -151,8 +151,19 @@ describe("mixins text colour", () => {
 // mixin removed it, so there is nothing left to compare there. The
 // _tokens.scss <-> themes.js parity that remains is asserted above, in
 // "theme accents".
-describe("theme accent parity across both sources", () => {
+describe("mixins.scss theme registry", () => {
   it("mixins.scss no longer carries a third accent value to compare", () => {
     expect(mixins).not.toMatch(/@include\s+styleCreator\(\s*"[\w-]+"\s*,\s*#[0-9a-fA-F]{6}\s*,/);
+  });
+
+  const includeNames = [...mixins.matchAll(/@include\s+styleCreator\(\s*"([\w-]+)"/g)].map((m) => m[1]);
+
+  it("declares one @include per theme in themes.js and no others", () => {
+    expect([...includeNames].sort()).toEqual(Object.keys(themes).sort());
+  });
+
+  it("keeps the unitless lightness channel — the percentage form is invalid and silently drops the declaration", () => {
+    expect(mixins).toContain("hsl(from var(--accent) h s calc(l - 10))");
+    expect(mixins).not.toMatch(/calc\(l\s*[-+]\s*[\d.]+%\)/);
   });
 });
