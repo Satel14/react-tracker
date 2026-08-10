@@ -1,11 +1,5 @@
 @mixin styleCreator($name, $colorFirst, $backgroundColorFirst) {
   .app.#{$name} {
-    .favorite-button {
-      &.active {
-        background: $colorFirst !important;
-      }
-    }
-
     .site-cookie {
       background-color: $backgroundColorFirst;
       box-shadow: inset 2px 2px 20px #00000059, 3px 3px 0px 0px $colorFirst;
@@ -30,17 +24,6 @@
       }
 
       &-menu {
-        .ant-menu-light {
-          .ant-menu-item {
-            &.ant-menu-item-selected {
-              a {
-                color: $colorFirst;
-                box-shadow: inset 0px 0px 2px $colorFirst;
-              }
-            }
-          }
-        }
-
         a {
           &:hover {
             color: $colorFirst;
