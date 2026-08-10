@@ -303,6 +303,11 @@
           "a": "Steam, Xbox, PlayStation, Stadia, and Kakao shards are supported. Make sure you pick the same platform where the player actually plays."
         }
       }
+    },
+    "routeError": {
+      "title": "This page failed to load",
+      "description": "Part of the app could not be downloaded. This usually happens right after a new release - reloading picks up the current version.",
+      "reload": "Reload page"
     }
   },
   "footer": {
