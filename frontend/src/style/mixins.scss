@@ -2,22 +2,22 @@
   .app.#{$name} {
     .site-cookie {
       background-color: $backgroundColorFirst;
-      box-shadow: inset 2px 2px 20px #00000059, 3px 3px 0px 0px $colorFirst;
-      border: 1px $colorFirst solid;
+      box-shadow: inset 2px 2px 20px #00000059, 3px 3px 0px 0px var(--accent);
+      border: 1px var(--accent) solid;
 
       &-block {
         button {
-          border-color: $colorFirst;
+          border-color: var(--accent);
 
           &:hover {
-            background: $colorFirst;
+            background: var(--accent);
           }
         }
       }
     }
 
     .footer {
-      border-top: 1px solid $colorFirst;
+      border-top: 1px solid var(--accent);
 
       .copyright {
         color: var(--text-muted);
@@ -26,24 +26,24 @@
       &-menu {
         a {
           &:hover {
-            color: $colorFirst;
-            box-shadow: inset 0px 0px 2px $colorFirst;
+            color: var(--accent);
+            box-shadow: inset 0px 0px 2px var(--accent);
           }
         }
       }
     }
 
     .navbar {
-      border-bottom: 1px solid $colorFirst;
+      border-bottom: 1px solid var(--accent);
 
       &__logo-tracker {
-        color: $colorFirst;
+        color: var(--accent);
       }
 
       .ant-menu-light {
         .ant-menu-title-content {
           .ant-badge-count {
-            background: $colorFirst;
+            background: var(--accent);
             color: $backgroundColorFirst;
           }
         }
@@ -51,22 +51,22 @@
         .ant-menu-item {
           &:hover {
             svg {
-              color: $colorFirst;
+              color: var(--accent);
             }
           }
 
           &:hover::after {
-            border-bottom: 4px solid $colorFirst;
+            border-bottom: 4px solid var(--accent);
           }
         }
 
         .ant-menu-item-selected {
           &::after {
-            border-bottom: 4px solid $colorFirst;
+            border-bottom: 4px solid var(--accent);
           }
 
           svg {
-            color: $colorFirst;
+            color: var(--accent);
           }
         }
       }
@@ -75,21 +75,21 @@
     .mainpage {
       .mainpage_left {
         input {
-          box-shadow: inset 2px 2px 20px #00000059, 3px 2px 0px 0px rgba($colorFirst, 0.55);
+          box-shadow: inset 2px 2px 20px #00000059, 3px 2px 0px 0px color-mix(in srgb, var(--accent) 55%, transparent);
           transition: box-shadow 0.2s ease, border-color 0.2s ease;
 
           &:focus,
           &:hover,
           &:active,
           &-focused {
-            box-shadow: inset 2px 2px 20px #00000059, 3px 2px 0px 0px $colorFirst, 0 0 0 1px rgba($colorFirst, 0.22);
+            box-shadow: inset 2px 2px 20px #00000059, 3px 2px 0px 0px var(--accent), 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
           }
         }
 
         .ant-input-search .ant-input,
         .ant-input,
         .ant-input-affix-wrapper {
-          border-color: rgba($colorFirst, 0.55) !important;
+          border-color: color-mix(in srgb, var(--accent) 55%, transparent) !important;
           box-shadow: none !important;
         }
 
@@ -109,20 +109,20 @@
         .ant-input-affix-wrapper:focus,
         .ant-input-affix-wrapper-focused,
         .ant-input-affix-wrapper:focus-within {
-          border-color: $colorFirst !important;
+          border-color: var(--accent) !important;
         }
 
         .ant-input:focus,
         .ant-input-focused,
         .ant-input-affix-wrapper-focused,
         .ant-input-affix-wrapper:focus-within {
-          box-shadow: inset 2px 2px 20px #00000059, 3px 2px 0px 0px $colorFirst, 0 0 0 1px rgba($colorFirst, 0.22) !important;
+          box-shadow: inset 2px 2px 20px #00000059, 3px 2px 0px 0px var(--accent), 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent) !important;
         }
       }
 
       .chooser {
         .enter-search {
-          color: rgba($colorFirst, 0.65);
+          color: color-mix(in srgb, var(--accent) 65%, transparent);
           transition: color 0.2s ease, transform 0.2s ease;
 
           &:hover {
@@ -137,13 +137,13 @@
       }
 
       .historycheck_block {
-        border-color: rgba($colorFirst, 0.22);
-        box-shadow: inset 0 0 0 1px rgba($colorFirst, 0.06);
+        border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 6%, transparent);
         transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease;
 
         &-left {
           img {
-            border-color: rgba($colorFirst, 0.38);
+            border-color: color-mix(in srgb, var(--accent) 38%, transparent);
             transition: border-color 0.2s ease, transform 0.2s ease;
           }
         }
@@ -164,18 +164,18 @@
         }
 
         &:hover {
-          border-color: rgba($colorFirst, 0.62);
-          box-shadow: inset 0 0 0 1px rgba($colorFirst, 0.24);
-          background: rgba($colorFirst, 0.08);
+          border-color: color-mix(in srgb, var(--accent) 62%, transparent);
+          box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent);
+          background: color-mix(in srgb, var(--accent) 8%, transparent);
           transform: translateY(-1px);
         }
 
         &:hover .historycheck_block-platform {
-          color: $colorFirst;
+          color: var(--accent);
         }
 
         &:hover .historycheck_block-left img {
-          border-color: rgba($colorFirst, 0.82);
+          border-color: color-mix(in srgb, var(--accent) 82%, transparent);
           transform: translateY(-1px);
         }
       }
@@ -183,48 +183,48 @@
 
     .bugreport {
       &__icon {
-        color: $colorFirst;
+        color: var(--accent);
       }
 
       &__form {
-        border-color: rgba($colorFirst, 0.22);
+        border-color: color-mix(in srgb, var(--accent) 22%, transparent);
       }
 
       &__field {
 
         .ant-input,
         textarea.ant-input {
-          border-color: rgba($colorFirst, 0.25) !important;
+          border-color: color-mix(in srgb, var(--accent) 25%, transparent) !important;
 
           &:hover {
-            border-color: rgba($colorFirst, 0.45) !important;
+            border-color: color-mix(in srgb, var(--accent) 45%, transparent) !important;
           }
 
           &:focus {
-            border-color: $colorFirst !important;
-            box-shadow: 0 0 0 2px rgba($colorFirst, 0.12) !important;
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 12%, transparent) !important;
           }
         }
       }
 
       &__submit {
-        background: linear-gradient(135deg, $colorFirst, darken($colorFirst, 10%)) !important;
+        background: linear-gradient(135deg, var(--accent), darken($colorFirst, 10%)) !important;
 
         &:hover {
-          box-shadow: 0 6px 20px rgba($colorFirst, 0.3);
+          box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 30%, transparent);
         }
       }
 
       &__contact-item {
-        border-color: rgba($colorFirst, 0.14);
+        border-color: color-mix(in srgb, var(--accent) 14%, transparent);
 
         &:hover {
-          border-color: rgba($colorFirst, 0.55);
-          background: rgba($colorFirst, 0.08);
+          border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+          background: color-mix(in srgb, var(--accent) 8%, transparent);
         }
 
         >.anticon {
-          color: $colorFirst;
+          color: var(--accent);
         }
       }
     }

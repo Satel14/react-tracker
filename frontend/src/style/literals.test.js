@@ -64,6 +64,30 @@ describe("brand alpha values", () => {
   });
 });
 
+describe("mixins alpha values", () => {
+  const mixins = readFileSync(
+    fileURLToPath(new URL("./mixins.scss", import.meta.url)),
+    "utf8",
+  );
+
+  // Same rationale as the style.scss pin above: absence of `rgba(` proves
+  // nothing about the alpha that replaced it. A legitimate new alpha fails
+  // this too — update the list deliberately.
+  //
+  // 70 is not accent-derived: it comes from a pre-existing
+  // color-mix(in srgb, var(--text-muted) 70%, transparent) in this file. The
+  // regex is deliberately token-agnostic so any color-mix percentage here is
+  // pinned, not just the accent ones.
+  it("preserves every alpha through the percentage conversion", () => {
+    const percents = [
+      ...mixins.matchAll(/color-mix\(in srgb, var\(--[a-z-]+\) ([0-9.]+)%/g),
+    ].map((match) => Number(match[1]));
+    expect([...new Set(percents)].sort((a, b) => a - b)).toEqual([
+      6, 8, 12, 14, 22, 24, 25, 30, 38, 45, 55, 62, 65, 70, 82,
+    ]);
+  });
+});
+
 describe("semantic colours", () => {
   const semanticLines = [
     "&--win { background: var(--win);",
