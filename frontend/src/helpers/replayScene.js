@@ -37,6 +37,14 @@ const ZONE_FILL = {
 const offScreen = (p, vw, vh, pad = 20) =>
   p.x < -pad || p.y < -pad || p.x > vw + pad || p.y > vh + pad;
 
+// Cohen-Sutherland outcode. "Both endpoints are outside" does NOT mean the
+// segment misses -- a tracer can enter one edge and leave another. Only a
+// shared outcode bit proves both ends sit beyond the SAME edge, which is the
+// one case a segment can be rejected outright.
+const outcode = (p, vw, vh, pad = 20) =>
+  (p.x < -pad ? 1 : 0) | (p.x > vw + pad ? 2 : 0) |
+  (p.y < -pad ? 4 : 0) | (p.y > vh + pad ? 8 : 0);
+
 export const drawBackground = (ctx, { cam, vw, vh, image, bandColor }) => {
   if (!ctx) return;
   ctx.clearRect(0, 0, vw, vh);
@@ -149,9 +157,7 @@ export const paintShots = (ctx, { cam, vw, vh, shots, colors }) => {
   for (const shot of shots) {
     const a = worldToScreen(cam, vw, vh, shot.ax, shot.ay);
     const b = worldToScreen(cam, vw, vh, shot.vx, shot.vy);
-    // Cull before drawing: a line with both ends off-screen cannot cross the
-    // viewport, because the viewport is convex.
-    if (offScreen(a, vw, vh) && offScreen(b, vw, vh)) continue;
+    if (outcode(a, vw, vh) & outcode(b, vw, vh)) continue;
     ctx.globalAlpha = 1 - shot.age;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
@@ -166,9 +172,10 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas }) => 
   for (const pkg of packages) {
     const p = worldToScreen(cam, vw, vh, pkg.x, pkg.y);
     if (offScreen(p, vw, vh)) continue;
-    const colour = pkg.kind === "redbox" ? colors.danger || colors.crate : colors.crate;
+    const red = pkg.kind === "redbox";
+    const colour = red ? colors.danger || colors.crate : colors.crate;
     if (atlas && atlas.blit) {
-      atlas.blit(ctx, "crate", Math.round(p.x), Math.round(p.y), SCREEN.crateRadius);
+      atlas.blit(ctx, red ? "crateRed" : "crate", Math.round(p.x), Math.round(p.y), SCREEN.crateRadius);
     } else {
       ctx.beginPath();
       ctx.arc(p.x, p.y, SCREEN.crateRadius, 0, Math.PI * 2);
@@ -187,17 +194,20 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas }) => 
   }
 };
 
-export const paintLandings = (ctx, { cam, vw, vh, landings, alpha, colors, atlas, focalIds }) => {
+export const paintLandings = (ctx, { cam, vw, vh, landings, alpha, colors, atlas, focalIds, t = Infinity }) => {
   if (!ctx || !landings || landings.length === 0 || !(alpha > 0)) return;
   ctx.save();
   ctx.globalAlpha = alpha;
   for (const landing of landings) {
+    // A landing marker before the player has landed is a spoiler and a lie.
+    if (landing.t > t) continue;
     const p = worldToScreen(cam, vw, vh, landing.x, landing.y);
     if (offScreen(p, vw, vh)) continue;
     const isFocal = !!(focalIds && focalIds.has(landing.a));
-    const colour = isFocal ? colors.focal : colors.flight;
+    const colour = isFocal ? colors.focal : colors.enemy;
     if (atlas && atlas.blit) {
-      atlas.blit(ctx, "chevron", Math.round(p.x), Math.round(p.y), SCREEN.chevronRadius);
+      // The atlas bakes one colour per cell, so friend/foe has to be the kind.
+      atlas.blit(ctx, isFocal ? "chevronFocal" : "chevronEnemy", Math.round(p.x), Math.round(p.y), SCREEN.chevronRadius);
     } else {
       ctx.strokeStyle = colour;
       ctx.lineWidth = SCREEN.shotWidth;
@@ -214,7 +224,9 @@ export const paintLandings = (ctx, { cam, vw, vh, landings, alpha, colors, atlas
 const paintHealthArc = (ctx, x, y, r, health, colors) => {
   const { fraction, level } = healthArc(health);
   if (fraction >= 1) return;
-  ctx.strokeStyle = level === "ok" ? colors.focal : level === "warn" ? colors.warn : colors.tracer;
+  // Health is its own encoding. Borrowing the focal hue would read as
+  // "teammate" and the tracer hue as "kill", so it gets dedicated colours.
+  ctx.strokeStyle = level === "ok" ? colors.healthOk : level === "warn" ? colors.warn : colors.healthLow;
   ctx.lineWidth = SCREEN.healthArcWidth;
   ctx.beginPath();
   // From 12 o'clock clockwise, so a shrinking arc reads as a draining gauge.
@@ -245,7 +257,7 @@ export const drawScene = (ctx, frame) => {
   const {
     cam, vw, vh, tracks, zone, flashes, nowMs, focusedAccountId, hoveredIndex,
     colors, atlas, labelCap = 24,
-    shots, specialZones, packages, landings, flightSeg,
+    shots, specialZones, packages, landings, landingsT, flightSeg,
     flightAlpha: fAlpha = 1, landingsAlpha: lAlpha = 1, focalIds,
     layers = {},
   } = frame;
@@ -257,7 +269,7 @@ export const drawScene = (ctx, frame) => {
   drawZone(ctx, { cam, vw, vh, zone, colors });
   if (on("specialZones")) paintSpecialZones(ctx, { cam, vw, vh, zones: specialZones, colors });
   if (on("flight")) paintFlight(ctx, { cam, vw, vh, segment: flightSeg, alpha: fAlpha, colors });
-  if (on("landings")) paintLandings(ctx, { cam, vw, vh, landings, alpha: lAlpha, colors, atlas, focalIds });
+  if (on("landings")) paintLandings(ctx, { cam, vw, vh, landings, alpha: lAlpha, colors, atlas, focalIds, t: landingsT });
   if (on("packages")) paintPackages(ctx, { cam, vw, vh, packages, colors, atlas });
   if (on("shots")) paintShots(ctx, { cam, vw, vh, shots, colors });
   drawFlashes(ctx, { cam, vw, vh, flashes, nowMs, colors });

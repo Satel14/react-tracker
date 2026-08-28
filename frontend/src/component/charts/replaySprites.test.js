@@ -6,6 +6,7 @@ const COLORS = {
   dead: "rgb(3,3,3)",
   crate: "rgb(4,4,4)",
   flight: "rgb(5,5,5)",
+  danger: "rgb(6,6,6)",
 };
 
 const CELL = 32;
@@ -141,7 +142,7 @@ afterEach(() => {
 
 test("exposes a path string per icon kind", () => {
   expect(Object.keys(ICON_PATHS).sort()).toEqual([
-    "chevron", "crate", "dead", "enemy", "focal",
+    "chevronEnemy", "chevronFocal", "crate", "crateRed", "dead", "enemy", "focal",
     "knockedEnemy", "knockedFocal", "vehicleEnemy", "vehicleFocal",
   ]);
   for (const d of Object.values(ICON_PATHS)) expect(typeof d).toBe("string");
@@ -256,12 +257,24 @@ test("paints every glyph from the palette it was handed", () => {
   expect(paint.vehicleFocal.colour).toBe(COLORS.focal);
   expect(paint.vehicleEnemy.colour).toBe(COLORS.enemy);
   expect(paint.crate.colour).toBe(COLORS.crate);
-  expect(paint.chevron.colour).toBe(COLORS.flight);
+  // A landing chevron carries the same friend/foe read as the dot it belongs
+  // to, so it follows the *Focal/*Enemy promise rather than the flight colour.
+  expect(paint.chevronFocal.colour).toBe(COLORS.focal);
+  expect(paint.chevronEnemy.colour).toBe(COLORS.enemy);
+  // The red crate is the one worth crossing the map for.
+  expect(paint.crateRed.colour).toBe(COLORS.danger);
 
   expect(paint.dead.op).toBe("stroke");
   expect(paint.crate.op).toBe("stroke");
-  expect(paint.chevron.op).toBe("stroke");
-  for (const kind of STATE_PAIRS.flat()) expect(paint[kind].op, kind).toBe("fill");
+  expect(paint.crateRed.op).toBe("stroke");
+  expect(paint.chevronFocal.op).toBe("stroke");
+  expect(paint.chevronEnemy.op).toBe("stroke");
+  // Paint op is per glyph, not per naming pattern: the state pairs are solid
+  // marks while a chevron is a stroked tick. Asserted individually above, and
+  // the pair loop keeps its real job -- the colour promise.
+  for (const kind of ["knockedFocal", "knockedEnemy", "vehicleFocal", "vehicleEnemy"]) {
+    expect(paint[kind].op, kind).toBe("fill");
+  }
 });
 
 // Regression guard. The atlas bakes each cell's colour in at raster time, so

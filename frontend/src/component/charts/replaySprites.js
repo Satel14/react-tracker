@@ -21,6 +21,9 @@ const VEHICLE = "M2 14 L8 14 L11 2 L21 2 L24 14 L30 14 L30 26 L27 26 A4 4 0 0 1 
 // would flip a knocked teammate to the enemy colour the instant they go down
 // -- inverting the one distinction the map exists to show. There is
 // deliberately no team-less spelling of either kind for a caller to reach for.
+const CRATE = "M2 2 L30 2 L30 30 L2 30 Z M16 2 L16 30";
+const CHEVRON = "M2 2 L16 16 L30 2 M2 16 L16 30 L30 16";
+
 export const ICON_PATHS = {
   focal: "M16 2 L30 30 L16 23 L2 30 Z",
   enemy: "M16 2 A14 14 0 1 0 16 30 A14 14 0 1 0 16 2 Z",
@@ -29,8 +32,12 @@ export const ICON_PATHS = {
   knockedEnemy: KNOCKED,
   vehicleFocal: VEHICLE,
   vehicleEnemy: VEHICLE,
-  crate: "M2 2 L30 2 L30 30 L2 30 Z M16 2 L16 30",
-  chevron: "M2 2 L16 16 L30 2 M2 16 L16 30 L30 16",
+  crate: CRATE,
+  // A red crate is the one worth crossing the map for, and the atlas bakes one
+  // colour per cell, so it needs its own.
+  crateRed: CRATE,
+  chevronFocal: CHEVRON,
+  chevronEnemy: CHEVRON,
 };
 
 const KINDS = Object.keys(ICON_PATHS);
@@ -53,7 +60,9 @@ const PAINT = {
   // spikes further: the chevron's lower vertex would tip ~0.8 units outside
   // the cell and be clipped, and the crate's corners would sit exactly on it.
   crate: { key: "crate", fallback: "rgb(255,196,74)", stroke: 4, join: "round" },
-  chevron: { key: "flight", fallback: "rgb(120,180,255)", stroke: 4, join: "round" },
+  crateRed: { key: "danger", fallback: "rgb(220,80,80)", stroke: 4, join: "round" },
+  chevronFocal: { key: "focal", fallback: "rgb(120,180,255)", stroke: 4, join: "round" },
+  chevronEnemy: { key: "enemy", fallback: "rgb(120,180,255)", stroke: 4, join: "round" },
 };
 
 export const buildAtlas = ({ dpr = 1, colors = {} } = {}) => {

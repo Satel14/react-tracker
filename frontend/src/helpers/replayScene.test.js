@@ -8,7 +8,7 @@ import { fitCamera, clampCamera } from "./replayCamera";
 const recordingCtx = () => {
   const calls = [];
   const state = { lineWidth: 0, fillStyle: "", strokeStyle: "", font: "", globalAlpha: 1 };
-  const rec = (name) => (...args) => calls.push({ name, args, lineWidth: state.lineWidth, fillStyle: state.fillStyle });
+  const rec = (name) => (...args) => calls.push({ name, args, lineWidth: state.lineWidth, fillStyle: state.fillStyle, strokeStyle: state.strokeStyle });
   return {
     calls,
     get lineWidth() { return state.lineWidth; },
@@ -223,6 +223,7 @@ const P2_COLORS = {
   ...COLORS,
   warn: "rgb(11,11,11)", zoneRed: "rgb(12,12,12)", zoneStorm: "rgb(13,13,13)",
   zoneEmp: "rgb(14,14,14)", crate: "rgb(15,15,15)", flight: "rgb(16,16,16)",
+  danger: "rgb(17,17,17)", healthOk: "rgb(18,18,18)", healthLow: "rgb(19,19,19)",
 };
 
 const lineWidths = (ctx) => ctx.calls.filter((c) => c.name === "stroke").map((c) => c.lineWidth);
@@ -345,9 +346,14 @@ test("landings honour the layer alpha and cull off-screen", () => {
 });
 
 test("layer flags switch each optional layer off inside drawScene", () => {
+  const wounded = [{
+    name: "Hurt", accountId: "a.hurt", teamId: 1, isFocal: true, dropTime: null, deathTime: null,
+    positions: [{ t: 0, x: 4000, y: 4000, h: 40, f: 0 }, { t: 10, x: 4000, y: 4000, h: 40, f: 0 }],
+  }];
   const rich = {
     ...frameAt(1),
     colors: P2_COLORS,
+    tracks: sampleTracks(buildTracks(wounded), 5),
     shots: [{ ax: 4000, ay: 4000, vx: 4100, vy: 4100, age: 0 }],
     specialZones: [{ type: "RedZone", x: 4000, y: 4000, r: 500 }],
     packages: [{ kind: "redbox", x: 4000, y: 4000, falling: false }],
@@ -366,7 +372,7 @@ test("layer flags switch each optional layer off inside drawScene", () => {
   expect(none.calls.length).toBeLessThan(all.calls.length);
 
   // And each flag is individually load-bearing, not just the bundle.
-  for (const key of ["shots", "landings", "flight", "packages", "specialZones"]) {
+  for (const key of ["shots", "landings", "flight", "packages", "specialZones", "healthArcs"]) {
     const off = recordingCtx();
     drawScene(off, { ...rich, layers: { [key]: false } });
     expect(off.calls.length, `${key} flag did nothing`).toBeLessThan(all.calls.length);
@@ -413,4 +419,131 @@ test("a dead player stays the X glyph whatever their last flags were", () => {
     tracks: sampleTracks(buildTracks(corpse), 8),
   });
   expect(kinds).toEqual(["dead"]);
+});
+
+// --- review findings, each pinned before the fix -----------------------------
+
+test("a shot line that crosses the view is drawn even though both ends are outside", () => {
+  // The old cull said "both ends off-screen means it cannot cross, the viewport
+  // is convex". Convexity says a segment between two INSIDE points stays
+  // inside; it says nothing about two outside points, and a long-range tracer
+  // straight across the map is exactly that case.
+  const across = { ax: 0, ay: 4080, vx: 8160, vy: 4080, age: 0 };
+  const ctx = recordingCtx();
+  paintShots(ctx, { ...frameAt(6), shots: [across], colors: P2_COLORS });
+  expect(ctx.calls.filter((c) => c.name === "stroke")).toHaveLength(1);
+});
+
+test("a shot line wholly on one side of the view is still culled", () => {
+  const ctx = recordingCtx();
+  paintShots(ctx, {
+    ...frameAt(6),
+    shots: [{ ax: 10, ay: 10, vx: 20, vy: 8000, age: 0 }],
+    colors: P2_COLORS,
+  });
+  expect(ctx.calls.filter((c) => c.name === "stroke")).toHaveLength(0);
+});
+
+test("landings appear only once the player has actually landed", () => {
+  const landings = [{ a: "a.me", t: 60, x: 4000, y: 4000 }];
+  const before = recordingCtx();
+  paintLandings(before, { ...frameAt(1), landings, t: 30, alpha: 1, colors: P2_COLORS, atlas: null, focalIds: new Set() });
+  expect(before.calls.filter((c) => c.name === "stroke")).toHaveLength(0);
+  const after = recordingCtx();
+  paintLandings(after, { ...frameAt(1), landings, t: 90, alpha: 1, colors: P2_COLORS, atlas: null, focalIds: new Set() });
+  expect(after.calls.filter((c) => c.name === "stroke")).toHaveLength(1);
+});
+
+test("a landing keeps its team colour through the atlas, not just the fallback", () => {
+  const kinds = [];
+  const atlas = { blit: (_c, kind) => kinds.push(kind) };
+  const landings = [{ a: "a.me", t: 0, x: 4000, y: 4000 }, { a: "a.foe", t: 0, x: 4100, y: 4100 }];
+  paintLandings(recordingCtx(), {
+    ...frameAt(1), landings, t: 60, alpha: 1, colors: P2_COLORS, atlas,
+    focalIds: new Set(["a.me"]),
+  });
+  expect(kinds).toEqual(["chevronFocal", "chevronEnemy"]);
+});
+
+test("a red crate is told apart from an ordinary one through the atlas", () => {
+  const kinds = [];
+  const atlas = { blit: (_c, kind) => kinds.push(kind) };
+  paintPackages(recordingCtx(), {
+    ...frameAt(1),
+    packages: [{ kind: "redbox", x: 4000, y: 4000, falling: false }, { kind: "small", x: 4050, y: 4050, falling: false }],
+    colors: P2_COLORS, atlas,
+  });
+  expect(kinds).toEqual(["crateRed", "crate"]);
+});
+
+test("the health arc uses its own three colours, not the team and kill hues", () => {
+  const strokes = (h) => {
+    const ctx = recordingCtx();
+    const p = [{
+      name: "P", accountId: "a.p", teamId: 1, isFocal: true, dropTime: null, deathTime: null,
+      positions: [{ t: 0, x: 4000, y: 4000, h, f: 0 }, { t: 10, x: 4000, y: 4000, h, f: 0 }],
+    }];
+    drawScene(ctx, { ...frameAt(1), zone: null, colors: P2_COLORS, tracks: sampleTracks(buildTracks(p), 5) });
+    return ctx.calls.filter((c) => c.name === "stroke").map((c) => c.strokeStyle ?? null);
+  };
+  // Health is its own encoding: reusing the focal hue would say "teammate" and
+  // reusing the tracer hue would say "kill".
+  const ok = strokes(80);
+  const warn = strokes(35);
+  const danger = strokes(10);
+  expect(new Set([...ok, ...warn, ...danger]).size).toBeGreaterThanOrEqual(3);
+  expect(ok).not.toContain(P2_COLORS.focal);
+  expect(danger).not.toContain(P2_COLORS.tracer);
+});
+
+test("the flight dash pattern is a screen-space constant", () => {
+  const dashes = (zoom) => {
+    const ctx = recordingCtx();
+    paintFlight(ctx, { ...frameAt(zoom), segment: { x1: 0, y1: 0, x2: MAP, y2: MAP }, alpha: 1, colors: P2_COLORS });
+    return ctx.calls.filter((c) => c.name === "setLineDash").map((c) => c.args[0]);
+  };
+  expect(dashes(1)[0]).toEqual(SCREEN.flightDash);
+  expect(dashes(6)[0]).toEqual(SCREEN.flightDash);
+});
+
+// The health arc was the one place P2's "every decision is pinned" thesis
+// failed: replayLayers pins the DECISION (fraction, level) but nothing pinned
+// the TRANSLATION, so multiplying its radius by the camera scale -- the exact
+// P0 regression that turned a 5px dot into 3.1px -- left the suite green.
+test("the health arc is screen-sized, like every other marker", () => {
+  const hurt = [{
+    name: "P", accountId: "a.p", teamId: 1, isFocal: true, dropTime: null, deathTime: null,
+    positions: [{ t: 0, x: 4000, y: 4000, h: 35, f: 0 }, { t: 10, x: 4000, y: 4000, h: 35, f: 0 }],
+  }];
+  const arcsAt = (zoom) => {
+    const ctx = recordingCtx();
+    drawScene(ctx, { ...frameAt(zoom), zone: null, colors: P2_COLORS, tracks: sampleTracks(buildTracks(hurt), 5) });
+    return ctx.calls.filter((c) => c.name === "arc");
+  };
+  const a = arcsAt(1);
+  const b = arcsAt(6);
+  expect(a.length).toBeGreaterThan(1); // the dot plus its arc
+  expect(a.map((c) => c.args[2])).toEqual(b.map((c) => c.args[2]));
+
+  // And the arc sits outside the dot at the documented offset and width.
+  const arc = a[a.length - 1];
+  expect(arc.args[2]).toBe(SCREEN.focalRadius + SCREEN.healthArcRadius);
+  expect(arc.lineWidth).toBe(SCREEN.healthArcWidth);
+});
+
+test("the health arc sweeps from twelve o'clock in proportion to health", () => {
+  const sweepFor = (h) => {
+    const p = [{
+      name: "P", accountId: "a.p", teamId: 1, isFocal: true, dropTime: null, deathTime: null,
+      positions: [{ t: 0, x: 4000, y: 4000, h, f: 0 }, { t: 10, x: 4000, y: 4000, h, f: 0 }],
+    }];
+    const ctx = recordingCtx();
+    drawScene(ctx, { ...frameAt(1), zone: null, colors: P2_COLORS, tracks: sampleTracks(buildTracks(p), 5) });
+    const arc = ctx.calls.filter((c) => c.name === "arc").pop();
+    return { start: arc.args[3], sweep: arc.args[4] - arc.args[3] };
+  };
+  const quarter = sweepFor(25);
+  expect(quarter.start).toBeCloseTo(-Math.PI / 2, 6);
+  expect(quarter.sweep).toBeCloseTo(Math.PI / 2, 6);
+  expect(sweepFor(50).sweep).toBeCloseTo(Math.PI, 6);
 });

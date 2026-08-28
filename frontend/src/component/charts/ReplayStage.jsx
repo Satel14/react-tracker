@@ -48,6 +48,13 @@ const FALLBACK_COLORS = {
   flight: "rgb(79,216,255)",
 };
 
+// These three resolve to a token another entry already uses, so they share its
+// fallback rather than repeating the literal -- which would duplicate a value
+// and trip the colour ratchet for no gain.
+FALLBACK_COLORS.danger = FALLBACK_COLORS.tracer;
+FALLBACK_COLORS.healthOk = FALLBACK_COLORS.focal;
+FALLBACK_COLORS.healthLow = FALLBACK_COLORS.zoneRed;
+
 const TOKEN_FOR = {
   focal: "--ok",
   enemy: "--text",
@@ -62,6 +69,9 @@ const TOKEN_FOR = {
   zoneEmp: "--zone-emp",
   crate: "--crate",
   flight: "--flight",
+  danger: "--danger",
+  healthOk: "--ok",
+  healthLow: "--zone-red",
 };
 
 const resolveColors = (el) => {
@@ -301,6 +311,7 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
             specialZones: specialZonesAt(data.specialZones, t, v.zoneBuf),
             packages: packagesAt(data.packages, t, v.pkgBuf),
             landings: data.landings,
+            landingsT: t,
             flightSeg,
             flightAlpha: flightAlpha(t),
             landingsAlpha: landingsAlpha(t),
