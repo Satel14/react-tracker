@@ -1,6 +1,12 @@
 import { buildAtlas, ICON_PATHS } from "./replaySprites";
 
-const COLORS = { focal: "rgb(1,1,1)", enemy: "rgb(2,2,2)", dead: "rgb(3,3,3)" };
+const COLORS = {
+  focal: "rgb(1,1,1)",
+  enemy: "rgb(2,2,2)",
+  dead: "rgb(3,3,3)",
+  crate: "rgb(4,4,4)",
+  flight: "rgb(5,5,5)",
+};
 
 const CELL = 32;
 const MARGIN = 2;
@@ -82,8 +88,55 @@ const pathBBox = (d) => {
   return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
 };
 
+// jsdom has neither Path2D nor a 2D context, so with the real globals the
+// atlas branch is unreachable and only the caller's arc fallback ever runs.
+// That blind spot is how a glyph that under-filled its cell once shipped.
+// These fakes record exactly what buildAtlas rasterises, and where.
+const installAtlasEnv = () => {
+  const draws = [];
+  const ctx = {
+    tx: 0,
+    sc: 0,
+    fillStyle: null,
+    strokeStyle: null,
+    lineWidth: 0,
+    save() {},
+    restore() {},
+    translate(x) { this.tx = x; },
+    scale(x) { this.sc = x; },
+    fill(path) {
+      draws.push({ op: "fill", d: path.d, tx: this.tx, scale: this.sc, colour: this.fillStyle });
+    },
+    stroke(path) {
+      draws.push({ op: "stroke", d: path.d, tx: this.tx, scale: this.sc, colour: this.strokeStyle });
+    },
+  };
+  const canvas = { width: 0, height: 0, getContext: () => ctx };
+  class FakePath2D {
+    constructor(d) { this.d = d; }
+  }
+  vi.stubGlobal("Path2D", FakePath2D);
+  vi.stubGlobal("document", { createElement: () => canvas });
+  return { canvas, draws };
+};
+
+// The source/destination rectangle blit actually samples for one kind.
+const blitRect = (atlas, kind, r = 5) => {
+  const calls = [];
+  atlas.blit({ drawImage: (...args) => calls.push(args) }, kind, 100, 200, r);
+  expect(calls, kind).toHaveLength(1);
+  const [, sx, sy, sw, sh, dx, dy, dw, dh] = calls[0];
+  return { sx, sy, sw, sh, dx, dy, dw, dh };
+};
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 test("exposes a path string per icon kind", () => {
-  expect(Object.keys(ICON_PATHS).sort()).toEqual(["dead", "enemy", "focal"]);
+  expect(Object.keys(ICON_PATHS).sort()).toEqual([
+    "chevron", "crate", "dead", "enemy", "focal", "knocked", "vehicle",
+  ]);
   for (const d of Object.values(ICON_PATHS)) expect(typeof d).toBe("string");
 });
 
@@ -103,7 +156,108 @@ test("every icon glyph is inscribed in the same centred 28-unit box", () => {
 });
 
 test("returns null when the environment has no Path2D, so callers never blit unsafely", () => {
-  // jsdom defines neither Path2D nor a 2D context.
+  // jsdom defines document but not Path2D, so the null proves the Path2D
+  // guard specifically -- not an incidentally missing document.
+  expect(typeof document).not.toBe("undefined");
+  expect(typeof Path2D).toBe("undefined");
   const atlas = buildAtlas({ dpr: 2, colors: COLORS });
   expect(atlas).toBeNull();
+});
+
+test("returns null when there is no document", () => {
+  class FakePath2D {
+    constructor(d) { this.d = d; }
+  }
+  vi.stubGlobal("Path2D", FakePath2D);
+  vi.stubGlobal("document", undefined);
+  expect(buildAtlas({ dpr: 2, colors: COLORS })).toBeNull();
+});
+
+test("rasterises every kind into its own cell of one sheet", () => {
+  const { canvas, draws } = installAtlasEnv();
+  const dpr = 2;
+  const size = CELL * dpr;
+  const kinds = Object.keys(ICON_PATHS);
+  const atlas = buildAtlas({ dpr, colors: COLORS });
+
+  expect(atlas).not.toBeNull();
+  expect(canvas.width).toBe(size * kinds.length);
+  expect(canvas.height).toBe(size);
+  // Each glyph drawn exactly once, in declaration order, scaled so its
+  // 32-unit design box covers the whole rasterised cell.
+  expect(draws.map((d) => d.d)).toEqual(kinds.map((k) => ICON_PATHS[k]));
+  draws.forEach((d, i) => {
+    expect(d.scale, kinds[i]).toBe(size / CELL);
+    expect(d.tx, kinds[i]).toBe(i * size);
+  });
+});
+
+test("every kind in ICON_PATHS has its own cell and the cells do not overlap", () => {
+  const { canvas, draws } = installAtlasEnv();
+  const dpr = 2;
+  const size = CELL * dpr;
+  const kinds = Object.keys(ICON_PATHS);
+  const atlas = buildAtlas({ dpr, colors: COLORS });
+
+  const rects = kinds.map((kind) => blitRect(atlas, kind));
+  rects.forEach((rect, i) => {
+    // The cell blit samples is the cell that glyph was painted into.
+    expect(rect.sx, kinds[i]).toBe(draws[i].tx);
+    expect(rect.sy, kinds[i]).toBe(0);
+    expect(rect.sw, kinds[i]).toBe(size);
+    expect(rect.sh, kinds[i]).toBe(size);
+    expect(rect.sx + rect.sw, kinds[i]).toBeLessThanOrEqual(canvas.width);
+  });
+
+  const ordered = [...rects].sort((a, b) => a.sx - b.sx);
+  for (let i = 1; i < ordered.length; i += 1) {
+    expect(ordered[i - 1].sx + ordered[i - 1].sw).toBeLessThanOrEqual(ordered[i].sx);
+  }
+  expect(new Set(rects.map((r) => r.sx)).size).toBe(kinds.length);
+});
+
+test("blits the whole cell onto the 2r destination box", () => {
+  installAtlasEnv();
+  const atlas = buildAtlas({ dpr: 2, colors: COLORS });
+  const rect = blitRect(atlas, "focal", 5);
+  expect(rect.dx).toBe(95);
+  expect(rect.dy).toBe(195);
+  expect(rect.dw).toBe(10);
+  expect(rect.dh).toBe(10);
+});
+
+test("an unknown kind falls back to the enemy cell", () => {
+  installAtlasEnv();
+  const atlas = buildAtlas({ dpr: 2, colors: COLORS });
+  expect(blitRect(atlas, "no-such-kind")).toEqual(blitRect(atlas, "enemy"));
+});
+
+test("paints every glyph from the palette it was handed", () => {
+  const { draws } = installAtlasEnv();
+  buildAtlas({ dpr: 1, colors: COLORS });
+  const kinds = Object.keys(ICON_PATHS);
+  const paint = Object.fromEntries(draws.map((d, i) => [kinds[i], d]));
+
+  expect(paint.focal.colour).toBe(COLORS.focal);
+  expect(paint.enemy.colour).toBe(COLORS.enemy);
+  expect(paint.dead.colour).toBe(COLORS.dead);
+  // A knocked player is still the same player, and a player in a vehicle is
+  // still that player: neither glyph gets a palette entry of its own.
+  expect(paint.knocked.colour).toBe(COLORS.enemy);
+  expect(paint.vehicle.colour).toBe(COLORS.focal);
+  expect(paint.crate.colour).toBe(COLORS.crate);
+  expect(paint.chevron.colour).toBe(COLORS.flight);
+
+  expect(paint.dead.op).toBe("stroke");
+  expect(paint.crate.op).toBe("stroke");
+  expect(paint.chevron.op).toBe("stroke");
+  expect(paint.knocked.op).toBe("fill");
+  expect(paint.vehicle.op).toBe("fill");
+});
+
+test("falls back to a built-in colour when the palette is empty", () => {
+  const { draws } = installAtlasEnv();
+  buildAtlas({ dpr: 1, colors: {} });
+  expect(draws).toHaveLength(Object.keys(ICON_PATHS).length);
+  for (const d of draws) expect(typeof d.colour).toBe("string");
 });
