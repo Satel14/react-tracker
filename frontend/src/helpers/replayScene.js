@@ -24,6 +24,14 @@ export const SCREEN = {
   healthArcWidth: 2,
   zoneFillAlpha: 0.18,
   zoneStrokeAlpha: 0.7,
+  knockRadius: 6,
+  reviveRadius: 6,
+  markerLifetime: 8,
+  // A corpse marks where someone died, which stops being news. By the endgame
+  // ~90 of 100 players are dead, and drawing every cross forever buries the
+  // handful still playing.
+  deadFadeStart: 60,
+  deadFadeEnd: 240,
 };
 
 // One fill per hazard. An unknown type falls back to the neutral crate colour
@@ -152,7 +160,9 @@ export const paintSpecialZones = (ctx, { cam, vw, vh, zones, colors }) => {
 
 export const paintShots = (ctx, { cam, vw, vh, shots, colors }) => {
   if (!ctx || !shots || shots.length === 0) return;
-  ctx.strokeStyle = colors.tracer;
+  // Deliberately NOT colors.tracer: kill flashes own that hue, and a shot
+  // painted the same made an exchange of fire look like someone dying.
+  ctx.strokeStyle = colors.shot || colors.warn;
   ctx.lineWidth = SCREEN.shotWidth;
   for (const shot of shots) {
     const a = worldToScreen(cam, vw, vh, shot.ax, shot.ay);
@@ -165,6 +175,48 @@ export const paintShots = (ctx, { cam, vw, vh, shots, colors }) => {
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
+};
+
+// A knock is not a kill: hollow ring at the victim, plus the attacker tracer.
+// A revive is the same event running backwards, so it reads as a ring too, in
+// the health colour. Both expire -- they are moments, not places.
+export const paintMarkers = (ctx, { cam, vw, vh, knocks, revives, t, colors }) => {
+  if (!ctx) return;
+  const age = (at) => (t - at) / SCREEN.markerLifetime;
+  ctx.save();
+  ctx.lineWidth = SCREEN.tracerWidth;
+  for (const k of knocks || []) {
+    const a = age(k.t);
+    if (a < 0 || a > 1) continue;
+    const p = worldToScreen(cam, vw, vh, k.vx, k.vy);
+    if (offScreen(p, vw, vh)) continue;
+    ctx.globalAlpha = 1 - a;
+    ctx.strokeStyle = colors.warn;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, SCREEN.knockRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    if (k.ax !== null && k.ax !== undefined) {
+      const from = worldToScreen(cam, vw, vh, k.ax, k.ay);
+      if (!(outcode(from, vw, vh) & outcode(p, vw, vh))) {
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      }
+    }
+  }
+  for (const r of revives || []) {
+    const a = age(r.t);
+    if (a < 0 || a > 1) continue;
+    const p = worldToScreen(cam, vw, vh, r.x, r.y);
+    if (offScreen(p, vw, vh)) continue;
+    ctx.globalAlpha = 1 - a;
+    ctx.strokeStyle = colors.healthOk;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, SCREEN.reviveRadius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
 };
 
 export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas }) => {
@@ -257,7 +309,8 @@ export const drawScene = (ctx, frame) => {
   const {
     cam, vw, vh, tracks, zone, flashes, nowMs, focusedAccountId, hoveredIndex,
     colors, atlas, labelCap = 24,
-    shots, specialZones, packages, landings, landingsT, flightSeg,
+    shots, specialZones, packages, landings, landingsT, flightSeg, knocks, revives,
+    t: frameT,
     flightAlpha: fAlpha = 1, landingsAlpha: lAlpha = 1, focalIds,
     layers = {},
   } = frame;
@@ -272,6 +325,7 @@ export const drawScene = (ctx, frame) => {
   if (on("landings")) paintLandings(ctx, { cam, vw, vh, landings, alpha: lAlpha, colors, atlas, focalIds, t: landingsT });
   if (on("packages")) paintPackages(ctx, { cam, vw, vh, packages, colors, atlas });
   if (on("shots")) paintShots(ctx, { cam, vw, vh, shots, colors });
+  paintMarkers(ctx, { cam, vw, vh, knocks, revives, t: frameT, colors });
   drawFlashes(ctx, { cam, vw, vh, flashes, nowMs, colors });
 
   const labels = [];
@@ -281,6 +335,17 @@ export const drawScene = (ctx, frame) => {
     const meta = tracks.meta[i];
     const p = worldToScreen(cam, vw, vh, tracks.outX[i], tracks.outY[i]);
     if (p.x < -20 || p.y < -20 || p.x > vw + 20 || p.y > vh + 20) continue;
+
+    // A corpse fades out; the living never do.
+    let markerAlpha = 1;
+    if (state === STATE.DEAD && meta.deathTime !== null) {
+      const since = frameT - meta.deathTime;
+      if (since > SCREEN.deadFadeEnd) continue;
+      if (since > SCREEN.deadFadeStart) {
+        markerAlpha = 1 - (since - SCREEN.deadFadeStart) / (SCREEN.deadFadeEnd - SCREEN.deadFadeStart);
+      }
+    }
+    ctx.globalAlpha = markerAlpha;
 
     const selected = !!focusedAccountId && meta.accountId === focusedAccountId;
     const r = radiusFor(meta, selected);
@@ -311,6 +376,7 @@ export const drawScene = (ctx, frame) => {
 
     if (meta.isFocal || selected || i === hoveredIndex) labels.push({ name: meta.name, x: p.x, y: p.y });
   }
+  ctx.globalAlpha = 1;
 
   ctx.font = SCREEN.labelFont;
   ctx.fillStyle = colors.label;

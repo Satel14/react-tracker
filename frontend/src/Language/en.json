@@ -251,7 +251,17 @@
       "stateAlive": "Alive",
       "teamless": "No team",
       "teamLabel": "Team {id}",
-      "aliveOf": "{alive} of {total} alive"
+      "aliveOf": "{alive} of {total} alive",
+      "legend": "Legend",
+      "legendFocal": "Your team",
+      "legendEnemy": "Enemy",
+      "legendDead": "Dead",
+      "legendKnocked": "Knocked",
+      "legendShot": "Gunfire",
+      "legendKill": "Kill",
+      "legendCrate": "Care package",
+      "legendFlight": "Flight path and landings",
+      "legendHazard": "Hazard zone"
     },
     "match": {
       "title": "Match Analysis",

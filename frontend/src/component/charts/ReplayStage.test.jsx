@@ -339,3 +339,20 @@ test("the fullscreen button does not clear the focused player", () => {
     delete Element.prototype.requestFullscreen;
   }
 });
+
+test("seeking with the keyboard does not stop playback", () => {
+  // core.seek() always pauses, which is right for a scrubber drag and wrong
+  // for nudging the playhead while watching.
+  const { container, clockRef } = renderStage();
+  clockRef.current.play();
+  expect(clockRef.current.playing).toBe(true);
+  fireEvent.keyDown(stageOf(container), { key: "ArrowRight", code: "ArrowRight" });
+  expect(clockRef.current.t).toBe(5);
+  expect(clockRef.current.playing).toBe(true);
+});
+
+test("seeking while paused stays paused", () => {
+  const { container, clockRef } = renderStage();
+  fireEvent.keyDown(stageOf(container), { key: "ArrowRight", code: "ArrowRight" });
+  expect(clockRef.current.playing).toBe(false);
+});

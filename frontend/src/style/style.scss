@@ -4401,6 +4401,34 @@ body {
     margin-top: 10px;
   }
   &__layers-title { color: var(--text-muted); font-size: 12px; margin-right: 2px; }
+  &__legend {
+    display: flex;
+    align-items: center;
+    gap: 4px 14px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  &__legend-title { color: var(--text); }
+  &__legend-item { display: inline-flex; align-items: center; gap: 5px; }
+  &__swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+
+    // Each swatch mirrors what the canvas paints for that encoding.
+    &.is-focal { background: var(--ok); }
+    &.is-enemy { background: var(--text); }
+    &.is-knocked { background: none; border: 2px solid var(--warn); }
+    &.is-dead { background: var(--rest); }
+    &.is-shot { background: var(--warn); border-radius: 1px; height: 3px; width: 14px; }
+    &.is-kill { background: var(--danger); border-radius: 1px; height: 3px; width: 14px; }
+    &.is-crate { background: var(--crate); border-radius: 1px; }
+    &.is-flight { background: var(--flight); border-radius: 1px; height: 3px; width: 14px; }
+    &.is-hazard { background: var(--zone-red); }
+  }
   &__layer {
     border: 1px solid var(--border);
     border-radius: 999px;

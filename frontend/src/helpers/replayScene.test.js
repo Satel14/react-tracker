@@ -547,3 +547,60 @@ test("the health arc sweeps from twelve o'clock in proportion to health", () => 
   expect(quarter.sweep).toBeCloseTo(Math.PI / 2, 6);
   expect(sweepFor(50).sweep).toBeCloseTo(Math.PI, 6);
 });
+
+// --- final review: shipped data that nothing drew ---------------------------
+
+test("knocks and revives are actually drawn", () => {
+  // P1 extracts them, P2 ships and decodes them, and until now nothing put
+  // them on the canvas: a whole layer built and invisible.
+  const frame = {
+    ...frameAt(1), zone: null, colors: P2_COLORS,
+    knocks: [{ t: 40, v: "a.foe", vx: 4000, vy: 4000, ax: 4100, ay: 4100 }],
+    revives: [{ t: 44, v: "a.foe", x: 4000, y: 4000 }],
+    t: 42,
+  };
+  const withKnock = recordingCtx();
+  drawScene(withKnock, frame);
+  const without = recordingCtx();
+  drawScene(without, { ...frame, knocks: [], revives: [] });
+  expect(withKnock.calls.length).toBeGreaterThan(without.calls.length);
+});
+
+test("a knock marker expires, so the map does not fill with old ones", () => {
+  const knocks = [{ t: 10, v: "a.foe", vx: 4000, vy: 4000, ax: 4100, ay: 4100 }];
+  const fresh = recordingCtx();
+  drawScene(fresh, { ...frameAt(1), zone: null, colors: P2_COLORS, knocks, t: 11 });
+  const stale = recordingCtx();
+  drawScene(stale, { ...frameAt(1), zone: null, colors: P2_COLORS, knocks, t: 600 });
+  expect(stale.calls.length).toBeLessThan(fresh.calls.length);
+});
+
+test("a shot is not painted the same colour as a kill", () => {
+  // Both used colors.tracer, so a exchange of fire looked identical to someone
+  // dying -- the one distinction a viewer most wants at a glance.
+  const shots = recordingCtx();
+  paintShots(shots, { ...frameAt(1), shots: [{ ax: 4000, ay: 4000, vx: 4100, vy: 4100, age: 0 }], colors: P2_COLORS });
+  const shotColour = shots.calls.filter((c) => c.name === "stroke")[0].strokeStyle;
+  const kills = recordingCtx();
+  drawScene(kills, {
+    ...frameAt(1), zone: null, colors: P2_COLORS,
+    flashes: [{ bornMs: 1000, kx: 4000, ky: 4000, vx: 4100, vy: 4100 }], nowMs: 1100,
+  });
+  const killColour = kills.calls.filter((c) => c.name === "stroke")[0].strokeStyle;
+  expect(shotColour).not.toBe(killColour);
+});
+
+test("dead markers fade out instead of accumulating for the whole match", () => {
+  // By the endgame ~90 of 100 players are dead; drawing every cross forever
+  // buries the handful still playing.
+  const corpses = Array.from({ length: 12 }, (_, i) => ({
+    name: `D${i}`, accountId: `a.${i}`, teamId: i, isFocal: false, dropTime: null, deathTime: 100,
+    positions: [{ t: 0, x: 4000 + i * 10, y: 4000 }, { t: 200, x: 4000 + i * 10, y: 4000 }],
+  }));
+  const tracks = buildTracks(corpses);
+  const soon = recordingCtx();
+  drawScene(soon, { ...frameAt(1), zone: null, colors: P2_COLORS, t: 110, tracks: sampleTracks(tracks, 110) });
+  const later = recordingCtx();
+  drawScene(later, { ...frameAt(1), zone: null, colors: P2_COLORS, t: 900, tracks: sampleTracks(tracks, 900) });
+  expect(later.calls.length).toBeLessThan(soon.calls.length);
+});

@@ -52,6 +52,7 @@ const FALLBACK_COLORS = {
   zoneEmp: "rgb(143,107,255)",
   crate: "rgb(255,62,200)",
   flight: "rgb(79,216,255)",
+  shot: "rgb(255,205,80)",
 };
 
 // These three resolve to a token another entry already uses, so they share its
@@ -75,6 +76,7 @@ const TOKEN_FOR = {
   zoneEmp: "--zone-emp",
   crate: "--crate",
   flight: "--flight",
+  shot: "--warn",
   danger: "--danger",
   healthOk: "--ok",
   healthLow: "--zone-red",
@@ -318,6 +320,9 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
             packages: packagesAt(data.packages, t, v.pkgBuf),
             landings: data.landings,
             landingsT: t,
+            knocks: data.knocks,
+            revives: data.revives,
+            t,
             flightSeg,
             flightAlpha: flightAlpha(t),
             landingsAlpha: landingsAlpha(t),
@@ -331,6 +336,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     raf = requestAnimationFrame(frame);
     return () => { if (raf !== null) cancelAnimationFrame(raf); };
   }, [clockRef, data.zones, data.specialZones, data.packages, data.landings,
+      data.knocks, data.revives,
       sweep, tracks, publish, shotWindow, flightSeg, focalIds]);
 
   const localPoint = (e) => {
@@ -452,7 +458,13 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const core = clockRef.current;
     if (!core) return;
-    const seekBy = (d) => core.seek(core.t + d);
+    // core.seek() always pauses, which is what a scrubber drag wants and not
+    // what nudging the playhead mid-watch wants.
+    const seekBy = (d) => {
+      const wasPlaying = core.playing;
+      core.seek(core.t + d);
+      if (wasPlaying) core.play();
+    };
     const step = e.shiftKey ? SEEK_STEP_BIG : SEEK_STEP;
 
     // e.code, not e.key: code is the physical key, so the shortcuts survive a

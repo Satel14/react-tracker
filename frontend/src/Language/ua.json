@@ -251,7 +251,17 @@
             "stateAlive": "Живий",
             "teamless": "Без команди",
             "teamLabel": "Команда {id}",
-            "aliveOf": "{alive} з {total} живих"
+            "aliveOf": "{alive} з {total} живих",
+            "legend": "Позначення",
+            "legendFocal": "Твоя команда",
+            "legendEnemy": "Суперник",
+            "legendDead": "Загиблий",
+            "legendKnocked": "У нокдауні",
+            "legendShot": "Постріл",
+            "legendKill": "Вбивство",
+            "legendCrate": "Аірдроп",
+            "legendFlight": "Маршрут літака і висадки",
+            "legendHazard": "Небезпечна зона"
         },
         "match": {
             "title": "Аналіз матчу",

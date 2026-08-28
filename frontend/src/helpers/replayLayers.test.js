@@ -413,3 +413,15 @@ test("every export tolerates junk arguments", () => {
     }
   }
 });
+
+test("a faded layer still reappears when the viewer scrubs back", () => {
+  // The fades are a default, not a one-way door: the flight and landing
+  // toggles would otherwise become permanent no-ops a couple of minutes in,
+  // with a control that still looks live.
+  expect(flightAlpha(30)).toBe(1);
+  expect(flightAlpha(200)).toBe(0);
+  expect(flightAlpha(30)).toBe(1);
+  expect(landingsAlpha(60)).toBe(1);
+  expect(landingsAlpha(300)).toBe(0);
+  expect(landingsAlpha(60)).toBe(1);
+});

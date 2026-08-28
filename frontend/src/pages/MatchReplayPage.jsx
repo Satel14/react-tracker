@@ -19,6 +19,21 @@ import ReplayOverlays from "../component/charts/ReplayOverlays";
 import { LAYER_KEYS, readLayerPrefs, writeLayerPrefs } from "../helpers/replayPrefs";
 
 const SPEEDS = [1, 2, 4, 8, 16];
+// Eleven things can be on the canvas at once and none of them is
+// self-explanatory. The swatch classes are styled to match what the canvas
+// paints, so the legend is the one place a viewer can learn the encoding.
+const LEGEND = [
+  { key: "legendFocal", cls: "is-focal" },
+  { key: "legendEnemy", cls: "is-enemy" },
+  { key: "legendKnocked", cls: "is-knocked" },
+  { key: "legendDead", cls: "is-dead" },
+  { key: "legendShot", cls: "is-shot" },
+  { key: "legendKill", cls: "is-kill" },
+  { key: "legendCrate", cls: "is-crate" },
+  { key: "legendFlight", cls: "is-flight" },
+  { key: "legendHazard", cls: "is-hazard" },
+];
+
 const LAYER_LABEL = {
   shots: "layerShots", landings: "layerLandings", flight: "layerFlight",
   packages: "layerPackages", specialZones: "layerZones", healthArcs: "layerHealth",
@@ -206,6 +221,15 @@ const MatchReplayPage = ({ t }) => {
           >
             {t(`pages.replay.${LAYER_LABEL[key]}`)}
           </button>
+        ))}
+      </div>
+      <div className="match-replay__legend">
+        <span className="match-replay__legend-title">{t("pages.replay.legend")}</span>
+        {LEGEND.map((item) => (
+          <span key={item.key} className="match-replay__legend-item">
+            <span className={`match-replay__swatch ${item.cls}`} aria-hidden="true" />
+            {t(`pages.replay.${item.key}`)}
+          </span>
         ))}
       </div>
       <ReplayRoster
