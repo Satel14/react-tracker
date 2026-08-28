@@ -1,4 +1,4 @@
-import { getMapMeta, worldToPercent, MAP_LIST } from "./mapMeta";
+import { getMapMeta, worldToPercent, MAP_LIST, highResUrl } from "./mapMeta";
 
 test("maps raw names to display names and mapMax", () => {
   expect(getMapMeta("Baltic_Main").displayName).toBe("Erangel");
@@ -19,4 +19,14 @@ test("MAP_LIST contains Erangel once and excludes the legacy duplicate", () => {
 test("known maps resolve to an image asset", () => {
   expect(getMapMeta("Baltic_Main").image).toBeTruthy();
   expect(getMapMeta("Savage_Main").image).toBeTruthy();
+});
+
+test("highResUrl points at a versioned public raster for known maps", () => {
+  expect(highResUrl("Baltic_Main")).toBe("/map-hi/erangel-2048.v1.webp");
+  expect(highResUrl("Neon_Main")).toBe("/map-hi/rondo-2048.v1.webp");
+  expect(highResUrl("Range_Main")).toBe("/map-hi/camp_jackal-2048.v1.webp");
+});
+
+test("highResUrl is null for an unknown map", () => {
+  expect(highResUrl("Not_A_Map")).toBeNull();
 });

@@ -11,19 +11,19 @@ import campJackal from "../img/maps/camp_jackal.webp";
 import haven from "../img/maps/haven.webp";
 
 export const MAP_META = {
-  Baltic_Main: { displayName: "Erangel", mapMax: 8160, image: erangel },
-  Erangel_Main: { displayName: "Erangel", mapMax: 8160, image: erangel },
-  Desert_Main: { displayName: "Miramar", mapMax: 8160, image: miramar },
-  Tiger_Main: { displayName: "Taego", mapMax: 8160, image: taego },
-  Kiki_Main: { displayName: "Deston", mapMax: 8160, image: deston },
-  Neon_Main: { displayName: "Rondo", mapMax: 8160, image: rondo },
+  Baltic_Main: { displayName: "Erangel", mapMax: 8160, slug: "erangel", image: erangel },
+  Erangel_Main: { displayName: "Erangel", mapMax: 8160, slug: "erangel", image: erangel },
+  Desert_Main: { displayName: "Miramar", mapMax: 8160, slug: "miramar", image: miramar },
+  Tiger_Main: { displayName: "Taego", mapMax: 8160, slug: "taego", image: taego },
+  Kiki_Main: { displayName: "Deston", mapMax: 8160, slug: "deston", image: deston },
+  Neon_Main: { displayName: "Rondo", mapMax: 8160, slug: "rondo", image: rondo },
   // TODO(validate-before-deploy): confirm Vikendi mapMax against a real telemetry sample max x/y
-  DihorOtok_Main: { displayName: "Vikendi", mapMax: 6120, image: vikendi },
-  Savage_Main: { displayName: "Sanhok", mapMax: 4080, image: sanhok },
-  Chimera_Main: { displayName: "Paramo", mapMax: 3060, image: paramo },
-  Summerland_Main: { displayName: "Karakin", mapMax: 2040, image: karakin },
-  Range_Main: { displayName: "Camp Jackal", mapMax: 2040, image: campJackal },
-  Heaven_Main: { displayName: "Haven", mapMax: 1020, image: haven },
+  DihorOtok_Main: { displayName: "Vikendi", mapMax: 6120, slug: "vikendi", image: vikendi },
+  Savage_Main: { displayName: "Sanhok", mapMax: 4080, slug: "sanhok", image: sanhok },
+  Chimera_Main: { displayName: "Paramo", mapMax: 3060, slug: "paramo", image: paramo },
+  Summerland_Main: { displayName: "Karakin", mapMax: 2040, slug: "karakin", image: karakin },
+  Range_Main: { displayName: "Camp Jackal", mapMax: 2040, slug: "camp_jackal", image: campJackal },
+  Heaven_Main: { displayName: "Haven", mapMax: 1020, slug: "haven", image: haven },
 };
 
 export const getMapMeta = (rawMapName) => {
@@ -39,6 +39,14 @@ export const getMapMeta = (rawMapName) => {
 export const worldToPercent = (coord, mapMax) => {
   if (!mapMax) return 0;
   return (coord / mapMax) * 100;
+};
+
+export const HIGH_RES_VERSION = "v1";
+
+export const highResUrl = (rawMapName) => {
+  const meta = MAP_META[rawMapName];
+  if (!meta || !meta.slug) return null;
+  return `/map-hi/${meta.slug}-2048.${HIGH_RES_VERSION}.webp`;
 };
 
 export const MAP_LIST = [
