@@ -3,6 +3,10 @@ import { getMapMeta, highResUrl } from "../../helpers/mapMeta";
 import { buildTracks, sampleTracks } from "../../helpers/replayTracks";
 import { createSweep, pruneFlashes } from "../../helpers/replayEvents";
 import { drawBackground, drawScene, pickIndex, SCREEN } from "../../helpers/replayScene";
+import {
+  createShotWindow, flightSegment, flightAlpha, landingsAlpha,
+  specialZonesAt, packagesAt,
+} from "../../helpers/replayLayers";
 import { clampCamera, fitCamera, scaleOf, zoomAt } from "../../helpers/replayCamera";
 import { buildAtlas } from "./replaySprites";
 import { zoneAt } from "./replayEngine";
@@ -30,6 +34,12 @@ const FALLBACK_COLORS = {
   ring: "rgb(253,232,43)",
   label: "rgb(255,255,255)",
   band: "rgb(12,20,34)",
+  warn: "rgb(255,143,60)",
+  zoneRed: "rgb(255,59,48)",
+  zoneStorm: "rgb(200,162,90)",
+  zoneEmp: "rgb(143,107,255)",
+  crate: "rgb(255,62,200)",
+  flight: "rgb(79,216,255)",
 };
 
 const TOKEN_FOR = {
@@ -40,6 +50,12 @@ const TOKEN_FOR = {
   ring: "--brand",
   label: "--text-strong",
   band: "--surface",
+  warn: "--warn",
+  zoneRed: "--zone-red",
+  zoneStorm: "--zone-storm",
+  zoneEmp: "--zone-emp",
+  crate: "--crate",
+  flight: "--flight",
 };
 
 const resolveColors = (el) => {
@@ -67,6 +83,17 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
   const meta = useMemo(() => getMapMeta(data.rawMapName), [data.rawMapName]);
   const tracks = useMemo(() => buildTracks(data.players), [data.players]);
   const sweep = useMemo(() => createSweep(data.kills || []), [data.kills]);
+  const shotWindow = useMemo(() => createShotWindow(data.shots), [data.shots]);
+  // The flight corridor and the focal id set are per-match constants: computing
+  // them once keeps the frame loop free of allocation.
+  const flightSeg = useMemo(
+    () => flightSegment(data.flight, data.mapMax),
+    [data.flight, data.mapMax],
+  );
+  const focalIds = useMemo(
+    () => new Set((data.players || []).filter((p) => p.isFocal).map((p) => p.accountId)),
+    [data.players],
+  );
 
   const view = useRef({
     cam: fitCamera(data.mapMax),
@@ -83,6 +110,11 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     pointers: new Map(),
     gesture: null,
     mapGen: 0,
+    // Reused every frame by the layer selectors; never reallocated.
+    shotBuf: [],
+    zoneBuf: [],
+    pkgBuf: [],
+    layers: {},
   });
 
   const focusedRef = useRef(focusedAccountId);
@@ -254,6 +286,15 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
             focusedAccountId: focusedRef.current,
             hoveredIndex: v.hoveredIndex,
             colors: v.colors, atlas: v.atlas,
+            shots: shotWindow.activeAt(t, v.shotBuf),
+            specialZones: specialZonesAt(data.specialZones, t, v.zoneBuf),
+            packages: packagesAt(data.packages, t, v.pkgBuf),
+            landings: data.landings,
+            flightSeg,
+            flightAlpha: flightAlpha(t),
+            landingsAlpha: landingsAlpha(t),
+            focalIds,
+            layers: v.layers,
           });
         }
       }
@@ -261,7 +302,8 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     };
     raf = requestAnimationFrame(frame);
     return () => { if (raf !== null) cancelAnimationFrame(raf); };
-  }, [clockRef, data.zones, sweep, tracks, publish]);
+  }, [clockRef, data.zones, data.specialZones, data.packages, data.landings,
+      sweep, tracks, publish, shotWindow, flightSeg, focalIds]);
 
   const localPoint = (e) => {
     const rect = wrapRef.current.getBoundingClientRect();

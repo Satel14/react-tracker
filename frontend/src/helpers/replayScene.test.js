@@ -1,4 +1,7 @@
-import { drawScene, drawBackground, pickIndex, SCREEN } from "./replayScene";
+import {
+  drawScene, drawBackground, pickIndex, SCREEN,
+  paintFlight, paintLandings, paintPackages, paintSpecialZones, paintShots,
+} from "./replayScene";
 import { buildTracks, sampleTracks } from "./replayTracks";
 import { fitCamera, clampCamera } from "./replayCamera";
 
@@ -208,4 +211,164 @@ test("pickIndex returns the nearest marker within the pick radius, or -1", () =>
   s.y = (tracks.outY[0] - cam.cy) * b + vh / 2;
   expect(pickIndex(tracks, cam, vw, vh, s.x + 1, s.y + 1)).toBe(0);
   expect(pickIndex(tracks, cam, vw, vh, 5, 5)).toBe(-1);
+});
+
+// ---------------------------------------------------------------------------
+// P2 layers. Every one of these is drawn from data produced by replayLayers.js,
+// so what is pinned here is the TRANSLATION: screen-space vs world-space sizing,
+// culling, and layer flags. The decisions themselves are tested next door.
+// ---------------------------------------------------------------------------
+
+const P2_COLORS = {
+  ...COLORS,
+  warn: "rgb(11,11,11)", zoneRed: "rgb(12,12,12)", zoneStorm: "rgb(13,13,13)",
+  zoneEmp: "rgb(14,14,14)", crate: "rgb(15,15,15)", flight: "rgb(16,16,16)",
+};
+
+const lineWidths = (ctx) => ctx.calls.filter((c) => c.name === "stroke").map((c) => c.lineWidth);
+const linesOf = (ctx) => ctx.calls.filter((c) => c.name === "lineTo");
+
+test("the flight line is world-positioned but screen-width", () => {
+  const seg = { x1: 0, y1: 0, x2: MAP, y2: MAP };
+  const a = recordingCtx();
+  const b = recordingCtx();
+  paintFlight(a, { ...frameAt(1), segment: seg, alpha: 1, colors: P2_COLORS });
+  paintFlight(b, { ...frameAt(6), segment: seg, alpha: 1, colors: P2_COLORS });
+  // Width identical at both zooms...
+  expect(lineWidths(a)).toEqual(lineWidths(b));
+  expect(lineWidths(a)).toEqual([SCREEN.flightWidth]);
+  // ...but the endpoints move, because the line is anchored in the world.
+  expect(linesOf(a)[0].args).not.toEqual(linesOf(b)[0].args);
+});
+
+test("a faded-out flight line is not drawn at all", () => {
+  const ctx = recordingCtx();
+  paintFlight(ctx, { ...frameAt(1), segment: { x1: 0, y1: 0, x2: MAP, y2: MAP }, alpha: 0, colors: P2_COLORS });
+  expect(ctx.calls.filter((c) => c.name === "stroke")).toHaveLength(0);
+});
+
+test("special zone radii scale with zoom by exactly the zoom factor", () => {
+  const zones = [{ type: "RedZone", x: 4000, y: 4000, r: 500 }];
+  const a = recordingCtx();
+  const b = recordingCtx();
+  paintSpecialZones(a, { ...frameAt(1), zones, colors: P2_COLORS });
+  paintSpecialZones(b, { ...frameAt(3), zones, colors: P2_COLORS });
+  const rA = arcsOf(a).map((c) => c.args[2]);
+  const rB = arcsOf(b).map((c) => c.args[2]);
+  expect(rA).toHaveLength(1);
+  expect(rB[0] / rA[0]).toBeCloseTo(3, 6);
+});
+
+test("each special zone type gets its own fill, and an unknown type still draws", () => {
+  const seen = (type) => {
+    const ctx = recordingCtx();
+    paintSpecialZones(ctx, { ...frameAt(1), zones: [{ type, x: 4000, y: 4000, r: 500 }], colors: P2_COLORS });
+    const fills = ctx.calls.filter((c) => c.name === "fill");
+    return fills.length ? fills[0].fillStyle : null;
+  };
+  const red = seen("RedZone");
+  const storm = seen("SandStorm");
+  const emp = seen("EMP");
+  expect(new Set([red, storm, emp]).size).toBe(3);
+  // A type PUBG has not shipped yet must not vanish silently.
+  expect(seen("SomeFutureHazard")).not.toBeNull();
+});
+
+test("a special zone entirely off-screen is culled before drawing", () => {
+  const ctx = recordingCtx();
+  paintSpecialZones(ctx, {
+    ...frameAt(6),
+    zones: [{ type: "RedZone", x: 100, y: 100, r: 50 }],
+    colors: P2_COLORS,
+  });
+  expect(arcsOf(ctx)).toHaveLength(0);
+});
+
+test("shot lines fade by age and are culled when both ends are off-screen", () => {
+  const onScreen = { ax: 4000, ay: 4000, vx: 4100, vy: 4100, age: 0 };
+  const offScreen = { ax: 50, ay: 50, vx: 60, vy: 60, age: 0 };
+  const ctx = recordingCtx();
+  paintShots(ctx, { ...frameAt(6), shots: [onScreen, offScreen], colors: P2_COLORS });
+  expect(ctx.calls.filter((c) => c.name === "stroke")).toHaveLength(1);
+
+  // Alpha tracks age: a fresh line is opaque, an old one nearly gone.
+  const alphas = [];
+  const probe = recordingCtx();
+  const orig = Object.getOwnPropertyDescriptor(probe, "globalAlpha");
+  Object.defineProperty(probe, "globalAlpha", {
+    get: orig.get,
+    set(v) { alphas.push(v); orig.set.call(probe, v); },
+  });
+  paintShots(probe, {
+    ...frameAt(1),
+    shots: [{ ...onScreen, age: 0 }, { ...onScreen, age: 0.75 }],
+    colors: P2_COLORS,
+  });
+  expect(alphas[0]).toBeCloseTo(1, 6);
+  expect(alphas[1]).toBeCloseTo(0.25, 6);
+});
+
+test("shot line width is constant across zoom", () => {
+  const shots = [{ ax: 4000, ay: 4000, vx: 4100, vy: 4100, age: 0 }];
+  const a = recordingCtx();
+  const b = recordingCtx();
+  paintShots(a, { ...frameAt(1), shots, colors: P2_COLORS });
+  paintShots(b, { ...frameAt(6), shots, colors: P2_COLORS });
+  expect(lineWidths(a)).toEqual(lineWidths(b));
+});
+
+test("packages draw at a constant screen size and a falling crate is marked", () => {
+  const pkgs = [{ kind: "redbox", x: 4000, y: 4000, falling: false }];
+  const a = recordingCtx();
+  const b = recordingCtx();
+  paintPackages(a, { ...frameAt(1), packages: pkgs, colors: P2_COLORS, atlas: null });
+  paintPackages(b, { ...frameAt(6), packages: pkgs, colors: P2_COLORS, atlas: null });
+  expect(arcsOf(a).map((c) => c.args[2])).toEqual(arcsOf(b).map((c) => c.args[2]));
+
+  // A falling crate is drawn differently from a landed one, or the drop is invisible.
+  const landed = recordingCtx();
+  const falling = recordingCtx();
+  paintPackages(landed, { ...frameAt(1), packages: [{ kind: "small", x: 4000, y: 4000, falling: false }], colors: P2_COLORS, atlas: null });
+  paintPackages(falling, { ...frameAt(1), packages: [{ kind: "small", x: 4000, y: 4000, falling: true }], colors: P2_COLORS, atlas: null });
+  expect(landed.calls.length).not.toBe(falling.calls.length);
+});
+
+test("landings honour the layer alpha and cull off-screen", () => {
+  const landings = [{ a: "a.me", x: 4000, y: 4000 }, { a: "a.far", x: 50, y: 50 }];
+  const ctx = recordingCtx();
+  paintLandings(ctx, { ...frameAt(6), landings, alpha: 1, colors: P2_COLORS, atlas: null, focalIds: new Set(["a.me"]) });
+  // Only the on-screen one survives the cull at zoom 6.
+  expect(arcsOf(ctx).length + ctx.calls.filter((c) => c.name === "lineTo").length).toBeGreaterThan(0);
+  const faded = recordingCtx();
+  paintLandings(faded, { ...frameAt(1), landings, alpha: 0, colors: P2_COLORS, atlas: null, focalIds: new Set() });
+  expect(faded.calls).toHaveLength(0);
+});
+
+test("layer flags switch each optional layer off inside drawScene", () => {
+  const rich = {
+    ...frameAt(1),
+    colors: P2_COLORS,
+    shots: [{ ax: 4000, ay: 4000, vx: 4100, vy: 4100, age: 0 }],
+    specialZones: [{ type: "RedZone", x: 4000, y: 4000, r: 500 }],
+    packages: [{ kind: "redbox", x: 4000, y: 4000, falling: false }],
+    landings: [{ a: "a.me", x: 4000, y: 4000 }],
+    flightSeg: { x1: 0, y1: 0, x2: MAP, y2: MAP },
+    flightAlpha: 1,
+    landingsAlpha: 1,
+  };
+  const all = recordingCtx();
+  drawScene(all, rich);
+  const none = recordingCtx();
+  drawScene(none, {
+    ...rich,
+    layers: { shots: false, landings: false, flight: false, packages: false, specialZones: false, healthArcs: false },
+  });
+  expect(none.calls.length).toBeLessThan(all.calls.length);
+
+  // And each flag is individually load-bearing, not just the bundle.
+  for (const key of ["shots", "landings", "flight", "packages", "specialZones"]) {
+    const off = recordingCtx();
+    drawScene(off, { ...rich, layers: { [key]: false } });
+    expect(off.calls.length, `${key} flag did nothing`).toBeLessThan(all.calls.length);
+  }
 });
