@@ -1,5 +1,5 @@
 const { getMapMeta } = require("./mapMeta");
-const { readXY, eventTime } = require("./telemetryUtils");
+const { readXY, buildMatchClock } = require("./telemetryUtils");
 const { loadMatchBundle } = require("./matchLoader");
 const { shardForMatch } = require("./pubgTelemetry");
 
@@ -13,8 +13,8 @@ function lower(s) {
 function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = null, playerName = null } = {}) {
   const rawMapName = matchAttributes.mapName || "";
   const meta = getMapMeta(rawMapName);
-  const matchStartMs = Date.parse(matchAttributes.createdAt || "");
   const duration = Number(matchAttributes.duration) || 0;
+  const clock = buildMatchClock(telemetry);
 
   const roster = new Map();
   const positions = new Map();
@@ -44,7 +44,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       if (Number(ev?.common?.isGame) < 0.1) continue;
       const xy = readXY(ch.location);
       if (!xy) continue;
-      const t = eventTime(ev, matchStartMs);
+      const t = clock.timeOf(ev);
       if (t === null) continue;
       if (!roster.has(ch.accountId)) roster.set(ch.accountId, { name: ch.name, teamId: ch.teamId });
       if (!positions.has(ch.accountId)) positions.set(ch.accountId, []);
@@ -55,7 +55,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     if (type === "LogPlayerKillV2") {
       const victim = ev.victim;
       const killer = ev.killer || ev.finisher || null;
-      const t = eventTime(ev, matchStartMs);
+      const t = clock.timeOf(ev);
       if (victim?.accountId && t !== null) deathTime.set(victim.accountId, t);
       const vxy = readXY(victim?.location);
       const kxy = readXY(killer?.location);
@@ -67,7 +67,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
 
     if (type === "LogGameStatePeriodic") {
       const gs = ev.gameState || {};
-      const t = eventTime(ev, matchStartMs);
+      const t = clock.timeOf(ev);
       const blue = readXY(gs.safetyZonePosition);
       const br = Number(gs.safetyZoneRadius);
       if (t !== null && blue && Number.isFinite(br) && br > 0) {
