@@ -45,8 +45,6 @@
         "ranked": "Ranked",
         "rp": "RP",
         "rpHint": "Why is RP missing?",
-        "rpSummaryGroup": "{value} RP across {count} ranked matches since {since}",
-        "rpSummaryAdjustment": "{value} RP with no ranked matches since {since} (decay or tier protection)",
         "rpTooltipDefault": "PUBG's API doesn't publish per-match RP. This site derives it by comparing rank readings between visits.",
         "rpTooltipNoBaseline": "No earlier RP reading for this player yet — values appear for ranked matches played after the first visit.",
         "rpTooltipGroup": "Part of {value} RP across {count} ranked matches. A single match can only be attributed when it is the only one between two readings.",

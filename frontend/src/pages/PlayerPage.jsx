@@ -1061,44 +1061,19 @@ const PlayerPage = ({ t }) => {
       const tone = value > 0 ? "up" : value < 0 ? "down" : "zero";
       return (
         <div className={`player-rp-delta player-rp-delta--${tone}`}>
-          <span>{t("pages.player.matches.rp")}</span>
-          <strong>{formatSignedRp(value)}</strong>
-        </div>
-      );
-    }
-
-    if (delta?.kind === "group") {
-      const count = Math.max(1, Number(delta.matches) || 1);
-      return (
-        <div className="player-rp-delta player-rp-delta--group">
-          <span>
-            {`${t("pages.player.matches.rp")} ×${count}`}
-            <Tooltip
-              title={t("pages.player.matches.rpTooltipGroup", {
-                value: formatSignedRp(delta.value),
-                count,
-              })}
-              mouseEnterDelay={0}
-              trigger={["hover", "focus"]}
-            >
-              <QuestionCircleOutlined
-                className="player-rp-delta__hint"
-                aria-label={t("pages.player.matches.rpHint")}
-                tabIndex={0}
-              />
-            </Tooltip>
-          </span>
-          <strong>{`Σ ${formatSignedRp(delta.value)}`}</strong>
+          <strong>{`${formatSignedRp(value)} RP`}</strong>
         </div>
       );
     }
 
     const tooltipKey = RP_TOOLTIP_KEYS[delta?.kind] || "pages.player.matches.rpTooltipDefault";
+    const tooltipParams =
+      delta?.kind === "group" ? { value: formatSignedRp(delta.value), count: delta.matches } : undefined;
     return (
       <div className="player-rp-delta player-rp-delta--none">
         <span>
           {t("pages.player.matches.rp")}
-          <Tooltip title={t(tooltipKey)} mouseEnterDelay={0} trigger={["hover", "focus"]}>
+          <Tooltip title={t(tooltipKey, tooltipParams)} mouseEnterDelay={0} trigger={["hover", "focus"]}>
             <QuestionCircleOutlined
               className="player-rp-delta__hint"
               aria-label={t("pages.player.matches.rpHint")}
@@ -1115,24 +1090,6 @@ const PlayerPage = ({ t }) => {
     if (!matchItems.length) {
       return renderEmptyCard("Recent Matches", "No recent match history returned for this player.");
     }
-
-    const rankPoints = matchSummary.rankPoints;
-    const rpSummary =
-      rankPoints && (rankPoints.kind === "group" || rankPoints.kind === "adjustment")
-        ? {
-            kind: rankPoints.kind,
-            text: t(
-              rankPoints.kind === "group"
-                ? "pages.player.matches.rpSummaryGroup"
-                : "pages.player.matches.rpSummaryAdjustment",
-              {
-                value: formatSignedRp(rankPoints.value),
-                count: rankPoints.matches,
-                since: formatMatchDate(rankPoints.since),
-              }
-            ),
-          }
-        : null;
 
     return (
       <section className="player-card">
@@ -1159,10 +1116,6 @@ const PlayerPage = ({ t }) => {
             <strong>{Math.round(Number(matchSummary.avgDamage || 0))}</strong>
           </div>
         </div>
-
-        {rpSummary ? (
-          <p className={`player-rp-summary player-rp-summary--${rpSummary.kind}`}>{rpSummary.text}</p>
-        ) : null}
 
         <div className="player-card__divider" />
 

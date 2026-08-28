@@ -509,21 +509,6 @@ body {
         gap: 8px;
       }
 
-      .player-rp-summary {
-        margin: 10px 0 0;
-        font-size: 12px;
-        letter-spacing: 0.3px;
-        color: var(--text-muted);
-
-        &--group {
-          color: var(--text-strong);
-        }
-
-        &--adjustment {
-          color: var(--text-strong);
-        }
-      }
-
       .player-meta-badge {
         border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
         border-radius: 10px;
@@ -1475,10 +1460,6 @@ body {
 
         .player-rp-delta--zero strong {
           color: var(--text-muted);
-        }
-
-        .player-rp-delta--group strong {
-          color: var(--accent);
         }
 
         // Flex row, or the block rule above drops antd's <span> icon onto its own line.
