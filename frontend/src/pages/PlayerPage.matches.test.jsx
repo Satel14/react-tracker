@@ -125,6 +125,16 @@ test("shows a dash with the default explanation when no RP delta is known", asyn
   expect(tooltip).toHaveTextContent(en.pages.player.matches.rpTooltipDefault);
 });
 
+test("opens the RP hint tooltip on keyboard focus, not just hover", async () => {
+  const card = await renderMatchesCard([matchItem()]);
+  const row = rowsOf(card)[0];
+  const hint = within(row).getByLabelText(en.pages.player.matches.rpHint);
+
+  fireEvent.focus(hint);
+  const tooltip = await screen.findByRole("tooltip");
+  expect(tooltip).toHaveTextContent(en.pages.player.matches.rpTooltipDefault);
+});
+
 test("renders an exact gain in the up colour and a loss in the down colour", async () => {
   const card = await renderMatchesCard([
     matchItem({ id: "gain", rpDelta: { kind: "exact", value: 23 } }),

@@ -1074,7 +1074,7 @@ const PlayerPage = ({ t }) => {
       <div className="player-rp-delta player-rp-delta--none">
         <span>
           {t("pages.player.matches.rp")}
-          <Tooltip title={t(tooltipKey, tooltipParams)} mouseEnterDelay={0}>
+          <Tooltip title={t(tooltipKey, tooltipParams)} mouseEnterDelay={0} trigger={["hover", "focus"]}>
             <QuestionCircleOutlined
               className="player-rp-delta__hint"
               aria-label={t("pages.player.matches.rpHint")}
