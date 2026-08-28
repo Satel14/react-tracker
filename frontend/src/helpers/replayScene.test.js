@@ -56,9 +56,11 @@ const frameAt = (zoom) => ({
 const arcsOf = (ctx) => ctx.calls.filter((c) => c.name === "arc");
 
 test("marker radii and line widths are identical at zoom 1 and zoom 6", () => {
-  const a = recordingCtx(); drawScene(a, frameAt(1));
-  const b = recordingCtx(); drawScene(b, frameAt(6));
-  const radii = (ctx) => arcsOf(ctx).map((c) => c.args[2]).filter((r) => r <= 20).sort((x, y) => x - y);
+  // zone: null so every recorded arc is a marker or a ring -- no magic-number
+  // split between "marker-sized" and "zone-sized" radii is needed.
+  const a = recordingCtx(); drawScene(a, { ...frameAt(1), zone: null });
+  const b = recordingCtx(); drawScene(b, { ...frameAt(6), zone: null });
+  const radii = (ctx) => arcsOf(ctx).map((c) => c.args[2]).sort((x, y) => x - y);
   expect(radii(a)).toEqual(radii(b));
   const widths = (ctx) => ctx.calls.filter((c) => c.name === "stroke").map((c) => c.lineWidth);
   expect(widths(a)).toEqual(widths(b));
@@ -77,6 +79,27 @@ test("draws one marker per present player at the camera-projected position", () 
   drawScene(ctx, frame);
   const markers = arcsOf(ctx).filter((c) => c.args[2] <= 20);
   expect(markers.length).toBeGreaterThanOrEqual(2);
+
+  const b = (Math.min(frame.vw, frame.vh) / MAP) * frame.cam.zoom;
+  const expectedX = (frame.tracks.outX[0] - frame.cam.cx) * b + frame.vw / 2;
+  const expectedY = (frame.tracks.outY[0] - frame.cam.cy) * b + frame.vh / 2;
+  const focal = markers.find((c) => c.args[2] === 7);
+  expect(focal.args[0]).toBeCloseTo(expectedX, 6);
+  expect(focal.args[1]).toBeCloseTo(expectedY, 6);
+});
+
+test("fills each marker with the colour for its role and state", () => {
+  const withDead = [
+    ...players,
+    { name: "Dead", accountId: "a.dead", teamId: 3, isFocal: false, dropTime: null, deathTime: 2,
+      positions: [{ t: 0, x: 4200, y: 3900 }, { t: 10, x: 4200, y: 3900 }] },
+  ];
+  const ctx = recordingCtx();
+  const frame = { ...frameAt(1), tracks: sampleTracks(buildTracks(withDead), 5) };
+  drawScene(ctx, frame);
+  // ctx.fill() with no args is a marker fill; the zone's ctx.fill("evenodd") is excluded.
+  const fills = ctx.calls.filter((c) => c.name === "fill" && c.args.length === 0).map((c) => c.fillStyle);
+  expect(fills).toEqual([COLORS.focal, COLORS.enemy, COLORS.dead]);
 });
 
 test("skips absent players entirely", () => {
@@ -111,6 +134,30 @@ test("labels only the focal, hovered and selected players, up to the cap", () =>
   drawScene(ctx, frame);
   const texts = ctx.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
   expect(texts).toEqual(["Me"]);
+});
+
+test("labels the hovered non-focal player too", () => {
+  const ctx = recordingCtx();
+  const frame = { ...frameAt(1), hoveredIndex: 1 };
+  drawScene(ctx, frame);
+  const texts = ctx.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
+  expect(texts).toEqual(["Me", "Foe"]);
+});
+
+test("labels the selected non-focal player too", () => {
+  const ctx = recordingCtx();
+  const frame = { ...frameAt(1), focusedAccountId: "a.foe" };
+  drawScene(ctx, frame);
+  const texts = ctx.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
+  expect(texts).toEqual(["Me", "Foe"]);
+});
+
+test("truncates labels at labelCap", () => {
+  const ctx = recordingCtx();
+  const frame = { ...frameAt(1), focusedAccountId: "a.foe", labelCap: 1 };
+  drawScene(ctx, frame);
+  const texts = ctx.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
+  expect(texts).toHaveLength(1);
 });
 
 test("drawBackground blits the map as a square and paints the bands", () => {
