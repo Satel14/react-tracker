@@ -9,9 +9,10 @@ vi.mock("../api/player", () => ({
     Promise.resolve({
       data: {
         matchId: "m1", rawMapName: "Baltic_Main", mapName: "Erangel", mapMax: 8160, duration: 100,
-        players: [{ name: "Me", accountId: "account.me", teamId: 1, isFocal: true, positions: [{ t: 0, x: 10, y: 10 }], deathTime: null }],
+        focalAccountId: "account.me", focalTeamId: 1, totalPlayers: 1, totalTeams: 1,
+        players: [{ name: "Me", accountId: "account.me", teamId: 1, isFocal: true, positions: [{ t: 0, x: 10, y: 10 }], deathTime: null, dropTime: null }],
         kills: [],
-        zones: [],
+        zones: [{ t: 0, bx: 0, by: 0, br: 100, wx: 0, wy: 0, wr: 100, phase: 1 }],
       },
     })
   ),
@@ -120,4 +121,30 @@ test("re-fetches analysis when the match identity changes while a non-replay tab
 
   fireEvent.click(screen.getByText("go-m2"));
   expect(await screen.findByText("SecondMatchGuy")).toBeInTheDocument();
+});
+
+test("shows the speed label and a reset-view control", async () => {
+  renderAt("/match/steam/m1/replay");
+  expect(await screen.findByRole("img", { name: /erangel/i })).toBeInTheDocument();
+  expect(screen.getByText("pages.replay.speed")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "pages.replay.resetView" })).toBeInTheDocument();
+});
+
+test("Space does not toggle playback while a text input has focus", async () => {
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  const input = document.createElement("input");
+  document.body.appendChild(input);
+  input.focus();
+  fireEvent.keyDown(input, { code: "Space" });
+  expect(screen.getByText("pages.replay.play")).toBeInTheDocument();
+  input.remove();
+});
+
+test("Space does not toggle playback while a non-replay tab is active", async () => {
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  fireEvent.click(screen.getByText("pages.match.tabScoreboard"));
+  fireEvent.keyDown(window, { code: "Space" });
+  expect(screen.queryByText("pages.replay.pause")).not.toBeInTheDocument();
 });

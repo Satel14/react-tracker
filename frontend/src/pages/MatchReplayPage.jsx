@@ -1,8 +1,8 @@
-import React, { useEffect, useReducer, useRef, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Alert, Button, Slider, Segmented, Tabs } from "antd";
 import { translate } from "react-switch-lang";
-import MapField from "../component/charts/MapField";
+import ReplayStage from "../component/charts/ReplayStage";
 import Skeleton from "../component/Skeleton";
 import ReplayRoster from "../component/charts/ReplayRoster";
 import MatchScoreboard from "../component/match/MatchScoreboard";
@@ -12,12 +12,10 @@ import DamageBreakdown from "../component/match/DamageBreakdown";
 import CombatTimeline from "../component/match/CombatTimeline";
 import { getMatchReplay, getMatchAnalysis } from "../api/player";
 import { useReplayClock } from "../component/charts/useReplayClock";
-import { playersAt, activeKills, zoneAt, rosterAt } from "../component/charts/replayEngine";
-import { drawReplayFrame } from "../component/charts/replayDraw";
+import { rosterAt } from "../component/charts/replayEngine";
 import { formatClock as fmt } from "../helpers/formatClock";
 
 const SPEEDS = [1, 2, 4, 8, 16];
-const CANVAS_SIZE = 1000;
 const INITIAL = { loading: false, error: null, data: null };
 
 function reducer(state, action) {
@@ -43,27 +41,28 @@ const MatchReplayPage = ({ t }) => {
   const [tab, setTab] = useState("replay");
   const [analysis, setAnalysis] = useState({ loading: false, error: null, data: null });
   const [wantAnalysis, setWantAnalysis] = useState(false);
-  const canvasRef = useRef(null);
+  const [resetKey, setResetKey] = useState(0);
   const clock = useReplayClock(data?.duration || 0);
+  const { toggle } = clock;
+  const roster = useMemo(
+    () => (data ? rosterAt(data.players, data.kills, clock.displayT) : []),
+    [data, clock.displayT]
+  );
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !data || tab !== "replay") return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const players = playersAt(data.players, clock.t);
-    const kills = activeKills(data.kills, clock.t);
-    const zone = zoneAt(data.zones, clock.t);
-    drawReplayFrame(ctx, { players, kills, zone, mapMax: data.mapMax, size: CANVAS_SIZE, focusedAccountId });
-  }, [data, clock.t, focusedAccountId, tab]);
-
-  useEffect(() => {
+    if (tab !== "replay") return undefined;
     const onKey = (e) => {
-      if (e.code === "Space") { e.preventDefault(); clock.toggle(); }
+      if (e.code !== "Space") return;
+      const el = e.target;
+      const tag = el && el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el && el.isContentEditable)) return;
+      if (el && typeof el.closest === "function" && el.closest("button, [role='button'], .ant-slider")) return;
+      e.preventDefault();
+      toggle();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clock]);
+  }, [tab, toggle]);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,12 +115,19 @@ const MatchReplayPage = ({ t }) => {
     <>
       <div className="match-replay__layout">
         <div className="match-replay__stage">
-          <MapField rawMapName={data.rawMapName} className="match-replay__field">
-            <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} className="match-replay__canvas" />
-          </MapField>
+          <ReplayStage
+            key={resetKey}
+            data={data}
+            clockRef={clock.clockRef}
+            publish={clock.publish}
+            focusedAccountId={focusedAccountId}
+            onSelect={setFocusedAccountId}
+            mapLabel={data.mapName}
+          />
+          <p className="match-replay__hint">{t("pages.replay.hint")}</p>
         </div>
         <ReplayRoster
-          rows={rosterAt(data.players, data.kills, clock.t)}
+          rows={roster}
           focusedAccountId={focusedAccountId}
           onSelect={setFocusedAccountId}
           t={t}
@@ -136,16 +142,18 @@ const MatchReplayPage = ({ t }) => {
           style={{ flex: 1, minWidth: 180 }}
           min={0}
           max={data.duration || 0}
-          value={Math.floor(clock.t)}
+          value={Math.floor(clock.displayT)}
           onChange={clock.seek}
           tooltip={{ formatter: (v) => fmt(v) }}
         />
-        <span className="match-replay__time">{fmt(clock.t)} / {fmt(data.duration || 0)}</span>
+        <span className="match-replay__time">{fmt(clock.displayT)} / {fmt(data.duration || 0)}</span>
+        <span className="match-replay__speed-label">{t("pages.replay.speed")}</span>
         <Segmented
           value={clock.speed}
           onChange={clock.setSpeed}
           options={SPEEDS.map((s) => ({ value: s, label: `${s}×` }))}
         />
+        <Button onClick={() => setResetKey((n) => n + 1)}>{t("pages.replay.resetView")}</Button>
       </div>
     </>
   );
@@ -161,7 +169,7 @@ const MatchReplayPage = ({ t }) => {
 
   const tabItems = data
     ? [
-        { key: "replay", label: t("pages.match.tabReplay"), children: renderReplay() },
+        { key: "replay", label: t("pages.match.tabReplay"), children: tab === "replay" ? renderReplay() : null },
         {
           key: "scoreboard",
           label: t("pages.match.tabScoreboard"),
