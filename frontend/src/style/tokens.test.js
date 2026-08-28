@@ -48,9 +48,10 @@ const tokens = parseTokens(source);
 describe("colour tokens", () => {
   it("defines the expected token set", () => {
     expect(Object.keys(tokens).sort()).toEqual([
-      "--accent", "--bg", "--border", "--brand", "--danger", "--ok",
-      "--rest", "--surface", "--text", "--text-faint", "--text-muted",
-      "--text-strong", "--tier-gold", "--win",
+      "--accent", "--bg", "--border", "--brand", "--crate", "--danger",
+      "--flight", "--ok", "--rest", "--surface", "--text", "--text-faint",
+      "--text-muted", "--text-strong", "--tier-gold", "--warn", "--win",
+      "--zone-emp", "--zone-red", "--zone-storm",
     ]);
   });
 
@@ -66,6 +67,36 @@ describe("colour tokens", () => {
       expect(contrast(tokens[name], tokens["--bg"])).toBeGreaterThanOrEqual(4.5);
     },
   );
+
+  // The map overlays are graphical objects painted on the map raster, not
+  // text, so the 4.5:1 text bar above is the wrong one to hold them to. WCAG
+  // AA asks 3:1 for non-text objects, measured here against --surface — the
+  // band the map sits in, and a lighter ground than --bg, so it is the harder
+  // of the two backgrounds to stay legible on.
+  const overlayTokens = [
+    "--warn", "--zone-red", "--zone-storm", "--zone-emp", "--crate", "--flight",
+  ];
+
+  it.each(overlayTokens)("%s clears the 3:1 non-text bar against --surface", (name) => {
+    expect(contrast(tokens[name], tokens["--surface"])).toBeGreaterThanOrEqual(3);
+  });
+
+  // Reported as pairs rather than as a Set size, so a failure names the two
+  // tokens that collapsed instead of just a count that is off by one.
+  it("gives every map overlay its own value", () => {
+    const collisions = overlayTokens.flatMap((a, i) =>
+      overlayTokens.slice(i + 1)
+        .filter((b) => tokens[a] === tokens[b])
+        .map((b) => `${a} and ${b} are both ${tokens[a]}`),
+    );
+    expect(collisions).toEqual([]);
+  });
+
+  // Kill markers are --danger. If the red zone shares that value, a
+  // bombardment area and a death read as the same thing on the same raster.
+  it("keeps --zone-red off --danger", () => {
+    expect(tokens["--zone-red"]).not.toBe(tokens["--danger"]);
+  });
 });
 
 const stylesheet = readFileSync(
