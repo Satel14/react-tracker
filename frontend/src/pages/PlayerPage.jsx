@@ -210,12 +210,6 @@ const getPlacementMeta = (placement) => {
 
 const RP_TOOLTIP_KEYS = {};
 
-export const formatSignedRp = (value) => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed === 0) return "0";
-  return parsed > 0 ? `+${parsed}` : `${parsed}`;
-};
-
 const formatMatchDate = (value) => {
   if (!value) return "Unknown time";
   const date = new Date(value);
