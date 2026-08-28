@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useNavigate } from "react-router-dom";
 import MatchReplayPage from "./MatchReplayPage";
-import { getMatchAnalysis } from "../api/player";
+import { getMatchAnalysis, getMatchReplay } from "../api/player";
 
 vi.mock("../api/player", () => ({
   getMatchReplay: vi.fn(() =>
@@ -61,6 +61,34 @@ test("shows the roster with player names after load", async () => {
   renderAt("/match/steam/m1/replay");
   await screen.findByRole("img", { name: /erangel/i });
   expect(screen.getByText("Me")).toBeInTheDocument();
+});
+
+test("decodes compact replay positions before rendering", async () => {
+  getMatchReplay.mockResolvedValueOnce({
+    data: {
+      format: 2,
+      matchId: "m1",
+      rawMapName: "Baltic_Main",
+      mapName: "Erangel",
+      mapMax: 8160,
+      duration: 100,
+      players: [{
+        name: "Compressed Player",
+        accountId: "account.compact",
+        teamId: 1,
+        positions: { t: [0, 10], x: [10, 5], y: [20, -5], h: [100, 80], f: [0, 1] },
+        deathTime: null,
+        dropTime: null,
+      }],
+      kills: [],
+      zones: [],
+      shots: { t: [], a: [], v: [], ax: [], ay: [], vx: [], vy: [], dmg: [] },
+    },
+  });
+
+  renderAt("/match/steam/m1/replay");
+
+  expect(await screen.findByText("Compressed Player")).toBeInTheDocument();
 });
 
 test("clicking a roster row marks it selected", async () => {

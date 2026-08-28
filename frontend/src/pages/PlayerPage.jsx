@@ -20,7 +20,7 @@ import {
   HomeOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getPlayerData, getPlayerReports, getPlayerExtras } from "../api/player";
+import { getPlayerData, getPlayerReports, getPlayerExtras, prefetchMatchReplay } from "../api/player";
 import { resolveAbsoluteApiUrl } from "../api/config";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
@@ -332,6 +332,8 @@ const INITIAL_SESSION = {
   isFavorited: false,
   favoriteLoading: false,
 };
+const REPLAY_HOVER_DELAY_MS = 150;
+
 function sessionReducer(state, action) {
   switch (action.type) {
     case "reset": return INITIAL_SESSION;
@@ -355,8 +357,39 @@ const PlayerPage = ({ t }) => {
   const { activeTabKey, selectedSeasonId, isFavorited, favoriteLoading } = session;
   const reportsRequestKeyRef = useRef(null);
   const dataRequestKeyRef = useRef(null);
+  const replayWarmTimerRef = useRef(null);
   const { platform, gameId } = useParams();
   const navigate = useNavigate();
+
+  const warmReplay = useCallback((matchId) => {
+    // Match telemetry is much larger than the route chunk. Start both as soon
+    // as the user signals intent; getMatchReplay reuses this same promise after
+    // navigation instead of issuing a second request.
+    void import("./MatchReplayPage");
+    void prefetchMatchReplay(
+      matchId,
+      platform,
+      data?.platformInfo?.platformUserId || "",
+      data?.platformInfo?.platformUserHandle || gameId || ""
+    ).catch(() => {});
+  }, [data, gameId, platform]);
+
+  const cancelReplayWarmup = useCallback(() => {
+    if (replayWarmTimerRef.current !== null) {
+      window.clearTimeout(replayWarmTimerRef.current);
+      replayWarmTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleReplayWarmup = useCallback((matchId) => {
+    cancelReplayWarmup();
+    replayWarmTimerRef.current = window.setTimeout(() => {
+      replayWarmTimerRef.current = null;
+      warmReplay(matchId);
+    }, REPLAY_HOVER_DELAY_MS);
+  }, [cancelReplayWarmup, warmReplay]);
+
+  useEffect(() => cancelReplayWarmup, [cancelReplayWarmup]);
 
   const routeKey = `${platform || ""}|${gameId || ""}`;
   const [loadedRouteKey, setLoadedRouteKey] = useState(routeKey);
@@ -1155,6 +1188,10 @@ const PlayerPage = ({ t }) => {
               <Link
                 className="player-match-item__replay"
                 to={`/match/${platform}/${encodeURIComponent(match.id)}/replay?accountId=${encodeURIComponent(data?.platformInfo?.platformUserId || "")}&playerName=${encodeURIComponent(data?.platformInfo?.platformUserHandle || gameId || "")}`}
+                onMouseEnter={() => scheduleReplayWarmup(match.id)}
+                onMouseLeave={cancelReplayWarmup}
+                onFocus={() => warmReplay(match.id)}
+                onTouchStart={() => warmReplay(match.id)}
               >
                 {t("pages.replay.open")}
               </Link>

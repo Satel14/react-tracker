@@ -9,11 +9,13 @@ import PlayerPage from "./PlayerPage";
 const getPlayerData = vi.fn();
 const getPlayerReports = vi.fn();
 const getPlayerExtras = vi.fn();
+const prefetchMatchReplay = vi.fn();
 
 vi.mock("../api/player", () => ({
   getPlayerData: (...args) => getPlayerData(...args),
   getPlayerReports: (...args) => getPlayerReports(...args),
   getPlayerExtras: (...args) => getPlayerExtras(...args),
+  prefetchMatchReplay: (...args) => prefetchMatchReplay(...args),
 }));
 
 vi.mock("../cookie/store", () => ({
@@ -33,8 +35,10 @@ beforeEach(() => {
   getPlayerData.mockReset();
   getPlayerReports.mockReset();
   getPlayerExtras.mockReset();
+  prefetchMatchReplay.mockReset();
   getPlayerReports.mockResolvedValue({ data: { summary: {}, encounters: [] } });
   getPlayerExtras.mockResolvedValue({ data: null });
+  prefetchMatchReplay.mockResolvedValue({ data: {} });
   window.matchMedia = window.matchMedia || ((query) => ({
     matches: false, media: query, onchange: null,
     addListener: () => {}, removeListener: () => {},
@@ -147,6 +151,15 @@ test("renders an exact gain in the up colour and a loss in the down colour", asy
   const loss = within(rows[1]).getByText("-15 RP");
   expect(loss.closest(".player-rp-delta")).toHaveClass("player-rp-delta--down");
   expect(card.querySelector(".player-rp-summary")).toBeNull();
+});
+
+test("starts loading replay data when the user shows intent to open it", async () => {
+  const card = await renderMatchesCard([matchItem()]);
+  const replay = within(card).getByRole("link", { name: en.pages.replay.open });
+
+  fireEvent.focus(replay);
+
+  expect(prefetchMatchReplay).toHaveBeenCalledWith("m-1", "steam", "account.PlayerA", "PlayerA");
 });
 
 test("keeps grouped RP at a dash instead of presenting it as a per-match value", async () => {

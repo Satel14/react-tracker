@@ -14,6 +14,7 @@ import { getMatchReplay, getMatchAnalysis } from "../api/player";
 import { useReplayClock } from "../component/charts/useReplayClock";
 import { rosterAt } from "../component/charts/replayEngine";
 import { formatClock as fmt } from "../helpers/formatClock";
+import { decodeReplay } from "../helpers/replayModel";
 
 const SPEEDS = [1, 2, 4, 8, 16];
 const INITIAL = { loading: false, error: null, data: null };
@@ -70,7 +71,7 @@ const MatchReplayPage = ({ t }) => {
     getMatchReplay(matchId, platform, accountId, playerName)
       .then((res) => {
         if (cancelled) return;
-        const payload = res?.data || null;
+        const payload = res?.data ? decodeReplay(res.data) : null;
         if (payload && Array.isArray(payload.players)) dispatch({ type: "ok", data: payload });
         else dispatch({ type: "err", error: res?.message || t("pages.replay.errorUnavailable") });
       })

@@ -1,5 +1,49 @@
 import { get, post } from './fetch'
 
+const replayRequests = new Map();
+const REPLAY_CACHE_TTL_MS = 5 * 60 * 1000;
+const REPLAY_CACHE_LIMIT = 3;
+
+const replayUrl = (matchId, shard, accountId, playerName) => {
+  const params = new URLSearchParams();
+  if (shard) params.set("shard", shard);
+  if (accountId) params.set("accountId", accountId);
+  if (playerName) params.set("playerName", playerName);
+  const query = params.toString();
+  return `/match/${encodeURIComponent(matchId)}/replay${query ? `?${query}` : ""}`;
+};
+
+const loadMatchReplay = (matchId, shard, accountId, playerName, notificationErr) => {
+  const url = replayUrl(matchId, shard, accountId, playerName);
+  const now = Date.now();
+  const cached = replayRequests.get(url);
+
+  if (cached && cached.expiresAt > now) {
+    replayRequests.delete(url);
+    replayRequests.set(url, cached);
+    return cached.promise;
+  }
+
+  if (cached) replayRequests.delete(url);
+
+  const entry = {
+    expiresAt: now + REPLAY_CACHE_TTL_MS,
+    promise: null,
+  };
+  entry.promise = get(url, notificationErr).catch((error) => {
+    if (replayRequests.get(url) === entry) replayRequests.delete(url);
+    throw error;
+  });
+  replayRequests.set(url, entry);
+
+  while (replayRequests.size > REPLAY_CACHE_LIMIT) {
+    const oldest = replayRequests.keys().next().value;
+    replayRequests.delete(oldest);
+  }
+
+  return entry.promise;
+};
+
 export const getPlayerSteamName = (text) =>
   post(
     "/player/steamid",
@@ -50,13 +94,11 @@ export const getAggregateHeatmap = ({ shard, accountId, playerName, map, matchId
   );
 
 export const getMatchReplay = (matchId, shard, accountId, playerName) => {
-  const params = new URLSearchParams();
-  if (shard) params.set("shard", shard);
-  if (accountId) params.set("accountId", accountId);
-  if (playerName) params.set("playerName", playerName);
-  const query = params.toString();
-  return get(`/match/${encodeURIComponent(matchId)}/replay${query ? `?${query}` : ""}`, true);
+  return loadMatchReplay(matchId, shard, accountId, playerName, true);
 };
+
+export const prefetchMatchReplay = (matchId, shard, accountId, playerName) =>
+  loadMatchReplay(matchId, shard, accountId, playerName, false);
 
 export const getMatchAnalysis = (matchId, shard, accountId, playerName) => {
   const params = new URLSearchParams();
