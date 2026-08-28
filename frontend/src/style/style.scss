@@ -1477,6 +1477,10 @@ body {
           color: var(--text-muted);
         }
 
+        .player-rp-delta--group strong {
+          color: var(--accent);
+        }
+
         // Flex row, or the block rule above drops antd's <span> icon onto its own line.
         .player-rp-delta > span {
           display: flex;

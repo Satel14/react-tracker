@@ -149,7 +149,7 @@ test("renders an exact gain in the up colour and a loss in the down colour", asy
   expect(card.querySelector(".player-rp-summary")).toBeNull();
 });
 
-test("shows a group total in the header and keeps grouped rows at a dash", async () => {
+test("shows a group total in the header and on every grouped row", async () => {
   const since = Date.parse("2026-08-26T18:00:00Z");
   const group = { kind: "group", value: 37, matches: 3 };
   const card = await renderMatchesCard(
@@ -159,7 +159,9 @@ test("shows a group total in the header and keeps grouped rows at a dash", async
 
   const summary = card.querySelector(".player-rp-summary");
   expect(summary).toHaveTextContent(/\+37 RP across 3 ranked matches since /);
-  expect(within(card).getAllByText("—")).toHaveLength(3);
+  expect(within(card).getAllByText("Σ +37")).toHaveLength(3);
+  expect(within(card).getAllByText("RP ×3")).toHaveLength(3);
+  expect(card.querySelectorAll(".player-rp-delta--group")).toHaveLength(3);
 
   const tooltip = await hoverHint(rowsOf(card)[0]);
   expect(tooltip).toHaveTextContent("Part of +37 RP across 3 ranked matches.");

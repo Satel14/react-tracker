@@ -1067,14 +1067,38 @@ const PlayerPage = ({ t }) => {
       );
     }
 
+    if (delta?.kind === "group") {
+      const count = Math.max(1, Number(delta.matches) || 1);
+      return (
+        <div className="player-rp-delta player-rp-delta--group">
+          <span>
+            {`${t("pages.player.matches.rp")} ×${count}`}
+            <Tooltip
+              title={t("pages.player.matches.rpTooltipGroup", {
+                value: formatSignedRp(delta.value),
+                count,
+              })}
+              mouseEnterDelay={0}
+              trigger={["hover", "focus"]}
+            >
+              <QuestionCircleOutlined
+                className="player-rp-delta__hint"
+                aria-label={t("pages.player.matches.rpHint")}
+                tabIndex={0}
+              />
+            </Tooltip>
+          </span>
+          <strong>{`Σ ${formatSignedRp(delta.value)}`}</strong>
+        </div>
+      );
+    }
+
     const tooltipKey = RP_TOOLTIP_KEYS[delta?.kind] || "pages.player.matches.rpTooltipDefault";
-    const tooltipParams =
-      delta?.kind === "group" ? { value: formatSignedRp(delta.value), count: delta.matches } : undefined;
     return (
       <div className="player-rp-delta player-rp-delta--none">
         <span>
           {t("pages.player.matches.rp")}
-          <Tooltip title={t(tooltipKey, tooltipParams)} mouseEnterDelay={0} trigger={["hover", "focus"]}>
+          <Tooltip title={t(tooltipKey)} mouseEnterDelay={0} trigger={["hover", "focus"]}>
             <QuestionCircleOutlined
               className="player-rp-delta__hint"
               aria-label={t("pages.player.matches.rpHint")}
