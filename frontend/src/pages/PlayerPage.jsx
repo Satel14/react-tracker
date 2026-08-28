@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useReducer, useRef, lazy, Suspense } from "react";
-import { Button, Spin, Tabs, Select } from "antd";
+import { Button, Spin, Tabs, Select, Tooltip } from "antd";
 import { translate } from "react-switch-lang";
 import {
   SyncOutlined,
@@ -207,6 +207,8 @@ const getPlacementMeta = (placement) => {
   if (parsed <= 25) return { tier: "top25", value: parsed };
   return { tier: "rest", value: parsed };
 };
+
+const RP_TOOLTIP_KEYS = {};
 
 const formatMatchDate = (value) => {
   if (!value) return "Unknown time";
@@ -1041,6 +1043,25 @@ const PlayerPage = ({ t }) => {
     );
   };
 
+  const renderRpCell = (match) => {
+    const delta = match.rpDelta;
+    const tooltipKey = RP_TOOLTIP_KEYS[delta?.kind] || "pages.player.matches.rpTooltipDefault";
+    return (
+      <div className="player-rp-delta player-rp-delta--none">
+        <span>
+          {t("pages.player.matches.rp")}
+          <Tooltip title={t(tooltipKey)} mouseEnterDelay={0}>
+            <QuestionCircleOutlined
+              className="player-rp-delta__hint"
+              aria-label={t("pages.player.matches.rpHint")}
+            />
+          </Tooltip>
+        </span>
+        <strong>—</strong>
+      </div>
+    );
+  };
+
   const renderMatchesCard = () => {
     if (!matchItems.length) {
       return renderEmptyCard("Recent Matches", "No recent match history returned for this player.");
@@ -1077,6 +1098,7 @@ const PlayerPage = ({ t }) => {
         <div className="player-match-list">
           {matchItems.map((match) => {
             const placeMeta = getPlacementMeta(match.placement);
+            const isRanked = match.matchType === "competitive";
             return (
             <article className={`player-match-item ${match.isWin ? "player-match-item--win" : ""}`} key={match.id}>
               <div className="player-match-item__main">
@@ -1089,17 +1111,21 @@ const PlayerPage = ({ t }) => {
                 </div>
                 <div>
                   <b>{match.mapName}</b>
-                  <span>{match.gameModeLabel}</span>
+                  <span>
+                    {match.gameModeLabel}
+                    {isRanked ? <span className="player-ranked-chip">{t("pages.player.matches.ranked")}</span> : null}
+                  </span>
                 </div>
               </div>
 
-              <div className="player-match-stats">
+              <div className={`player-match-stats ${isRanked ? "player-match-stats--ranked" : ""}`}>
                 <div><span>Kills</span><strong>{match.kills}</strong></div>
                 <div><span>Damage</span><strong>{match.damage}</strong></div>
                 <div><span>Assists</span><strong>{match.assists}</strong></div>
                 <div><span>DBNOs</span><strong>{match.dbnos}</strong></div>
                 <div><span>Survived</span><strong>{match.survivalTimeLabel}</strong></div>
                 <div><span>Longest</span><strong>{match.longestKill}m</strong></div>
+                {isRanked ? renderRpCell(match) : null}
               </div>
 
               <Link

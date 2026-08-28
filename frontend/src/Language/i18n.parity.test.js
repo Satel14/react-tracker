@@ -44,3 +44,10 @@ test("the weapons block matches across locales and defines no headshot rate labe
   expect(enWeaponKeys).not.toContain("headshotRate");
   expect(uaWeaponKeys).not.toContain("headshotRate");
 });
+
+test("the player matches block exists and matches across locales", () => {
+  const enKeys = [...flattenKeys(en.pages?.player?.matches ?? {})].sort();
+  const uaKeys = [...flattenKeys(ua.pages?.player?.matches ?? {})].sort();
+  expect(enKeys.length).toBeGreaterThan(0);
+  expect(uaKeys).toEqual(enKeys);
+});
