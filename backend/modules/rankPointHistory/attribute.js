@@ -109,8 +109,12 @@ function annotateSpans(spans, deltas) {
   });
 }
 
+// A trailing 0/0 span (two instances stored the same reading) records no change,
+// so the newest span that means anything is the one before it.
 function summarize(spans) {
-  const newest = spans[spans.length - 1];
+  let k = spans.length - 1;
+  while (k >= 0 && spans[k].kind === "none") k -= 1;
+  const newest = spans[k];
   if (!newest || (newest.kind !== "group" && newest.kind !== "adjustment")) return null;
   return { kind: newest.kind, value: newest.dRP, matches: newest.rounds, since: newest.from };
 }

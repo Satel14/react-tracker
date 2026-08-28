@@ -219,6 +219,16 @@ test("only the newest span feeds the header; older groups stay on their rows", (
   assert.equal(result.summary.rankPoints, null);
 });
 
+test("a duplicate reading from a second instance still reports the group total", () => {
+  // two instances can insert the same values; the trailing 0/0 span means nothing happened
+  const result = run(
+    [snap(3000, 100, T0), snap(3037, 103, T0 + 3 * H), snap(3037, 103, T0 + 3 * H + 60000)],
+    [match("a", T0 + 1 * H), match("b", T0 + 1.5 * H), match("c", T0 + 2 * H)]
+  );
+  ["a", "b", "c"].forEach((id) => assert.deepEqual(deltaOf(result, id), { kind: "group", value: 37, matches: 3 }));
+  assert.deepEqual(result.summary.rankPoints, { kind: "group", value: 37, matches: 3, since: T0 });
+});
+
 test("does not mutate the snapshots it is given", () => {
   const series = [snap(3000, 100, T0), snap(3023, 101, T0 + 3 * H)];
   const frozen = JSON.stringify(series);
