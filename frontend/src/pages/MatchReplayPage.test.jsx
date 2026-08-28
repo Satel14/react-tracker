@@ -146,5 +146,6 @@ test("Space does not toggle playback while a non-replay tab is active", async ()
   await screen.findByRole("img", { name: /erangel/i });
   fireEvent.click(screen.getByText("pages.match.tabScoreboard"));
   fireEvent.keyDown(window, { code: "Space" });
-  expect(screen.queryByText("pages.replay.pause")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText("pages.match.tabReplay"));
+  expect(await screen.findByText("pages.replay.play")).toBeInTheDocument();
 });
