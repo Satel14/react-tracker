@@ -35,8 +35,8 @@ test("advanceClock advances by dt*speed and stops at duration", () => {
 });
 
 const zones = [
-  { t: 0, bx: 0, by: 0, br: 1000, wx: 0, wy: 0, wr: 500 },
-  { t: 10, bx: 100, by: 200, br: 800, wx: 50, wy: 50, wr: 500 },
+  { t: 0, bx: 0, by: 0, br: 1000, wx: 0, wy: 0, wr: 500, phase: 1 },
+  { t: 10, bx: 100, by: 200, br: 800, wx: 50, wy: 50, wr: 500, phase: 2 },
 ];
 
 test("zoneAt lerps fields mid-segment", () => {
@@ -46,10 +46,19 @@ test("zoneAt lerps fields mid-segment", () => {
   expect(z.br).toBe(900);
 });
 
-test("zoneAt clamps to edges and is null on empty", () => {
-  expect(zoneAt(zones, -5).br).toBe(1000);
+test("zoneAt has no circle before the first sample, clamps at the end, and is null on empty", () => {
+  expect(zoneAt(zones, -5)).toBeNull();
   expect(zoneAt(zones, 99).br).toBe(800);
   expect(zoneAt([], 5)).toBeNull();
+});
+
+test("zoneAt steps the warning circle and lerps the blue one", () => {
+  const z = zoneAt(zones, 5);
+  expect(z.br).toBe(900);      // blue lerps
+  expect(z.wx).toBe(0);        // warning held from the left sample
+  expect(z.wy).toBe(0);
+  expect(z.wr).toBe(500);
+  expect(z.phase).toBe(1);
 });
 
 test("rosterAt counts kills up to t, marks alive/dead, sorts focal-first", () => {

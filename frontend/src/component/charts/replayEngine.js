@@ -38,8 +38,9 @@ export const advanceClock = (t, dtMs, speed, duration) => {
 
 export const zoneAt = (zones, t) => {
   if (!zones || zones.length === 0) return null;
-  if (t <= zones[0].t) return zones[0];
-  if (t >= zones[zones.length - 1].t) return zones[zones.length - 1];
+  if (t < zones[0].t) return null;
+  const last = zones[zones.length - 1];
+  if (t >= last.t) return last;
   for (let i = 0; i < zones.length - 1; i += 1) {
     const a = zones[i];
     const b = zones[i + 1];
@@ -47,10 +48,18 @@ export const zoneAt = (zones, t) => {
       const span = b.t - a.t || 1;
       const f = (t - a.t) / span;
       const lerp = (k) => a[k] + (b[k] - a[k]) * f;
-      return { bx: lerp("bx"), by: lerp("by"), br: lerp("br"), wx: lerp("wx"), wy: lerp("wy"), wr: lerp("wr") };
+      return {
+        bx: lerp("bx"),
+        by: lerp("by"),
+        br: lerp("br"),
+        wx: a.wx,
+        wy: a.wy,
+        wr: a.wr,
+        phase: a.phase ?? 0,
+      };
     }
   }
-  return zones[zones.length - 1];
+  return last;
 };
 
 export const rosterAt = (players, kills, t) => {
