@@ -1,4 +1,4 @@
-const DECAY_TIERS = new Set(["Diamond", "Master"]);
+const DECAY_TIERS = new Set(["diamond", "master"]);
 const DECAY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 function isCompetitive(item) {
@@ -58,7 +58,8 @@ function assignCandidates(series, intervals, items, deltas) {
 function classify({ dRP, rounds, candidates, truncated, spanMs, tierBefore }) {
   if (dRP === null) return "unattributed";
   if (candidates === 0 && rounds === 0) return dRP !== 0 ? "adjustment" : "none";
-  if (spanMs > DECAY_WINDOW_MS && DECAY_TIERS.has(tierBefore)) return "unattributed";
+  const decayTier = typeof tierBefore === "string" ? tierBefore.toLowerCase() : null;
+  if (spanMs > DECAY_WINDOW_MS && DECAY_TIERS.has(decayTier)) return "unattributed";
   if (candidates === rounds && rounds === 1) return "exact";
   if (candidates === rounds) return "group";
   if (truncated && candidates < rounds) return "group";

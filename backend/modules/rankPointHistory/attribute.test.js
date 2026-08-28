@@ -1,6 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { attributeRankPoints } = require("./attribute");
+const { readRankedSnapshot, applyReading } = require("./reading");
 
 const H = 60 * 60 * 1000;
 const T0 = Date.parse("2026-08-26T18:00:00Z");
@@ -219,4 +220,23 @@ test("summary.since reports the start of the window, not when the baseline was f
     [match("a", T0 + 3 * H), match("b", T0 + 3.5 * H), match("c", T0 + 4 * H)]
   );
   assert.deepEqual(result.summary.rankPoints, { kind: "group", value: 37, matches: 3, since: T0 + 2 * H });
+});
+
+test("the decay guard fires on the lowercase tier the ranked mapper actually produces", () => {
+  // extractRankedInfo (ranked.js) always lowercases tier, so readRankedSnapshot stores "diamond",
+  // never "Diamond" — this seam was untested and the decay guard never fired in production.
+  const rankedInfo = { tier: "diamond", subTier: "3" };
+  const reading1 = readRankedSnapshot(
+    { "squad-fpp": { currentTier: { tier: "Diamond", subTier: "3" }, currentRankPoint: 3200, roundsPlayed: 100 } },
+    rankedInfo
+  );
+  const reading2 = readRankedSnapshot(
+    { "squad-fpp": { currentTier: { tier: "Diamond", subTier: "3" }, currentRankPoint: 3223, roundsPlayed: 101 } },
+    rankedInfo
+  );
+  let series = applyReading([], reading1, T0);
+  series = applyReading(series, reading2, T0 + 8 * DAY);
+
+  const result = run(series, [match("m", T0 + 2 * DAY)]);
+  assert.deepEqual(deltaOf(result, "m"), { kind: "unattributed" });
 });
