@@ -141,3 +141,25 @@ test("keeps the earliest aircraft exit if the event repeats", () => {
   );
   assert.equal(r.players.find((p) => p.accountId === "account.me").dropTime, 42);
 });
+
+test("assigns a phase index that changes only when the warning circle jumps", () => {
+  const gs = (t, wx, wy, wr) => ({
+    _T: "LogGameStatePeriodic", elapsedTime: t,
+    gameState: {
+      elapsedTime: t,
+      safetyZonePosition: { x: 400000, y: 400000, z: 0 }, safetyZoneRadius: 300000,
+      poisonGasWarningPosition: { x: wx, y: wy, z: 0 }, poisonGasWarningRadius: wr,
+    },
+  });
+  const r = parseReplayTelemetry([
+    telemetry[0],
+    gs(10, 400000, 400000, 0),        // no warning yet
+    gs(20, 420000, 420000, 200000),   // first warning appears
+    gs(30, 420000, 420000, 200000),   // unchanged
+    gs(40, 460000, 430000, 120000),   // new phase
+    gs(50, 460000, 430000, 120000),   // unchanged
+  ], { matchAttributes, accountId: "account.me" });
+
+  assert.deepEqual(r.zones.map((z) => z.t), [10, 20, 30, 40, 50]);
+  assert.deepEqual(r.zones.map((z) => z.phase), [0, 1, 1, 2, 2]);
+});

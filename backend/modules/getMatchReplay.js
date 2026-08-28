@@ -148,6 +148,21 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
   kills.sort((a, b) => a.t - b.t);
   zones.sort((a, b) => a.t - b.t);
 
+  let phase = 0;
+  let prevWarning = null;
+  for (const z of zones) {
+    const hasWarning = z.wr > 0;
+    if (hasWarning) {
+      const moved =
+        prevWarning === null ||
+        Math.hypot(z.wx - prevWarning.wx, z.wy - prevWarning.wy) > 1 ||
+        Math.abs(z.wr - prevWarning.wr) > 1;
+      if (moved) phase += 1;
+      prevWarning = { wx: z.wx, wy: z.wy, wr: z.wr };
+    }
+    z.phase = phase;
+  }
+
   return {
     rawMapName,
     mapName: meta.displayName,
