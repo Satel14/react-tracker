@@ -15,6 +15,8 @@ function createPool() {
     // but outlive the usual gap between visitors (30s meant a reconnect per miss).
     idleTimeoutMillis: 180_000,
     connectionTimeoutMillis: 10_000,
+    // Bounds a hung query so it can't pin one of the 3 shared connections forever.
+    query_timeout: 8000,
   });
 
   // pg-pool emits 'error' when an idle client dies; unhandled, EventEmitter throws.

@@ -11,7 +11,6 @@ function readRankedSnapshot(rankedGameModeStats, rankedInfo = null) {
   if (!entries.length) return null;
 
   const modes = {};
-  const distinct = new Set();
   let roundsPlayed = 0;
 
   entries.forEach(([mode, stats]) => {
@@ -19,9 +18,19 @@ function readRankedSnapshot(rankedGameModeStats, rankedInfo = null) {
     const rounds = Number(stats?.roundsPlayed) || 0;
     const tier = typeof stats?.currentTier?.tier === "string" ? stats.currentTier.tier : null;
     modes[mode] = { rankPoint, roundsPlayed: rounds, tier };
-    if (rankPoint !== null) distinct.add(rankPoint);
     roundsPlayed += rounds;
   });
+
+  // A mode with no rounds can't have contributed RP, so a zero-round shell entry
+  // shouldn't be enough to null out an otherwise-agreeing reading; but if every
+  // mode is a shell, fall back to all of them so we still read something.
+  const playedValues = Object.values(modes).filter((m) => m.roundsPlayed > 0 && m.rankPoint !== null);
+  const fallbackValues = Object.values(modes).filter((m) => m.rankPoint !== null);
+  const distinct = new Set((playedValues.length ? playedValues : fallbackValues).map((m) => m.rankPoint));
+
+  if (distinct.size > 1) {
+    console.log(`[RP] Mode RP values disagree for a reading: ${[...distinct].join(", ")}`);
+  }
 
   return {
     rankPoint: distinct.size === 1 ? [...distinct][0] : null,

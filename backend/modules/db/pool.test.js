@@ -56,6 +56,7 @@ test("the idle timeout sits between a visitor gap and Neon's autosuspend", async
     assert.ok(idle >= 60 * 1000, `idleTimeoutMillis ${idle} too short`);
     assert.ok(idle < 5 * 60 * 1000, `idleTimeoutMillis ${idle} too long`);
     assert.equal(pool.options.max, 3);
+    assert.ok(Number.isFinite(pool.options.query_timeout), "query_timeout must be set and finite");
   } finally {
     await pool.end().catch(() => {});
   }

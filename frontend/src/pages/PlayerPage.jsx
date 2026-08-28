@@ -1078,6 +1078,7 @@ const PlayerPage = ({ t }) => {
             <QuestionCircleOutlined
               className="player-rp-delta__hint"
               aria-label={t("pages.player.matches.rpHint")}
+              tabIndex={0}
             />
           </Tooltip>
         </span>

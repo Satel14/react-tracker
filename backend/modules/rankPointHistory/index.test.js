@@ -39,7 +39,7 @@ const annotateWith = (store, overrides = {}) =>
   });
 
 test("exposes the spec's read timeout", () => {
-  assert.equal(READ_TIMEOUT_MS, 1500);
+  assert.equal(READ_TIMEOUT_MS, 3000);
 });
 
 test("passes matches through untouched when the store is not configured", async () => {

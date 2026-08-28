@@ -119,6 +119,8 @@ test("shows a dash with the default explanation when no RP delta is known", asyn
   const row = rowsOf(card)[0];
 
   expect(within(row).getByText("—")).toBeInTheDocument();
+  const hint = within(row).getByLabelText(en.pages.player.matches.rpHint);
+  expect(hint).toHaveAttribute("tabindex", "0");
   const tooltip = await hoverHint(row);
   expect(tooltip).toHaveTextContent(en.pages.player.matches.rpTooltipDefault);
 });

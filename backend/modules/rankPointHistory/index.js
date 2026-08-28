@@ -2,7 +2,7 @@ const store = require("./pgStore");
 const { readRankedSnapshot, applyReading } = require("./reading");
 const { attributeRankPoints } = require("./attribute");
 
-const READ_TIMEOUT_MS = 1500;
+const READ_TIMEOUT_MS = 3000;
 
 function withTimeout(promise, ms) {
   let timer = null;

@@ -43,6 +43,39 @@ test("ignores modes without an RP value when deciding unification", () => {
   assert.equal(reading.modes.squad.tier, null);
 });
 
+test("a zero-round shell mode does not null out an otherwise-agreeing reading", () => {
+  const reading = readRankedSnapshot(
+    { "squad-fpp": MODE(3153, 8), shell: { currentRankPoint: 0, roundsPlayed: 0 } },
+    { tier: "Diamond" }
+  );
+  assert.equal(reading.rankPoint, 3153);
+  assert.equal(reading.modes.shell.rankPoint, 0);
+});
+
+test("a genuine disagreement between two played modes still nulls the reading and logs once", () => {
+  const originalLog = console.log;
+  const logs = [];
+  console.log = (message) => logs.push(message);
+  try {
+    const reading = readRankedSnapshot({ squad: MODE(3153, 8), "squad-fpp": MODE(3200, 292) }, { tier: "Diamond" });
+    assert.equal(reading.rankPoint, null);
+    assert.equal(logs.length, 1);
+    assert.match(logs[0], /^\[RP\] Mode RP values disagree for a reading: /);
+  } finally {
+    console.log = originalLog;
+  }
+});
+
+test("rankPoint 0 from a played mode is preserved, not treated as absent", () => {
+  const reading = readRankedSnapshot({ "squad-fpp": MODE(0, 50) }, { tier: "Bronze" });
+  assert.equal(reading.rankPoint, 0);
+});
+
+test("a reading with only a zero-round mode still falls back to reading its RP", () => {
+  const reading = readRankedSnapshot({ shell: { currentRankPoint: 5000, roundsPlayed: 0 } }, null);
+  assert.equal(reading.rankPoint, 5000);
+});
+
 test("returns null when there are no modes", () => {
   assert.equal(readRankedSnapshot({}, null), null);
   assert.equal(readRankedSnapshot(null, null), null);
