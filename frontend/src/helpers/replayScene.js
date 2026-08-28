@@ -222,6 +222,19 @@ const paintHealthArc = (ctx, x, y, r, health, colors) => {
   ctx.stroke();
 };
 
+
+// Friend/foe is baked into the glyph name because the atlas bakes one colour
+// per cell: a shared "knocked" kind would blit a downed teammate in the enemy
+// colour, inverting the one distinction that matters most at exactly the
+// moment that player needs watching. Knocked outranks in-vehicle -- being
+// downed is the more urgent read.
+const glyphFor = (state, flags, isFocal) => {
+  if (state === STATE.DEAD) return "dead";
+  if (flags & 2) return isFocal ? "knockedFocal" : "knockedEnemy";
+  if (flags & 1) return isFocal ? "vehicleFocal" : "vehicleEnemy";
+  return isFocal ? "focal" : "enemy";
+};
+
 const radiusFor = (meta, selected) => {
   if (selected) return SCREEN.selectedRadius;
   return meta.isFocal ? SCREEN.focalRadius : SCREEN.dotRadius;
@@ -262,7 +275,7 @@ export const drawScene = (ctx, frame) => {
     const fill = state === STATE.DEAD ? colors.dead : meta.isFocal ? colors.focal : colors.enemy;
 
     if (atlas && atlas.blit) {
-      atlas.blit(ctx, state === STATE.DEAD ? "dead" : meta.isFocal ? "focal" : "enemy", Math.round(p.x), Math.round(p.y), r);
+      atlas.blit(ctx, glyphFor(state, tracks.outF ? tracks.outF[i] : 0, meta.isFocal), Math.round(p.x), Math.round(p.y), r);
     } else {
       ctx.beginPath();
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2);

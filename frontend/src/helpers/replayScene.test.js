@@ -372,3 +372,45 @@ test("layer flags switch each optional layer off inside drawScene", () => {
     expect(off.calls.length, `${key} flag did nothing`).toBeLessThan(all.calls.length);
   }
 });
+
+// A player's state changes which glyph is asked for. The atlas bakes one colour
+// per cell, so friend/foe must be part of the kind or a knocked teammate blits
+// in the enemy colour -- the single distinction that matters most, inverted at
+// exactly the moment the player needs watching.
+test("state picks the glyph, and friend/foe survives the state change", () => {
+  const kindsFor = (h, f, isFocal) => {
+    const kinds = [];
+    const atlas = { blit: (_c, kind) => kinds.push(kind) };
+    const stateful = [{
+      name: "P", accountId: "a.p", teamId: 1, isFocal, dropTime: null, deathTime: null,
+      positions: [{ t: 0, x: 4000, y: 4000, h, f }, { t: 10, x: 4000, y: 4000, h, f }],
+    }];
+    drawScene(recordingCtx(), {
+      ...frameAt(1), zone: null, colors: P2_COLORS, atlas,
+      tracks: sampleTracks(buildTracks(stateful), 5),
+    });
+    return kinds;
+  };
+  expect(kindsFor(100, 0, true)).toEqual(["focal"]);
+  expect(kindsFor(100, 0, false)).toEqual(["enemy"]);
+  expect(kindsFor(100, 1, true)).toEqual(["vehicleFocal"]);
+  expect(kindsFor(100, 1, false)).toEqual(["vehicleEnemy"]);
+  expect(kindsFor(30, 2, true)).toEqual(["knockedFocal"]);
+  expect(kindsFor(30, 2, false)).toEqual(["knockedEnemy"]);
+  // Knocked wins over in-vehicle: being downed is the more urgent read.
+  expect(kindsFor(30, 3, true)).toEqual(["knockedFocal"]);
+});
+
+test("a dead player stays the X glyph whatever their last flags were", () => {
+  const kinds = [];
+  const atlas = { blit: (_c, kind) => kinds.push(kind) };
+  const corpse = [{
+    name: "P", accountId: "a.p", teamId: 1, isFocal: true, dropTime: null, deathTime: 4,
+    positions: [{ t: 0, x: 4000, y: 4000, h: 40, f: 3 }, { t: 10, x: 4000, y: 4000, h: 0, f: 3 }],
+  }];
+  drawScene(recordingCtx(), {
+    ...frameAt(1), zone: null, colors: P2_COLORS, atlas,
+    tracks: sampleTracks(buildTracks(corpse), 8),
+  });
+  expect(kinds).toEqual(["dead"]);
+});

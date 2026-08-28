@@ -120,6 +120,12 @@ const installAtlasEnv = () => {
   return { canvas, draws };
 };
 
+// Every state that ships a per-team pair, derived rather than listed so a
+// third state cannot be added without inheriting these guarantees.
+const STATE_PAIRS = Object.keys(ICON_PATHS)
+  .filter((k) => k.endsWith("Focal"))
+  .map((k) => [k, `${k.slice(0, -"Focal".length)}Enemy`]);
+
 // The source/destination rectangle blit actually samples for one kind.
 const blitRect = (atlas, kind, r = 5) => {
   const calls = [];
@@ -135,7 +141,8 @@ afterEach(() => {
 
 test("exposes a path string per icon kind", () => {
   expect(Object.keys(ICON_PATHS).sort()).toEqual([
-    "chevron", "crate", "dead", "enemy", "focal", "knocked", "vehicle",
+    "chevron", "crate", "dead", "enemy", "focal",
+    "knockedEnemy", "knockedFocal", "vehicleEnemy", "vehicleFocal",
   ]);
   for (const d of Object.values(ICON_PATHS)) expect(typeof d).toBe("string");
 });
@@ -242,17 +249,45 @@ test("paints every glyph from the palette it was handed", () => {
   expect(paint.enemy.colour).toBe(COLORS.enemy);
   expect(paint.dead.colour).toBe(COLORS.dead);
   // A knocked player is still the same player, and a player in a vehicle is
-  // still that player: neither glyph gets a palette entry of its own.
-  expect(paint.knocked.colour).toBe(COLORS.enemy);
-  expect(paint.vehicle.colour).toBe(COLORS.focal);
+  // still that player: the state glyphs take the team colour, not one of
+  // their own.
+  expect(paint.knockedFocal.colour).toBe(COLORS.focal);
+  expect(paint.knockedEnemy.colour).toBe(COLORS.enemy);
+  expect(paint.vehicleFocal.colour).toBe(COLORS.focal);
+  expect(paint.vehicleEnemy.colour).toBe(COLORS.enemy);
   expect(paint.crate.colour).toBe(COLORS.crate);
   expect(paint.chevron.colour).toBe(COLORS.flight);
 
   expect(paint.dead.op).toBe("stroke");
   expect(paint.crate.op).toBe("stroke");
   expect(paint.chevron.op).toBe("stroke");
-  expect(paint.knocked.op).toBe("fill");
-  expect(paint.vehicle.op).toBe("fill");
+  for (const kind of STATE_PAIRS.flat()) expect(paint[kind].op, kind).toBe("fill");
+});
+
+// Regression guard. The atlas bakes each cell's colour in at raster time, so
+// a state drawn from ONE cell has to pick a side: a knocked teammate would
+// have blitted in the enemy colour, and an enemy who mounted up in the focal
+// colour -- friend and foe swapping over precisely when a player changes
+// state, which is worse than not drawing the state at all. Team variants are
+// the fix, and this is what stops them collapsing back into one cell.
+test("the focal and enemy variants of a state paint different palette entries", () => {
+  const { draws } = installAtlasEnv();
+  buildAtlas({ dpr: 1, colors: COLORS });
+  const kinds = Object.keys(ICON_PATHS);
+  const paint = Object.fromEntries(draws.map((d, i) => [kinds[i], d]));
+
+  expect(STATE_PAIRS.length).toBeGreaterThan(0);
+  for (const [focalKind, enemyKind] of STATE_PAIRS) {
+    // Same shape, so the inscription is shared and only the colour differs.
+    expect(ICON_PATHS[enemyKind], enemyKind).toBe(ICON_PATHS[focalKind]);
+    expect(paint[focalKind].colour, focalKind).toBe(COLORS.focal);
+    expect(paint[enemyKind].colour, enemyKind).toBe(COLORS.enemy);
+    expect(paint[focalKind].colour, focalKind).not.toBe(paint[enemyKind].colour);
+  }
+  // And no team-less spelling survives for a caller to reach for by accident.
+  for (const [focalKind] of STATE_PAIRS) {
+    expect(ICON_PATHS).not.toHaveProperty(focalKind.replace(/Focal$/, ""));
+  }
 });
 
 test("falls back to a built-in colour when the palette is empty", () => {

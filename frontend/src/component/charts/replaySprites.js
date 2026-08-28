@@ -6,16 +6,29 @@ const CELL = 32;
 // under-fills its box renders smaller than the radius the caller asked for --
 // silently, because jsdom has no Path2D and never reaches this code. The
 // bounding-box test in replaySprites.test.js is the only guard on that.
+
+// Ring: the outer circle is enemy's, the inner one is wound the other way
+// (sweep 1 against sweep 0) so the nonzero fill punches it out as a hole.
+const KNOCKED = "M16 2 A14 14 0 1 0 16 30 A14 14 0 1 0 16 2 Z M16 8 A8 8 0 1 1 16 24 A8 8 0 1 1 16 8 Z";
+
+// Car in profile, one closed outline: hood, cabin, boot, then the bottom edge
+// running back with a half-circle dropped under each wheel.
+const VEHICLE = "M2 14 L8 14 L11 2 L21 2 L24 14 L30 14 L30 26 L27 26 A4 4 0 0 1 19 26 L13 26 A4 4 0 0 1 5 26 L2 26 Z";
+
+// A state is a shape; a team is a colour. The two state glyphs therefore ship
+// one cell per team rather than one cell each: the atlas bakes its colour in
+// at raster time, so a single "knocked" cell would have to pick a side and
+// would flip a knocked teammate to the enemy colour the instant they go down
+// -- inverting the one distinction the map exists to show. There is
+// deliberately no team-less spelling of either kind for a caller to reach for.
 export const ICON_PATHS = {
   focal: "M16 2 L30 30 L16 23 L2 30 Z",
   enemy: "M16 2 A14 14 0 1 0 16 30 A14 14 0 1 0 16 2 Z",
   dead: "M2 2 L30 30 M30 2 L2 30",
-  // Ring: the outer circle is enemy's, the inner one is wound the other way
-  // (sweep 1 against sweep 0) so the nonzero fill punches it out as a hole.
-  knocked: "M16 2 A14 14 0 1 0 16 30 A14 14 0 1 0 16 2 Z M16 8 A8 8 0 1 1 16 24 A8 8 0 1 1 16 8 Z",
-  // Car in profile, one closed outline: hood, cabin, boot, then the bottom
-  // edge running back with a half-circle dropped under each wheel.
-  vehicle: "M2 14 L8 14 L11 2 L21 2 L24 14 L30 14 L30 26 L27 26 A4 4 0 0 1 19 26 L13 26 A4 4 0 0 1 5 26 L2 26 Z",
+  knockedFocal: KNOCKED,
+  knockedEnemy: KNOCKED,
+  vehicleFocal: VEHICLE,
+  vehicleEnemy: VEHICLE,
   crate: "M2 2 L30 2 L30 30 L2 30 Z M16 2 L16 30",
   chevron: "M2 2 L16 16 L30 2 M2 16 L16 30 L30 16",
 };
@@ -25,13 +38,16 @@ const KINDS = Object.keys(ICON_PATHS);
 // Which palette entry each glyph paints with, and how. `key` indexes the
 // caller's colors object -- never a literal here, since the colour policy
 // ratchet reads this file. `fallback` only ever paints when no stylesheet
-// resolved the token. knocked and vehicle reuse the player colours rather
-// than claiming their own: a knocked player is still the same player.
+// resolved the token. The state glyphs claim no colour of their own: each
+// variant takes the team colour its name carries, so a player keeps their
+// side when they go down or mount up.
 const PAINT = {
   focal: { key: "focal", fallback: "rgb(255,255,255)" },
   enemy: { key: "enemy", fallback: "rgb(255,255,255)" },
-  knocked: { key: "enemy", fallback: "rgb(255,255,255)" },
-  vehicle: { key: "focal", fallback: "rgb(255,255,255)" },
+  knockedFocal: { key: "focal", fallback: "rgb(255,255,255)" },
+  knockedEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
+  vehicleFocal: { key: "focal", fallback: "rgb(255,255,255)" },
+  vehicleEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   dead: { key: "dead", fallback: "rgb(150,150,150)", stroke: 4 },
   // Round joins bound the ink at half a line width past the path. A mitre
   // spikes further: the chevron's lower vertex would tip ~0.8 units outside
