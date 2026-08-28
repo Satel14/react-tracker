@@ -9,6 +9,7 @@ const { createPlayerNameService } = require("./playerName");
 const { createSteamAvatarService } = require("./steamAvatar");
 const { createSeasonCatalogService } = require("./seasonCatalog");
 const { createEmptyMatches, createPlayerEnrichmentService } = require("./enrichment");
+const { createRankPointHistoryService } = require("../rankPointHistory");
 const {
   CACHE_DURATION,
   CURRENT_SEASON_CACHE_DURATION,
@@ -55,7 +56,7 @@ function createProfileExtrasError(error, fallbackProfile = null) {
   };
 }
 
-function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
+function createParsePlayerRank({ pubgApiKey, steamApiKey, rankPointHistory = createRankPointHistoryService() }) {
   const { doRequest } = createPubgApiClient({
     apiKey: pubgApiKey,
     onRateLimit: setRateLimited,
@@ -469,6 +470,25 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey }) {
           resolvedAvatar,
           profileExtras
         );
+
+        if (
+          rankedSeasonData?.attributes?.rankedGameModeStats &&
+          selectedSeasonId &&
+          selectedSeasonId === seasonCatalog?.currentSeasonId
+        ) {
+          try {
+            mappedData.data.matches = await rankPointHistory.annotate({
+              shard,
+              accountId,
+              seasonId: selectedSeasonId,
+              rankedGameModeStats: rankedSeasonData.attributes.rankedGameModeStats,
+              rankedInfo: mappedData.data.season?.rankedInfo || null,
+              matches: mappedData.data.matches,
+            });
+          } catch (rankPointError) {
+            console.log(`[RP] annotation skipped for ${displayPlayerName}: ${rankPointError.message}`);
+          }
+        }
 
         const cacheEntry = {
           data: mappedData,

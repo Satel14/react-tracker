@@ -9,6 +9,7 @@ const { createCorsOptions } = require("./modules/corsConfig");
 require("dotenv").config();
 const routes = require("./routes");
 const { warmRecentSearches } = require("./modules/recentSearches");
+const { warmRankPointHistory } = require("./modules/rankPointHistory");
 
 const app = express();
 
@@ -33,6 +34,7 @@ routes(app);
 app.listen(config.port, () => {
   console.log(`Listening on port ${config.port}`);
   warmRecentSearches();
+  warmRankPointHistory();
 });
 
 if (process.env.CI) {
