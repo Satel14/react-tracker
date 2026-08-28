@@ -110,6 +110,15 @@ test("a rejected write does not affect the annotated result", async () => {
   assert.equal(store.calls.record.length, 1);
 });
 
+test("a throwing attribution degrades to the untouched matches object", async () => {
+  const store = fakeStore();
+  const hostile = { summary: { total: 1 }, get items() { throw new Error("boom"); } };
+  const result = await createRankPointHistoryService({ store, now: () => NOW }).annotate({
+    ...KEY, rankedGameModeStats: RANKED, rankedInfo: RANKED_INFO, matches: hostile,
+  });
+  assert.equal(result, hostile);
+});
+
 test("the noop service is a pass-through", async () => {
   const result = await createNoopRankPointHistoryService().annotate({ ...KEY, matches: MATCHES });
   assert.equal(result, MATCHES);

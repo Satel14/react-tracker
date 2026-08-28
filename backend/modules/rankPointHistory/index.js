@@ -35,7 +35,12 @@ function createRankPointHistoryService({ store: historyStore = store, now = Date
       .then(() => historyStore.recordReading(key, reading, { latest, now: capturedAt }))
       .catch((e) => console.log(`[RP] snapshot write rejected for ${accountId}: ${e.message}`));
 
-    return attributeRankPoints({ series: applyReading(series, reading, capturedAt), matches });
+    try {
+      return attributeRankPoints({ series: applyReading(series, reading, capturedAt), matches });
+    } catch (e) {
+      console.log(`[RP] attribution failed for ${accountId}: ${e.message}`);
+      return matches;
+    }
   }
 
   return { annotate };
