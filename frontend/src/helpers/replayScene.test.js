@@ -1,4 +1,4 @@
-import { drawScene, drawBackground, pickIndex } from "./replayScene";
+import { drawScene, drawBackground, pickIndex, SCREEN } from "./replayScene";
 import { buildTracks, sampleTracks } from "./replayTracks";
 import { fitCamera, clampCamera } from "./replayCamera";
 
@@ -67,6 +67,24 @@ test("marker radii and line widths are identical at zoom 1 and zoom 6", () => {
   expect(radii(a)).toEqual(radii(b));
   const widths = (ctx) => ctx.calls.filter((c) => c.name === "stroke").map((c) => c.lineWidth);
   expect(widths(a)).toEqual(widths(b));
+});
+
+// The fallback ctx.arc path above is NOT what ships: in a real browser buildAtlas
+// succeeds and every marker goes through atlas.blit, which no other test reaches
+// (jsdom has no Path2D, the logic project has no document). Pin the blit radius
+// too, or a scale factor introduced inside blit would ship unseen.
+test("atlas markers blit at the same radius at zoom 1 and zoom 6", () => {
+  const recordingAtlas = () => {
+    const radii = [];
+    return { radii, blit: (_target, _kind, _x, _y, r) => radii.push(r) };
+  };
+  const overrides = { zone: null, focusedAccountId: "a.me", hoveredIndex: 1 };
+  const a = recordingAtlas();
+  const b = recordingAtlas();
+  drawScene(recordingCtx(), { ...frameAt(1), ...overrides, atlas: a });
+  drawScene(recordingCtx(), { ...frameAt(6), ...overrides, atlas: b });
+  expect(a.radii).toEqual([SCREEN.selectedRadius, SCREEN.dotRadius]);
+  expect(b.radii).toEqual(a.radii);
 });
 
 test("zone radii DO scale with zoom, by exactly the zoom factor", () => {
