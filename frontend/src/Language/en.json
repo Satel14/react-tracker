@@ -40,7 +40,13 @@
       "inGameTitles": "In-game Titles",
       "moreStats": "More Stats",
       "placeinTheWorld": "Place in the world",
-      "loading": "Loading profile…"
+      "loading": "Loading profile…",
+      "matches": {
+        "ranked": "Ranked",
+        "rp": "RP",
+        "rpHint": "Why is RP missing?",
+        "rpTooltipDefault": "PUBG's API doesn't publish per-match RP. This site derives it by comparing rank readings between visits."
+      }
     },
     "leaderboards": {
       "title": "Leaderboards",
