@@ -52,9 +52,14 @@ function extractShots(telemetry, clock) {
 
     // One attackId can hit several victims (shared pellet group / one bullet
     // through two bodies), and each is its own line, so the pair is the key.
-    const key = `${ev.attackId} ${victimId}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    // Without an attackId there is nothing to group by, and keying on the
+    // coerced "undefined" would collapse a victim's whole match onto one line.
+    const hasAttackId = Number.isFinite(Number(ev.attackId));
+    if (hasAttackId) {
+      const key = `${ev.attackId} ${victimId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+    }
 
     const amount = Number(ev.damage);
     rows.push({

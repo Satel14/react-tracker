@@ -214,3 +214,37 @@ test("does not throw when the clock is missing or unusable", () => {
     assert.deepEqual(lengths(extractShots([gun()], bad)), [0, 0, 0, 0, 0, 0, 0, 0]);
   }
 });
+
+test("an attackId-less hit is not folded onto one line per victim", () => {
+  // Keying on a coerced "undefined" would make every such hit on a victim
+  // collapse into a single shot line, hiding a whole match of fire.
+  const hit = (t, x) => ({
+    _T: "LogPlayerTakeDamage",
+    damageTypeCategory: "Damage_Gun",
+    at: t,
+    attacker: { accountId: "account.k", location: { x, y: 200000, z: 0 } },
+    victim: { accountId: "account.v", location: { x: 300000, y: 300000, z: 0 } },
+    damage: 30,
+  });
+  const clock = { timeOf: (ev) => (typeof ev.at === "number" ? ev.at : null) };
+  const out = extractShots([hit(1, 100000), hit(2, 110000), hit(3, 120000)], clock);
+  assert.equal(out.t.length, 3);
+  assert.deepEqual(out.ax, [1000, 1100, 1200]);
+});
+
+test("still dedupes on the pair when an attackId is present", () => {
+  const row = (id, victim) => ({
+    _T: "LogPlayerTakeDamage",
+    damageTypeCategory: "Damage_Gun",
+    attackId: id,
+    at: 5,
+    attacker: { accountId: "account.k", location: { x: 100000, y: 200000, z: 0 } },
+    victim: { accountId: victim, location: { x: 300000, y: 300000, z: 0 } },
+    damage: 30,
+  });
+  const clock = { timeOf: (ev) => ev.at };
+  // Same pair twice collapses; two victims under one attackId stay separate.
+  const out = extractShots([row(7, "account.v"), row(7, "account.v"), row(7, "account.w")], clock);
+  assert.equal(out.t.length, 2);
+  assert.deepEqual(out.v, ["account.v", "account.w"]);
+});

@@ -177,3 +177,48 @@ test("Space does not toggle playback while a non-replay tab is active", async ()
   fireEvent.click(screen.getByText("pages.match.tabReplay"));
   expect(await screen.findByText("pages.replay.play")).toBeInTheDocument();
 });
+
+test("scrubs against the in-game span, not the wall-clock duration", async () => {
+  // duration is wall-clock seconds off the match record; endTime is the in-game
+  // span. They differ by 5-19 s on every real match because the clocks drift,
+  // and scrubbing on duration leaves the tail as dead air.
+  getMatchReplay.mockResolvedValueOnce({
+    data: {
+      format: 2,
+      matchId: "m1", rawMapName: "Baltic_Main", mapName: "Erangel", mapMax: 8160,
+      duration: 100, endTime: 88,
+      players: [{
+        name: "Me", accountId: "account.me", teamId: 1,
+        positions: { t: [0, 10], x: [10, 5], y: [20, -5], h: [100, 80], f: [0, 0] },
+        deathTime: null, dropTime: null,
+      }],
+      kills: [], zones: [],
+      shots: { t: [], a: [], v: [], ax: [], ay: [], vx: [], vy: [], dmg: [] },
+    },
+  });
+
+  renderAt("/match/steam/m1/replay");
+  await screen.findByText("Me");
+  expect(screen.getByRole("slider")).toHaveAttribute("aria-valuemax", "88");
+  // 88 s renders as 1:28, so the readout tracks the same span as the slider.
+  expect(document.querySelector(".match-replay__time").textContent).toBe("00:00 / 01:28");
+});
+
+test("falls back to duration when a legacy payload carries no endTime", async () => {
+  getMatchReplay.mockResolvedValueOnce({
+    data: {
+      matchId: "m1", rawMapName: "Baltic_Main", mapName: "Erangel", mapMax: 8160,
+      duration: 100,
+      players: [{
+        name: "Me", accountId: "account.me", teamId: 1,
+        positions: [{ t: 0, x: 10, y: 20 }, { t: 10, x: 15, y: 15 }],
+        deathTime: null, dropTime: null,
+      }],
+      kills: [], zones: [],
+    },
+  });
+
+  renderAt("/match/steam/m1/replay");
+  await screen.findByText("Me");
+  expect(screen.getByRole("slider")).toHaveAttribute("aria-valuemax", "100");
+});

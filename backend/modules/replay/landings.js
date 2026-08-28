@@ -11,6 +11,9 @@ const LANDING = "LogParachuteLanding";
 
 function extractLandings(telemetry, clock) {
   const firstByAccount = new Map();
+  // Every sibling extractor tolerates a missing or broken clock; this one
+  // used to be the sole module that would throw on it.
+  const timeOf = typeof clock?.timeOf === "function" ? (ev) => clock.timeOf(ev) : () => null;
 
   for (const ev of Array.isArray(telemetry) ? telemetry : []) {
     if (ev?._T !== LANDING) continue;
@@ -22,7 +25,7 @@ function extractLandings(telemetry, clock) {
     const xy = readXY(ev.character?.location);
     if (!xy) continue;
 
-    const t = clock.timeOf(ev);
+    const t = timeOf(ev);
     if (!Number.isFinite(t)) continue;
 
     const previous = firstByAccount.get(a);

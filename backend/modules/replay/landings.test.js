@@ -138,3 +138,15 @@ test("returns an empty array for empty or malformed telemetry", () => {
   assert.deepEqual(extractLandings(undefined, clock), []);
   assert.deepEqual(extractLandings({ not: "an array" }, clock), []);
 });
+
+test("tolerates a missing or broken clock like every sibling extractor", () => {
+  const ev = {
+    _T: "LogParachuteLanding",
+    character: { accountId: "account.a", location: { x: 100000, y: 200000, z: 0 } },
+    distance: 200,
+  };
+  // Each of these used to throw here while the other six modules returned [].
+  assert.deepEqual(extractLandings([ev], undefined), []);
+  assert.deepEqual(extractLandings([ev], {}), []);
+  assert.deepEqual(extractLandings([ev], { timeOf: null }), []);
+});

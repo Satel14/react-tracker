@@ -43,7 +43,11 @@ const MatchReplayPage = ({ t }) => {
   const [analysis, setAnalysis] = useState({ loading: false, error: null, data: null });
   const [wantAnalysis, setWantAnalysis] = useState(false);
   const [resetKey, setResetKey] = useState(0);
-  const clock = useReplayClock(data?.duration || 0);
+  // duration is wall-clock seconds from the match record; endTime is the
+  // in-game span, 5-19 s shorter on every real match because the two clocks
+  // drift. A legacy payload carries no endTime, so duration still backs it.
+  const span = data?.endTime || data?.duration || 0;
+  const clock = useReplayClock(span);
   const { toggle } = clock;
   const roster = useMemo(
     () => (data ? rosterAt(data.players, data.kills, clock.displayT) : []),
@@ -142,12 +146,12 @@ const MatchReplayPage = ({ t }) => {
           className="match-replay__scrubber"
           style={{ flex: 1, minWidth: 180 }}
           min={0}
-          max={data.duration || 0}
+          max={span}
           value={Math.floor(clock.displayT)}
           onChange={clock.seek}
           tooltip={{ formatter: (v) => fmt(v) }}
         />
-        <span className="match-replay__time">{fmt(clock.displayT)} / {fmt(data.duration || 0)}</span>
+        <span className="match-replay__time">{fmt(clock.displayT)} / {fmt(span)}</span>
         <span className="match-replay__speed-label">{t("pages.replay.speed")}</span>
         <Segmented
           value={clock.speed}
