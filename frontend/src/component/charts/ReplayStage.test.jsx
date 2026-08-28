@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ReplayStage from "./ReplayStage";
 import { createClockCore } from "../../helpers/replayClockCore";
 
@@ -56,12 +56,69 @@ test("survives a pointer drag and a stray pointer release", () => {
   }).not.toThrow();
 });
 
+test("survives a pinch gesture and keeps the gesture alive after one finger lifts", () => {
+  const onSelect = vi.fn();
+  const { container } = renderStage({ onSelect });
+  const stage = container.querySelector(".replay-stage");
+  expect(() => {
+    fireEvent.pointerDown(stage, { pointerId: 1, clientX: 0, clientY: 0 });
+    fireEvent.pointerDown(stage, { pointerId: 2, clientX: 40, clientY: 0 });
+    fireEvent.pointerMove(stage, { pointerId: 1, clientX: -10, clientY: 0 });
+    fireEvent.pointerMove(stage, { pointerId: 2, clientX: 50, clientY: 0 });
+    fireEvent.pointerUp(stage, { pointerId: 1 });
+  }).not.toThrow();
+  // pointers.size === 0 rule: one finger is still down, so the release above
+  // must not be mistaken for a completed tap-to-select.
+  expect(onSelect).not.toHaveBeenCalled();
+});
+
+test("selects the tapped player but not after a drag past the move threshold", () => {
+  const onSelect = vi.fn();
+  const rafSpy = vi.spyOn(window, "requestAnimationFrame");
+  const { container } = renderStage({ onSelect });
+  // Run one frame so sampleTracks has placed the roster before we pick.
+  rafSpy.mock.calls[0][0](0);
+  const stage = container.querySelector(".replay-stage");
+
+  fireEvent.pointerDown(stage, { pointerId: 5, clientX: 0, clientY: 0 });
+  fireEvent.pointerUp(stage, { pointerId: 5, clientX: 0, clientY: 0 });
+  expect(onSelect).toHaveBeenCalledWith("a.me");
+
+  onSelect.mockClear();
+  fireEvent.pointerDown(stage, { pointerId: 6, clientX: 0, clientY: 0 });
+  fireEvent.pointerMove(stage, { pointerId: 6, clientX: 20, clientY: 20 });
+  fireEvent.pointerUp(stage, { pointerId: 6, clientX: 20, clientY: 20 });
+  expect(onSelect).not.toHaveBeenCalled();
+
+  rafSpy.mockRestore();
+});
+
+test("re-resolves canvas colours when the surrounding .app theme changes", async () => {
+  const clockRef = { current: createClockCore({ duration: data.duration }) };
+  const spy = vi.spyOn(window, "getComputedStyle");
+  const { container } = render(
+    <div className="app light">
+      <ReplayStage data={data} clockRef={clockRef} focusedAccountId={null} onSelect={() => {}} mapLabel="Erangel" />
+    </div>
+  );
+  const before = spy.mock.calls.length;
+  container.querySelector(".app").className = "app dark";
+  await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(before));
+  spy.mockRestore();
+});
+
 test("renders two canvas layers", () => {
   const { container } = renderStage();
   expect(container.querySelectorAll("canvas")).toHaveLength(2);
 });
 
-test("unmounts without leaving a pending frame", () => {
+test("cancels the last scheduled frame on unmount", () => {
+  const rafSpy = vi.spyOn(window, "requestAnimationFrame");
+  const cafSpy = vi.spyOn(window, "cancelAnimationFrame");
   const { unmount } = renderStage();
-  expect(() => unmount()).not.toThrow();
+  const lastId = rafSpy.mock.results[rafSpy.mock.results.length - 1].value;
+  unmount();
+  expect(cafSpy).toHaveBeenCalledWith(lastId);
+  rafSpy.mockRestore();
+  cafSpy.mockRestore();
 });

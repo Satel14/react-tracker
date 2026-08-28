@@ -3,7 +3,7 @@ import { getMapMeta, highResUrl } from "../../helpers/mapMeta";
 import { buildTracks, sampleTracks } from "../../helpers/replayTracks";
 import { createSweep, pruneFlashes } from "../../helpers/replayEvents";
 import { drawBackground, drawScene, pickIndex, SCREEN } from "../../helpers/replayScene";
-import { clampCamera, fitCamera, zoomAt } from "../../helpers/replayCamera";
+import { clampCamera, fitCamera, scaleOf, zoomAt } from "../../helpers/replayCamera";
 import { buildAtlas } from "./replaySprites";
 import { zoneAt } from "./replayEngine";
 
@@ -82,12 +82,14 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     hoveredIndex: -1,
     pointers: new Map(),
     gesture: null,
+    mapGen: 0,
   });
 
   const focusedRef = useRef(focusedAccountId);
   useEffect(() => { focusedRef.current = focusedAccountId; }, [focusedAccountId]);
 
   useEffect(() => {
+    view.current.mapGen += 1;
     view.current.cam = fitCamera(data.mapMax);
     view.current.bgDirty = true;
     view.current.flashes.length = 0;
@@ -115,8 +117,13 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     const url = highResUrl(data.rawMapName);
     if (!url) return;
     v.highResRequested = true;
+    const gen = v.mapGen;
     const img = new Image();
-    img.onload = () => { v.image = img; v.bgDirty = true; };
+    img.onload = () => {
+      if (v.mapGen !== gen) return;
+      v.image = img;
+      v.bgDirty = true;
+    };
     img.src = url;
   }, [data.rawMapName]);
 
@@ -156,6 +163,24 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     ro.observe(wrapRef.current);
     return () => ro.disconnect();
   }, [measure]);
+
+  // --accent et al. live on .app.<theme>, so a theme swap (which only ever
+  // toggles that class) needs its own watcher to avoid stale canvas colours.
+  useEffect(() => {
+    const fx = fxRef.current;
+    if (!fx || typeof MutationObserver === "undefined") return undefined;
+    const app = fx.closest(".app");
+    if (!app) return undefined;
+    const v = view.current;
+    const onThemeChange = () => {
+      v.colors = resolveColors(fx);
+      v.atlas = buildAtlas({ dpr: v.dpr, colors: v.colors });
+      v.bgDirty = true;
+    };
+    const mo = new MutationObserver(onThemeChange);
+    mo.observe(app, { attributes: true, attributeFilter: ["class"] });
+    return () => mo.disconnect();
+  }, []);
 
   // Reset the sweep cursor whenever the clock jumps.
   useEffect(() => {
@@ -274,7 +299,7 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
         v.bgDirty = true;
       }
     } else if (g.mode === "pan") {
-      const s = (Math.min(v.vw, v.vh) / v.cam.mapMax) * v.cam.zoom;
+      const s = scaleOf(v.cam, v.vw, v.vh);
       if (s > 0) {
         g.moved = g.moved || Math.hypot(p.x - g.startX, p.y - g.startY) > 4;
         v.cam = clampCamera(
@@ -291,7 +316,7 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     const g = v.gesture;
     const had = v.pointers.has(e.pointerId);
     v.pointers.delete(e.pointerId);
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
     if (had && g && g.mode === "pan" && !g.moved && v.vw) {
       const p = localPoint(e);
       const hit = pickIndex(tracks, v.cam, v.vw, v.vh, p.x, p.y);
