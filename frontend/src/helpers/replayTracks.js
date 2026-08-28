@@ -9,9 +9,13 @@ export const buildTracks = (players = []) => {
     T: new Array(count),
     X: new Array(count),
     Y: new Array(count),
+    H: new Array(count),
+    F: new Array(count),
     cursor: new Int32Array(count),
     outX: new Float32Array(count),
     outY: new Float32Array(count),
+    outH: new Uint8Array(count),
+    outF: new Uint8Array(count),
     outState: new Uint8Array(count),
     lastT: -Infinity,
   };
@@ -22,14 +26,22 @@ export const buildTracks = (players = []) => {
     const T = new Float32Array(n);
     const X = new Float32Array(n);
     const Y = new Float32Array(n);
+    const H = new Uint8Array(n);
+    const F = new Uint8Array(n);
     for (let j = 0; j < n; j += 1) {
       T[j] = pos[j].t;
       X[j] = pos[j].x;
       Y[j] = pos[j].y;
+      // A legacy payload carries neither, so an absent reading means "unhurt,
+      // on foot" rather than zero health and no flags.
+      H[j] = typeof pos[j].h === "number" ? pos[j].h : 100;
+      F[j] = typeof pos[j].f === "number" ? pos[j].f : 0;
     }
     tracks.T[i] = T;
     tracks.X[i] = X;
     tracks.Y[i] = Y;
+    tracks.H[i] = H;
+    tracks.F[i] = F;
     tracks.meta[i] = {
       name: p.name,
       accountId: p.accountId,
@@ -76,18 +88,27 @@ export const sampleTracks = (tracks, t) => {
 
     const X = tracks.X[i];
     const Y = tracks.Y[i];
+    // Position lerps; health and the flag mask step-hold. A 10 s health
+    // snapshot interpolated would report readings the telemetry never made,
+    // and nobody is ever half in a vehicle.
+    let held = 0;
     if (st <= T[0]) {
       tracks.outX[i] = X[0];
       tracks.outY[i] = Y[0];
+      held = 0;
     } else if (st >= T[n - 1]) {
       tracks.outX[i] = X[n - 1];
       tracks.outY[i] = Y[n - 1];
+      held = n - 1;
     } else {
       const span = T[c + 1] - T[c] || 1;
       const f = (st - T[c]) / span;
       tracks.outX[i] = X[c] + (X[c + 1] - X[c]) * f;
       tracks.outY[i] = Y[c] + (Y[c + 1] - Y[c]) * f;
+      held = st >= T[c + 1] ? c + 1 : c;
     }
+    tracks.outH[i] = tracks.H[i][held];
+    tracks.outF[i] = tracks.F[i][held];
 
     tracks.outState[i] =
       meta.deathTime !== null && t > meta.deathTime ? STATE.DEAD : STATE.ALIVE;

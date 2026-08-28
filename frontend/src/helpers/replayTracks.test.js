@@ -58,3 +58,77 @@ test("allocates nothing per sample call", () => {
   sampleTracks(tracks, 7);
   expect(tracks.outX).toBe(x);
 });
+
+// --- health and state flags carried alongside the position track ---------
+// Both are discrete: health is a 10 s snapshot, and you are either in a vehicle
+// or not. Interpolating either would invent readings the telemetry never made,
+// so both step-hold the last sample at or before the requested time.
+
+const rich = (over = {}) => ({
+  name: "R", accountId: "a.r", teamId: 2, isFocal: false,
+  positions: [
+    { t: 0, x: 0, y: 0, h: 100, f: 0 },
+    { t: 10, x: 100, y: 200, h: 50, f: 1 },
+    { t: 20, x: 200, y: 400, h: 30, f: 3 },
+  ],
+  deathTime: null, dropTime: null, ...over,
+});
+
+test("carries health and flags off the decoded samples", () => {
+  const tracks = buildTracks([rich()]);
+  expect(Array.from(tracks.H[0])).toEqual([100, 50, 30]);
+  expect(Array.from(tracks.F[0])).toEqual([0, 1, 3]);
+});
+
+test("defaults health to 100 and flags to 0 on a legacy track", () => {
+  const tracks = sampleTracks(buildTracks([player()]), 5);
+  expect(tracks.outH[0]).toBe(100);
+  expect(tracks.outF[0]).toBe(0);
+});
+
+test("step-holds health instead of lerping it", () => {
+  const tracks = buildTracks([rich()]);
+  sampleTracks(tracks, 5);
+  // Position is halfway between the samples, but health is not 75.
+  expect(tracks.outX[0]).toBeCloseTo(50, 4);
+  expect(tracks.outH[0]).toBe(100);
+  sampleTracks(tracks, 10);
+  expect(tracks.outH[0]).toBe(50);
+  sampleTracks(tracks, 19);
+  expect(tracks.outH[0]).toBe(50);
+  sampleTracks(tracks, 20);
+  expect(tracks.outH[0]).toBe(30);
+});
+
+test("step-holds the flag mask", () => {
+  const tracks = buildTracks([rich()]);
+  sampleTracks(tracks, 9);
+  expect(tracks.outF[0]).toBe(0);
+  sampleTracks(tracks, 11);
+  expect(tracks.outF[0]).toBe(1);
+  sampleTracks(tracks, 25);
+  expect(tracks.outF[0]).toBe(3);
+});
+
+test("freezes health at deathTime like the position does", () => {
+  const tracks = sampleTracks(buildTracks([rich({ deathTime: 12 })]), 30);
+  expect(tracks.outState[0]).toBe(STATE.DEAD);
+  expect(tracks.outH[0]).toBe(50);
+});
+
+test("clamps health and flags to the ends of the track", () => {
+  const tracks = buildTracks([rich()]);
+  sampleTracks(tracks, -50);
+  expect(tracks.outH[0]).toBe(100);
+  sampleTracks(tracks, 9999);
+  expect(tracks.outH[0]).toBe(30);
+  expect(tracks.outF[0]).toBe(3);
+});
+
+test("keeps health and flag buffers stable across sample calls", () => {
+  const tracks = buildTracks([rich()]);
+  const h = tracks.outH;
+  sampleTracks(tracks, 3);
+  sampleTracks(tracks, 15);
+  expect(tracks.outH).toBe(h);
+});
