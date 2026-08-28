@@ -95,3 +95,21 @@ test("setDuration clamps t when the new duration is shorter", () => {
   expect(c.duration).toBe(50);
   expect(c.t).toBe(50);
 });
+
+test("setDuration notifies onSeek when the clamp moves t", () => {
+  const c = createClockCore({ duration: 100 });
+  c.seek(80);
+  const seen = [];
+  c.onSeek((t) => seen.push(t));
+  c.setDuration(50);
+  expect(seen).toEqual([50]);
+});
+
+test("setDuration does not notify onSeek when duration grows", () => {
+  const c = createClockCore({ duration: 100 });
+  c.seek(30);
+  const seen = [];
+  c.onSeek((t) => seen.push(t));
+  c.setDuration(200);
+  expect(seen).toEqual([]);
+});

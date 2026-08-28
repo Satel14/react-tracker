@@ -38,9 +38,16 @@ test("seek publishes the new time and pauses", () => {
 });
 
 test("setSpeed is reflected in state and on the core", () => {
-  render(<Harness />);
-  fireEvent.click(screen.getByText("faster"));
+  let captured = null;
+  const Capture = () => {
+    const clock = useReplayClock(100);
+    captured = clock;
+    return <span data-testid="speed">{clock.speed}</span>;
+  };
+  render(<Capture />);
+  act(() => { captured.setSpeed(8); });
   expect(screen.getByTestId("speed")).toHaveTextContent("8");
+  expect(captured.clockRef.current.speed).toBe(8);
 });
 
 test("publishes the core time when asked to", () => {
@@ -80,4 +87,31 @@ test("clamps displayT when duration shrinks below the current position", () => {
   act(() => { captured.seek(80); });
   rerender(<Wrapper duration={50} />);
   expect(screen.getByTestId("t")).toHaveTextContent("50");
+});
+
+test("keeps stable references for the returned callbacks across an unrelated re-render", () => {
+  let captured = null;
+  let forceRender = null;
+  const Wrapper = () => {
+    const [, setTick] = React.useState(0);
+    captured = useReplayClock(100);
+    forceRender = () => setTick((n) => n + 1);
+    return null;
+  };
+  render(<Wrapper />);
+  const first = {
+    play: captured.play,
+    pause: captured.pause,
+    toggle: captured.toggle,
+    seek: captured.seek,
+    setSpeed: captured.setSpeed,
+    publish: captured.publish,
+  };
+  act(() => { forceRender(); });
+  expect(captured.play).toBe(first.play);
+  expect(captured.pause).toBe(first.pause);
+  expect(captured.toggle).toBe(first.toggle);
+  expect(captured.seek).toBe(first.seek);
+  expect(captured.setSpeed).toBe(first.setSpeed);
+  expect(captured.publish).toBe(first.publish);
 });

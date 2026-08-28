@@ -24,7 +24,8 @@ export const createClockCore = ({ duration = 0, publishIntervalMs = 100 } = {}) 
 
     setDuration(d) {
       duration = d;
-      t = Math.max(0, Math.min(duration, t));
+      const clamped = Math.max(0, Math.min(duration, t));
+      if (clamped !== t) { t = clamped; notifySeek(); }
     },
 
     play() {
