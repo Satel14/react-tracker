@@ -74,9 +74,22 @@ test("rosterAt credits two players sharing a display name separately", () => {
   const kills = [
     { t: 1, killer: "Twin", killerAccountId: "a.1", victim: "X" },
     { t: 2, killer: "Twin", killerAccountId: "a.1", victim: "Y" },
+    { t: 3, killer: "Twin", killerAccountId: "a.2", victim: "Z" },
   ];
   const byId = new Map();
   for (const row of rosterAt(players, kills, 10)) byId.set(row.accountId, row.kills);
   expect(byId.get("a.1")).toBe(2);
-  expect(byId.get("a.2")).toBe(0);
+  expect(byId.get("a.2")).toBe(1);
+});
+
+test("rosterAt does not credit anyone for a killerless death and does not throw", () => {
+  const players = [
+    { name: "Me", accountId: "a.me", teamId: 1, isFocal: true, positions: [], deathTime: 5 },
+  ];
+  const kills = [
+    { t: 5, killer: null, killerAccountId: null, victim: "Me", victimAccountId: "a.me" },
+  ];
+  let rows;
+  expect(() => { rows = rosterAt(players, kills, 10); }).not.toThrow();
+  expect(rows[0].kills).toBe(0);
 });

@@ -1,10 +1,13 @@
 const CELL = 32;
 const KINDS = ["focal", "enemy", "dead"];
 
+// Each glyph is inscribed in a centred 28-unit box (a 2-unit margin off the
+// 32-unit cell so antialiasing doesn't clip at the edge) so the three kinds
+// read as the same nominal size once blit scales the cell uniformly.
 export const ICON_PATHS = {
-  focal: "M16 4 L27 27 L16 21 L5 27 Z",
-  enemy: "M16 6 A10 10 0 1 0 16 26 A10 10 0 1 0 16 6 Z",
-  dead: "M8 8 L24 24 M24 8 L8 24",
+  focal: "M16 2 L30 30 L16 23 L2 30 Z",
+  enemy: "M16 2 A14 14 0 1 0 16 30 A14 14 0 1 0 16 2 Z",
+  dead: "M2 2 L30 30 M30 2 L2 30",
 };
 
 export const buildAtlas = ({ dpr = 1, colors = {} } = {}) => {
