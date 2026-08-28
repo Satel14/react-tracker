@@ -1,4 +1,5 @@
 import React from "react";
+import { vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ReplayStage from "./ReplayStage";
 import { createClockCore } from "../../helpers/replayClockCore";
@@ -188,5 +189,100 @@ test("drops the hover highlight when the pointer leaves the stage", () => {
   } finally {
     ctxSpy.mockRestore();
     rafSpy.mockRestore();
+  }
+});
+
+// --- keyboard and fullscreen -------------------------------------------------
+
+const stageOf = (container) => container.querySelector(".replay-stage");
+
+test("Space toggles playback and does not scroll the page", () => {
+  const { container, clockRef } = renderStage();
+  const stage = stageOf(container);
+  expect(clockRef.current.playing).toBe(false);
+  const ev = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+  stage.dispatchEvent(ev);
+  expect(clockRef.current.playing).toBe(true);
+  // Without preventDefault the browser scrolls the page on every Space.
+  expect(ev.defaultPrevented).toBe(true);
+});
+
+test("arrows seek, and Shift makes the step bigger", () => {
+  const { container, clockRef } = renderStage();
+  const stage = stageOf(container);
+  clockRef.current.seek(50);
+  fireEvent.keyDown(stage, { key: "ArrowRight" });
+  expect(clockRef.current.t).toBe(55);
+  fireEvent.keyDown(stage, { key: "ArrowLeft" });
+  expect(clockRef.current.t).toBe(50);
+  fireEvent.keyDown(stage, { key: "ArrowLeft", shiftKey: true });
+  expect(clockRef.current.t).toBe(20);
+});
+
+test("seeking clamps at both ends instead of going negative", () => {
+  const { container, clockRef } = renderStage();
+  const stage = stageOf(container);
+  clockRef.current.seek(2);
+  fireEvent.keyDown(stage, { key: "ArrowLeft", shiftKey: true });
+  expect(clockRef.current.t).toBe(0);
+  clockRef.current.seek(98);
+  fireEvent.keyDown(stage, { key: "ArrowRight", shiftKey: true });
+  expect(clockRef.current.t).toBe(data.duration);
+});
+
+test("comma and period step exactly one telemetry tick", () => {
+  const { container, clockRef } = renderStage();
+  const stage = stageOf(container);
+  clockRef.current.seek(50);
+  fireEvent.keyDown(stage, { key: "." });
+  expect(clockRef.current.t).toBe(60);
+  fireEvent.keyDown(stage, { key: "," });
+  expect(clockRef.current.t).toBe(50);
+});
+
+test("digits set the speed", () => {
+  const { container, clockRef } = renderStage();
+  const stage = stageOf(container);
+  fireEvent.keyDown(stage, { key: "3" });
+  expect(clockRef.current.speed).toBe(8);
+  fireEvent.keyDown(stage, { key: "0" });
+  expect(clockRef.current.speed).toBe(1);
+});
+
+test("keys are inert while the user is typing in a field", () => {
+  const { container, clockRef } = renderStage();
+  const stage = stageOf(container);
+  const input = document.createElement("input");
+  stage.appendChild(input);
+  clockRef.current.seek(50);
+  fireEvent.keyDown(input, { key: "ArrowRight" });
+  fireEvent.keyDown(input, { key: " " });
+  expect(clockRef.current.t).toBe(50);
+  expect(clockRef.current.playing).toBe(false);
+});
+
+test("the stage is keyboard reachable", () => {
+  const { container } = renderStage();
+  expect(stageOf(container)).toHaveAttribute("tabindex", "0");
+});
+
+test("the fullscreen button is hidden when the browser has no Fullscreen API", () => {
+  // jsdom has none, which is also the older-iOS-Safari case. It must not throw
+  // and must not offer a button that cannot work.
+  const { queryByRole } = renderStage();
+  expect(queryByRole("button", { name: /fullscreen/i })).toBeNull();
+});
+
+test("the fullscreen button appears and calls the API when it exists", async () => {
+  const request = vi.fn(() => Promise.resolve());
+  Element.prototype.requestFullscreen = request;
+  try {
+    const { container } = renderStage();
+    const button = container.querySelector(".replay-stage__fullscreen");
+    expect(button).not.toBeNull();
+    fireEvent.click(button);
+    expect(request).toHaveBeenCalled();
+  } finally {
+    delete Element.prototype.requestFullscreen;
   }
 });

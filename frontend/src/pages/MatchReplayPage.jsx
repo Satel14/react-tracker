@@ -15,8 +15,14 @@ import { useReplayClock } from "../component/charts/useReplayClock";
 import { rosterAt } from "../component/charts/replayEngine";
 import { formatClock as fmt } from "../helpers/formatClock";
 import { decodeReplay } from "../helpers/replayModel";
+import ReplayOverlays from "../component/charts/ReplayOverlays";
+import { LAYER_KEYS, readLayerPrefs, writeLayerPrefs } from "../helpers/replayPrefs";
 
 const SPEEDS = [1, 2, 4, 8, 16];
+const LAYER_LABEL = {
+  shots: "layerShots", landings: "layerLandings", flight: "layerFlight",
+  packages: "layerPackages", specialZones: "layerZones", healthArcs: "layerHealth",
+};
 const INITIAL = { loading: false, error: null, data: null };
 
 function reducer(state, action) {
@@ -43,6 +49,12 @@ const MatchReplayPage = ({ t }) => {
   const [analysis, setAnalysis] = useState({ loading: false, error: null, data: null });
   const [wantAnalysis, setWantAnalysis] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  // The stage reads these every frame out of its own ref; this copy only drives
+  // the checkboxes, so a toggle costs one render of the control bar, not of the
+  // animation.
+  const [layers, setLayers] = useState(readLayerPrefs);
+  const toggleLayer = (key) =>
+    setLayers((prev) => writeLayerPrefs({ ...prev, [key]: !prev[key] }));
   // duration is wall-clock seconds from the match record; endTime is the
   // in-game span, 5-19 s shorter on every real match because the two clocks
   // drift. A legacy payload carries no endTime, so duration still backs it.
@@ -128,15 +140,20 @@ const MatchReplayPage = ({ t }) => {
             focusedAccountId={focusedAccountId}
             onSelect={setFocusedAccountId}
             mapLabel={data.mapName}
-          />
+            layers={layers}
+            fullscreenLabel={t("pages.replay.fullscreen")}
+          >
+            <ReplayOverlays
+              rows={roster}
+              phases={data.phases}
+              t={t}
+              displayT={clock.displayT}
+              focalTeamId={data.focalTeamId ?? null}
+            />
+          </ReplayStage>
           <p className="match-replay__hint">{t("pages.replay.hint")}</p>
+          <p className="match-replay__shortcuts">{t("pages.replay.shortcuts")}</p>
         </div>
-        <ReplayRoster
-          rows={roster}
-          focusedAccountId={focusedAccountId}
-          onSelect={setFocusedAccountId}
-          t={t}
-        />
       </div>
       <div className="match-replay__controls">
         <Button onClick={clock.toggle}>
@@ -160,6 +177,26 @@ const MatchReplayPage = ({ t }) => {
         />
         <Button onClick={() => setResetKey((n) => n + 1)}>{t("pages.replay.resetView")}</Button>
       </div>
+      <div className="match-replay__layers">
+        <span className="match-replay__layers-title">{t("pages.replay.layers")}</span>
+        {LAYER_KEYS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={`match-replay__layer${layers[key] ? " is-on" : ""}`}
+            aria-pressed={!!layers[key]}
+            onClick={() => toggleLayer(key)}
+          >
+            {t(`pages.replay.${LAYER_LABEL[key]}`)}
+          </button>
+        ))}
+      </div>
+      <ReplayRoster
+        rows={roster}
+        focusedAccountId={focusedAccountId}
+        onSelect={setFocusedAccountId}
+        t={t}
+      />
     </>
   );
 

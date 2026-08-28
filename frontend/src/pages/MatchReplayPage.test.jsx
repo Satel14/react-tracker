@@ -60,7 +60,10 @@ test("clicking play switches the button to pause", async () => {
 test("shows the roster with player names after load", async () => {
   renderAt("/match/steam/m1/replay");
   await screen.findByRole("img", { name: /erangel/i });
-  expect(screen.getByText("Me")).toBeInTheDocument();
+  // The name appears twice by design since the HUD landed: once in the focal
+  // squad overlay on the map, once in the roster below it.
+  expect(document.querySelector(".replay-overlay__member-name").textContent).toBe("Me");
+  expect(document.querySelector(".replay-roster__name").textContent).toBe("Me");
 });
 
 test("decodes compact replay positions before rendering", async () => {
@@ -198,7 +201,7 @@ test("scrubs against the in-game span, not the wall-clock duration", async () =>
   });
 
   renderAt("/match/steam/m1/replay");
-  await screen.findByText("Me");
+  await screen.findAllByText("Me");
   expect(screen.getByRole("slider")).toHaveAttribute("aria-valuemax", "88");
   // 88 s renders as 1:28, so the readout tracks the same span as the slider.
   expect(document.querySelector(".match-replay__time").textContent).toBe("00:00 / 01:28");
@@ -219,6 +222,6 @@ test("falls back to duration when a legacy payload carries no endTime", async ()
   });
 
   renderAt("/match/steam/m1/replay");
-  await screen.findByText("Me");
+  await screen.findAllByText("Me");
   expect(screen.getByRole("slider")).toHaveAttribute("aria-valuemax", "100");
 });

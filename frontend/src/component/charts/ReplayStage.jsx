@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getMapMeta, highResUrl } from "../../helpers/mapMeta";
 import { buildTracks, sampleTracks } from "../../helpers/replayTracks";
 import { createSweep, pruneFlashes } from "../../helpers/replayEvents";
@@ -14,6 +14,12 @@ import { zoneAt } from "./replayEngine";
 const HIGH_RES_SOURCE_PX = 2048;
 const HIGH_RES_TRIGGER = 0.7;
 const FLASH_CAP = 40;
+const SEEK_STEP = 5;
+const SEEK_STEP_BIG = 30;
+// One telemetry tick. Positions arrive every 10 s, so a smaller step just
+// re-renders the same interpolated frame.
+const TICK = 10;
+const SPEED_KEYS = [1, 2, 4, 8, 16];
 
 // Fetch the 2048 raster once the map is being sampled above ~70% of its native
 // resolution. A fixed zoom constant cannot work: the break-even depends on the
@@ -75,7 +81,7 @@ const normaliseWheel = (e) => {
   return Math.exp(-dy * (e.ctrlKey ? 0.02 : 0.0025));
 };
 
-const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, publish }) => {
+const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, publish, layers, fullscreenLabel = "Fullscreen", children }) => {
   const wrapRef = useRef(null);
   const bgRef = useRef(null);
   const fxRef = useRef(null);
@@ -119,6 +125,11 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
 
   const focusedRef = useRef(focusedAccountId);
   useEffect(() => { focusedRef.current = focusedAccountId; }, [focusedAccountId]);
+
+  // Layer flags are read by the draw loop every frame, so they live in the view
+  // ref rather than in state: toggling one must not re-render the tree while
+  // the animation is running.
+  useEffect(() => { view.current.layers = layers || {}; }, [layers]);
 
   useEffect(() => {
     const v = view.current;
@@ -379,6 +390,66 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     view.current.hoveredIndex = -1;
   };
 
+  const [fullscreen, setFullscreen] = useState(false);
+  const canFullscreen =
+    typeof document !== "undefined" && typeof Element !== "undefined" &&
+    typeof Element.prototype.requestFullscreen === "function";
+
+  const toggleFullscreen = useCallback(() => {
+    const el = wrapRef.current;
+    if (!el || !canFullscreen) return;
+    if (document.fullscreenElement === el) document.exitFullscreen?.();
+    else el.requestFullscreen?.();
+  }, [canFullscreen]);
+
+  // The button's label has to follow the real state, not our last click:
+  // Escape leaves fullscreen without going through us.
+  useEffect(() => {
+    if (!canFullscreen) return undefined;
+    const onChange = () => setFullscreen(document.fullscreenElement === wrapRef.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, [canFullscreen]);
+
+  const resetView = useCallback(() => {
+    const v = view.current;
+    v.cam = clampCamera(fitCamera(v.cam.mapMax), v.vw, v.vh);
+    v.bgDirty = true;
+  }, []);
+
+  const onKeyDown = (e) => {
+    // Never steal a keystroke from a field the user is typing in.
+    const tag = e.target && e.target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target?.isContentEditable) return;
+    const core = clockRef.current;
+    if (!core) return;
+    const seekBy = (d) => core.seek(core.t + d);
+    const step = e.shiftKey ? SEEK_STEP_BIG : SEEK_STEP;
+
+    switch (e.key) {
+      case " ":
+      case "Spacebar":
+        // Without this the page scrolls on every play/pause.
+        e.preventDefault();
+        core.toggle();
+        break;
+      case "ArrowRight": e.preventDefault(); seekBy(step); break;
+      case "ArrowLeft": e.preventDefault(); seekBy(-step); break;
+      case ".": seekBy(TICK); break;
+      case ",": seekBy(-TICK); break;
+      case "f": case "F": toggleFullscreen(); break;
+      case "r": case "R": resetView(); break;
+      default: {
+        const digit = Number(e.key);
+        if (Number.isInteger(digit) && digit >= 0 && digit < SPEED_KEYS.length) {
+          core.setSpeed(SPEED_KEYS[digit]);
+        }
+        return;
+      }
+    }
+    if (publish) publish();
+  };
+
   const onDoubleClick = () => {
     const v = view.current;
     v.cam = clampCamera(fitCamera(v.cam.mapMax), v.vw, v.vh);
@@ -396,9 +467,23 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
       onLostPointerCapture={endPointer}
       onPointerLeave={onPointerLeave}
       onDoubleClick={onDoubleClick}
+      onKeyDown={onKeyDown}
+      tabIndex={0}
     >
       <canvas ref={bgRef} className="replay-stage__layer replay-stage__layer--bg" aria-hidden="true" />
       <canvas ref={fxRef} className="replay-stage__layer replay-stage__layer--fx" role="img" aria-label={mapLabel} />
+      {children}
+      {canFullscreen ? (
+        <button
+          type="button"
+          className="replay-stage__fullscreen"
+          onClick={toggleFullscreen}
+          aria-label={fullscreenLabel}
+          title={fullscreenLabel}
+        >
+          {fullscreen ? "✕" : "⛶"}
+        </button>
+      ) : null}
     </div>
   );
 };
