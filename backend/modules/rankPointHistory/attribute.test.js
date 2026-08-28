@@ -96,3 +96,127 @@ test("does not mutate its inputs", () => {
   assert.equal(JSON.stringify(items[0]), frozenItem);
   assert.equal(Object.prototype.hasOwnProperty.call(items[0], "rpDelta"), false);
 });
+
+const { DECAY_WINDOW_MS } = require("./attribute");
+const DAY = 24 * H;
+
+test("merges forward when a match is visible before the ranked endpoint counted it", () => {
+  // interval 1: 2 matches visible, 1 counted; interval 2: 0 visible, 1 counted → one merged group
+  const result = run(
+    [snap(3000, 100, T0), snap(3023, 101, T0 + H), snap(3030, 102, T0 + 2 * H)],
+    [match("a", T0 + 20 * 60 * 1000), match("b", T0 + 40 * 60 * 1000)]
+  );
+  assert.deepEqual(deltaOf(result, "a"), { kind: "group", value: 30, matches: 2 });
+  assert.deepEqual(deltaOf(result, "b"), { kind: "group", value: 30, matches: 2 });
+  assert.deepEqual(result.summary.rankPoints, { kind: "group", value: 30, matches: 2, since: T0 });
+});
+
+test("a merged span that resolves to one counted match is exact", () => {
+  // interval 1: 1 visible, 0 counted (RP lagged); interval 2: 0 visible, 1 counted
+  const result = run(
+    [snap(3000, 100, T0), snap(3000, 100, T0 + H), snap(3023, 101, T0 + 2 * H)],
+    [match("m", T0 + 0.5 * H)]
+  );
+  assert.deepEqual(deltaOf(result, "m"), { kind: "exact", value: 23 });
+});
+
+test("a truncated window reports the counted total even when fewer matches are visible", () => {
+  // oldest visible match is newer than the window start → matches may hide beyond the visible 8
+  const result = run(
+    [snap(3000, 100, T0), snap(3037, 110, T0 + 5 * H)],
+    [match("a", T0 + 3 * H), match("b", T0 + 3.5 * H), match("c", T0 + 4 * H)]
+  );
+  ["a", "b", "c"].forEach((id) => assert.deepEqual(deltaOf(result, id), { kind: "group", value: 37, matches: 10 }));
+  assert.deepEqual(result.summary.rankPoints, { kind: "group", value: 37, matches: 10, since: T0 });
+});
+
+test("a complete window with fewer visible than counted matches stays unattributed", () => {
+  // a normal match older than the window proves the window is fully visible
+  const result = run(
+    [snap(3000, 100, T0), snap(3037, 102, T0 + 5 * H)],
+    [match("older-normal", T0 - H, "official"), match("m", T0 + H)]
+  );
+  assert.deepEqual(deltaOf(result, "m"), { kind: "unattributed" });
+  assert.equal(result.summary.rankPoints, null);
+});
+
+test("more visible than counted matches with nothing to merge into is unattributed", () => {
+  const result = run([snap(3000, 100, T0), snap(3023, 101, T0 + 3 * H)], [match("a", T0 + H), match("b", T0 + 2 * H)]);
+  assert.deepEqual(deltaOf(result, "a"), { kind: "unattributed" });
+  assert.deepEqual(deltaOf(result, "b"), { kind: "unattributed" });
+  assert.equal(result.summary.rankPoints, null);
+});
+
+test("Diamond and Master never get an exact value across a window longer than the decay threshold", () => {
+  const diamond = run(
+    [snap(3200, 100, T0, T0, "Diamond"), snap(3223, 101, T0 + DECAY_WINDOW_MS + DAY, T0 + DECAY_WINDOW_MS + DAY, "Diamond")],
+    [match("m", T0 + 2 * DAY)]
+  );
+  assert.deepEqual(deltaOf(diamond, "m"), { kind: "unattributed" });
+
+  const master = run(
+    [snap(3500, 100, T0, T0, "Master"), snap(3523, 101, T0 + 8 * DAY, T0 + 8 * DAY, "Master")],
+    [match("m", T0 + 2 * DAY)]
+  );
+  assert.deepEqual(deltaOf(master, "m"), { kind: "unattributed" });
+});
+
+test("lower tiers keep exact values across long windows", () => {
+  const result = run(
+    [snap(2000, 100, T0, T0, "Gold"), snap(2023, 101, T0 + 8 * DAY, T0 + 8 * DAY, "Gold")],
+    [match("m", T0 + 2 * DAY)]
+  );
+  assert.deepEqual(deltaOf(result, "m"), { kind: "exact", value: 23 });
+});
+
+test("a long idle Diamond drop with no matches is still an adjustment", () => {
+  const result = run([snap(3200, 100, T0, T0, "Diamond"), snap(3000, 100, T0 + 9 * DAY, T0 + 9 * DAY, "Diamond")], []);
+  assert.deepEqual(result.summary.rankPoints, { kind: "adjustment", value: -200, matches: 0, since: T0 });
+});
+
+test("a window measured from the last sighting, not the first, decides the decay rule", () => {
+  // first seen 10 days ago, but re-observed unchanged yesterday → 1-day window → exact
+  const result = run(
+    [snap(3200, 100, T0 - 10 * DAY, T0 - DAY, "Diamond"), snap(3223, 101, T0, T0, "Diamond")],
+    [match("m", T0 - 0.5 * DAY)]
+  );
+  assert.deepEqual(deltaOf(result, "m"), { kind: "exact", value: 23 });
+});
+
+test("a null RP reading (modes disagree) makes every span touching it unattributed", () => {
+  const result = run(
+    [snap(3000, 100, T0), snap(null, 101, T0 + H), snap(3040, 102, T0 + 2 * H)],
+    [match("a", T0 + 0.5 * H), match("b", T0 + 1.5 * H)]
+  );
+  assert.deepEqual(deltaOf(result, "a"), { kind: "unattributed" });
+  assert.deepEqual(deltaOf(result, "b"), { kind: "unattributed" });
+  assert.equal(result.summary.rankPoints, null);
+});
+
+test("only the newest span feeds the header; older groups stay on their rows", () => {
+  const result = run(
+    [snap(3000, 100, T0), snap(3012, 102, T0 + 2 * H), snap(3035, 103, T0 + 4 * H)],
+    [match("old-a", T0 + 0.5 * H), match("old-b", T0 + H), match("new", T0 + 3 * H)]
+  );
+  assert.deepEqual(deltaOf(result, "old-a"), { kind: "group", value: 12, matches: 2 });
+  assert.deepEqual(deltaOf(result, "old-b"), { kind: "group", value: 12, matches: 2 });
+  assert.deepEqual(deltaOf(result, "new"), { kind: "exact", value: 23 });
+  assert.equal(result.summary.rankPoints, null);
+});
+
+test("does not mutate the snapshots it is given", () => {
+  const series = [snap(3000, 100, T0), snap(3023, 101, T0 + 3 * H)];
+  const frozen = JSON.stringify(series);
+  run(series, [match("m", T0 + H)]);
+  assert.equal(JSON.stringify(series), frozen);
+});
+
+test("summary.since reports the start of the window, not when the baseline was first seen", () => {
+  // baseline first seen at T0 but re-observed unchanged until T0+2H: the change
+  // can only have happened after the last sighting, so that is the honest start.
+  const result = run(
+    [snap(3000, 100, T0, T0 + 2 * H), snap(3037, 103, T0 + 5 * H)],
+    [match("a", T0 + 3 * H), match("b", T0 + 3.5 * H), match("c", T0 + 4 * H)]
+  );
+  assert.deepEqual(result.summary.rankPoints, { kind: "group", value: 37, matches: 3, since: T0 + 2 * H });
+});
