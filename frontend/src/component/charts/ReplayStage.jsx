@@ -59,7 +59,7 @@ const normaliseWheel = (e) => {
   return Math.exp(-dy * (e.ctrlKey ? 0.02 : 0.0025));
 };
 
-const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel }) => {
+const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, publish }) => {
   const wrapRef = useRef(null);
   const bgRef = useRef(null);
   const fxRef = useRef(null);
@@ -201,6 +201,7 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel }) =
       const bg = bgRef.current;
       if (core && v.vw) {
         const { t } = core.advance(nowMs);
+        if (publish && core.shouldPublish(nowMs)) publish();
         for (const kill of sweep.sweepTo(t)) {
           v.flashes.push({ bornMs: nowMs, kx: kill.kx, ky: kill.ky, vx: kill.vx, vy: kill.vy });
         }
@@ -228,7 +229,7 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel }) =
     };
     raf = requestAnimationFrame(frame);
     return () => { if (raf !== null) cancelAnimationFrame(raf); };
-  }, [clockRef, data.zones, sweep, tracks]);
+  }, [clockRef, data.zones, sweep, tracks, publish]);
 
   const localPoint = (e) => {
     const rect = wrapRef.current.getBoundingClientRect();

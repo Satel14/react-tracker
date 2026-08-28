@@ -79,3 +79,19 @@ test("toggle flips playing", () => {
   c.toggle();
   expect(c.playing).toBe(false);
 });
+
+test("setDuration updates duration in place", () => {
+  const c = createClockCore({ duration: 100 });
+  c.seek(30);
+  c.setDuration(200);
+  expect(c.duration).toBe(200);
+  expect(c.t).toBe(30);
+});
+
+test("setDuration clamps t when the new duration is shorter", () => {
+  const c = createClockCore({ duration: 100 });
+  c.seek(80);
+  c.setDuration(50);
+  expect(c.duration).toBe(50);
+  expect(c.t).toBe(50);
+});

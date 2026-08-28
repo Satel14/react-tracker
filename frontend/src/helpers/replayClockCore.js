@@ -22,6 +22,11 @@ export const createClockCore = ({ duration = 0, publishIntervalMs = 100 } = {}) 
 
     setSpeed(v) { speed = v; },
 
+    setDuration(d) {
+      duration = d;
+      t = Math.max(0, Math.min(duration, t));
+    },
+
     play() {
       const restarted = t >= duration;
       if (restarted) t = 0;
@@ -40,14 +45,14 @@ export const createClockCore = ({ duration = 0, publishIntervalMs = 100 } = {}) 
     },
 
     advance(nowMs) {
-      if (!playing) { lastNow = nowMs; return { t, playing, seeked: false }; }
-      if (lastNow === null) { lastNow = nowMs; return { t, playing, seeked: false }; }
+      if (!playing) { lastNow = nowMs; return { t, playing }; }
+      if (lastNow === null) { lastNow = nowMs; return { t, playing }; }
       const dtMs = Math.min(nowMs - lastNow, MAX_FRAME_MS);
       lastNow = nowMs;
       const r = advanceClock(t, dtMs, speed, duration);
       t = r.t;
       playing = r.playing;
-      return { t, playing, seeked: false };
+      return { t, playing };
     },
 
     shouldPublish(nowMs) {
