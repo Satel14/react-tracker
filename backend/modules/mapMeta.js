@@ -5,8 +5,11 @@ const MAP_META = {
   Tiger_Main: { displayName: "Taego", mapMax: 8160 },
   Kiki_Main: { displayName: "Deston", mapMax: 8160 },
   Neon_Main: { displayName: "Rondo", mapMax: 8160 },
-  // TODO(validate-before-deploy): confirm Vikendi mapMax against a real telemetry sample max x/y
-  DihorOtok_Main: { displayName: "Vikendi", mapMax: 6120 },
+  // Vikendi is 8x8 km, not the 6x6 of its 2019 original. Confirmed against a
+  // real match: the first safety zone is centred on the map midpoint, and it
+  // sits at 4080 m, so the side is 8160. Players in that match reached 7513 m,
+  // which the old 6120 would have drawn off the map.
+  DihorOtok_Main: { displayName: "Vikendi", mapMax: 8160 },
   Savage_Main: { displayName: "Sanhok", mapMax: 4080 },
   Chimera_Main: { displayName: "Paramo", mapMax: 3060 },
   Summerland_Main: { displayName: "Karakin", mapMax: 2040 },
