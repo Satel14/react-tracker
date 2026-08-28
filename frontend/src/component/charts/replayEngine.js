@@ -54,7 +54,7 @@ export const zoneAt = (zones, t) => {
 };
 
 export const rosterAt = (players, kills, t) => {
-  const killCount = {};
+  const killCount = Object.create(null);
   for (const k of kills || []) {
     if (k.killer && k.t <= t) killCount[k.killer] = (killCount[k.killer] || 0) + 1;
   }

@@ -73,3 +73,20 @@ test("playersAt includes accountId", () => {
   const players = [{ name: "Me", accountId: "a.me", teamId: 1, isFocal: true, positions: [{ t: 0, x: 1, y: 2 }], deathTime: null }];
   expect(playersAt(players, 0)[0].accountId).toBe("a.me");
 });
+
+test("rosterAt credits kills for players with Object.prototype names", () => {
+  const players = [
+    { name: "constructor", accountId: "a.1", teamId: 1, isFocal: false, positions: [], deathTime: null },
+    { name: "__proto__", accountId: "a.2", teamId: 1, isFocal: false, positions: [], deathTime: null },
+    { name: "toString", accountId: "a.3", teamId: 1, isFocal: false, positions: [], deathTime: null },
+  ];
+  const kills = [
+    { t: 1, killer: "constructor", victim: "X" },
+    { t: 2, killer: "__proto__", victim: "Y" },
+  ];
+  const byName = new Map();
+  for (const row of rosterAt(players, kills, 10)) byName.set(row.name, row.kills);
+  expect(byName.get("constructor")).toBe(1);
+  expect(byName.get("__proto__")).toBe(1);
+  expect(byName.get("toString")).toBe(0);
+});
