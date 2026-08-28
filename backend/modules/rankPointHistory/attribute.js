@@ -1,4 +1,5 @@
-const DECAY_TIERS = new Set(["diamond", "master"]);
+// Decay applies from Diamond up; keep in step with the ladder in playerRank/ranked.js.
+const DECAY_TIERS = new Set(["diamond", "crystal", "master", "grandmaster", "survivor", "top500"]);
 const DECAY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 function isCompetitive(item) {

@@ -162,6 +162,20 @@ test("Diamond and Master never get an exact value across a window longer than th
   assert.deepEqual(deltaOf(master, "m"), { kind: "unattributed" });
 });
 
+test("Crystal and Survivor are also decay-prone tiers across a window longer than the decay threshold", () => {
+  const crystal = run(
+    [snap(3200, 100, T0, T0, "Crystal"), snap(3223, 101, T0 + DECAY_WINDOW_MS + DAY, T0 + DECAY_WINDOW_MS + DAY, "Crystal")],
+    [match("m", T0 + 2 * DAY)]
+  );
+  assert.deepEqual(deltaOf(crystal, "m"), { kind: "unattributed" });
+
+  const survivor = run(
+    [snap(3500, 100, T0, T0, "Survivor"), snap(3523, 101, T0 + 8 * DAY, T0 + 8 * DAY, "Survivor")],
+    [match("m", T0 + 2 * DAY)]
+  );
+  assert.deepEqual(deltaOf(survivor, "m"), { kind: "unattributed" });
+});
+
 test("lower tiers keep exact values across long windows", () => {
   const result = run(
     [snap(2000, 100, T0, T0, "Gold"), snap(2023, 101, T0 + 8 * DAY, T0 + 8 * DAY, "Gold")],
