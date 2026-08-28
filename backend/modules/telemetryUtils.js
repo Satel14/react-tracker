@@ -42,10 +42,10 @@ function buildMatchClock(telemetry) {
   }
 
   residuals.sort((a, b) => a - b);
-  const offsetSeconds = median(residuals);
+  const originSeconds = median(residuals);
   let residualSeconds = 0;
   if (residuals.length >= 4) {
-    const q = (f) => residuals[Math.min(residuals.length - 1, Math.round(residuals.length * f))];
+    const q = (f) => residuals[Math.min(residuals.length - 1, Math.floor(residuals.length * f))];
     residualSeconds = Math.round((q(0.75) - q(0.25)) * 100) / 100;
   }
 
@@ -58,12 +58,12 @@ function buildMatchClock(telemetry) {
     if (Number.isFinite(nested)) return Math.round(nested);
     const ms = Date.parse(ev?._D);
     if (!Number.isFinite(ms)) return null;
-    const origin = offsetSeconds !== null ? offsetSeconds : (fallbackOrigin !== null ? fallbackOrigin / 1000 : null);
+    const origin = originSeconds !== null ? originSeconds : (fallbackOrigin !== null ? fallbackOrigin / 1000 : null);
     if (origin === null) return null;
     return Math.max(0, Math.round(ms / 1000 - origin));
   };
 
-  return { timeOf, offsetSeconds, residualSeconds, sampleCount: residuals.length };
+  return { timeOf, originSeconds, residualSeconds, sampleCount: residuals.length };
 }
 
 module.exports = { readXY, eventTime, isFocalActor, buildMatchClock };

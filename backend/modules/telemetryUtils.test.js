@@ -13,11 +13,11 @@ const positions = [10, 20, 30, 40, 50].map((elapsed) => ({
   character: { accountId: "account.me" },
 }));
 
-test("derives the offset from the position stream", () => {
+test("derives the origin from the position stream", () => {
   const clock = buildMatchClock(positions);
   assert.equal(clock.sampleCount, 5);
-  // offsetSeconds is the wall-clock epoch-second at elapsed=0, not the 7 s skew.
-  assert.equal(clock.offsetSeconds, Date.parse(at(0)) / 1000);
+  // originSeconds is the wall-clock epoch-second at elapsed=0, not the 7 s skew.
+  assert.equal(clock.originSeconds, Date.parse(at(0)) / 1000);
 });
 
 test("timeOf prefers a top-level elapsedTime", () => {
@@ -47,22 +47,35 @@ test("ignores warm-up samples when fitting", () => {
   };
   const clock = buildMatchClock([warmup, ...positions]);
   assert.equal(clock.sampleCount, 5);
-  assert.equal(clock.offsetSeconds, Date.parse(at(0)) / 1000);
+  assert.equal(clock.originSeconds, Date.parse(at(0)) / 1000);
 });
 
 test("reports the residual spread and clamps negative times to 0", () => {
+  // Five samples whose _D drifts 5..9 s ahead of the in-game clock, so the
+  // interquartile range is genuinely non-zero.
+  const spread = [10, 20, 30, 40, 50].map((elapsed, i) => ({
+    _T: "LogPlayerPosition",
+    _D: new Date(Date.UTC(2026, 0, 1, 0, 0, elapsed + 5 + i)).toISOString(),
+    common: { isGame: 1 },
+    elapsedTime: elapsed,
+    character: { accountId: "account.me" },
+  }));
+  const clock = buildMatchClock(spread);
+  assert.equal(clock.residualSeconds, 2);
+  assert.equal(clock.timeOf({ _T: "LogPlayerKillV2", _D: at(-100) }), 0);
+});
+
+test("an outlier outside the quartiles does not inflate the residual spread", () => {
   const noisy = [
     ...positions,
     { _T: "LogPlayerPosition", _D: at(63), common: { isGame: 1 }, elapsedTime: 60, character: { accountId: "a" } },
   ];
-  const clock = buildMatchClock(noisy);
-  assert.ok(clock.residualSeconds > 0);
-  assert.equal(clock.timeOf({ _T: "LogPlayerKillV2", _D: at(-100) }), 0);
+  assert.equal(buildMatchClock(noisy).residualSeconds, 0);
 });
 
 test("has no clock when no position samples carry both clocks", () => {
   const clock = buildMatchClock([{ _T: "LogPlayerKillV2", _D: at(5) }]);
-  assert.equal(clock.offsetSeconds, null);
+  assert.equal(clock.originSeconds, null);
   assert.equal(clock.sampleCount, 0);
   assert.equal(clock.timeOf({ _T: "LogPlayerKillV2", _D: at(5) }), null);
 });
