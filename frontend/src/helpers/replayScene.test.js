@@ -57,9 +57,12 @@ const arcsOf = (ctx) => ctx.calls.filter((c) => c.name === "arc");
 
 test("marker radii and line widths are identical at zoom 1 and zoom 6", () => {
   // zone: null so every recorded arc is a marker or a ring -- no magic-number
-  // split between "marker-sized" and "zone-sized" radii is needed.
-  const a = recordingCtx(); drawScene(a, { ...frameAt(1), zone: null });
-  const b = recordingCtx(); drawScene(b, { ...frameAt(6), zone: null });
+  // split between "marker-sized" and "zone-sized" radii is needed. One player
+  // selected and the other hovered so both draw a ring, giving the width
+  // comparison real strokes to pin instead of two empty arrays.
+  const overrides = { zone: null, focusedAccountId: "a.me", hoveredIndex: 1 };
+  const a = recordingCtx(); drawScene(a, { ...frameAt(1), ...overrides });
+  const b = recordingCtx(); drawScene(b, { ...frameAt(6), ...overrides });
   const radii = (ctx) => arcsOf(ctx).map((c) => c.args[2]).sort((x, y) => x - y);
   expect(radii(a)).toEqual(radii(b));
   const widths = (ctx) => ctx.calls.filter((c) => c.name === "stroke").map((c) => c.lineWidth);
