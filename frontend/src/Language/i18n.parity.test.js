@@ -1,3 +1,6 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import en from "./en.json";
 import ua from "./ua.json";
 
@@ -50,4 +53,37 @@ test("the player matches block exists and matches across locales", () => {
   const uaKeys = [...flattenKeys(ua.pages?.player?.matches ?? {})].sort();
   expect(enKeys.length).toBeGreaterThan(0);
   expect(uaKeys).toEqual(enKeys);
+});
+
+// The replay HUD landed with 22 new keys, and nothing above covered them: the
+// full-dictionary check is still deferred, and the three scoped assertions do
+// not reach pages.replay. A key added to one locale only would have shipped
+// silently. Scope one more block rather than wait for Phase 4.
+test("the replay block matches across locales", () => {
+  const enKeys = [...flattenKeys(en.pages?.replay ?? {})].sort();
+  const uaKeys = [...flattenKeys(ua.pages?.replay ?? {})].sort();
+  expect(enKeys.length).toBeGreaterThan(0);
+  expect(uaKeys).toEqual(enKeys);
+});
+
+// Every key the replay components actually call has to exist. Deriving the
+// list from the source rather than restating it by hand: a hand-written copy
+// went stale within the hour when a component renamed three of its keys, and
+// the test still passed.
+test("every replay key the components reference exists in both locales", () => {
+  const dir = fileURLToPath(new URL("../component/charts", import.meta.url));
+  const pageDir = fileURLToPath(new URL("../pages", import.meta.url));
+  const files = [
+    ...readdirSync(dir).filter((f) => f.startsWith("Replay") && f.endsWith(".jsx") && !f.includes(".test.")).map((f) => join(dir, f)),
+    join(pageDir, "MatchReplayPage.jsx"),
+  ];
+  const used = new Set();
+  for (const file of files) {
+    for (const m of readFileSync(file, "utf8").matchAll(/pages\.replay\.([A-Za-z]+)/g)) used.add(m[1]);
+  }
+  expect(used.size).toBeGreaterThan(10);
+  for (const key of [...used].sort()) {
+    expect(en.pages?.replay?.[key], `en is missing pages.replay.${key}`).toBeTruthy();
+    expect(ua.pages?.replay?.[key], `ua is missing pages.replay.${key}`).toBeTruthy();
+  }
 });
