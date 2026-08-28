@@ -30,14 +30,12 @@ function median(sorted) {
 
 function buildMatchClock(telemetry) {
   const residuals = [];
-  let firstMs = null;
   for (const ev of Array.isArray(telemetry) ? telemetry : []) {
     if (ev?._T !== "LogPlayerPosition") continue;
     if (Number(ev?.common?.isGame) < 0.1) continue;
     const elapsed = Number(ev.elapsedTime);
     const ms = Date.parse(ev?._D);
     if (!Number.isFinite(elapsed) || !Number.isFinite(ms)) continue;
-    if (firstMs === null) firstMs = ms;
     residuals.push(ms / 1000 - elapsed);
   }
 
@@ -49,18 +47,15 @@ function buildMatchClock(telemetry) {
     residualSeconds = Math.round((q(0.75) - q(0.25)) * 100) / 100;
   }
 
-  const fallbackOrigin = firstMs;
-
   const timeOf = (ev) => {
-    const top = Number(ev?.elapsedTime);
-    if (Number.isFinite(top)) return Math.round(top);
-    const nested = Number(ev?.gameState?.elapsedTime);
-    if (Number.isFinite(nested)) return Math.round(nested);
+    const top = ev?.elapsedTime;
+    if (typeof top === "number" && Number.isFinite(top)) return Math.round(top);
+    const nested = ev?.gameState?.elapsedTime;
+    if (typeof nested === "number" && Number.isFinite(nested)) return Math.round(nested);
     const ms = Date.parse(ev?._D);
     if (!Number.isFinite(ms)) return null;
-    const origin = originSeconds !== null ? originSeconds : (fallbackOrigin !== null ? fallbackOrigin / 1000 : null);
-    if (origin === null) return null;
-    return Math.max(0, Math.round(ms / 1000 - origin));
+    if (originSeconds === null) return null;
+    return Math.max(0, Math.round(ms / 1000 - originSeconds));
   };
 
   return { timeOf, originSeconds, residualSeconds, sampleCount: residuals.length };

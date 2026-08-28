@@ -22,7 +22,9 @@ test("derives the origin from the position stream", () => {
 
 test("timeOf prefers a top-level elapsedTime", () => {
   const clock = buildMatchClock(positions);
-  assert.equal(clock.timeOf(positions[0]), 10);
+  // _D disagrees with elapsedTime (would derive 999 via _D) so precedence is discriminating.
+  const ev = { _T: "LogPlayerPosition", _D: at(999), elapsedTime: 10, common: { isGame: 1 }, character: { accountId: "account.me" } };
+  assert.equal(clock.timeOf(ev), 10);
 });
 
 test("timeOf prefers gameState.elapsedTime for gamestate events", () => {
@@ -61,6 +63,9 @@ test("reports the residual spread and clamps negative times to 0", () => {
     character: { accountId: "account.me" },
   }));
   const clock = buildMatchClock(spread);
+  // Residuals are 5,6,7,8,9 s in index order; the median (odd length 5) sits
+  // at index 2 (elapsed=30), so that sample's own residual is the expected origin.
+  assert.equal(clock.originSeconds, Date.parse(spread[2]._D) / 1000 - spread[2].elapsedTime);
   assert.equal(clock.residualSeconds, 2);
   assert.equal(clock.timeOf({ _T: "LogPlayerKillV2", _D: at(-100) }), 0);
 });
@@ -80,7 +85,21 @@ test("has no clock when no position samples carry both clocks", () => {
   assert.equal(clock.timeOf({ _T: "LogPlayerKillV2", _D: at(5) }), null);
 });
 
+test("has no clock when a position carries _D but no elapsedTime", () => {
+  const noElapsed = { _T: "LogPlayerPosition", _D: at(10), common: { isGame: 1 }, character: { accountId: "account.me" } };
+  const clock = buildMatchClock([noElapsed]);
+  assert.equal(clock.sampleCount, 0);
+  assert.equal(clock.timeOf({ _T: "LogPlayerKillV2", _D: at(10) }), null);
+});
+
 test("returns null when an event carries no usable time at all", () => {
   const clock = buildMatchClock(positions);
   assert.equal(clock.timeOf({ _T: "LogPlayerKillV2" }), null);
+});
+
+test("an explicit null elapsedTime falls through to the _D-derived time", () => {
+  const clock = buildMatchClock(positions);
+  // A kill with elapsedTime: null and _D matching the t=20 position sample
+  // must land on 20, not be coerced to 0 via Number(null).
+  assert.equal(clock.timeOf({ _T: "LogPlayerKillV2", _D: at(20), elapsedTime: null }), 20);
 });

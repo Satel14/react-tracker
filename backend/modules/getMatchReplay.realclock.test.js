@@ -28,6 +28,10 @@ const telemetry = [
 
 test("a kill carrying only _D lands on the same clock as the positions", () => {
   const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
+  assert.deepEqual(
+    r.players.find((p) => p.accountId === "account.me").positions.map((p) => p.t),
+    [10, 20, 30, 40]
+  );
   assert.equal(r.kills[0].t, 30);
   assert.equal(r.players.find((p) => p.accountId === "account.foe").deathTime, 30);
 });
