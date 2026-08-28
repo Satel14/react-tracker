@@ -1338,6 +1338,22 @@ body {
           font-size: 11px;
           letter-spacing: 0.4px;
         }
+
+        .player-ranked-chip {
+          display: inline-flex;
+          align-items: center;
+          margin-left: 6px;
+          padding: 1px 7px;
+          border-radius: 999px;
+          border: 1px solid color-mix(in srgb, var(--win) 55%, transparent);
+          background: color-mix(in srgb, var(--win) 12%, transparent);
+          color: var(--win);
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.8px;
+          text-transform: uppercase;
+          line-height: 1.4;
+        }
       }
 
       .player-place-badge {
@@ -1425,6 +1441,22 @@ body {
           overflow: hidden;
           text-overflow: ellipsis;
         }
+
+        &--ranked {
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+        }
+
+        .player-rp-delta--none strong {
+          color: var(--text-muted);
+        }
+
+        .player-rp-delta__hint {
+          margin-left: 4px;
+          font-size: 11px;
+          color: var(--text-muted);
+          cursor: help;
+          vertical-align: middle;
+        }
       }
 
       @media (max-width: 1100px) {
@@ -1474,6 +1506,10 @@ body {
 
         .player-match-stats {
           grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .player-match-stats--ranked {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
         }
       }
 
