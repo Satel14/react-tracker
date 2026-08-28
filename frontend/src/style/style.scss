@@ -4121,6 +4121,37 @@ body {
   }
 }
 
+.replay-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+
+  &:active { cursor: grabbing; }
+
+  // 16:9 via an in-flow padding spacer, never aspect-ratio: on iOS Safari a
+  // definite height collapses this box to 0 because every child is absolute.
+  &::before {
+    content: "";
+    display: block;
+    padding-top: 56.25%;
+  }
+
+  &__layer {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+}
+
+@media (max-width: 760px) {
+  .replay-stage::before { padding-top: 75%; }
+}
+
 .aggregate-heatmap {
   &__controls {
     display: flex;

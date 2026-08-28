@@ -29,6 +29,10 @@
     { "file": "pages/PlayerPage.jsx", "id": "#fde82b", "count": 2, "until": "PR D" },
     { "file": "pages/Player.jsx", "id": "#fff", "count": 1, "until": "PR D" },
     { "file": "component/Footer.jsx", "id": "#fff", "count": 1, "until": "PR D" },
-    { "file": "router/RouterLayout.jsx", "id": "#fde82b", "count": 1, "until": "PR D" }
+    { "file": "router/RouterLayout.jsx", "id": "#fde82b", "count": 1, "until": "PR D" },
+    { "file": "component/charts/ReplayStage.jsx", "id": "#78f7a8", "count": 1, "until": "P4" },
+    { "file": "component/charts/ReplayStage.jsx", "id": "#d6d9ee", "count": 1, "until": "P4" },
+    { "file": "component/charts/ReplayStage.jsx", "id": "#ff9b9b", "count": 1, "until": "P4" },
+    { "file": "component/charts/ReplayStage.jsx", "id": "#fde82b", "count": 1, "until": "P4" }
   ]
 }
