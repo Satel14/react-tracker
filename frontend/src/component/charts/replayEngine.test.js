@@ -65,3 +65,18 @@ test("rosterAt credits kills for players with Object.prototype names", () => {
   expect(byName.get("__proto__")).toBe(1);
   expect(byName.get("toString")).toBe(0);
 });
+
+test("rosterAt credits two players sharing a display name separately", () => {
+  const players = [
+    { name: "Twin", accountId: "a.1", teamId: 1, isFocal: false, positions: [], deathTime: null },
+    { name: "Twin", accountId: "a.2", teamId: 2, isFocal: false, positions: [], deathTime: null },
+  ];
+  const kills = [
+    { t: 1, killer: "Twin", killerAccountId: "a.1", victim: "X" },
+    { t: 2, killer: "Twin", killerAccountId: "a.1", victim: "Y" },
+  ];
+  const byId = new Map();
+  for (const row of rosterAt(players, kills, 10)) byId.set(row.accountId, row.kills);
+  expect(byId.get("a.1")).toBe(2);
+  expect(byId.get("a.2")).toBe(0);
+});

@@ -31,16 +31,21 @@ export const zoneAt = (zones, t) => {
 };
 
 export const rosterAt = (players, kills, t) => {
+  // Credit by accountId when the payload carries it -- two players can share a
+  // display name in one lobby. The name is kept as the fallback so a payload
+  // predating killerAccountId still counts, and Object.create(null) still
+  // matters there: a player called __proto__ would otherwise never be credited.
   const killCount = Object.create(null);
   for (const k of kills || []) {
-    if (k.killer && k.t <= t) killCount[k.killer] = (killCount[k.killer] || 0) + 1;
+    const key = k.killerAccountId || k.killer;
+    if (key && k.t <= t) killCount[key] = (killCount[key] || 0) + 1;
   }
   return (players || [])
     .map((p) => ({
       name: p.name,
       accountId: p.accountId,
       teamId: p.teamId,
-      kills: killCount[p.name] || 0,
+      kills: killCount[p.accountId] ?? killCount[p.name] ?? 0,
       alive: p.deathTime == null || t <= p.deathTime,
       isFocal: p.isFocal,
     }))
