@@ -1048,16 +1048,16 @@ const PlayerPage = ({ t }) => {
     const tooltipKey = RP_TOOLTIP_KEYS[delta?.kind] || "pages.player.matches.rpTooltipDefault";
     return (
       <div className="player-rp-delta player-rp-delta--none">
-        <span>{t("pages.player.matches.rp")}</span>
-        <strong>
-          —
+        <span>
+          {t("pages.player.matches.rp")}
           <Tooltip title={t(tooltipKey)} mouseEnterDelay={0}>
             <QuestionCircleOutlined
               className="player-rp-delta__hint"
               aria-label={t("pages.player.matches.rpHint")}
             />
           </Tooltip>
-        </strong>
+        </span>
+        <strong>—</strong>
       </div>
     );
   };

@@ -1450,12 +1450,17 @@ body {
           color: var(--text-muted);
         }
 
+        // Flex row, or the block rule above drops antd's <span> icon onto its own line.
+        .player-rp-delta > span {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
         .player-rp-delta__hint {
-          margin-left: 4px;
           font-size: 11px;
           color: var(--text-muted);
           cursor: help;
-          vertical-align: middle;
         }
       }
 
