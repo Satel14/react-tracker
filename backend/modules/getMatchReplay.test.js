@@ -1,6 +1,11 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { parseReplayTelemetry } = require("./getMatchReplay");
+const { decodePositions } = require("./replay/positions");
+
+// Positions ship as delta-coded columns since format 2; decoding here keeps
+// these assertions about the parser, not about the wire encoding.
+const posOf = (player) => decodePositions(player.positions);
 
 const matchAttributes = { mapName: "Baltic_Main", duration: 100, createdAt: "2026-01-01T00:00:00.000Z" };
 
@@ -24,8 +29,8 @@ const telemetry = [
 test("groups positions per player, sorted by t, dropping lobby (isGame<0.1)", () => {
   const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
   const me = r.players.find((p) => p.accountId === "account.me");
-  assert.deepEqual(me.positions.map((p) => p.t), [10, 20]); // the isGame:0 sample at t=0 dropped
-  assert.equal(me.positions[0].x, 4000); // 400000/100
+  assert.deepEqual(posOf(me).map((p) => p.t), [10, 20]); // the isGame:0 sample at t=0 dropped
+  assert.equal(posOf(me)[0].x, 4000); // 400000/100
 });
 
 test("extracts kills with scaled locations and sets victim deathTime", () => {
@@ -88,7 +93,7 @@ test("keeps roster players who emitted no position samples", () => {
   const r = parseReplayTelemetry(trimmed, { matchAttributes, accountId: "account.me" });
   const mate = r.players.find((p) => p.accountId === "account.mate");
   assert.ok(mate, "roster-only player must still appear");
-  assert.deepEqual(mate.positions, []);
+  assert.deepEqual(posOf(mate), []);
 });
 
 test("keeps a kill whose killer location is unreadable", () => {
@@ -109,7 +114,7 @@ test("dedupes duplicate position samples at the same t", () => {
   const dup = telemetry.find((ev) => ev._T === "LogPlayerPosition" && ev.elapsedTime === 10 && ev.character.accountId === "account.me");
   const r = parseReplayTelemetry([...telemetry, { ...dup }], { matchAttributes, accountId: "account.me" });
   const me = r.players.find((p) => p.accountId === "account.me");
-  assert.deepEqual(me.positions.map((p) => p.t), [10, 20]);
+  assert.deepEqual(posOf(me).map((p) => p.t), [10, 20]);
 });
 
 const aircraftExit = (accountId, name, teamId, t) => ({
@@ -162,4 +167,59 @@ test("assigns a phase index that changes only when the warning circle jumps", ()
 
   assert.deepEqual(r.zones.map((z) => z.t), [10, 20, 30, 40, 50]);
   assert.deepEqual(r.zones.map((z) => z.phase), [0, 1, 1, 2, 2]);
+});
+
+// --- format 2 payload wiring ---------------------------------------------
+
+test("stamps the wire format so a stale cached payload is detectable", () => {
+  const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
+  assert.equal(r.format, 2);
+});
+
+test("ships every new layer as an array, never undefined", () => {
+  const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
+  for (const key of ["landings", "knocks", "revives", "packages", "specialZones", "phases"]) {
+    assert.ok(Array.isArray(r[key]), `${key} must be an array`);
+  }
+  // shots is column-oriented: eight parallel arrays, all the same length.
+  const lengths = ["t", "a", "v", "ax", "ay", "vx", "vy", "dmg"].map((k) => r.shots[k].length);
+  assert.equal(new Set(lengths).size, 1);
+});
+
+test("reports the in-game end time, which is not the wall-clock duration", () => {
+  const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
+  // Last position is t=20, last zone t=20; duration says 100 wall seconds.
+  assert.equal(r.endTime, 20);
+  assert.equal(r.duration, 100);
+});
+
+test("carries health and the vehicle/DBNO flags on decoded samples", () => {
+  const withState = telemetry.map((ev) =>
+    ev._T === "LogPlayerPosition" && ev.character.accountId === "account.me" && ev.elapsedTime === 20
+      ? { ...ev, character: { ...ev.character, health: 42.4, isInVehicle: true, isDBNO: true } }
+      : ev,
+  );
+  const r = parseReplayTelemetry(withState, { matchAttributes, accountId: "account.me" });
+  const samples = posOf(r.players.find((p) => p.accountId === "account.me"));
+  assert.equal(samples[0].h, 100); // no health on the fixture sample -> unhurt
+  assert.equal(samples[0].f, 0);
+  assert.equal(samples[1].h, 42); // rounded
+  assert.equal(samples[1].f, 3); // in vehicle | knocked
+});
+
+test("derives the flight line from the two aircraft exits", () => {
+  const withPlane = [
+    ...telemetry,
+    { _T: "LogVehicleLeave", elapsedTime: 5, character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 100000, y: 100000, z: 150000 } },
+      vehicle: { vehicleId: "DummyTransportAircraft_C", velocity: 14180, location: { x: 100000, y: 100000, z: 150000 } } },
+    { _T: "LogVehicleLeave", elapsedTime: 9, character: { accountId: "account.foe", name: "Foe", teamId: 2, location: { x: 700000, y: 300000, z: 150000 } },
+      vehicle: { vehicleId: "DummyTransportAircraft_C", velocity: 14180, location: { x: 700000, y: 300000, z: 150000 } } },
+  ];
+  const r = parseReplayTelemetry(withPlane, { matchAttributes, accountId: "account.me" });
+  assert.deepEqual(r.flight, { x1: 1000, y1: 1000, t1: 5, x2: 7000, y2: 3000, t2: 9, speed: 142 });
+});
+
+test("has no flight line when nobody left the aircraft", () => {
+  const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
+  assert.equal(r.flight, null);
 });

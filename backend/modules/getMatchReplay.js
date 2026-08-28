@@ -2,6 +2,17 @@ const { getMapMeta } = require("./mapMeta");
 const { readXY, buildMatchClock } = require("./telemetryUtils");
 const { loadMatchBundle } = require("./matchLoader");
 const { shardForMatch } = require("./pubgTelemetry");
+const { encodePositions } = require("./replay/positions");
+const { extractFlight } = require("./replay/flight");
+const { extractLandings } = require("./replay/landings");
+const { extractKnocks } = require("./replay/knocks");
+const { extractShots } = require("./replay/shots");
+const { extractPackages } = require("./replay/packages");
+const { extractSpecialZones, extractPhases } = require("./replay/zones");
+
+// Bumped whenever the wire shape changes, so a stale cached payload is detected
+// rather than silently mis-decoded. 2 = delta-coded position columns.
+const REPLAY_FORMAT = 2;
 
 const replayCache = new Map();
 const REPLAY_CACHE_LIMIT = 30;
@@ -51,7 +62,15 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       if (!positions.has(ch.accountId)) positions.set(ch.accountId, []);
       const arr = positions.get(ch.accountId);
       if (arr.length && arr[arr.length - 1].t === t) continue;
-      arr.push({ t, x: xy.x, y: xy.y });
+      // health rides on every position sample already, so it is free.
+      arr.push({
+        t,
+        x: xy.x,
+        y: xy.y,
+        health: ch.health,
+        isInVehicle: !!ch.isInVehicle,
+        isDBNO: !!ch.isDBNO,
+      });
       continue;
     }
 
@@ -126,12 +145,6 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
   const players = [];
   for (const [id, info] of roster) {
     const posArr = positions.get(id) || [];
-    posArr.sort((a, b) => a.t - b.t);
-    const deduped = [];
-    for (const p of posArr) {
-      if (deduped.length && deduped[deduped.length - 1].t === p.t) continue;
-      deduped.push(p);
-    }
     const isFocal =
       (focalAccountId !== null && id === focalAccountId) ||
       (focalTeamId !== null && info.teamId === focalTeamId);
@@ -140,7 +153,8 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       accountId: id,
       teamId: info.teamId ?? null,
       isFocal: !!isFocal,
-      positions: deduped,
+      // encodePositions sorts by t and drops duplicate timestamps itself.
+      positions: encodePositions(posArr),
       dropTime: dropTime.has(id) ? dropTime.get(id) : null,
       deathTime: deathTime.has(id) ? deathTime.get(id) : null,
     });
@@ -163,11 +177,35 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     z.phase = phase;
   }
 
+  const { knocks, revives } = extractKnocks(telemetry, clock);
+  const landings = extractLandings(telemetry, clock);
+  const shots = extractShots(telemetry, clock);
+  const packages = extractPackages(telemetry, clock);
+  const specialZones = extractSpecialZones(telemetry, clock);
+  const phases = extractPhases(telemetry, clock);
+  const flight = extractFlight(telemetry, clock);
+
+  // `duration` is wall-clock seconds from the match record; the replay scrubber
+  // needs the in-game span, which the two clocks make a different number.
+  let endTime = 0;
+  for (const p of players) {
+    const t = p.positions.t;
+    if (!t.length) continue;
+    let last = 0;
+    for (const d of t) last += d;
+    if (last > endTime) endTime = last;
+  }
+  for (const list of [kills, zones]) {
+    for (const item of list) if (item.t > endTime) endTime = item.t;
+  }
+
   return {
+    format: REPLAY_FORMAT,
     rawMapName,
     mapName: meta.displayName,
     mapMax: meta.mapMax,
     duration,
+    endTime,
     createdAt: matchAttributes.createdAt || null,
     focalAccountId,
     focalTeamId,
@@ -176,6 +214,14 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     players,
     kills,
     zones,
+    flight,
+    landings,
+    knocks,
+    revives,
+    shots,
+    packages,
+    specialZones,
+    phases,
   };
 }
 
