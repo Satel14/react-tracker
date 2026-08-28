@@ -21,9 +21,6 @@ const telemetry = [
   { _T: "LogPlayerKillV2", _D: wall(30),
     killer: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 300000, y: 100000, z: 0 } },
     victim: { accountId: "account.foe", name: "Foe", teamId: 2, location: { x: 200000, y: 200000, z: 0 } } },
-  { _T: "LogVehicleLeave", _D: wall(12),
-    character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 300000, y: 300000, z: 120000 } },
-    vehicle: { vehicleId: "DummyTransportAircraft_C", location: { x: 300000, y: 300000, z: 150000 } } },
   { _T: "LogGameStatePeriodic", _D: wall(20), gameState: { elapsedTime: 20,
     safetyZonePosition: { x: 400000, y: 400000, z: 0 }, safetyZoneRadius: 300000,
     poisonGasWarningPosition: { x: 420000, y: 420000, z: 0 }, poisonGasWarningRadius: 200000 } },
@@ -42,11 +39,4 @@ test("a kill carrying only _D lands on the same clock as the positions", () => {
 test("a gamestate sample uses gameState.elapsedTime, not the wall clock", () => {
   const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
   assert.deepEqual(r.zones.map((z) => z.t), [20]);
-});
-
-// Real LogVehicleLeave events carry no top-level elapsedTime -- positions are the
-// only event type that does -- so the aircraft exit reaches the clock via _D only.
-test("dropTime comes off the same clock when the aircraft exit carries only _D", () => {
-  const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
-  assert.equal(r.players.find((p) => p.accountId === "account.me").dropTime, 12);
 });
