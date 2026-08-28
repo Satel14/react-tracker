@@ -122,3 +122,62 @@ test("shows a dash with the default explanation when no RP delta is known", asyn
   const tooltip = await hoverHint(row);
   expect(tooltip).toHaveTextContent(en.pages.player.matches.rpTooltipDefault);
 });
+
+test("renders an exact gain in the up colour and a loss in the down colour", async () => {
+  const card = await renderMatchesCard([
+    matchItem({ id: "gain", rpDelta: { kind: "exact", value: 23 } }),
+    matchItem({ id: "loss", rpDelta: { kind: "exact", value: -15 } }),
+  ]);
+  const rows = rowsOf(card);
+
+  const gain = within(rows[0]).getByText("+23");
+  expect(gain.closest(".player-rp-delta")).toHaveClass("player-rp-delta--up");
+  const loss = within(rows[1]).getByText("-15");
+  expect(loss.closest(".player-rp-delta")).toHaveClass("player-rp-delta--down");
+  expect(card.querySelector(".player-rp-summary")).toBeNull();
+});
+
+test("shows a group total in the header and keeps grouped rows at a dash", async () => {
+  const since = Date.parse("2026-08-26T18:00:00Z");
+  const group = { kind: "group", value: 37, matches: 3 };
+  const card = await renderMatchesCard(
+    [matchItem({ id: "a", rpDelta: group }), matchItem({ id: "b", rpDelta: group }), matchItem({ id: "c", rpDelta: group })],
+    { rankPoints: { ...group, since } }
+  );
+
+  const summary = card.querySelector(".player-rp-summary");
+  expect(summary).toHaveTextContent(/\+37 RP across 3 ranked matches since /);
+  expect(within(card).getAllByText("—")).toHaveLength(3);
+
+  const tooltip = await hoverHint(rowsOf(card)[0]);
+  expect(tooltip).toHaveTextContent("Part of +37 RP across 3 ranked matches.");
+});
+
+test("shows an adjustment line when RP moved with no ranked matches", async () => {
+  const card = await renderMatchesCard([matchItem({ id: "n", matchType: "official" })], {
+    rankPoints: { kind: "adjustment", value: -100, matches: 0, since: Date.parse("2026-08-20T18:00:00Z") },
+  });
+  expect(card.querySelector(".player-rp-summary")).toHaveTextContent(/-100 RP with no ranked matches since /);
+});
+
+test("explains noBaseline, pending and unattributed rows on hover", async () => {
+  const card = await renderMatchesCard([
+    matchItem({ id: "nb", rpDelta: { kind: "noBaseline" } }),
+    matchItem({ id: "pd", rpDelta: { kind: "pending" } }),
+    matchItem({ id: "un", rpDelta: { kind: "unattributed" } }),
+  ]);
+  const rows = rowsOf(card);
+  const texts = en.pages.player.matches;
+
+  const hoverLast = async (row) => {
+    fireEvent.mouseEnter(within(row).getByLabelText(texts.rpHint));
+    const tooltips = await screen.findAllByRole("tooltip");
+    return tooltips[tooltips.length - 1];
+  };
+
+  expect(await hoverLast(rows[0])).toHaveTextContent(texts.rpTooltipNoBaseline);
+  fireEvent.mouseLeave(within(rows[0]).getByLabelText(texts.rpHint));
+  expect(await hoverLast(rows[1])).toHaveTextContent(texts.rpTooltipPending);
+  fireEvent.mouseLeave(within(rows[1]).getByLabelText(texts.rpHint));
+  expect(await hoverLast(rows[2])).toHaveTextContent(texts.rpTooltipUnattributed);
+});
