@@ -48,20 +48,34 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       if (t === null) continue;
       if (!roster.has(ch.accountId)) roster.set(ch.accountId, { name: ch.name, teamId: ch.teamId });
       if (!positions.has(ch.accountId)) positions.set(ch.accountId, []);
-      positions.get(ch.accountId).push({ t, x: xy.x, y: xy.y });
+      const arr = positions.get(ch.accountId);
+      if (arr.length && arr[arr.length - 1].t === t) continue;
+      arr.push({ t, x: xy.x, y: xy.y });
       continue;
     }
 
     if (type === "LogPlayerKillV2") {
       const victim = ev.victim;
-      const killer = ev.killer || ev.finisher || null;
+      const killer = ev.killer || ev.finisher || ev.dBNOMaker || null;
       const t = clock.timeOf(ev);
-      if (victim?.accountId && t !== null) deathTime.set(victim.accountId, t);
+      if (t === null) continue;
+      if (victim?.accountId) deathTime.set(victim.accountId, t);
       const vxy = readXY(victim?.location);
+      if (!vxy) continue;
       const kxy = readXY(killer?.location);
-      if (vxy && kxy && t !== null) {
-        kills.push({ t, killer: killer?.name || null, victim: victim?.name || null, kx: kxy.x, ky: kxy.y, vx: vxy.x, vy: vxy.y });
-      }
+      kills.push({
+        t,
+        killer: killer?.name || null,
+        victim: victim?.name || null,
+        killerAccountId: killer?.accountId || null,
+        victimAccountId: victim?.accountId || null,
+        killerTeamId: killer?.teamId ?? null,
+        victimTeamId: victim?.teamId ?? null,
+        kx: kxy ? kxy.x : null,
+        ky: kxy ? kxy.y : null,
+        vx: vxy.x,
+        vy: vxy.y,
+      });
       continue;
     }
 
@@ -87,28 +101,34 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     }
   }
 
-  let focalTeam = null;
+  let focalAccountId = null;
+  let focalTeamId = null;
   for (const [id, info] of roster) {
     if ((accountKey && id === accountKey) || (lowerName && lower(info.name) === lowerName)) {
-      focalTeam = info.teamId;
+      focalAccountId = id;
+      focalTeamId = info.teamId ?? null;
       break;
     }
   }
 
   const players = [];
-  for (const [id, posArr] of positions) {
-    const info = roster.get(id) || {};
+  for (const [id, info] of roster) {
+    const posArr = positions.get(id) || [];
     posArr.sort((a, b) => a.t - b.t);
+    const deduped = [];
+    for (const p of posArr) {
+      if (deduped.length && deduped[deduped.length - 1].t === p.t) continue;
+      deduped.push(p);
+    }
     const isFocal =
-      (accountKey && id === accountKey) ||
-      (lowerName && lower(info.name) === lowerName) ||
-      (focalTeam != null && info.teamId === focalTeam);
+      (focalAccountId !== null && id === focalAccountId) ||
+      (focalTeamId !== null && info.teamId === focalTeamId);
     players.push({
       name: info.name || id,
       accountId: id,
       teamId: info.teamId ?? null,
       isFocal: !!isFocal,
-      positions: posArr,
+      positions: deduped,
       deathTime: deathTime.has(id) ? deathTime.get(id) : null,
     });
   }
@@ -121,6 +141,10 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     mapMax: meta.mapMax,
     duration,
     createdAt: matchAttributes.createdAt || null,
+    focalAccountId,
+    focalTeamId,
+    totalPlayers: roster.size,
+    totalTeams: new Set([...roster.values()].map((i) => i.teamId ?? "none")).size,
     players,
     kills,
     zones,
