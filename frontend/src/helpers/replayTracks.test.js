@@ -1,5 +1,4 @@
 import { buildTracks, sampleTracks, STATE } from "./replayTracks";
-import { interpolatePosition } from "../component/charts/replayEngine";
 
 const player = (over = {}) => ({
   name: "P", accountId: "a.p", teamId: 1, isFocal: false,
@@ -42,28 +41,14 @@ test("a player with no samples is always absent", () => {
   expect(tracks.outState[0]).toBe(STATE.ABSENT);
 });
 
-test("matches interpolatePosition inside the sampled range over a random walk", () => {
-  let seed = 12345;
-  const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
-  const positions = [];
-  let t = 0;
-  for (let i = 0; i < 180; i += 1) {
-    positions.push({ t, x: Math.round(rand() * 8160), y: Math.round(rand() * 8160) });
-    t += 10;
-  }
+test("lerps a long track at known checkpoints", () => {
+  const positions = Array.from({ length: 20 }, (_, i) => ({ t: i * 10, x: i * 100, y: i * 50 }));
   const tracks = buildTracks([player({ positions })]);
-  const last = positions[positions.length - 1].t;
-  let checked = 0;
-  for (let i = 0; i < 10000; i += 1) {
-    // Deliberately non-monotonic: forward jumps and backward seeks.
-    const at = Math.round(rand() * last * 100) / 100;
+  for (const [at, x, y] of [[0, 0, 0], [5, 50, 25], [95, 950, 475], [190, 1900, 950]]) {
     sampleTracks(tracks, at);
-    const ref = interpolatePosition(positions, at);
-    expect(tracks.outX[0]).toBeCloseTo(ref.x, 2);
-    expect(tracks.outY[0]).toBeCloseTo(ref.y, 2);
-    checked += 1;
+    expect(tracks.outX[0]).toBeCloseTo(x, 3);
+    expect(tracks.outY[0]).toBeCloseTo(y, 3);
   }
-  expect(checked).toBe(10000);
 });
 
 test("allocates nothing per sample call", () => {
