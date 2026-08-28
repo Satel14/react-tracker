@@ -125,3 +125,68 @@ test("cancels the last scheduled frame on unmount", () => {
   rafSpy.mockRestore();
   cafSpy.mockRestore();
 });
+
+// jsdom's getContext returns null, so nothing below the measure() guard ever
+// paints. Stub it to make one real frame observable.
+const recordingCtx = () => {
+  const calls = [];
+  const rec = (name) => (...args) => calls.push({ name, args });
+  return {
+    calls,
+    lineWidth: 0, fillStyle: "", strokeStyle: "", font: "", globalAlpha: 1,
+    setTransform: rec("setTransform"), save: rec("save"), restore: rec("restore"),
+    clearRect: rec("clearRect"), fillRect: rec("fillRect"), drawImage: rec("drawImage"),
+    beginPath: rec("beginPath"), rect: rec("rect"), arc: rec("arc"),
+    fill: rec("fill"), stroke: rec("stroke"),
+    moveTo: rec("moveTo"), lineTo: rec("lineTo"), fillText: rec("fillText"),
+  };
+};
+
+test("mounting mid-match does not replay every earlier kill as a tracer burst", () => {
+  const ctx = recordingCtx();
+  const ctxSpy = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(ctx);
+  const rafSpy = vi.spyOn(window, "requestAnimationFrame");
+  try {
+    // The clock outlives the stage, so a remount (tab switch, "Reset view")
+    // starts with a fresh sweep against an already-advanced t.
+    const clockRef = { current: createClockCore({ duration: 100 }) };
+    clockRef.current.seek(60);
+    const withKills = {
+      ...data,
+      kills: [10, 20, 30, 40].map((t) => ({ t, kx: 3000, ky: 3000, vx: 5000, vy: 5000 })),
+    };
+    render(
+      <ReplayStage data={withKills} clockRef={clockRef} focusedAccountId={null} onSelect={() => {}} mapLabel="Erangel" />
+    );
+    ctx.calls.length = 0;
+    rafSpy.mock.calls[rafSpy.mock.calls.length - 1][0](0);
+    expect(ctx.calls.filter((c) => c.name === "lineTo")).toHaveLength(0);
+  } finally {
+    ctxSpy.mockRestore();
+    rafSpy.mockRestore();
+  }
+});
+
+test("drops the hover highlight when the pointer leaves the stage", () => {
+  const ctx = recordingCtx();
+  const ctxSpy = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(ctx);
+  const rafSpy = vi.spyOn(window, "requestAnimationFrame");
+  try {
+    const { container } = renderStage();
+    const stage = container.querySelector(".replay-stage");
+    const frame = () => {
+      ctx.calls.length = 0;
+      rafSpy.mock.calls[rafSpy.mock.calls.length - 1][0](0);
+      return ctx.calls.filter((c) => c.name === "arc").length;
+    };
+    frame();
+    fireEvent.pointerMove(stage, { pointerId: 1, clientX: 0, clientY: 0 });
+    const hovered = frame();
+    fireEvent.pointerLeave(stage, { pointerId: 1 });
+    // The hover ring is one extra arc; leaving must take it away again.
+    expect(frame()).toBe(hovered - 1);
+  } finally {
+    ctxSpy.mockRestore();
+    rafSpy.mockRestore();
+  }
+});

@@ -29,7 +29,7 @@ const FALLBACK_COLORS = {
   outside: "rgba(40,90,200,0.28)",
   ring: "rgb(253,232,43)",
   label: "rgb(255,255,255)",
-  band: "rgb(8,14,24)",
+  band: "rgb(12,20,34)",
 };
 
 const TOKEN_FOR = {
@@ -186,7 +186,9 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     return () => mo.disconnect();
   }, []);
 
-  // Reset the sweep cursor whenever the clock jumps.
+  // Reset the sweep cursor whenever the clock jumps -- and once on mount, since
+  // the clock outlives this component (tab switch, "Reset view") and a fresh
+  // sweep would otherwise replay every kill since t=0 as one burst of tracers.
   useEffect(() => {
     const core = clockRef.current;
     if (!core) return undefined;
@@ -195,6 +197,7 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
       view.current.flashes.length = 0;
       view.current.bgDirty = true;
     };
+    onSeek(core.t);
     core.onSeek(onSeek);
     return () => core.offSeek(onSeek);
   }, [clockRef, sweep]);
@@ -330,6 +333,10 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     if (v.pointers.size === 0) v.gesture = null;
   };
 
+  const onPointerLeave = () => {
+    view.current.hoveredIndex = -1;
+  };
+
   const onDoubleClick = () => {
     const v = view.current;
     v.cam = clampCamera(fitCamera(v.cam.mapMax), v.vw, v.vh);
@@ -345,6 +352,7 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
       onPointerUp={endPointer}
       onPointerCancel={endPointer}
       onLostPointerCapture={endPointer}
+      onPointerLeave={onPointerLeave}
       onDoubleClick={onDoubleClick}
     >
       <canvas ref={bgRef} className="replay-stage__layer replay-stage__layer--bg" aria-hidden="true" />
