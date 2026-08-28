@@ -89,12 +89,16 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
   useEffect(() => { focusedRef.current = focusedAccountId; }, [focusedAccountId]);
 
   useEffect(() => {
-    view.current.mapGen += 1;
-    view.current.cam = fitCamera(data.mapMax);
-    view.current.bgDirty = true;
-    view.current.flashes.length = 0;
-    view.current.highResRequested = false;
-    view.current.image = null;
+    const v = view.current;
+    v.mapGen += 1;
+    v.cam = fitCamera(data.mapMax);
+    v.bgDirty = true;
+    v.flashes.length = 0;
+    v.highResRequested = false;
+    v.image = null;
+    // Also invalidates an in-flight high-res load on unmount, so a late
+    // onload with no map change finds a stale generation and drops itself.
+    return () => { v.mapGen += 1; };
   }, [data.mapMax, data.rawMapName]);
 
   // Base raster first, so there is never a blank frame.

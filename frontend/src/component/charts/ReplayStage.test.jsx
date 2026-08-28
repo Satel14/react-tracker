@@ -101,10 +101,13 @@ test("re-resolves canvas colours when the surrounding .app theme changes", async
       <ReplayStage data={data} clockRef={clockRef} focusedAccountId={null} onSelect={() => {}} mapLabel="Erangel" />
     </div>
   );
-  const before = spy.mock.calls.length;
-  container.querySelector(".app").className = "app dark";
-  await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(before));
-  spy.mockRestore();
+  try {
+    const before = spy.mock.calls.length;
+    container.querySelector(".app").className = "app dark";
+    await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(before));
+  } finally {
+    spy.mockRestore();
+  }
 });
 
 test("renders two canvas layers", () => {
