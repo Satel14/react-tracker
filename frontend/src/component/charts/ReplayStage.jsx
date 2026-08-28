@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { getMapMeta, highResUrl } from "../../helpers/mapMeta";
 import { buildTracks, sampleTracks } from "../../helpers/replayTracks";
 import { createSweep, pruneFlashes } from "../../helpers/replayEvents";
@@ -28,18 +28,24 @@ const SPEED_KEYS = [1, 2, 4, 8, 16];
 const needsHighRes = (v) =>
   Math.min(v.vw, v.vh) * v.dpr * v.cam.zoom > HIGH_RES_SOURCE_PX * HIGH_RES_TRIGGER;
 
-// Mirrors :root's token defaults; only reached when no stylesheet is present.
+// Last-resort paint: only reached when no stylesheet resolved the token in
+// TOKEN_FOR below. Deliberately approximate rather than a copy of the token
+// value -- a copy is a second home for the same colour, and because this half
+// only ever shows with the stylesheet gone, a retuned token would drift away
+// from it in silence. Near enough to stay legible, far enough that nobody
+// reads it as the source of truth. focal/enemy/dead must stay told apart even
+// here, and band is the letterbox behind the map, so it must stay dark.
 const FALLBACK_COLORS = {
-  focal: "rgb(120,247,168)",
-  enemy: "rgb(214,217,238)",
+  focal: "rgb(110,230,150)",
+  enemy: "rgb(225,228,245)",
   dead: "rgb(108,112,144)",
-  tracer: "rgb(255,155,155)",
+  tracer: "rgb(255,140,140)",
   zoneCurrent: "rgb(255,255,255)",
   zoneNext: "rgb(90,180,255)",
   outside: "rgba(40,90,200,0.28)",
-  ring: "rgb(253,232,43)",
+  ring: "rgb(250,220,60)",
   label: "rgb(255,255,255)",
-  band: "rgb(12,20,34)",
+  band: "rgb(16,25,40)",
   warn: "rgb(255,143,60)",
   zoneRed: "rgb(255,59,48)",
   zoneStorm: "rgb(200,162,90)",
@@ -91,7 +97,7 @@ const normaliseWheel = (e) => {
   return Math.exp(-dy * (e.ctrlKey ? 0.02 : 0.0025));
 };
 
-const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, publish, layers, fullscreenLabel = "Fullscreen", children }) => {
+const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, mapLabel, publish, layers, fullscreenLabel = "Fullscreen", exitFullscreenLabel, onSpeed, children }, ref) => {
   const wrapRef = useRef(null);
   const bgRef = useRef(null);
   const fxRef = useRef(null);
@@ -409,8 +415,10 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
   const toggleFullscreen = useCallback(() => {
     const el = wrapRef.current;
     if (!el || !canFullscreen) return;
-    if (document.fullscreenElement === el) document.exitFullscreen?.();
-    else el.requestFullscreen?.();
+    // Both reject when the browser refuses (no transient activation, framed
+    // without allow="fullscreen"); swallow rather than leak a rejection.
+    const done = document.fullscreenElement === el ? document.exitFullscreen?.() : el.requestFullscreen?.();
+    if (done && typeof done.catch === "function") done.catch(() => {});
   }, [canFullscreen]);
 
   // The button's label has to follow the real state, not our last click:
@@ -428,37 +436,56 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     v.bgDirty = true;
   }, []);
 
+  // The page's Reset view button drives the same code path as the R shortcut,
+  // rather than remounting the stage and discarding its loaded rasters.
+  useImperativeHandle(ref, () => ({ resetView }), [resetView]);
+
   const onKeyDown = (e) => {
-    // Never steal a keystroke from a field the user is typing in.
+    // Never steal a keystroke from a control or a field the user is typing in.
+    // BUTTON matters as much as INPUT here: the fullscreen button lives inside
+    // this subtree, and swallowing its keys would stop it activating.
     const tag = e.target && e.target.tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target?.isContentEditable) return;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" ||
+        e.target?.isContentEditable) return;
+    // Leave every browser and OS chord alone. Alt+Left is Back, Ctrl+R reloads,
+    // Cmd+1 switches tab -- preventDefault on any of those is theft.
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     const core = clockRef.current;
     if (!core) return;
     const seekBy = (d) => core.seek(core.t + d);
     const step = e.shiftKey ? SEEK_STEP_BIG : SEEK_STEP;
 
-    switch (e.key) {
-      case " ":
-      case "Spacebar":
-        // Without this the page scrolls on every play/pause.
-        e.preventDefault();
-        core.toggle();
-        break;
+    // e.code, not e.key: code is the physical key, so the shortcuts survive a
+    // non-Latin layout. On the Ukrainian layout this app is translated into,
+    // e.key for F is "ф" and for R is "к".
+    //
+    // Space is deliberately absent. MatchReplayPage owns it on window, and two
+    // handlers each toggling meant play() then pause() -- Space stopped working
+    // the moment the user clicked the map.
+    switch (e.code) {
       case "ArrowRight": e.preventDefault(); seekBy(step); break;
       case "ArrowLeft": e.preventDefault(); seekBy(-step); break;
-      case ".": seekBy(TICK); break;
-      case ",": seekBy(-TICK); break;
-      case "f": case "F": toggleFullscreen(); break;
-      case "r": case "R": resetView(); break;
+      case "Period": seekBy(TICK); break;
+      case "Comma": seekBy(-TICK); break;
+      case "KeyF": toggleFullscreen(); break;
+      case "KeyR": resetView(); break;
       default: {
-        const digit = Number(e.key);
-        if (Number.isInteger(digit) && digit >= 0 && digit < SPEED_KEYS.length) {
-          core.setSpeed(SPEED_KEYS[digit]);
+        const digit = /^(Digit|Numpad)([0-9])$/.exec(e.code);
+        const index = digit ? Number(digit[2]) : -1;
+        if (index >= 0 && index < SPEED_KEYS.length) {
+          // Through the caller, so React's copy of the speed stays in step:
+          // setting it straight on the core desyncs the speed control, and Ant
+          // fires no onChange for an already-selected value, so the user cannot
+          // click their way back to the speed the UI claims is active.
+          if (onSpeed) onSpeed(SPEED_KEYS[index]);
+          else core.setSpeed(SPEED_KEYS[index]);
         }
-        return;
+        break;
       }
     }
-    if (publish) publish();
+    // No publish() here on purpose: the rAF loop already publishes on its own
+    // 100 ms throttle, and publishing per keydown turned a held arrow key into
+    // a ~30 Hz re-render of the whole replay pane.
   };
 
   const onDoubleClick = () => {
@@ -466,6 +493,11 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
     v.cam = clampCamera(fitCamera(v.cam.mapMax), v.vw, v.vh);
     v.bgDirty = true;
   };
+
+  // The button does two jobs, so it needs two names -- a screen reader told
+  // "Fullscreen" while already in fullscreen is being told the opposite of
+  // what the button does.
+  const label = fullscreen ? (exitFullscreenLabel || fullscreenLabel) : fullscreenLabel;
 
   return (
     <div
@@ -489,14 +521,18 @@ const ReplayStage = ({ data, clockRef, focusedAccountId, onSelect, mapLabel, pub
           type="button"
           className="replay-stage__fullscreen"
           onClick={toggleFullscreen}
-          aria-label={fullscreenLabel}
-          title={fullscreenLabel}
+          onPointerDown={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+          aria-label={label}
+          title={label}
         >
           {fullscreen ? "✕" : "⛶"}
         </button>
       ) : null}
     </div>
   );
-};
+});
+
+ReplayStage.displayName = "ReplayStage";
 
 export default ReplayStage;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useReducer, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Alert, Button, Slider, Segmented, Tabs } from "antd";
 import { translate } from "react-switch-lang";
@@ -48,7 +48,7 @@ const MatchReplayPage = ({ t }) => {
   const [tab, setTab] = useState("replay");
   const [analysis, setAnalysis] = useState({ loading: false, error: null, data: null });
   const [wantAnalysis, setWantAnalysis] = useState(false);
-  const [resetKey, setResetKey] = useState(0);
+  const stageRef = useRef(null);
   // The stage reads these every frame out of its own ref; this copy only drives
   // the checkboxes, so a toggle costs one render of the control bar, not of the
   // animation.
@@ -133,7 +133,7 @@ const MatchReplayPage = ({ t }) => {
       <div className="match-replay__layout">
         <div className="match-replay__stage">
           <ReplayStage
-            key={resetKey}
+            ref={stageRef}
             data={data}
             clockRef={clock.clockRef}
             publish={clock.publish}
@@ -141,7 +141,9 @@ const MatchReplayPage = ({ t }) => {
             onSelect={setFocusedAccountId}
             mapLabel={data.mapName}
             layers={layers}
+            onSpeed={clock.setSpeed}
             fullscreenLabel={t("pages.replay.fullscreen")}
+            exitFullscreenLabel={t("pages.replay.exitFullscreen")}
           >
             <ReplayOverlays
               rows={roster}
@@ -175,7 +177,11 @@ const MatchReplayPage = ({ t }) => {
           onChange={clock.setSpeed}
           options={SPEEDS.map((s) => ({ value: s, label: `${s}×` }))}
         />
-        <Button onClick={() => setResetKey((n) => n + 1)}>{t("pages.replay.resetView")}</Button>
+        {/* Both this and the R shortcut re-fit the camera and nothing else.
+            It used to remount the stage, which also threw away the loaded
+            high-res raster and the sprite atlas -- a visible blink for an
+            action labelled the same as a shortcut that did neither. */}
+        <Button onClick={() => stageRef.current?.resetView()}>{t("pages.replay.resetView")}</Button>
       </div>
       <div className="match-replay__layers">
         <span className="match-replay__layers-title">{t("pages.replay.layers")}</span>
