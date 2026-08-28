@@ -19,6 +19,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
   const roster = new Map();
   const positions = new Map();
   const deathTime = new Map();
+  const dropTime = new Map();
   const kills = [];
   const zones = [];
 
@@ -51,6 +52,17 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       const arr = positions.get(ch.accountId);
       if (arr.length && arr[arr.length - 1].t === t) continue;
       arr.push({ t, x: xy.x, y: xy.y });
+      continue;
+    }
+
+    if (type === "LogVehicleLeave") {
+      if (ev?.vehicle?.vehicleId !== "DummyTransportAircraft_C") continue;
+      const id = ev?.character?.accountId;
+      const t = clock.timeOf(ev);
+      if (!id || t === null) continue;
+      const prev = dropTime.get(id);
+      if (prev === undefined || t < prev) dropTime.set(id, t);
+      if (!roster.has(id)) roster.set(id, { name: ev.character.name, teamId: ev.character.teamId });
       continue;
     }
 
@@ -129,6 +141,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       teamId: info.teamId ?? null,
       isFocal: !!isFocal,
       positions: deduped,
+      dropTime: dropTime.has(id) ? dropTime.get(id) : null,
       deathTime: deathTime.has(id) ? deathTime.get(id) : null,
     });
   }

@@ -111,3 +111,33 @@ test("dedupes duplicate position samples at the same t", () => {
   const me = r.players.find((p) => p.accountId === "account.me");
   assert.deepEqual(me.positions.map((p) => p.t), [10, 20]);
 });
+
+const aircraftExit = (accountId, name, teamId, t) => ({
+  _T: "LogVehicleLeave", elapsedTime: t,
+  character: { accountId, name, teamId, location: { x: 300000, y: 300000, z: 120000 } },
+  vehicle: { vehicleType: "TransportAircraft", vehicleId: "DummyTransportAircraft_C", location: { x: 300000, y: 300000, z: 150000 } },
+});
+
+test("sets dropTime from the aircraft exit", () => {
+  const r = parseReplayTelemetry([...telemetry, aircraftExit("account.me", "Me", 1, 42)], { matchAttributes, accountId: "account.me" });
+  assert.equal(r.players.find((p) => p.accountId === "account.me").dropTime, 42);
+  assert.equal(r.players.find((p) => p.accountId === "account.foe").dropTime, null);
+});
+
+test("ignores the Recall helicopter when setting dropTime", () => {
+  const recall = {
+    _T: "LogVehicleLeave", elapsedTime: 900,
+    character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 500000, y: 500000, z: 90000 } },
+    vehicle: { vehicleType: "TransportAircraft", vehicleId: "RedeployAircraft_Tiger_C", location: { x: 500000, y: 500000, z: 100000 } },
+  };
+  const r = parseReplayTelemetry([...telemetry, aircraftExit("account.me", "Me", 1, 42), recall], { matchAttributes, accountId: "account.me" });
+  assert.equal(r.players.find((p) => p.accountId === "account.me").dropTime, 42);
+});
+
+test("keeps the earliest aircraft exit if the event repeats", () => {
+  const r = parseReplayTelemetry(
+    [...telemetry, aircraftExit("account.me", "Me", 1, 55), aircraftExit("account.me", "Me", 1, 42)],
+    { matchAttributes, accountId: "account.me" }
+  );
+  assert.equal(r.players.find((p) => p.accountId === "account.me").dropTime, 42);
+});
