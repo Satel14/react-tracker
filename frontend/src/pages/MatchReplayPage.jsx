@@ -53,17 +53,28 @@ const MatchReplayPage = ({ t }) => {
   // the checkboxes, so a toggle costs one render of the control bar, not of the
   // animation.
   const [layers, setLayers] = useState(readLayerPrefs);
-  const toggleLayer = (key) =>
-    setLayers((prev) => writeLayerPrefs({ ...prev, [key]: !prev[key] }));
+  // Persist outside the updater: React may call an updater twice (StrictMode,
+  // and any re-render it decides to discard), and a storage write is a side
+  // effect that must happen once.
+  const toggleLayer = (key) => {
+    const next = { ...layers, [key]: !layers[key] };
+    setLayers(next);
+    writeLayerPrefs(next);
+  };
   // duration is wall-clock seconds from the match record; endTime is the
   // in-game span, 5-19 s shorter on every real match because the two clocks
   // drift. A legacy payload carries no endTime, so duration still backs it.
   const span = data?.endTime || data?.duration || 0;
   const clock = useReplayClock(span);
   const { toggle } = clock;
+  // Whole seconds, not the raw 10 Hz publish tick: health and the knocked flag
+  // come from 10 s telemetry samples and deaths land on whole seconds, so a
+  // finer key recomputes the roster and re-renders ~100 team-card buttons
+  // nine times out of ten for an identical result.
+  const rosterT = Math.floor(clock.displayT);
   const roster = useMemo(
-    () => (data ? rosterAt(data.players, data.kills, clock.displayT) : []),
-    [data, clock.displayT]
+    () => (data ? rosterAt(data.players, data.kills, rosterT) : []),
+    [data, rosterT]
   );
 
   useEffect(() => {

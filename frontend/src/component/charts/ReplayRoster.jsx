@@ -42,8 +42,11 @@ const ReplayRoster = ({ rows = [], focusedAccountId = null, onSelect, t }) => {
                     ? t("pages.replay.teamless")
                     : t("pages.replay.teamLabel", { id: team.teamId })}
               </span>
+              {/* role="img" because aria-label on a bare span is ignored: without
+                  a role there is nothing for the name to attach to. */}
               <span
                 className="replay-roster__team-alive"
+                role="img"
                 aria-label={t("pages.replay.aliveOf", { alive: team.aliveCount, total: team.total })}
               >
                 {`${team.aliveCount}/${team.total}`}

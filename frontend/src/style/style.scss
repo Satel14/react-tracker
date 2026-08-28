@@ -4218,7 +4218,9 @@ body {
     overflow: hidden;
   }
   &__health-fill { display: block; height: 100%; background: var(--ok); }
-  &__member.is-knocked &__health-fill { background: var(--warn); }
+  // Same reason as the roster: a downed player's health reads 0, so the fill
+  // has no width to colour.
+  &__member.is-knocked &__health { background: var(--warn); }
   &__member.is-dead &__health-fill { background: var(--rest); }
 }
 
@@ -4419,12 +4421,10 @@ body {
   }
 }
 
+// The roster used to sit here as a sidebar; it is a full-width panel below the
+// stage now, so this is a plain block wrapper.
 .match-replay__layout {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-
-  .match-replay__stage { flex: 1; min-width: 0; }
+  .match-replay__stage { min-width: 0; }
 }
 
 .replay-roster {
@@ -4436,12 +4436,6 @@ body {
   background: var(--surface);
   border-radius: 10px;
   padding: 8px;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--accent) 40%, transparent) transparent;
-
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 3px; }
-
   &__title { color: var(--brand); font-weight: 700; margin-bottom: 6px; }
   &__teams {
     display: grid;
@@ -4501,9 +4495,10 @@ body {
 
     &.is-focal .replay-roster__name { color: var(--ok); }
     &.is-dead { opacity: 0.4; }
-    // Knocked is a live state, not a dead one: it stays legible and the bar
-    // turns amber, so it never reads as "already out".
-    &.is-knocked .replay-roster__health-fill { background: var(--warn); }
+    // PUBG reports health 0 for the whole time a player is downed (measured:
+    // 121 of 121 DBNO samples), so the FILL is zero-width and colouring it
+    // would style nothing. The track carries the state instead.
+    &.is-knocked .replay-roster__health { background: var(--warn); }
     &.is-dead .replay-roster__health-fill { background: var(--rest); }
     &.is-selected { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, transparent); }
   }
@@ -4512,7 +4507,6 @@ body {
 }
 
 @media (max-width: 760px) {
-  .match-replay__layout { flex-direction: column; }
   .replay-roster__teams { grid-template-columns: 1fr; }
   // In the column layout the stage no longer stretches (align-items:flex-start
   // is inherited), so without an explicit width it shrinks to its content —

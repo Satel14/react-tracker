@@ -60,7 +60,17 @@ test("every replay key the components reference exists in both locales", () => {
   ];
   const used = new Set();
   for (const file of files) {
-    for (const m of readFileSync(file, "utf8").matchAll(/pages\.replay\.([A-Za-z]+)/g)) used.add(m[1]);
+    const src = readFileSync(file, "utf8");
+    for (const m of src.matchAll(/pages\.replay\.([A-Za-z]+)/g)) used.add(m[1]);
+    // A key built by template literal -- t(`pages.replay.${LAYER_LABEL[key]}`) --
+    // is invisible to the scan above, and the six layer names it hides are the
+    // ones most likely to drift. Follow the lookup table to its values.
+    for (const table of src.matchAll(/pages\.replay\.\$\{(\w+)\[/g)) {
+      const start = src.indexOf(`const ${table[1]} = {`);
+      const end = start < 0 ? -1 : src.indexOf("};", start);
+      if (start < 0 || end < 0) throw new Error(`cannot resolve the ${table[1]} key table in ${file}`);
+      for (const v of src.slice(start, end).matchAll(/:\s*"([A-Za-z]+)"/g)) used.add(v[1]);
+    }
   }
   expect(used.size).toBeGreaterThan(10);
   for (const key of [...used].sort()) {

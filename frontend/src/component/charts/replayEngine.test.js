@@ -207,3 +207,30 @@ test("groupRosterIntoTeams keeps teamless rows in one bucket, sorted last", () =
   expect(teams.map((team) => team.teamId)).toEqual([5, null]);
   expect(teams[1].members).toHaveLength(1);
 });
+
+test("groupRosterIntoTeams survives a ragged roster", () => {
+  // Defensive because the payload is decoded from the network: a null row used
+  // to throw on row.teamId and take the whole page down.
+  expect(groupRosterIntoTeams(null)).toEqual([]);
+  expect(groupRosterIntoTeams(undefined)).toEqual([]);
+  const teams = groupRosterIntoTeams([
+    null,
+    "junk",
+    { name: "A", accountId: "a", teamId: 1, kills: 0, alive: true, isFocal: false },
+  ]);
+  expect(teams).toHaveLength(1);
+  expect(teams[0].members).toHaveLength(1);
+});
+
+test("sorting is stable when isFocal is absent rather than false", () => {
+  // An absent flag and an explicit false must compare equal, or the comparator
+  // is intransitive and the sort order depends on the input order.
+  const rows = [
+    { name: "B", accountId: "b", teamId: 1, kills: 1, alive: true },
+    { name: "A", accountId: "a", teamId: 1, kills: 1, alive: true, isFocal: false },
+  ];
+  const forward = rosterAt(rows.map((r) => ({ ...r, positions: [], deathTime: null })), [], 5).map((r) => r.name);
+  const backward = rosterAt([...rows].reverse().map((r) => ({ ...r, positions: [], deathTime: null })), [], 5).map((r) => r.name);
+  expect(forward).toEqual(backward);
+  expect(forward).toEqual(["A", "B"]);
+});

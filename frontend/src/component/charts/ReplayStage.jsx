@@ -488,11 +488,8 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     // a ~30 Hz re-render of the whole replay pane.
   };
 
-  const onDoubleClick = () => {
-    const v = view.current;
-    v.cam = clampCamera(fitCamera(v.cam.mapMax), v.vw, v.vh);
-    v.bgDirty = true;
-  };
+  // Double-click, the R key and the page's Reset view button are one action.
+  const onDoubleClick = resetView;
 
   // The button does two jobs, so it needs two names -- a screen reader told
   // "Fullscreen" while already in fullscreen is being told the opposite of

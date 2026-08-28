@@ -93,7 +93,11 @@ export const rosterAt = (players, kills, t) => {
       };
     })
     .sort((a, b) => {
-      if (a.isFocal !== b.isFocal) return a.isFocal ? -1 : 1;
+      // Coerced, so a payload with isFocal absent on some players does not make
+      // the comparator intransitive against ones where it is explicitly false.
+      const af = !!a.isFocal;
+      const bf = !!b.isFocal;
+      if (af !== bf) return af ? -1 : 1;
       if (b.kills !== a.kills) return b.kills - a.kills;
       return String(a.name).localeCompare(String(b.name));
     });
@@ -113,7 +117,8 @@ const compareTeamId = (a, b) => {
 export const groupRosterIntoTeams = (rows = []) => {
   const teams = [];
   const indexByTeam = new Map();
-  for (const row of rows) {
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (!row || typeof row !== "object") continue;
     const teamId = row.teamId ?? null;
     const key = teamId === null ? "none" : String(teamId);
     if (!indexByTeam.has(key)) {
