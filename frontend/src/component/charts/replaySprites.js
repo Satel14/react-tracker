@@ -71,7 +71,12 @@ const MOVING = "M30 16 L8 2 L2 16 L8 30 Z";
 //
 // This one has an up, so unlike every other glyph it must NOT be turned by the
 // bearing. drawScene excludes it explicitly.
-const PARACHUTE = "M2 16 A14 14 0 0 1 30 16 L16 30 Z";
+// Stroked, not filled. Filled, the canopy and the shrouds merge into one solid
+// wedge and the thing stops reading as a parachute at all -- the gaps between
+// the lines are half of what makes the shape recognisable. Three shrouds, not
+// the reference's full set: at eight pixels any more of them close up into the
+// solid this is avoiding.
+const PARACHUTE = "M2 16 A14 14 0 0 1 30 16 M2 16 L16 30 M30 16 L16 30 M16 16 L16 30";
 
 const DEAD = "M2 2 L30 30 M30 2 L2 30";
 
@@ -213,8 +218,8 @@ const PAINT = {
   enemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   movingFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   movingEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
-  parachuteFocal: { key: "focal", fallback: "rgb(255,255,255)" },
-  parachuteEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
+  parachuteFocal: { key: "focal", fallback: "rgb(255,255,255)", stroke: 3 },
+  parachuteEnemy: { key: "enemy", fallback: "rgb(255,255,255)", stroke: 3 },
   knockedFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   knockedEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   vehicleFocal: { key: "focal", fallback: "rgb(255,255,255)" },

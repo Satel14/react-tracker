@@ -437,19 +437,28 @@ test("the four new forms are their own silhouettes, and the truck cannot collaps
 // every marker that is moving, and a descending player is always moving. The
 // guard is in drawScene; this pins the property that makes the guard necessary,
 // so nobody removes it thinking the shape is rotation-proof.
-test("the canopy is not symmetric under rotation, so it must never be turned", () => {
+test("the canopy is an outline with open shrouds, not a solid wedge", () => {
   const subs = pathPoints(ICON_PATHS.parachuteFocal);
-  expect(subs).toHaveLength(1);
-  const turned = subs[0].map(([x, y]) => [16 - (y - 16), 16 + (x - 16)]);
-  const same = turned.every(([x, y]) =>
-    subs[0].some(([px, py]) => Math.abs(px - x) < 0.02 && Math.abs(py - y) < 0.02));
-  expect(same).toBe(false);
+  // A canopy arc plus three separate shrouds. Filled, or joined into one
+  // subpath, they merge into a solid triangle and it stops reading as a
+  // parachute -- the gaps are half of what makes the shape recognisable.
+  expect(subs.length).toBeGreaterThan(1);
 
-  // Its mass sits above centre and its point below: a canopy over lines, not a
-  // blob. Reversing that would be a different object entirely.
-  const ys = subs[0].map(([, y]) => y);
+  const all = subs.flat();
+  const ys = all.map(([, y]) => y);
+  const xs = all.map(([x]) => x);
   expect(Math.min(...ys)).toBeCloseTo(2, 5);
   expect(Math.max(...ys)).toBeCloseTo(30, 5);
+  expect(Math.min(...xs)).toBeCloseTo(2, 5);
+  expect(Math.max(...xs)).toBeCloseTo(30, 5);
+
+  // Every shroud ends at the same point below centre, and the canopy spans the
+  // full width above it: a canopy over converging lines, not a blob. Rotating
+  // that would hang it sideways, which is why drawScene exempts it.
+  const turned = all.map(([x, y]) => [16 - (y - 16), 16 + (x - 16)]);
+  const same = turned.every(([x, y]) =>
+    all.some(([px, py]) => Math.abs(px - x) < 0.02 && Math.abs(py - y) < 0.02));
+  expect(same).toBe(false);
 });
 
 
@@ -790,8 +799,12 @@ test("paints every glyph from the palette it was handed", () => {
   expect(paint.dead.op).toBe("stroke");
   expect(paint.chevronFocal.op).toBe("stroke");
   expect(paint.chevronEnemy.op).toBe("stroke");
+  // The canopy joins them: filled, it and its shrouds merge into one solid
+  // wedge and it stops reading as a parachute at all.
+  expect(paint.parachuteFocal.op).toBe("stroke");
+  expect(paint.parachuteEnemy.op).toBe("stroke");
   for (const kind of [
-    "focal", "enemy", "movingFocal", "movingEnemy", "parachuteFocal", "parachuteEnemy",
+    "focal", "enemy", "movingFocal", "movingEnemy",
     "knockedFocal", "knockedEnemy", "vehicleFocal", "vehicleEnemy", "bikeFocal",
     "bikeEnemy", "truckFocal", "truckEnemy", "boatFocal", "boatEnemy", "planeFocal",
     "planeEnemy", "balloonFocal", "balloonEnemy", "crate", "crateRed",
