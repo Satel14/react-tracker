@@ -34,6 +34,13 @@ export const SCREEN = {
   // crate settles onto its point instead of snapping to it.
   crateSway: 4,
   crateSwayTurns: 2.5,
+  // A crate somebody has already emptied is still worth seeing -- it says where
+  // a fight probably happened -- but it is no longer worth walking to, so it
+  // recedes. Rasterised at marker size over the four grounds the map actually
+  // shows (Erangel green, Miramar sand, Vikendi snow, out-of-zone), 0.6 is
+  // where it reads as faded without going pale on snow: by 0.45 it is getting
+  // weak there, and at 0.75 the difference barely registers.
+  lootedAlpha: 0.6,
   chevronRadius: 4,
   // Bigger than a player: it carries sixty of them.
   planeRadius: 9,
@@ -289,6 +296,14 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas, image
     const cx = p.x + sway;
     const cy = p.y - rise;
 
+    // Faded once somebody has been through it. Still in the air means still
+    // worth going to, whatever happens to it later.
+    const spent = !!pkg.looted && !pkg.falling;
+    if (spent) {
+      ctx.save();
+      ctx.globalAlpha = SCREEN.lootedAlpha;
+    }
+
     // PUBG's own crate artwork, which is the one thing in their asset repo that
     // is genuinely a map marker rather than a killfeed row or a product render.
     // Three states, and the payload knows all three: under canopy, on the
@@ -298,29 +313,30 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas, image
       const w = SCREEN.crateRadius * 2 * SCREEN.crateArtScale;
       const h = w * (art.height / art.width);
       ctx.drawImage(art, cx - w / 2, cy - h / 2, w, h);
-      continue;
+    } else {
+      // Until it loads, and wherever it cannot be fetched, the drawn glyph
+      // stands in -- there is never a frame with no care packages on it.
+      const red = pkg.kind === "redbox";
+      const colour = red ? colors.danger || colors.crate : colors.crate;
+      if (atlas && atlas.blit) {
+        atlas.blit(ctx, red ? "crateRed" : "crate", Math.round(cx), Math.round(cy), SCREEN.crateRadius);
+      } else {
+        ctx.beginPath();
+        ctx.arc(cx, cy, SCREEN.crateRadius, 0, Math.PI * 2);
+        ctx.fillStyle = colour;
+        ctx.fill();
+      }
+      if (pkg.falling) {
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = SCREEN.shotWidth;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - SCREEN.crateRadius);
+        ctx.lineTo(cx, cy - SCREEN.crateRadius * 3);
+        ctx.stroke();
+      }
     }
 
-    // Until it loads, and wherever it cannot be fetched, the drawn glyph stands
-    // in -- there is never a frame with no care packages on it.
-    const red = pkg.kind === "redbox";
-    const colour = red ? colors.danger || colors.crate : colors.crate;
-    if (atlas && atlas.blit) {
-      atlas.blit(ctx, red ? "crateRed" : "crate", Math.round(cx), Math.round(cy), SCREEN.crateRadius);
-    } else {
-      ctx.beginPath();
-      ctx.arc(cx, cy, SCREEN.crateRadius, 0, Math.PI * 2);
-      ctx.fillStyle = colour;
-      ctx.fill();
-    }
-    if (pkg.falling) {
-      ctx.strokeStyle = colour;
-      ctx.lineWidth = SCREEN.shotWidth;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - SCREEN.crateRadius);
-      ctx.lineTo(cx, cy - SCREEN.crateRadius * 3);
-      ctx.stroke();
-    }
+    if (spent) ctx.restore();
   }
 };
 

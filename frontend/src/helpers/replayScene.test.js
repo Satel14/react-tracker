@@ -8,7 +8,8 @@ import { fitCamera, clampCamera, worldToScreen } from "./replayCamera";
 const recordingCtx = () => {
   const calls = [];
   const state = { lineWidth: 0, fillStyle: "", strokeStyle: "", font: "", globalAlpha: 1 };
-  const rec = (name) => (...args) => calls.push({ name, args, lineWidth: state.lineWidth, fillStyle: state.fillStyle, strokeStyle: state.strokeStyle });
+  const saved = [];
+  const rec = (name) => (...args) => calls.push({ name, args, lineWidth: state.lineWidth, fillStyle: state.fillStyle, strokeStyle: state.strokeStyle, globalAlpha: state.globalAlpha });
   return {
     calls,
     get lineWidth() { return state.lineWidth; },
@@ -21,7 +22,9 @@ const recordingCtx = () => {
     set font(v) { state.font = v; },
     get globalAlpha() { return state.globalAlpha; },
     set globalAlpha(v) { state.globalAlpha = v; },
-    save: rec("save"), restore: rec("restore"),
+    // globalAlpha is drawing state, so save/restore has to carry it.
+    save: (...a) => { saved.push(state.globalAlpha); return rec("save")(...a); },
+    restore: (...a) => { const r = rec("restore")(...a); if (saved.length) state.globalAlpha = saved.pop(); return r; },
     beginPath: rec("beginPath"), closePath: rec("closePath"),
     moveTo: rec("moveTo"), lineTo: rec("lineTo"),
     arc: rec("arc"), rect: rec("rect"),
@@ -955,6 +958,64 @@ test("an opened crate is drawn open", () => {
   });
   expect(drawn[0][0]).toBe(images.open);
   expect(drawn[1][0]).toBe(images.landed);
+});
+
+const CRATE_ART = { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 }, open: { width: 144, height: 136 } };
+
+test("a crate somebody has emptied is drawn faded", () => {
+  const ctx = recordingCtx();
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null, images: CRATE_ART,
+    packages: [
+      { kind: "redbox", x: 4000, y: 4000, falling: false, fall: 1, looted: true },
+      { kind: "redbox", x: 4100, y: 4100, falling: false, fall: 1, looted: false },
+    ],
+  });
+  const draws = ctx.calls.filter((c) => c.name === "drawImage");
+  expect(draws).toHaveLength(2);
+  expect(draws[0].globalAlpha).toBe(SCREEN.lootedAlpha);
+  // The one nobody has touched keeps its full weight, so the two are told
+  // apart by more than which PNG they use.
+  expect(draws[1].globalAlpha).toBe(1);
+  // Faded, not gone: it still marks where a fight probably happened.
+  expect(SCREEN.lootedAlpha).toBeGreaterThan(0.45);
+  expect(SCREEN.lootedAlpha).toBeLessThan(0.75);
+});
+
+test("the fade does not leak onto the next crate or the rest of the frame", () => {
+  const ctx = recordingCtx();
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null, images: CRATE_ART,
+    packages: [{ kind: "redbox", x: 4000, y: 4000, falling: false, fall: 1, looted: true }],
+  });
+  expect(ctx.globalAlpha).toBe(1);
+});
+
+test("the stand-in glyph fades too, so the state survives a failed icon fetch", () => {
+  const ctx = recordingCtx();
+  const blits = [];
+  const atlas = { blit: (c, kind) => blits.push({ kind, globalAlpha: c.globalAlpha }) };
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas, images: null,
+    packages: [
+      { kind: "redbox", x: 4000, y: 4000, falling: false, fall: 1, looted: true },
+      { kind: "redbox", x: 4100, y: 4100, falling: false, fall: 1, looted: false },
+    ],
+  });
+  expect(blits[0].globalAlpha).toBe(SCREEN.lootedAlpha);
+  expect(blits[1].globalAlpha).toBe(1);
+});
+
+test("a crate still under its canopy is not faded, however it ends up", () => {
+  // Still in the air means still worth going to. The payload knows it will be
+  // looted long before anyone reaches it, and fading it there says the
+  // opposite.
+  const ctx = recordingCtx();
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null, images: CRATE_ART,
+    packages: [{ kind: "redbox", x: 4000, y: 4000, falling: true, fall: 0.5, looted: true }],
+  });
+  expect(ctx.calls.find((c) => c.name === "drawImage").globalAlpha).toBe(1);
 });
 
 test("a falling crate is still falling even after somebody will loot it", () => {
