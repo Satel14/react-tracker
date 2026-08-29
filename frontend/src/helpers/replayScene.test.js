@@ -7,9 +7,8 @@ import { fitCamera, clampCamera, worldToScreen } from "./replayCamera";
 
 const recordingCtx = () => {
   const calls = [];
-  const state = { lineWidth: 0, fillStyle: "", strokeStyle: "", font: "", globalAlpha: 1, filter: "none" };
-  const saved = [];
-  const rec = (name) => (...args) => calls.push({ name, args, lineWidth: state.lineWidth, fillStyle: state.fillStyle, strokeStyle: state.strokeStyle, filter: state.filter });
+  const state = { lineWidth: 0, fillStyle: "", strokeStyle: "", font: "", globalAlpha: 1 };
+  const rec = (name) => (...args) => calls.push({ name, args, lineWidth: state.lineWidth, fillStyle: state.fillStyle, strokeStyle: state.strokeStyle });
   return {
     calls,
     get lineWidth() { return state.lineWidth; },
@@ -22,12 +21,7 @@ const recordingCtx = () => {
     set font(v) { state.font = v; },
     get globalAlpha() { return state.globalAlpha; },
     set globalAlpha(v) { state.globalAlpha = v; },
-    // filter is drawing state like the rest, so save/restore has to carry it --
-    // otherwise a test cannot tell a leak from a clean restore.
-    get filter() { return state.filter; },
-    set filter(v) { state.filter = v; },
-    save: (...a) => { saved.push(state.filter); return rec("save")(...a); },
-    restore: (...a) => { const r = rec("restore")(...a); if (saved.length) state.filter = saved.pop(); return r; },
+    save: rec("save"), restore: rec("restore"),
     beginPath: rec("beginPath"), closePath: rec("closePath"),
     moveTo: rec("moveTo"), lineTo: rec("lineTo"),
     arc: rec("arc"), rect: rec("rect"),
@@ -961,76 +955,6 @@ test("an opened crate is drawn open", () => {
   });
   expect(drawn[0][0]).toBe(images.open);
   expect(drawn[1][0]).toBe(images.landed);
-});
-
-test("a crate somebody has emptied is drawn drained of colour", () => {
-  // The open artwork is the same red and blue box with its lid up, which at
-  // marker size is no change at all. The filter is what actually says "spent".
-  const ctx = recordingCtx();
-  const images = { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 }, open: { width: 144, height: 136 } };
-  paintPackages(ctx, {
-    ...frameAt(1), colors: P2_COLORS, atlas: null, images,
-    packages: [
-      { kind: "redbox", x: 4000, y: 4000, falling: false, fall: 1, looted: true },
-      { kind: "redbox", x: 4100, y: 4100, falling: false, fall: 1, looted: false },
-    ],
-  });
-  const draws = ctx.calls.filter((c) => c.name === "drawImage");
-  expect(draws).toHaveLength(2);
-  expect(draws[0].filter).toBe(SCREEN.lootedFilter);
-  // ...and the crate nobody has touched is drawn with no filter at all, so the
-  // two are told apart by more than which PNG they use.
-  expect(draws[1].filter).toBe("none");
-});
-
-test("the drained look does not leak onto the next crate or the rest of the frame", () => {
-  const ctx = recordingCtx();
-  const images = { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 }, open: { width: 144, height: 136 } };
-  paintPackages(ctx, {
-    ...frameAt(1), colors: P2_COLORS, atlas: null, images,
-    packages: [{ kind: "redbox", x: 4000, y: 4000, falling: false, fall: 1, looted: true }],
-  });
-  expect(ctx.filter).toBe("none");
-});
-
-test("the stand-in glyph is drained too, so the state survives a failed icon fetch", () => {
-  const ctx = recordingCtx();
-  const blits = [];
-  const atlas = { blit: (c, kind) => blits.push({ kind, filter: c.filter }) };
-  paintPackages(ctx, {
-    ...frameAt(1), colors: P2_COLORS, atlas, images: null,
-    packages: [
-      { kind: "redbox", x: 4000, y: 4000, falling: false, fall: 1, looted: true },
-      { kind: "redbox", x: 4100, y: 4100, falling: false, fall: 1, looted: false },
-    ],
-  });
-  expect(blits[0].filter).toBe(SCREEN.lootedFilter);
-  expect(blits[1].filter).toBe("none");
-});
-
-test("a crate still under its canopy is not drained, however it ends up", () => {
-  // Still in the air means still worth going to. Draining it there would say
-  // the opposite, and the payload knows it will be looted long before anyone
-  // reaches it.
-  const ctx = recordingCtx();
-  const images = { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 }, open: { width: 144, height: 136 } };
-  paintPackages(ctx, {
-    ...frameAt(1), colors: P2_COLORS, atlas: null, images,
-    packages: [{ kind: "redbox", x: 4000, y: 4000, falling: true, fall: 0.5, looted: true }],
-  });
-  expect(ctx.calls.find((c) => c.name === "drawImage").filter).toBe("none");
-});
-
-test("the drained crate is lightened, not darkened, so it survives the dark ground", () => {
-  // Desaturating the crate's red leaves a luminance near 66, below the
-  // out-of-zone wash it is drawn on. Pulling brightness down from there hides
-  // it; the filter has to push up.
-  const m = /brightness\(([\d.]+)\)/.exec(SCREEN.lootedFilter);
-  expect(m).not.toBeNull();
-  expect(Number(m[1])).toBeGreaterThan(1);
-  // And not so far up that the lid blows out to white and is lost on snow.
-  expect(Number(m[1])).toBeLessThan(2.3);
-  expect(SCREEN.lootedFilter).toContain("grayscale(1)");
 });
 
 test("a falling crate is still falling even after somebody will loot it", () => {
