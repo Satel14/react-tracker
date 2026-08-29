@@ -38,7 +38,7 @@ const decodeLegacyPositions = (samples) => {
       x: toNumber(s.x, 0),
       y: toNumber(s.y, 0),
       h: clampHealth(s.h ?? 100),
-      f: toNumber(s.f, 0) & 15,
+      f: toNumber(s.f, 0) & 31,
     });
   }
   return out;
@@ -60,10 +60,10 @@ const decodeColumnPositions = (encoded) => {
     curT += toNumber(t[i], 0);
     curX += toNumber(dx[i], 0);
     curY += toNumber(dy[i], 0);
-    // & 15 mirrors decodePositions in backend/modules/replay/positions.js; the two
+    // & 31 mirrors decodePositions in backend/modules/replay/positions.js; the two
     // codecs are inverses and must not fork, so admitting a third flag bit here
     // means widening the mask in both files together.
-    const f = toNumber(flags[i], 0) & 15;
+    const f = toNumber(flags[i], 0) & 31;
     out.push({ t: curT, x: curX, y: curY, h: clampHealth(health[i]), f });
   }
   return out;

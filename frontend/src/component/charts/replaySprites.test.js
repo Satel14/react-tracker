@@ -39,10 +39,18 @@ const TEAM_FORM_OF = {
   enemy: "focal",
   movingFocal: "movingFocal",
   movingEnemy: "movingFocal",
+  parachuteFocal: "parachuteFocal",
+  parachuteEnemy: "parachuteFocal",
   knockedFocal: "knockedFocal",
   knockedEnemy: "knockedFocal",
   vehicleFocal: "vehicleFocal",
   vehicleEnemy: "vehicleFocal",
+  bikeFocal: "bikeFocal",
+  bikeEnemy: "bikeFocal",
+  truckFocal: "truckFocal",
+  truckEnemy: "truckFocal",
+  boatFocal: "boatFocal",
+  boatEnemy: "boatFocal",
   planeFocal: "planeFocal",
   planeEnemy: "planeFocal",
   balloonFocal: "balloonFocal",
@@ -51,6 +59,11 @@ const TEAM_FORM_OF = {
 
 // Declaration order matters: it is the order buildAtlas rasterises a team row.
 const TEAM_FORMS = [...new Set(Object.values(TEAM_FORM_OF))];
+
+// The four forms added for the descent and the three rides the car used to
+// stand in for. Listed by hand: the point of the list is that each one is a
+// deliberate addition to the sheet, not a shape that appeared by derivation.
+const NEW_FORMS = ["parachuteFocal", "bikeFocal", "truckFocal", "boatFocal"];
 
 // A corpse belongs to nobody, the crates encode contents rather than ownership,
 // and the landing chevron keeps its friend/foe read. These take no team colour.
@@ -156,6 +169,21 @@ const pathPoints = (d) => {
   }
   return subpaths;
 };
+
+// One bounding box per subpath. The union's box is what the inscription rule
+// reads; this is what says WHERE inside that box the ink sits, which is the
+// whole basis on which the rides are told apart at 8 px.
+const subpathBoxes = (d) => pathPoints(d).map((pts) => ({
+  minX: Math.min(...pts.map(([x]) => x)),
+  maxX: Math.max(...pts.map(([x]) => x)),
+  minY: Math.min(...pts.map(([, y]) => y)),
+  maxY: Math.max(...pts.map(([, y]) => y)),
+}));
+
+// Subpaths that span the box top to bottom -- the axles, the handlebars, the
+// wing, the transom. Where these sit along the hull is the coarsest cue a
+// vehicle glyph has, and the only one that survives being 8 px wide.
+const fullHeightBlocks = (d) => subpathBoxes(d).filter((b) => b.maxY - b.minY === BOX_MAX - BOX_MIN);
 
 const pathBBox = (d) => {
   let minX = Infinity;
@@ -312,9 +340,11 @@ afterEach(() => {
 
 test("exposes a path string per icon kind", () => {
   expect(Object.keys(ICON_PATHS).sort()).toEqual([
-    "balloonEnemy", "balloonFocal", "chevronEnemy", "chevronFocal", "crate", "crateRed",
-    "dead", "enemy", "focal", "knockedEnemy", "knockedFocal", "movingEnemy", "movingFocal",
-    "planeEnemy", "planeFocal", "vehicleEnemy", "vehicleFocal",
+    "balloonEnemy", "balloonFocal", "bikeEnemy", "bikeFocal", "boatEnemy", "boatFocal",
+    "chevronEnemy", "chevronFocal", "crate", "crateRed", "dead", "enemy", "focal",
+    "knockedEnemy", "knockedFocal", "movingEnemy", "movingFocal", "parachuteEnemy",
+    "parachuteFocal", "planeEnemy", "planeFocal", "truckEnemy", "truckFocal",
+    "vehicleEnemy", "vehicleFocal",
   ]);
   for (const d of Object.values(ICON_PATHS)) expect(typeof d).toBe("string");
 });
@@ -332,6 +362,104 @@ test("every icon glyph is inscribed in the same centred 28-unit box", () => {
     expect(box.width, kind).toBeCloseTo(BOX_MAX - BOX_MIN, 5);
     expect(box.height, kind).toBeCloseTo(BOX_MAX - BOX_MIN, 5);
   }
+});
+
+// How much the subpath that reaches the front of the box narrows on its way
+// there: 0 is a flat face, and a subpath's own full depth is a point.
+const noseTaper = (d) => {
+  const subs = pathPoints(d);
+  const boxes = subpathBoxes(d);
+  const i = boxes.findIndex((b) => b.maxX === BOX_MAX);
+  const face = subs[i].filter(([x]) => x === BOX_MAX).map(([, y]) => y);
+  return (boxes[i].maxY - boxes[i].minY) - (Math.max(...face) - Math.min(...face));
+};
+
+const midX = (b) => (b.minX + b.maxX) / 2;
+
+// The four shapes this pass adds have one job the inscription rule cannot
+// check: being tellable apart from each other, and from what already ships, at
+// the 8-16 px they blit at. That is a question about silhouette CLASS, so it is
+// pinned as class -- how many blocks reach the full depth of the box, where
+// along the hull they sit, and whether the nose is a point or a face. Detail
+// finer than that is eaten by the halo and cannot be relied on.
+test("the four new forms are their own silhouettes, and the truck cannot collapse into the car", () => {
+  // Nothing was added by copying a neighbour and forgetting to redraw it.
+  expect(new Set(TEAM_FORMS.map((f) => ICON_PATHS[f])).size).toBe(TEAM_FORMS.length);
+  for (const form of NEW_FORMS) {
+    expect(ICON_PATHS, form).toHaveProperty(form);
+    const box = pathBBox(ICON_PATHS[form]);
+    expect(box.width, form).toBeCloseTo(BOX_MAX - BOX_MIN, 5);
+    expect(box.height, form).toBeCloseTo(BOX_MAX - BOX_MIN, 5);
+  }
+
+  // The pair most likely to fail, since both are four-wheeled boxes. Three
+  // separate cues, because at 8 px any one of them can be lost.
+  const car = fullHeightBlocks(ICON_PATHS.vehicleFocal);
+  const truck = fullHeightBlocks(ICON_PATHS.truckFocal);
+  // 1. The car has a block at each end; the truck has one, and it is at the back.
+  expect(car).toHaveLength(2);
+  expect(midX(car[0])).toBeLessThan(CELL / 2);
+  expect(midX(car[1])).toBeGreaterThan(CELL / 2);
+  expect(truck).toHaveLength(1);
+  expect(midX(truck[0])).toBeLessThan(CELL / 2);
+  // 2. The car's nose tapers to a wedge; the truck's steps out to a flat face.
+  expect(noseTaper(ICON_PATHS.vehicleFocal)).toBeGreaterThan(0);
+  expect(noseTaper(ICON_PATHS.truckFocal)).toBe(0);
+  // 3. The truck's body is the deeper of the two.
+  const hullDepth = (d) => Math.max(...subpathBoxes(d)
+    .map((b) => b.maxY - b.minY)
+    .filter((h) => h < BOX_MAX - BOX_MIN));
+  expect(hullDepth(ICON_PATHS.truckFocal)).toBeGreaterThan(hullDepth(ICON_PATHS.vehicleFocal));
+
+  // The bike is the light one: one thin block, at the FRONT, on a hairline hull
+  // less than half the depth of the truck's body.
+  const bike = fullHeightBlocks(ICON_PATHS.bikeFocal);
+  expect(bike).toHaveLength(1);
+  expect(midX(bike[0])).toBeGreaterThan(CELL / 2);
+  expect(bike[0].maxX - bike[0].minX).toBeLessThan(car[0].maxX - car[0].minX);
+  expect(hullDepth(ICON_PATHS.bikeFocal) * 2).toBeLessThan(hullDepth(ICON_PATHS.truckFocal));
+
+  // The boat is the one that has to stay off the moving dart, and the transom
+  // is what does it: the boat is at its WIDEST at the very back, where the dart
+  // it would be confused with comes to a single point.
+  const boat = fullHeightBlocks(ICON_PATHS.boatFocal);
+  expect(boat).toHaveLength(1);
+  expect(boat[0].minX).toBe(BOX_MIN);
+  const dartBack = pathPoints(ICON_PATHS.movingFocal)[0].filter(([x]) => x === BOX_MIN);
+  expect(dartBack).toHaveLength(1);
+  // ...and its hull is a wedge, coming to a point at the bow rather than a face.
+  const boatHull = subpathBoxes(ICON_PATHS.boatFocal).find((b) => b.maxX === BOX_MAX);
+  expect(noseTaper(ICON_PATHS.boatFocal)).toBe(boatHull.maxY - boatHull.minY);
+});
+
+// The one design decision in this pass that a caller could undo without
+// noticing. The scene aims every marker that is moving and a descending player
+// is always moving, so blit WILL be handed a bearing for this glyph; the canopy
+// answers by having no orientation to lose. Eightfold symmetry is the whole of
+// that answer, so it is pinned as a symmetry and not as a comment.
+test("the canopy is eightfold symmetric, so the bearing the scene passes cannot spin it", () => {
+  const subs = pathPoints(ICON_PATHS.parachuteFocal);
+  expect(subs).toHaveLength(1);
+  // Eight points at the box edge and eight pulled in between them, so the turn
+  // below is a real symmetry and not the empty one of a shape with no corners.
+  expect(subs[0]).toHaveLength(16);
+
+  const a = Math.PI / 4;
+  const turned = subs[0].map(([x, y]) => [
+    16 + (x - 16) * Math.cos(a) - (y - 16) * Math.sin(a),
+    16 + (x - 16) * Math.sin(a) + (y - 16) * Math.cos(a),
+  ]);
+  for (const [x, y] of turned) {
+    const landed = subs[0].some(([px, py]) => Math.abs(px - x) < 0.02 && Math.abs(py - y) < 0.02);
+    expect(landed, `${x.toFixed(2)} ${y.toFixed(2)}`).toBe(true);
+  }
+
+  // And it is measurably lighter than the disc a player standing still gets:
+  // under half the ink in the same 28-unit box is what reads as "in the air"
+  // once the outline itself is only a few pixels across.
+  const ink = (kind) => subpathAreas(ICON_PATHS[kind]).reduce((sum, s) => sum + Math.abs(s), 0);
+  expect(ink("parachuteFocal")).toBeLessThan(ink("focal") * 0.5);
+  expect(ink("parachuteFocal")).toBeGreaterThan(ink("focal") * 0.3);
 });
 
 // The inscription rule above bounds the PATH; the halo is ink the path does
@@ -438,7 +566,7 @@ test("rasterises every kind into its own cell of one sheet", () => {
   // One sheet, one column per kind and one row per colour, so a kind widens it
   // and a colour heightens it. A browser canvas caps out well above this, but
   // not infinitely far above it, and BOTH axes have to stay under.
-  expect(canvas.width).toBe(1428);
+  expect(canvas.width).toBe(2100);
   expect(canvas.height).toBe(1092);
   expect(canvas.width).toBeLessThan(4096);
   expect(canvas.height).toBeLessThan(4096);
@@ -585,27 +713,41 @@ test("an unknown kind falls back to the enemy cell", () => {
   expect(unknown.sw).toBe(enemy.sw);
 });
 
-// The backend resolves vehicleType into bits 2-3 of the flag byte, so the
-// renderer holds a code, not a name. Only the two exotic rides earn a glyph;
-// every other code is a car, including whatever PUBG adds next.
+// The backend resolves 54 distinct vehicleIds into six groups and packs the
+// group into bits 2-4 of the flag byte, so the renderer holds a code, not a
+// name. All eight codes those three bits can carry are spelled out: six are
+// allocated and the other two are not, and the whole point of the last rule is
+// that an unallocated code still draws a VEHICLE.
 test("maps every vehicle code to a glyph, and anything out of range to the car", () => {
-  expect(vehicleGlyph(0, true)).toBe("vehicleFocal");
-  expect(vehicleGlyph(0, false)).toBe("vehicleEnemy");
-  expect(vehicleGlyph(1, true)).toBe("planeFocal");
-  expect(vehicleGlyph(1, false)).toBe("planeEnemy");
-  expect(vehicleGlyph(2, true)).toBe("balloonFocal");
-  expect(vehicleGlyph(2, false)).toBe("balloonEnemy");
-  // Two bits carry a fourth code the backend does not use yet, and a caller
-  // that forgets to mask gets something bigger still. Both ride as a car
-  // rather than falling through to a player marker.
-  expect(vehicleGlyph(3, true)).toBe("vehicleFocal");
-  expect(vehicleGlyph(3, false)).toBe("vehicleEnemy");
-  expect(vehicleGlyph(7, false)).toBe("vehicleEnemy");
-  expect(vehicleGlyph(undefined, false)).toBe("vehicleEnemy");
-  // And every kind it can name is really in the atlas.
-  for (const code of [0, 1, 2, 3, 7, undefined]) {
+  // Index is the code. 6 and 7 are unallocated and ride as a car.
+  const BY_CODE = ["vehicle", "plane", "balloon", "bike", "truck", "boat", "vehicle", "vehicle"];
+  BY_CODE.forEach((form, code) => {
+    expect(vehicleGlyph(code, true), `code ${code}`).toBe(`${form}Focal`);
+    expect(vehicleGlyph(code, false), `code ${code}`).toBe(`${form}Enemy`);
+  });
+
+  // A caller that forgets to mask gets something bigger still, and a code the
+  // table cannot answer for is anything but an integer in range. All of them
+  // ride as a car rather than falling through to a player marker -- a driver
+  // drawn as a pedestrian is a wrong answer, not a rough one. "length" and
+  // "constructor" are the ones that bite: the table is an Array, so without an
+  // integer check they would name kinds "6Focal" and "function Array()...".
+  for (const bad of [
+    8, 99, -1, 1.5, NaN, Infinity, undefined, null, true,
+    "1", "length", "constructor", {}, [],
+  ]) {
+    expect(vehicleGlyph(bad, true), String(bad)).toBe("vehicleFocal");
+    expect(vehicleGlyph(bad, false), String(bad)).toBe("vehicleEnemy");
+  }
+
+  // And every kind it can name is really in the atlas -- and takes a team
+  // colour, so a teammate's ride still blits in their team's colour rather than
+  // dropping to the row that means "mine".
+  for (const code of [0, 1, 2, 3, 4, 5, 6, 7, 8, -1, undefined, "length"]) {
     for (const isFocal of [true, false]) {
-      expect(ICON_PATHS, `${code}/${isFocal}`).toHaveProperty(vehicleGlyph(code, isFocal));
+      const kind = vehicleGlyph(code, isFocal);
+      expect(ICON_PATHS, `${code}/${isFocal}`).toHaveProperty(kind);
+      expect(TEAM_FORM_OF, `${code}/${isFocal}`).toHaveProperty(kind);
     }
   }
 });
@@ -629,6 +771,16 @@ test("paints every glyph from the palette it was handed", () => {
   expect(paint.knockedEnemy.colour).toBe(COLORS.enemy);
   expect(paint.vehicleFocal.colour).toBe(COLORS.focal);
   expect(paint.vehicleEnemy.colour).toBe(COLORS.enemy);
+  // The same promise for the descent and for the three rides the car used to
+  // stand in for: a state and a ride are shapes, never colours of their own.
+  expect(paint.parachuteFocal.colour).toBe(COLORS.focal);
+  expect(paint.parachuteEnemy.colour).toBe(COLORS.enemy);
+  expect(paint.bikeFocal.colour).toBe(COLORS.focal);
+  expect(paint.bikeEnemy.colour).toBe(COLORS.enemy);
+  expect(paint.truckFocal.colour).toBe(COLORS.focal);
+  expect(paint.truckEnemy.colour).toBe(COLORS.enemy);
+  expect(paint.boatFocal.colour).toBe(COLORS.focal);
+  expect(paint.boatEnemy.colour).toBe(COLORS.enemy);
   expect(paint.planeFocal.colour).toBe(COLORS.focal);
   expect(paint.planeEnemy.colour).toBe(COLORS.enemy);
   expect(paint.balloonFocal.colour).toBe(COLORS.focal);
@@ -648,9 +800,10 @@ test("paints every glyph from the palette it was handed", () => {
   expect(paint.chevronFocal.op).toBe("stroke");
   expect(paint.chevronEnemy.op).toBe("stroke");
   for (const kind of [
-    "focal", "enemy", "movingFocal", "movingEnemy", "knockedFocal", "knockedEnemy",
-    "vehicleFocal", "vehicleEnemy", "planeFocal", "planeEnemy", "balloonFocal",
-    "balloonEnemy", "crate", "crateRed",
+    "focal", "enemy", "movingFocal", "movingEnemy", "parachuteFocal", "parachuteEnemy",
+    "knockedFocal", "knockedEnemy", "vehicleFocal", "vehicleEnemy", "bikeFocal",
+    "bikeEnemy", "truckFocal", "truckEnemy", "boatFocal", "boatEnemy", "planeFocal",
+    "planeEnemy", "balloonFocal", "balloonEnemy", "crate", "crateRed",
   ]) {
     expect(paint[kind].op, kind).toBe("fill");
   }
@@ -701,11 +854,12 @@ test("falls back to a built-in colour when the palette is empty", () => {
 
 // Which kinds take a team colour is a decision, not a naming accident: it is
 // what sizes every team row. Listed both ways round so neither half can drift
-// -- a seventh form added without a kind, or a kind quietly dropped out of the
-// palette, breaks this before it breaks a cell address.
-test("exactly the six player and vehicle forms take a team colour", () => {
+// -- an eleventh form added without a kind, or a kind quietly dropped out of
+// the palette, breaks this before it breaks a cell address.
+test("exactly the ten player and vehicle forms take a team colour", () => {
   expect(TEAM_FORMS).toEqual([
-    "focal", "movingFocal", "knockedFocal", "vehicleFocal", "planeFocal", "balloonFocal",
+    "focal", "movingFocal", "parachuteFocal", "knockedFocal", "vehicleFocal",
+    "bikeFocal", "truckFocal", "boatFocal", "planeFocal", "balloonFocal",
   ]);
   expect([...Object.keys(TEAM_FORM_OF), ...PLAIN_KINDS].sort()).toEqual([...KINDS].sort());
   // Every form is a real kind, and a form's whole point is that two kinds share
@@ -847,7 +1001,7 @@ test("every team colour stays saturated and mid-light", () => {
 });
 
 // The blocker this pass exists to solve: the atlas bakes one colour per cell,
-// so (six forms) x (twelve colours) needs six times twelve cells on top of the
+// so (ten forms) x (twelve colours) needs ten times twelve cells on top of the
 // original row -- and every one of them has to be somewhere no other cell is.
 test("the sheet is a form x colour grid and every pair has its own cell", () => {
   const { canvas, draws } = installAtlasEnv();
@@ -890,7 +1044,7 @@ test("the sheet is a form x colour grid and every pair has its own cell", () => 
       cells.get(cellKey).push(at);
     }
   }
-  // 17 default cells plus 6 forms x 12 colours: the two kinds sharing a form
+  // 25 default cells plus 10 forms x 12 colours: the two kinds sharing a form
   // share its cell (that is the point), nothing else does.
   expect(cells.size).toBe(KINDS.length + TEAM_FORMS.length * TEAM_COLOR_CAP);
 
@@ -898,6 +1052,46 @@ test("the sheet is a form x colour grid and every pair has its own cell", () => 
   // one of the eleven columns a team row leaves empty.
   const painted = new Set(draws.map((d) => `${d.tx - PAD * scale},${d.ty - PAD * scale}`));
   for (const cellKey of cells.keys()) expect([...painted], cellKey).toContain(cellKey);
+});
+
+// The four new forms are team forms like any other, and this is the promise
+// that says so: a teammate who mounts a bike, a truck or a boat, or who is
+// still under canopy, keeps their team's colour rather than dropping to the row
+// that means "mine" or borrowing the enemy's. Spelled out per form and per
+// colour, because a form missing from the table costs no test above -- the grid
+// walks whatever the table happens to hold.
+test("the descent and the three new rides carry a team colour in every row", () => {
+  const { draws } = installAtlasEnv();
+  const dpr = 2;
+  const size = CELL_BOX * dpr;
+  const atlas = buildAtlas({ dpr, colors: COLORS });
+  const rows = teamPasses(draws);
+
+  for (const form of NEW_FORMS) {
+    expect(TEAM_FORMS, form).toContain(form);
+    const enemyKind = `${form.slice(0, -"Focal".length)}Enemy`;
+    expect(ICON_PATHS, enemyKind).toHaveProperty(enemyKind);
+
+    rows.forEach((row, i) => {
+      const at = `${form}@${i + 1}`;
+      expect(row[form].colour.d, at).toBe(ICON_PATHS[form]);
+      expect(row[form].colour.colour, at).toBe(teamColor(i + 1));
+      expect(row[form].colour.colour, at).not.toBe(COLORS.focal);
+      expect(row[form].colour.colour, at).not.toBe(COLORS.enemy);
+    });
+
+    // Both spellings of the kind reach that one cell, in every colour row.
+    for (let ci = 1; ci <= TEAM_COLOR_CAP; ci += 1) {
+      const at = `${form}@${ci}`;
+      const focalCell = blitRect(atlas, form, 5, undefined, ci);
+      const enemyCell = blitRect(atlas, enemyKind, 5, undefined, ci);
+      expect(focalCell.sy, at).toBe(ci * size);
+      expect(enemyCell.sx, at).toBe(focalCell.sx);
+      expect(enemyCell.sy, at).toBe(focalCell.sy);
+    }
+    // ...and with no colour index they are still two cells, one per side.
+    expect(blitRect(atlas, enemyKind).sx).not.toBe(blitRect(atlas, form).sx);
+  }
 });
 
 // The signature change has to be invisible to the caller that has not been

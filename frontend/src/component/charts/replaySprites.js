@@ -50,6 +50,30 @@ const STILL = "M16 2 A14 14 0 1 0 16 30 A14 14 0 1 0 16 2 Z";
 // change size.
 const MOVING = "M30 16 L8 2 L2 16 L8 30 Z";
 
+// Under canopy, between leaving the plane and touching down. Every one of the
+// 475 players measured across 8 matches passes through this state and it is 5%
+// of all position samples, so it is a first-class state, not an edge case: an
+// eight-gore canopy seen from straight down, spiked at the suspension lines and
+// pulled in between them. What it has to beat is its two neighbours -- it is
+// neither the solid disc of a player standing still nor the smooth kite of one
+// running -- and it beats them on ink as much as on outline: eight points at
+// radius 14 over valleys at radius 6 colour in about 42% of the disc's area, so
+// an airborne marker reads lighter than a planted one even where the shape
+// itself is only a few pixels across.
+//
+// Deliberately NOT aimed, by shape rather than by rule. The scene aims every
+// marker that is moving, and a descending player is always moving, so a bearing
+// WILL arrive here -- but a canopy seen from above has no nose to point, and the
+// only direction telemetry offers is the horizontal part of a descent, which
+// shrinks to jitter in the last seconds before touchdown, exactly when the
+// marker is worth watching. Eightfold symmetry answers that in the glyph: the
+// shape repeats every 45 degrees and at the 8-16 px this blits at, any rotation
+// of it is the same picture. blit still turns the cell; there is just nothing to
+// see, and nothing to spin.
+const PARACHUTE = "M30 16 L21.54 18.3 L25.9 25.9 L18.3 21.54 L16 30 L13.7 21.54 "
+  + "L6.1 25.9 L10.46 18.3 L2 16 L10.46 13.7 L6.1 6.1 L13.7 10.46 L16 2 "
+  + "L18.3 10.46 L25.9 6.1 L21.54 13.7 Z";
+
 const DEAD = "M2 2 L30 30 M30 2 L2 30";
 
 // Ring: the outer circle is the disc's, the inner one is wound the other way
@@ -57,17 +81,54 @@ const DEAD = "M2 2 L30 30 M30 2 L2 30";
 const KNOCKED = "M16 2 A14 14 0 1 0 16 30 A14 14 0 1 0 16 2 Z M16 8 A8 8 0 1 1 16 24 A8 8 0 1 1 16 8 Z";
 
 // The map is a straight-down view, so the vehicles are drawn from straight
-// down too -- the old side-on car was the wrong projection on it. All three
-// point +x like the dart, so one rotation convention covers every glyph.
-// Subpaths overlap deliberately and are all wound the same way: the halo pass
-// strokes each of them, then one fill covers every halo segment that fell
-// inside the union, leaving the halo tracing only the outer silhouette.
+// down too -- the old side-on car was the wrong projection on it. Every one of
+// them points +x like the dart, so one rotation convention covers every glyph.
+// Subpaths overlap deliberately -- they are never merely butted edge to edge,
+// which leaves an antialiased seam down the join -- and are all wound the same
+// way: the halo pass strokes each of them, then one fill covers every halo
+// segment that fell inside the union, leaving the halo tracing only the outer
+// silhouette.
+//
+// At the 8-16 px these blit at, the silhouette CLASS is the whole read -- long
+// or blocky, pointed or blunt, and where the mass sits along the hull. Detail
+// below about 4 units is halo food. So the five rides are separated by where
+// their full-height blocks are, which is the coarsest cue available:
+//
+//   car    tapered nose, a block at EACH end          even, pointed
+//   truck  blunt stepped nose, ONE block at the rear  back-heavy, square
+//   bike   one thin block at the FRONT, hairline hull light
+//   boat   one block at the very rear, wedge hull     widest where a dart is thinnest
+//   plane  a thick block amidships plus a short tail  winged
 
 // Car: a 16-unit hull with a tapered nose, straddled by two axle blocks that
 // reach the full width of the box. The hull alone would have to be square to
 // fill the box, and a square hull is not a car; the axles are what let it stay
 // long and thin.
 const CAR = "M2 8 L23 8 L30 13 L30 19 L23 24 L2 24 Z M4 2 L11 2 L11 30 L4 30 Z M21 2 L28 2 L28 30 L21 30 Z";
+
+// Truck: pickups, vans, buses, UAZs, the BRDM. 1813 samples across 8 matches,
+// second only to the car -- which makes car-vs-truck the pair most likely to
+// collapse, since both are four-wheeled boxes. One cue is not enough at 8 px,
+// so it is separated on three at once: the mass sits at ONE end (a single rear
+// axle) where the car has a block at each, the nose is a blunt step out to a
+// flat face where the car tapers to a wedge, and the cargo box is parallel-
+// sided and 18 deep against the car's narrowing 16. Even and pointed against
+// back-heavy and square; nothing about it has to be resolved to tell them apart.
+const TRUCK = "M2 7 L22 7 L22 25 L2 25 Z M20 12 L30 12 L30 20 L20 20 Z M3 2 L11 2 L11 30 L3 30 Z";
+
+// Bike: motorcycles and bicycles, 312 samples. The car's trick inverted -- the
+// handlebars are the only thing reaching the box edges, so the 28-unit box is
+// filled while the hull stays a 6-unit hairline. It carries well under half the
+// car's ink and that is the read: the bike is the light one.
+const BIKE = "M2 13 L25 13 L30 15 L30 17 L25 19 L2 19 Z M21 2 L25 2 L25 30 L21 30 Z";
+
+// Boat: 5 samples across 8 matches, and still worth a glyph, because when it
+// happens it is on water where nothing else is. A sharp wedge of a hull with a
+// broad square transom, and the transom is what keeps it off the moving dart:
+// the dart is at its NARROWEST at the back and the boat at its widest, with the
+// transom standing 6 units proud of the hull on each side -- the same proudness
+// the car's axles have, which is what survives the halo at r = 4.
+const BOAT = "M30 16 L8 24 L8 8 Z M2 2 L10 2 L10 30 L2 30 Z";
 
 // Aircraft: fuselage tapering to a nose at +x, one wing bar across it, a
 // shorter tailplane at the back.
@@ -92,11 +153,19 @@ export const ICON_PATHS = {
   enemy: STILL,
   movingFocal: MOVING,
   movingEnemy: MOVING,
+  parachuteFocal: PARACHUTE,
+  parachuteEnemy: PARACHUTE,
   dead: DEAD,
   knockedFocal: KNOCKED,
   knockedEnemy: KNOCKED,
   vehicleFocal: CAR,
   vehicleEnemy: CAR,
+  bikeFocal: BIKE,
+  bikeEnemy: BIKE,
+  truckFocal: TRUCK,
+  truckEnemy: TRUCK,
+  boatFocal: BOAT,
+  boatEnemy: BOAT,
   planeFocal: PLANE,
   planeEnemy: PLANE,
   balloonFocal: BALLOON,
@@ -111,19 +180,26 @@ export const ICON_PATHS = {
 
 const KINDS = Object.keys(ICON_PATHS);
 
-// LogPlayerPosition's vehicle.vehicleType, as measured on live matches:
-// WheeledVehicle (cars, and BP_Motorbike_04_C bikes), TransportAircraft (the
-// drop plane), EmergencyPickup (the rescue balloon) and Mortar. Only two of
-// them earn a glyph of their own. The backend resolves the string to bits 2-3
-// of the track's flag byte before it reaches here -- 0 ground, 1 aircraft,
-// 2 balloon -- so this switches on that code, never on the name. Anything
-// else, including whatever PUBG ships next patch, rides as a car rather than
-// falling through to a player marker.
+// LogPlayerPosition names the ride it carries, and 54 distinct vehicleIds turn
+// up on position samples across 8 real matches. The backend groups them into
+// the six shapes worth telling apart at marker size and packs the group into
+// bits 2-4 of the track's flag byte before it reaches here, so this switches on
+// that code and never on the name. Samples per group over those 8 matches:
+// car 4055, plane 1860, truck 1813, bike 312, balloon 292, boat 5.
+const VEHICLE_FORMS = ["vehicle", "plane", "balloon", "bike", "truck", "boat"];
+
+// 6 and 7 are unallocated -- three bits hold eight codes -- and every other
+// input, including whatever PUBG ships next patch, rides as a car rather than
+// falling through to a player marker: an unfamiliar ride drawn as a car is a
+// rough answer, a driver drawn as a pedestrian is a wrong one.
+//
+// Number.isInteger is what makes the table lookup safe: without it "length"
+// indexes the array's own length and a driver blits as kind "6Focal", which is
+// no cell at all.
 export const vehicleGlyph = (vehicleCode, isFocal) => {
   const team = isFocal ? "Focal" : "Enemy";
-  if (vehicleCode === 1) return `plane${team}`;
-  if (vehicleCode === 2) return `balloon${team}`;
-  return `vehicle${team}`;
+  const form = (Number.isInteger(vehicleCode) && VEHICLE_FORMS[vehicleCode]) || VEHICLE_FORMS[0];
+  return `${form}${team}`;
 };
 
 // Which palette entry each glyph paints with, and how. `key` indexes the
@@ -138,10 +214,18 @@ const PAINT = {
   enemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   movingFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   movingEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
+  parachuteFocal: { key: "focal", fallback: "rgb(255,255,255)" },
+  parachuteEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   knockedFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   knockedEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   vehicleFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   vehicleEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
+  bikeFocal: { key: "focal", fallback: "rgb(255,255,255)" },
+  bikeEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
+  truckFocal: { key: "focal", fallback: "rgb(255,255,255)" },
+  truckEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
+  boatFocal: { key: "focal", fallback: "rgb(255,255,255)" },
+  boatEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   planeFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   planeEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   balloonFocal: { key: "focal", fallback: "rgb(255,255,255)" },
@@ -293,10 +377,18 @@ const TEAM_FORM = {
   enemy: "focal",
   movingFocal: "movingFocal",
   movingEnemy: "movingFocal",
+  parachuteFocal: "parachuteFocal",
+  parachuteEnemy: "parachuteFocal",
   knockedFocal: "knockedFocal",
   knockedEnemy: "knockedFocal",
   vehicleFocal: "vehicleFocal",
   vehicleEnemy: "vehicleFocal",
+  bikeFocal: "bikeFocal",
+  bikeEnemy: "bikeFocal",
+  truckFocal: "truckFocal",
+  truckEnemy: "truckFocal",
+  boatFocal: "boatFocal",
+  boatEnemy: "boatFocal",
   planeFocal: "planeFocal",
   planeEnemy: "planeFocal",
   balloonFocal: "balloonFocal",
@@ -315,21 +407,20 @@ const haloWidth = (paint) => (paint.stroke || 0) + HALO * 2;
 // Row 0 is the sheet as it always was -- every kind in the colour its PAINT
 // entry names -- and is what a caller that passes no colour index samples, so
 // the two-colour map is bit-for-bit the row it was before. Rows 1..TEAM_COLORS
-// repaint the six player/vehicle forms in one generated team colour each, in
+// repaint the ten player/vehicle forms in one generated team colour each, in
 // the same columns their row-0 originals occupy.
 //
-// At dpr 2 a cell is CELL_BOX * 2 = 84 px, so the sheet is 17 * 84 = 1428 wide
-// (unchanged -- the colour axis costs nothing on this one) and 13 * 84 = 1092
-// tall, against the 4096 px conservative canvas limit: 2668 px of width and
-// 3004 px of height still spare. Height is what the colour axis spends, and
-// TEAM_COLORS could reach 47 before it ran out.
+// At dpr 2 a cell is CELL_BOX * 2 = 84 px, so the sheet is 25 * 84 = 2100 wide
+// and 13 * 84 = 1092 tall, against the 4096 px conservative canvas limit: 1996
+// px of width and 3004 px of height still spare. A kind costs 84 px of width
+// (23 more would fit) and a colour 84 px of height (TEAM_COLORS could reach 47).
 //
-// The eleven columns each team row leaves empty are transparent and never
-// sampled. They cost 1428 * 1092 * 4 = 6.2 MB of backing store at dpr 2 where a
-// tightly packed 89 cells would cost about 2.5; the grid is what makes a cell's
+// The fifteen columns each team row leaves empty are transparent and never
+// sampled. They cost 2100 * 1092 * 4 = 9.2 MB of backing store at dpr 2 where a
+// tightly packed 145 cells would cost about 4.1; the grid is what makes a cell's
 // address (column = kind, row = colour) something blit can compute rather than
-// look up, and 6 MB of canvas is not the constraint here. If it ever becomes
-// one, two team rows fit side by side in 17 columns and halve it.
+// look up, and 9 MB of canvas is not the constraint here. If it ever becomes
+// one, two team rows fit side by side in 25 columns and halve it.
 export const buildAtlas = ({ dpr = 1, colors = {} } = {}) => {
   if (typeof document === "undefined" || typeof Path2D === "undefined") return null;
   const canvas = document.createElement("canvas");
@@ -371,7 +462,7 @@ export const buildAtlas = ({ dpr = 1, colors = {} } = {}) => {
     return { sx: column[kind] * size, sy: row * size, sw: size, sh: size };
   };
 
-  // rows[0] is keyed by every kind; rows[1..] only by the six team forms. Both
+  // rows[0] is keyed by every kind; rows[1..] only by the ten team forms. Both
   // are null-prototype: blit looks a caller-supplied string up in them, and on
   // a plain object "toString" and "constructor" answer truthily with something
   // that is not a cell.

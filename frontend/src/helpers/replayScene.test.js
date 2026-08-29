@@ -655,7 +655,11 @@ test("each vehicle kind gets its own glyph, and an unknown one rides as a car", 
   expect(kindFor(1, false)).toBe("vehicleEnemy");
   expect(kindFor(1 | 4, true)).toBe("planeFocal");        // aircraft
   expect(kindFor(1 | 8, false)).toBe("balloonEnemy");     // rescue balloon
-  expect(kindFor(1 | 12, true)).toBe("vehicleFocal");     // kind 3 is undefined
+  expect(kindFor(1 | 12, true)).toBe("bikeFocal");        // kind 3, a bike
+  // 6 and 7 are unallocated: they ride as a car rather than falling through to
+  // a pedestrian, because PUBG ships new vehicle types without warning.
+  expect(kindFor(1 | 24, false)).toBe("vehicleEnemy");
+  expect(kindFor(1 | 28, true)).toBe("vehicleFocal");
 });
 
 test("a vehicle marker is aimed along the bearing too", () => {
@@ -800,4 +804,52 @@ test("a player with no team does not borrow the focal colour", () => {
   // Index 0 is the enemy colour for a non-focal player, which is the safe
   // answer: an unknown team must not read as "your squad".
   expect(blits).toEqual([0]);
+});
+
+test("a player under canopy is drawn as one, whatever else is true of them", () => {
+  const kindFor = (over) => {
+    const blits = [];
+    const atlas = { blit: (_c, kind) => blits.push(kind) };
+    const p = [{
+      name: "J", accountId: "a.j", teamId: 1, isFocal: true, dropTime: 10, landTime: 50,
+      deathTime: null, positions: [
+        { t: 0, x: 4000, y: 4000, h: 100, f: 0 }, { t: 60, x: 4300, y: 4000, h: 100, f: 0 },
+      ], ...over,
+    }];
+    drawScene(recordingCtx(), {
+      ...frameAt(1), zone: null, colors: P2_COLORS, atlas, t: 30,
+      tracks: sampleTracks(buildTracks(p), 30),
+    });
+    return blits[0];
+  };
+  // Falling and moving fast, but the canopy is the thing to show.
+  expect(kindFor({})).toBe("parachuteFocal");
+  expect(kindFor({ isFocal: false })).toBe("parachuteEnemy");
+});
+
+test("each vehicle class gets its own shape", () => {
+  const kindFor = (f) => {
+    const blits = [];
+    const atlas = { blit: (_c, kind) => blits.push(kind) };
+    const p = [{
+      name: "V", accountId: "a.v", teamId: 1, isFocal: true, dropTime: null, landTime: null,
+      deathTime: null, positions: [
+        { t: 0, x: 4000, y: 4000, h: 100, f }, { t: 10, x: 4200, y: 4000, h: 100, f },
+      ],
+    }];
+    drawScene(recordingCtx(), {
+      ...frameAt(1), zone: null, colors: P2_COLORS, atlas, t: 5,
+      tracks: sampleTracks(buildTracks(p), 5),
+    });
+    return blits[0];
+  };
+  expect(kindFor(1)).toBe("vehicleFocal");          // car, kind 0
+  expect(kindFor(1 | (1 << 2))).toBe("planeFocal");
+  expect(kindFor(1 | (2 << 2))).toBe("balloonFocal");
+  expect(kindFor(1 | (3 << 2))).toBe("bikeFocal");
+  expect(kindFor(1 | (4 << 2))).toBe("truckFocal");
+  expect(kindFor(1 | (5 << 2))).toBe("boatFocal");
+  // Kinds PUBG has not shipped yet ride as a car rather than vanishing.
+  expect(kindFor(1 | (6 << 2))).toBe("vehicleFocal");
+  expect(kindFor(1 | (7 << 2))).toBe("vehicleFocal");
 });

@@ -24,6 +24,7 @@ export const buildTracks = (players = []) => {
     outF: new Uint8Array(count),
     outAngle: new Float32Array(count),
     outMoving: new Uint8Array(count),
+    outFalling: new Uint8Array(count),
     outState: new Uint8Array(count),
     lastT: -Infinity,
   };
@@ -70,6 +71,7 @@ export const buildTracks = (players = []) => {
       teamId: p.teamId ?? null,
       isFocal: !!p.isFocal,
       dropTime: p.dropTime ?? null,
+      landTime: p.landTime ?? null,
       deathTime: p.deathTime ?? null,
     };
   }
@@ -144,6 +146,11 @@ export const sampleTracks = (tracks, t) => {
     } else {
       tracks.outMoving[i] = 0;
     }
+
+    // Under canopy: out of the plane, not yet on the ground. A payload with
+    // no landTime reads as "not falling" rather than "falling forever".
+    tracks.outFalling[i] =
+      meta.dropTime !== null && meta.landTime !== null && t >= meta.dropTime && t < meta.landTime ? 1 : 0;
 
     tracks.outState[i] =
       meta.deathTime !== null && t > meta.deathTime ? STATE.DEAD : STATE.ALIVE;

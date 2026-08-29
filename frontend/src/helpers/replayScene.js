@@ -322,14 +322,17 @@ const paintHealthArc = (ctx, x, y, r, health, colors) => {
 // colour, inverting the one distinction that matters most at exactly the
 // moment that player needs watching. Knocked outranks in-vehicle -- being
 // downed is the more urgent read.
-const glyphFor = (state, flags, isFocal, moving) => {
+const glyphFor = (state, flags, isFocal, moving, falling) => {
   const side = isFocal ? "Focal" : "Enemy";
   if (state === STATE.DEAD) return "dead";
   // Knocked outranks everything: it is the most urgent thing about a player,
   // and a downed passenger is still downed.
   if (flags & 2) return `knocked${side}`;
+  // Under canopy outranks movement and vehicle: they are always moving fast on
+  // the way down, and the descent is the thing worth showing.
+  if (falling) return `parachute${side}`;
   // The glyph names live with the glyphs, so the mapping has one home.
-  if (flags & 1) return vehicleGlyph((flags >> 2) & 3, isFocal);
+  if (flags & 1) return vehicleGlyph((flags >> 2) & 7, isFocal);
   // A dart says "going that way", so it may only be drawn when there is a way.
   if (moving) return `moving${side}`;
   return isFocal ? "focal" : "enemy";
@@ -394,6 +397,7 @@ export const drawScene = (ctx, frame) => {
 
     const flags = tracks.outF ? tracks.outF[i] : 0;
     const moving = state === STATE.ALIVE && tracks.outMoving && tracks.outMoving[i] === 1;
+    const falling = state === STATE.ALIVE && tracks.outFalling && tracks.outFalling[i] === 1;
     // A vehicle glyph has a nose, so it is aimed even at rest: the cell points
     // +x, and drawing a stopped car upright would face every parked vehicle
     // due east. The sampler holds the last real bearing for exactly this. A
@@ -403,7 +407,7 @@ export const drawScene = (ctx, frame) => {
     if (atlas && atlas.blit) {
       const angle = aimed && tracks.outAngle ? tracks.outAngle[i] : undefined;
       atlas.blit(
-        ctx, glyphFor(state, flags, meta.isFocal, moving),
+        ctx, glyphFor(state, flags, meta.isFocal, moving, falling),
         Math.round(p.x), Math.round(p.y), r, angle,
         // Colour is the team; form is the state. The focal team resolves to 0,
         // which is its own colour rather than one drawn from the palette.
