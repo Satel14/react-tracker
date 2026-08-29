@@ -198,3 +198,15 @@ test("the flag byte carries the vehicle kind alongside the two state bits", () =
   // A kind out of range must not spill into a neighbouring bit.
   assert.equal(f({ isInVehicle: true, vehicleKind: 9 }), 1);
 });
+
+test("the flag byte carries six vehicle kinds without disturbing the state bits", () => {
+  // Three bits for the kind now: a bike, a truck and a boat are worth telling
+  // apart on the map, and the data names 54 distinct vehicles.
+  const f = (over) => decodePositions(encodePositions([{ t: 0, x: 1, y: 2, health: 100, ...over }]))[0].f;
+  assert.equal(f({ isInVehicle: true, vehicleKind: 0 }), 1);        // car
+  assert.equal(f({ isInVehicle: true, vehicleKind: 5 }), 1 | 20);   // boat
+  assert.equal(f({ isInVehicle: true, isDBNO: true, vehicleKind: 3 }), 1 | 2 | 12);
+  // Out of range must not spill into a neighbouring field.
+  assert.equal(f({ isInVehicle: true, vehicleKind: 8 }), 1);
+  assert.equal(f({ isInVehicle: true, vehicleKind: -1 }), 1);
+});

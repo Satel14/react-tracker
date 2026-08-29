@@ -223,3 +223,42 @@ test("has no flight line when nobody left the aircraft", () => {
   const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
   assert.equal(r.flight, null);
 });
+
+test("classifies the vehicle a player is riding, and when they are under canopy", () => {
+  const ride = (id, type, t) => ({
+    _T: "LogPlayerPosition", common: { isGame: 1 }, elapsedTime: t,
+    character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 400000, y: 400000, z: 0 } },
+    vehicle: { vehicleId: id, vehicleType: type },
+  });
+  const withRides = [
+    telemetry[0],
+    ride("BP_Motorbike_04_C", "WheeledVehicle", 10),
+    ride("BP_PickupTruck_A_01_C", "WheeledVehicle", 20),
+    ride("Boat_PG117_C", "FloatingVehicle", 30),
+    ride("BP_Mirado_A_03_C", "WheeledVehicle", 40),
+    ride("DummyTransportAircraft_C", "TransportAircraft", 50),
+    ride("BP_EmergencyPickupVehicle_C", "EmergencyPickup", 60),
+  ];
+  const r = parseReplayTelemetry(withRides, { matchAttributes, accountId: "account.me" });
+  const kinds = posOf(r.players.find((p) => p.accountId === "account.me")).map((s) => (s.f >> 2) & 7);
+  // bike, truck, boat, car, plane, balloon -- the six the map draws apart.
+  assert.deepEqual(kinds, [3, 4, 5, 0, 1, 2]);
+});
+
+test("reports when each player stopped falling, so the map can draw a canopy", () => {
+  const withDrop = [
+    ...telemetry,
+    { _T: "LogVehicleLeave", elapsedTime: 5,
+      character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 100000, y: 100000, z: 150000 } },
+      vehicle: { vehicleId: "DummyTransportAircraft_C", velocity: 14180, location: { x: 100000, y: 100000, z: 150000 } } },
+    { _T: "LogParachuteLanding", elapsedTime: 42, distance: 300,
+      character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 400000, y: 400000, z: 0 } } },
+  ];
+  const r = parseReplayTelemetry(withDrop, { matchAttributes, accountId: "account.me" });
+  const me = r.players.find((p) => p.accountId === "account.me");
+  assert.equal(me.dropTime, 5);
+  assert.equal(me.landTime, 42);
+  // A player who never jumped has neither, rather than a misleading zero.
+  const mate = r.players.find((p) => p.accountId === "account.mate");
+  assert.equal(mate.landTime, null);
+});

@@ -23,10 +23,11 @@ function clampHealth(value) {
 }
 
 function packFlags(sample) {
-  // bit 0 in a vehicle, bit 1 knocked, bits 2-3 which vehicle. Ground is kind
-  // 0, so the low bit alone still reads as "in a car" for a legacy sample.
+  // bit 0 in a vehicle, bit 1 knocked, bits 2-4 which vehicle (0-7). Car is
+  // kind 0, so the low bit alone still reads as "in a car" for a sample that
+  // names no vehicle.
   const kind = Number(sample.vehicleKind);
-  const kindBits = Number.isInteger(kind) && kind > 0 && kind < 4 ? kind << 2 : 0;
+  const kindBits = Number.isInteger(kind) && kind > 0 && kind < 8 ? kind << 2 : 0;
   return (sample.isInVehicle ? 1 : 0) | (sample.isDBNO ? 2 : 0) | kindBits;
 }
 
@@ -96,7 +97,7 @@ function decodePositions(encoded) {
       x: curX,
       y: curY,
       h: clampHealth(health[i]),
-      f: toNumber(flags[i], 0) & 15,
+      f: toNumber(flags[i], 0) & 31,
     });
   }
 
