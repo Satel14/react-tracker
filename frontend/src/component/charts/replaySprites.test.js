@@ -981,6 +981,46 @@ test("no team hue lands on an encoding the map already uses", () => {
   }
 });
 
+// Hue distance is not perceptual distance: fifteen degrees is a different
+// amount of "different" in the greens than in the blues. CIE Lab is, near
+// enough, so the property worth holding is stated there. Plain sRGB -> Lab, D65.
+const labOf = (css) => {
+  const { h, s, l } = hslParts(css);
+  const H = h / 360, S = s / 100, L = l / 100;
+  const a = S * Math.min(L, 1 - L);
+  const k = (n) => (n + H * 12) % 12;
+  const ch = (n) => L - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const lin = (v) => (v > 0.04045 ? ((v + 0.055) / 1.055) ** 2.4 : v / 12.92);
+  const [r, g, b] = [ch(0), ch(8), ch(4)].map(lin);
+  const X = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+  const Y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+  const Z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+  const f = (v) => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116);
+  return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))];
+};
+
+// Requirement: two teams are two colours. A map carries every one of the twelve
+// at once, so it is not enough that consecutive team ids get distant hues --
+// no PAIR anywhere in the palette may be a pair a viewer has to squint at.
+//
+// This is the test that was missing. Hue spacing and the lightness tilt were
+// both pinned and both passed while colours 3 and 4 -- two greens 15 degrees
+// apart, where the tilt is flat -- sat 8.2 apart in Lab, the only pair of
+// sixty-six under 10. Alternating saturation moved the floor to 13.0.
+test("no two team colours are perceptually close", () => {
+  const palette = Array.from({ length: TEAM_COLORS }, (_, i) => teamColor(i + 1));
+  const labs = palette.map(labOf);
+  let worst = Infinity;
+  let at = "";
+  for (let i = 0; i < labs.length; i += 1) {
+    for (let j = i + 1; j < labs.length; j += 1) {
+      const d = Math.hypot(labs[i][0] - labs[j][0], labs[i][1] - labs[j][1], labs[i][2] - labs[j][2]);
+      if (d < worst) { worst = d; at = `colour ${i + 1} (${palette[i]}) vs ${j + 1} (${palette[j]})`; }
+    }
+  }
+  expect(worst, `closest pair is ${at}`).toBeGreaterThan(12);
+});
+
 // Requirement 4. The raster underneath is photographic -- pale desert, dark
 // forest, white snow. The halo does most of the work, but a near-black or
 // washed-out fill inside it is still a marker nobody can name.

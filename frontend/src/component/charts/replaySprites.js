@@ -325,7 +325,21 @@ const TEAM_STRIDE = 7;
 // cosine term peaking opposite yellow, and it lands every colour between 55%
 // and 71%: none dark enough to lose to forest, none pale enough to wash out on
 // snow.
+//
+// Saturation alternates between two levels rather than being one. Hue and
+// lightness alone leave the green arc tight: [66,122] holds four of the twelve
+// at 15-degree steps, and the lightness tilt is nearly flat there, so colours
+// 3 and 4 came out 8.2 apart in CIE Lab -- the only pair of sixty-six under
+// 10, and two greens a viewer has to tell apart at a 13 px marker. Dropping
+// every other entry to 72% moves the worst pair to 13.0, which is where the
+// second-worst pair already sat, and it costs nothing elsewhere: the lightness
+// tilt is untouched, so the blues stay measurably lighter than the yellow-
+// greens. A zigzag on lightness was the obvious alternative and is worse --
+// it reaches 11.2 only by eating that blue-to-yellow-green margin down to 5.1.
+// The stride that maps team ids to slots is odd, so consecutive ids land on
+// different levels too.
 const TEAM_SAT = 85;
+const TEAM_SAT_MUTED = 72;
 const TEAM_LIGHT_BASE = 55;
 const TEAM_LIGHT_TILT = 16;
 
@@ -353,7 +367,8 @@ export const teamColor = (index) => {
   const hue = hueAt((index - 1 + 0.5) * (HUE_SPAN / TEAM_COLORS));
   const lift = (1 - Math.cos(((hue - 60) * Math.PI) / 180)) / 2;
   const light = TEAM_LIGHT_BASE + TEAM_LIGHT_TILT * lift;
-  return `hsl(${hue.toFixed(1)}, ${TEAM_SAT}%, ${light.toFixed(1)}%)`;
+  const sat = index % 2 ? TEAM_SAT : TEAM_SAT_MUTED;
+  return `hsl(${hue.toFixed(1)}, ${sat}%, ${light.toFixed(1)}%)`;
 };
 
 // Team -> index. Pure, and total: every input lands on a real row.
