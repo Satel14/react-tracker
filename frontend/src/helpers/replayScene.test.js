@@ -971,24 +971,66 @@ test("a falling crate is still falling even after somebody will loot it", () => 
   expect(drawn[0][0]).toBe(images.falling);
 });
 
-test("a crate shrinks towards the ground as it falls", () => {
-  // The drop is straight down, so on a map seen from above nothing moves. Size
-  // is what reads as altitude: bigger is higher.
-  const widthAt = (fall) => {
-    const drawn = [];
-    const ctx = recordingCtx();
-    ctx.drawImage = (...args) => drawn.push(args);
-    paintPackages(ctx, {
-      ...frameAt(1), colors: P2_COLORS, atlas: null,
-      images: { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 }, open: { width: 144, height: 136 } },
-      packages: [{ kind: "redbox", x: 4000, y: 4000, falling: fall < 1, fall, looted: false }],
-    });
-    return drawn[0][3];
-  };
-  expect(widthAt(0)).toBeGreaterThan(widthAt(0.5));
-  expect(widthAt(0.5)).toBeGreaterThan(widthAt(0.99));
-  // And it settles at exactly the landed size rather than overshooting.
-  expect(widthAt(1)).toBeCloseTo(SCREEN.crateRadius * 2 * SCREEN.crateArtScale, 6);
+// Centre and size of the one crate drawn, recovered from the drawImage call.
+// drawImage takes the top-left corner, so the centre is the corner plus half
+// the box -- which is what the descent is actually about.
+const crateBox = (pkg) => {
+  const drawn = [];
+  const ctx = recordingCtx();
+  ctx.drawImage = (...args) => drawn.push(args);
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null,
+    images: { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 }, open: { width: 144, height: 136 } },
+    packages: [pkg],
+  });
+  const [, dx, dy, w, h] = drawn[0];
+  return { cx: dx + w / 2, cy: dy + h / 2, w };
+};
+
+const fallingCrate = (fall) => crateBox({ kind: "redbox", x: 4000, y: 4000, falling: true, fall, looted: false });
+
+test("a falling crate starts above its landing point and comes down onto it", () => {
+  // The drop is straight down, so on a map seen from above the world position
+  // never changes. The descent is drawn instead: high over the point at the
+  // start of the fall, on it at the end.
+  const landedY = crateBox({ kind: "redbox", x: 4000, y: 4000, falling: false, fall: 1, looted: false }).cy;
+
+  expect(fallingCrate(0).cy).toBeLessThan(fallingCrate(0.5).cy);
+  expect(fallingCrate(0.5).cy).toBeLessThan(fallingCrate(0.99).cy);
+  // It leaves the plane a full fall height up...
+  expect(landedY - fallingCrate(0).cy).toBeCloseTo(SCREEN.crateFallHeight, 6);
+  // ...and touches down exactly on the point, so the handoff to the landed
+  // crate does not jump.
+  expect(fallingCrate(1).cy).toBeCloseTo(landedY, 6);
+});
+
+test("a crate is the same size the whole way down", () => {
+  // Size is the marker's own scale, not a stand-in for altitude -- the descent
+  // shows the altitude now.
+  const expected = SCREEN.crateRadius * 2 * SCREEN.crateArtScale;
+  for (const fall of [0, 0.25, 0.5, 0.99, 1]) {
+    expect(fallingCrate(fall).w).toBeCloseTo(expected, 6);
+  }
+});
+
+test("the swing under the canopy dies out by touchdown", () => {
+  // A crate still swinging at the moment it lands would snap sideways onto its
+  // point. Sampled across the fall, the widest swing is early and there is
+  // none left at the end.
+  const landedX = crateBox({ kind: "redbox", x: 4000, y: 4000, falling: false, fall: 1, looted: false }).cx;
+  const swingAt = (fall) => Math.abs(fallingCrate(fall).cx - landedX);
+
+  let early = 0;
+  let late = 0;
+  for (let k = 0; k <= 20; k += 1) {
+    const fall = k / 20;
+    const swing = swingAt(fall);
+    if (fall < 0.4) early = Math.max(early, swing);
+    if (fall > 0.8) late = Math.max(late, swing);
+  }
+  expect(early).toBeGreaterThan(1);
+  expect(late).toBeLessThan(early);
+  expect(swingAt(1)).toBeCloseTo(0, 6);
 });
 
 test("crates in the air do not sway in unison", () => {

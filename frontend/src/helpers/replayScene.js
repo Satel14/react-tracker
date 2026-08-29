@@ -26,11 +26,13 @@ export const SCREEN = {
   // as wide as the biggest player marker, and the artwork carries its own
   // margin on top of that.
   crateArtScale: 2.6,
-  // How much larger a crate is at the moment it leaves the plane than when it
-  // touches down. Enough to read as coming closer, not so much that it looks
-  // like a different object.
-  crateFallLift: 0.7,
-  crateSway: 3,
+  // How far above its landing point a crate is drawn at the moment it leaves
+  // the plane. The descent takes 52 in-game seconds at the median, so this is
+  // travelled slowly enough to read as a drop rather than as a jump.
+  crateFallHeight: 54,
+  // Amplitude of the swing at the top, damped to nothing by touchdown so the
+  // crate settles onto its point instead of snapping to it.
+  crateSway: 4,
   crateSwayTurns: 2.5,
   chevronRadius: 4,
   // Bigger than a player: it carries sixty of them.
@@ -270,7 +272,22 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas, image
   for (let i = 0; i < packages.length; i += 1) {
     const pkg = packages[i];
     const p = worldToScreen(cam, vw, vh, pkg.x, pkg.y);
-    if (offScreen(p, vw, vh)) continue;
+    // A falling crate is drawn above its landing point, so one whose point sits
+    // just past the bottom edge is still on screen.
+    if (offScreen(p, vw, vh, SCREEN.crateFallHeight + 20)) continue;
+
+    // Seen from above a crate drops straight down, so the descent is faked in
+    // screen space: it starts high over the point it is going to land on and
+    // comes down onto it, swinging under the canopy on the way. The phase is
+    // seeded off the index rather than the position so a cluster of drops does
+    // not swing as one rigid object.
+    const fall = typeof pkg.fall === "number" ? pkg.fall : 1;
+    const rise = pkg.falling ? (1 - fall) * SCREEN.crateFallHeight : 0;
+    const sway = pkg.falling
+      ? Math.sin(fall * SCREEN.crateSwayTurns * Math.PI * 2 + i) * SCREEN.crateSway * (1 - fall)
+      : 0;
+    const cx = p.x + sway;
+    const cy = p.y - rise;
 
     // PUBG's own crate artwork, which is the one thing in their asset repo that
     // is genuinely a map marker rather than a killfeed row or a product render.
@@ -278,18 +295,9 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas, image
     // ground, and opened by whoever got there first.
     const art = images && (pkg.falling ? images.falling : (pkg.looted ? images.open : images.landed));
     if (art && art.width && art.height) {
-      // A crate drops straight down, so nothing moves on a map seen from above.
-      // Size is what reads as altitude, and a slow sway is what reads as a
-      // canopy. The phase is seeded off the index rather than the position so a
-      // cluster of drops does not swing as one rigid object.
-      const fall = typeof pkg.fall === "number" ? pkg.fall : 1;
-      const lift = 1 + (1 - fall) * SCREEN.crateFallLift;
-      const w = SCREEN.crateRadius * 2 * SCREEN.crateArtScale * lift;
+      const w = SCREEN.crateRadius * 2 * SCREEN.crateArtScale;
       const h = w * (art.height / art.width);
-      const sway = pkg.falling
-        ? Math.sin(fall * SCREEN.crateSwayTurns * Math.PI * 2 + i) * SCREEN.crateSway
-        : 0;
-      ctx.drawImage(art, p.x + sway - w / 2, p.y - h / 2, w, h);
+      ctx.drawImage(art, cx - w / 2, cy - h / 2, w, h);
       continue;
     }
 
@@ -298,10 +306,10 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas, image
     const red = pkg.kind === "redbox";
     const colour = red ? colors.danger || colors.crate : colors.crate;
     if (atlas && atlas.blit) {
-      atlas.blit(ctx, red ? "crateRed" : "crate", Math.round(p.x), Math.round(p.y), SCREEN.crateRadius);
+      atlas.blit(ctx, red ? "crateRed" : "crate", Math.round(cx), Math.round(cy), SCREEN.crateRadius);
     } else {
       ctx.beginPath();
-      ctx.arc(p.x, p.y, SCREEN.crateRadius, 0, Math.PI * 2);
+      ctx.arc(cx, cy, SCREEN.crateRadius, 0, Math.PI * 2);
       ctx.fillStyle = colour;
       ctx.fill();
     }
@@ -309,8 +317,8 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas, image
       ctx.strokeStyle = colour;
       ctx.lineWidth = SCREEN.shotWidth;
       ctx.beginPath();
-      ctx.moveTo(p.x, p.y - SCREEN.crateRadius);
-      ctx.lineTo(p.x, p.y - SCREEN.crateRadius * 3);
+      ctx.moveTo(cx, cy - SCREEN.crateRadius);
+      ctx.lineTo(cx, cy - SCREEN.crateRadius * 3);
       ctx.stroke();
     }
   }
