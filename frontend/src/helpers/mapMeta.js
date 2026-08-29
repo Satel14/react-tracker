@@ -46,10 +46,15 @@ export const worldToPercent = (coord, mapMax) => {
 
 export const HIGH_RES_VERSION = "v1";
 
-export const highResUrl = (rawMapName) => {
+// The source art is 8192px, so both tiers are downsamples rather than upscales.
+// 4096 is only fetched when someone zooms far enough in to see the difference.
+export const HIGH_RES_SIZES = [2048, 4096];
+
+export const highResUrl = (rawMapName, size = HIGH_RES_SIZES[0]) => {
   const meta = MAP_META[rawMapName];
   if (!meta || !meta.slug) return null;
-  return `/map-hi/${meta.slug}-2048.${HIGH_RES_VERSION}.webp`;
+  if (!HIGH_RES_SIZES.includes(size)) return null;
+  return `/map-hi/${meta.slug}-${size}.${HIGH_RES_VERSION}.webp`;
 };
 
 export const MAP_LIST = [

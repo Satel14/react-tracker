@@ -94,10 +94,15 @@ test("decodes compact replay positions before rendering", async () => {
   expect(await screen.findByText("Compressed Player")).toBeInTheDocument();
 });
 
-test("clicking a roster row marks it selected", async () => {
+test("clicking a roster row toggles its selection", async () => {
   renderAt("/match/steam/m1/replay");
   await screen.findByRole("img", { name: /erangel/i });
   const row = screen.getByRole("button", { name: /Me/ });
+  // The fixture's only player is the focal one, so the replay opens with them
+  // already selected. Click once to clear, once more to select again -- which
+  // is the toggle this test has always been about.
+  fireEvent.click(row);
+  expect(row.className).not.toMatch(/is-selected/);
   fireEvent.click(row);
   expect(row.className).toMatch(/is-selected/);
 });
@@ -285,4 +290,25 @@ test("Space plays and pauses", async () => {
   const before = label();
   fireEvent.keyDown(window, { key: " ", code: "Space" });
   expect(label()).not.toBe(before);
+});
+
+test("the searched player is selected as soon as the replay loads", async () => {
+  // You arrive here from your own profile, so the one player you are certainly
+  // interested in is yourself. Leaving nothing selected made the viewer hunt
+  // for their own dot among sixty.
+  renderAt("/match/steam/m1/replay?accountId=account.me");
+  await screen.findByRole("img", { name: /erangel/i });
+  const row = document.querySelector(".replay-roster__row.is-selected");
+  expect(row).not.toBeNull();
+  expect(row.getAttribute("data-account")).toBe("account.me");
+});
+
+test("selecting someone else, then deselecting, does not snap back to the focal player", async () => {
+  // The default is a starting point, not a floor: re-clicking a row has always
+  // meant "select nobody" and must keep meaning it.
+  renderAt("/match/steam/m1/replay?accountId=account.me");
+  await screen.findByRole("img", { name: /erangel/i });
+  const mine = document.querySelector('.replay-roster__row[data-account="account.me"]');
+  fireEvent.click(mine);
+  expect(document.querySelector(".replay-roster__row.is-selected")).toBeNull();
 });

@@ -1,6 +1,6 @@
 import { worldToScreen, scaleOf } from "./replayCamera";
 import { STATE } from "./replayTracks";
-import { healthArc } from "./replayLayers";
+import { healthArc, planeAt } from "./replayLayers";
 import { vehicleGlyph } from "../component/charts/replaySprites";
 
 export const SCREEN = {
@@ -21,6 +21,8 @@ export const SCREEN = {
   shotWidth: 1,
   crateRadius: 4,
   chevronRadius: 4,
+  // Bigger than a player: it carries sixty of them.
+  planeRadius: 9,
   healthArcRadius: 4,
   healthArcWidth: 2,
   zoneFillAlpha: 0.18,
@@ -117,6 +119,33 @@ const drawFlashes = (ctx, { cam, vw, vh, flashes, nowMs, colors }) => {
 
 
 // --------------------------------------------------------------- P2 layers
+
+// The cargo plane itself, on the corridor, while it is over the map. Drawn
+// with the aircraft glyph the player markers already use, so a viewer who has
+// learnt one has learnt the other.
+export const paintPlane = (ctx, { cam, vw, vh, flight, t, colors, atlas }) => {
+  if (!ctx || !flight) return;
+  const at = planeAt(flight, t, cam.mapMax);
+  if (!at) return;
+  const p = worldToScreen(cam, vw, vh, at.x, at.y);
+  if (atlas && atlas.blit) {
+    atlas.blit(ctx, "planeEnemy", Math.round(p.x), Math.round(p.y), SCREEN.planeRadius, at.angle);
+    return;
+  }
+  // Fallback: a triangle pointing along the corridor.
+  const r = SCREEN.planeRadius;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(at.angle);
+  ctx.fillStyle = colors.flight;
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(-r, -r * 0.7);
+  ctx.lineTo(-r, r * 0.7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+};
 
 export const paintFlight = (ctx, { cam, vw, vh, segment, alpha, colors }) => {
   if (!ctx || !segment || !(alpha > 0)) return;
@@ -316,7 +345,7 @@ export const drawScene = (ctx, frame) => {
   const {
     cam, vw, vh, tracks, zone, flashes, nowMs, focusedAccountId, hoveredIndex,
     colors, atlas, labelCap = 24,
-    shots, specialZones, packages, landings, landingsT, flightSeg, knocks, revives,
+    shots, specialZones, packages, landings, landingsT, flightSeg, flight, knocks, revives,
     t: frameT,
     flightAlpha: fAlpha = 1, landingsAlpha: lAlpha = 1, focalIds,
     layers = {},
@@ -328,7 +357,12 @@ export const drawScene = (ctx, frame) => {
   ctx.clearRect(0, 0, vw, vh);
   drawZone(ctx, { cam, vw, vh, zone, colors });
   if (on("specialZones")) paintSpecialZones(ctx, { cam, vw, vh, zones: specialZones, colors });
-  if (on("flight")) paintFlight(ctx, { cam, vw, vh, segment: flightSeg, alpha: fAlpha, colors });
+  if (on("flight")) {
+    paintFlight(ctx, { cam, vw, vh, segment: flightSeg, alpha: fAlpha, colors });
+    // Not faded with the corridor: the plane is only on the map while it is
+    // actually flying, and that window closes on its own.
+    paintPlane(ctx, { cam, vw, vh, flight, t: frameT, colors, atlas });
+  }
   if (on("landings")) paintLandings(ctx, { cam, vw, vh, landings, alpha: lAlpha, colors, atlas, focalIds, t: landingsT });
   if (on("packages")) paintPackages(ctx, { cam, vw, vh, packages, colors, atlas });
   if (on("shots")) paintShots(ctx, { cam, vw, vh, shots, colors });

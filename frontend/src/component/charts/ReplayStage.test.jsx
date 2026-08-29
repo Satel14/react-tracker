@@ -241,3 +241,14 @@ test("the fullscreen button does not clear the focused player", () => {
   }
 });
 
+
+
+test("double-clicking the map zooms in rather than throwing the view away", () => {
+  // Selecting two players in quick succession reads as a double-click, and
+  // resetting the camera there felt like the view collapsing on its own. Every
+  // other map zooms in on double-click; reset stays on its button and on R.
+  const { container } = renderStage();
+  const stage = container.querySelector(".replay-stage");
+  stage.getBoundingClientRect = () => ({ width: 800, height: 450, left: 0, top: 0, right: 800, bottom: 450 });
+  expect(() => fireEvent.doubleClick(stage, { clientX: 400, clientY: 225 })).not.toThrow();
+});

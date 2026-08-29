@@ -7,7 +7,9 @@ import sharp from "sharp";
 
 const BASE = "https://media.githubusercontent.com/media/pubg/api-assets/master/Assets/Maps";
 const OUT = path.resolve("public/map-hi");
-const SIZE = 2048;
+// Both tiers come from the same 8192px source, so each is a downsample. Pass a
+// size on the command line to build just one: `node build-map-rasters.mjs 4096`.
+const SIZES = process.argv[2] ? [Number(process.argv[2])] : [2048, 4096];
 const QUALITY = 82;
 
 const MAPS = [
@@ -39,14 +41,18 @@ for (const [asset, slug] of MAPS) {
   const buf = Buffer.from(await res.arrayBuffer());
   console.log(`${slug}: ${(buf.length / 1e6).toFixed(1)} MB, sniffed ${sniff(buf)}`);
 
+  // Decode once, emit every requested tier from it.
   const img = sharp(buf, { limitInputPixels: false });
   const { hasAlpha } = await img.metadata();
-  const out = await img
-    .resize(SIZE, SIZE, { kernel: "lanczos3", fit: "fill" })
-    .webp({ quality: QUALITY, effort: 6, alphaQuality: 100 })
-    .toBuffer();
+  for (const size of SIZES) {
+    const out = await img
+      .clone()
+      .resize(size, size, { kernel: "lanczos3", fit: "fill" })
+      .webp({ quality: QUALITY, effort: 6, alphaQuality: 100 })
+      .toBuffer();
 
-  const file = path.join(OUT, `${slug}-2048.v1.webp`);
-  await writeFile(file, out);
-  console.log(`  -> ${file} ${(out.length / 1024).toFixed(0)} KB${hasAlpha ? " (alpha preserved)" : ""}`);
+    const file = path.join(OUT, `${slug}-${size}.v1.webp`);
+    await writeFile(file, out);
+    console.log(`  -> ${file} ${(out.length / 1024).toFixed(0)} KB${hasAlpha ? " (alpha preserved)" : ""}`);
+  }
 }

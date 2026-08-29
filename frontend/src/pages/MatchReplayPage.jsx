@@ -64,6 +64,7 @@ const MatchReplayPage = ({ t }) => {
   const [analysis, setAnalysis] = useState({ loading: false, error: null, data: null });
   const [wantAnalysis, setWantAnalysis] = useState(false);
   const stageRef = useRef(null);
+  const [follow, setFollow] = useState(true);
   // The stage reads these every frame out of its own ref; this copy only drives
   // the checkboxes, so a toggle costs one render of the control bar, not of the
   // animation.
@@ -148,7 +149,13 @@ const MatchReplayPage = ({ t }) => {
       .then((res) => {
         if (cancelled) return;
         const payload = res?.data ? decodeReplay(res.data) : null;
-        if (payload && Array.isArray(payload.players)) dispatch({ type: "ok", data: payload });
+        if (payload && Array.isArray(payload.players)) {
+          dispatch({ type: "ok", data: payload });
+          // You arrive here from your own profile, so start on yourself rather
+          // than making the viewer hunt for their dot among sixty. Only on
+          // load: after that, null means "the viewer deselected".
+          setFocusedAccountId(payload.focalAccountId ?? null);
+        }
         else dispatch({ type: "err", error: res?.message || t("pages.replay.errorUnavailable") });
       })
       .catch((e) => {
@@ -208,6 +215,7 @@ const MatchReplayPage = ({ t }) => {
             onSelect={setFocusedAccountId}
             mapLabel={data.mapName}
             layers={layers}
+            follow={follow}
             fullscreenLabel={t("pages.replay.fullscreen")}
             exitFullscreenLabel={t("pages.replay.exitFullscreen")}
           >
@@ -247,6 +255,14 @@ const MatchReplayPage = ({ t }) => {
             It used to remount the stage, which also threw away the loaded
             high-res raster and the sprite atlas -- a visible blink for an
             action labelled the same as a shortcut that did neither. */}
+        <Button
+          onClick={() => setFollow((on) => !on)}
+          type={follow ? "primary" : "default"}
+          aria-pressed={follow}
+          title={t("pages.replay.followHint")}
+        >
+          {t("pages.replay.follow")}
+        </Button>
         <Button onClick={() => stageRef.current?.resetView()}>{t("pages.replay.resetView")}</Button>
       </div>
       <div className="match-replay__layers">

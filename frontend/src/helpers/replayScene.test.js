@@ -3,7 +3,7 @@ import {
   paintFlight, paintLandings, paintPackages, paintSpecialZones, paintShots,
 } from "./replayScene";
 import { buildTracks, sampleTracks } from "./replayTracks";
-import { fitCamera, clampCamera } from "./replayCamera";
+import { fitCamera, clampCamera, worldToScreen } from "./replayCamera";
 
 const recordingCtx = () => {
   const calls = [];
@@ -728,4 +728,38 @@ test("a player standing still still gets no bearing", () => {
   }];
   drawScene(recordingCtx(), { ...frameAt(1), zone: null, colors: P2_COLORS, atlas, tracks: sampleTracks(buildTracks(idler), 15) });
   expect(blits).toEqual([["focal", undefined]]);
+});
+
+test("the cargo plane is drawn on its corridor while it is over the map", () => {
+  const blits = [];
+  const atlas = { blit: (_c, kind, x, y, _r, angle) => blits.push({ kind, x, y, angle }) };
+  const flight = { x1: 2000, y1: 2000, t1: 20, x2: 6000, y2: 6000, t2: 60, speed: 142 };
+  const frame = { ...frameAt(1), zone: null, colors: P2_COLORS, atlas, flight, t: 40 };
+  drawScene(recordingCtx(), frame);
+  const plane = blits.find((b) => b.kind === "planeFocal" || b.kind === "planeEnemy");
+  expect(plane).toBeDefined();
+  // Halfway between the two jumps in time is halfway between them in space.
+  const mid = worldToScreen(frame.cam, frame.vw, frame.vh, 4000, 4000);
+  expect(plane.x).toBeCloseTo(mid.x, 0);
+  expect(plane.y).toBeCloseTo(mid.y, 0);
+  expect(plane.angle).toBeCloseTo(Math.PI / 4, 4);
+});
+
+test("the plane is gone once it has left the map", () => {
+  const blits = [];
+  const atlas = { blit: (_c, kind) => blits.push(kind) };
+  const flight = { x1: 2000, y1: 2000, t1: 20, x2: 6000, y2: 6000, t2: 60, speed: 142 };
+  drawScene(recordingCtx(), { ...frameAt(1), zone: null, colors: P2_COLORS, atlas, flight, t: 600 });
+  expect(blits.filter((k) => k.startsWith("plane"))).toHaveLength(0);
+});
+
+test("the flight layer toggle hides the plane too, not just the corridor", () => {
+  const blits = [];
+  const atlas = { blit: (_c, kind) => blits.push(kind) };
+  const flight = { x1: 2000, y1: 2000, t1: 20, x2: 6000, y2: 6000, t2: 60, speed: 142 };
+  drawScene(recordingCtx(), {
+    ...frameAt(1), zone: null, colors: P2_COLORS, atlas, flight, t: 40,
+    layers: { flight: false },
+  });
+  expect(blits.filter((k) => k.startsWith("plane"))).toHaveLength(0);
 });

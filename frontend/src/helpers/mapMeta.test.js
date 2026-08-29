@@ -30,3 +30,13 @@ test("highResUrl points at a versioned public raster for known maps", () => {
 test("highResUrl is null for an unknown map", () => {
   expect(highResUrl("Not_A_Map")).toBeNull();
 });
+
+test("each raster tier has its own url, and an unknown size has none", () => {
+  // The 4096 tier is what makes the far end of the zoom range worth having;
+  // asking for a size we never generated must be a miss, not a 404 at runtime.
+  expect(highResUrl("Baltic_Main")).toBe("/map-hi/erangel-2048.v1.webp");
+  expect(highResUrl("Baltic_Main", 2048)).toBe("/map-hi/erangel-2048.v1.webp");
+  expect(highResUrl("Baltic_Main", 4096)).toBe("/map-hi/erangel-4096.v1.webp");
+  expect(highResUrl("Baltic_Main", 8192)).toBeNull();
+  expect(highResUrl("Nope_Main", 4096)).toBeNull();
+});

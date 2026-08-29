@@ -166,6 +166,64 @@ export const flightSegment = (flight, mapMax) => {
   };
 };
 
+// How far outside the map box the plane may still be drawn, as a fraction of
+// the box: the map is rendered scaled to fit, so a fraction stays the same
+// visual slack on a 1000 m Haven as on an 8160 m Erangel. 2% is ~163 m on
+// Erangel -- enough that the icon slides off rather than vanishing mid-air at
+// the edge, and far too little to leave it parked in the margin.
+const PLANE_MARGIN = 0.02;
+
+// Where the cargo plane is at time t, or null when it should not be drawn.
+//
+// The flight is an exact straight line at constant speed (measured over 8 real
+// matches: 0.00 m maximum deviation from the first-to-last chord), so the two
+// jump points fully determine the plane's position at any time, extrapolated
+// in BOTH directions -- it enters the map before the first player jumps and
+// leaves after the last one does.
+//
+// The velocity comes from the two (position, time) pairs, not from the payload's
+// `speed` field, because those pairs are the same numbers the corridor and the
+// jump markers are drawn from: derived this way the icon is guaranteed to sit on
+// its own dashed line and to reach each jump marker at that jump's own time.
+// The two do agree to the precision either is shipped at -- a real payload's
+// pairs imply 142.99 m/s against a `speed` of 142 -- but neither is exact:
+// `speed` is Math.round(velocity / 100) at the first exit and the times are
+// rounded to whole seconds, so only the pairs are self-consistent with the
+// positions being drawn.
+//
+// This returns a fresh object rather than filling a caller-owned one, unlike the
+// `out`-taking functions above: there is exactly one plane per frame, and null
+// is the "not drawn" answer, which a reused object cannot express without a flag
+// the caller would have to remember to check.
+export const planeAt = (flight, t, mapMax) => {
+  if (!flight || typeof flight !== "object" || Array.isArray(flight)) return null;
+  if (!isNum(mapMax) || mapMax <= 0) return null;
+  if (!isNum(t)) return null;
+
+  const { x1, y1, t1, x2, y2, t2 } = flight;
+  if (!isNum(x1) || !isNum(y1) || !isNum(x2) || !isNum(y2)) return null;
+  if (!isNum(t1) || !isNum(t2)) return null;
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  if (dx === 0 && dy === 0) return null;
+  const dt = t2 - t1;
+  if (dt === 0) return null;
+
+  const vx = dx / dt;
+  const vy = dy / dt;
+  const x = x1 + vx * (t - t1);
+  const y = y1 + vy * (t - t1);
+
+  const margin = mapMax * PLANE_MARGIN;
+  if (x < -margin || x > mapMax + margin) return null;
+  if (y < -margin || y > mapMax + margin) return null;
+
+  // Heading off the velocity, so it points along the direction of travel even
+  // for a payload whose two samples arrive in reverse time order.
+  return { x, y, angle: Math.atan2(vy, vx) };
+};
+
 const fade = (t, fadeStart, fadeEnd) => {
   if (!isNum(t)) return 1;
   if (!(fadeEnd > fadeStart)) return t >= fadeEnd ? 0 : 1;

@@ -1,6 +1,7 @@
 import {
   createShotWindow,
   flightSegment,
+  planeAt,
   flightAlpha,
   landingsAlpha,
   specialZonesAt,
@@ -204,6 +205,145 @@ test("a line whose whole extension misses the box yields null", () => {
   expect(flightSegment({ x1: -300, y1: 100, x2: -300, y2: 7000 }, 8160)).toBe(null);
 });
 
+// --------------------------------------------------------------------- plane
+
+// 5400 m east and 1800 m north over 40 s, i.e. 135 / 45 m/s -- both exact in
+// binary, so every expected position below is an exact metre value. The implied
+// ground speed is 142.3 m/s, inside the 141.6-146.8 m/s measured band.
+const diagFlight = { x1: 1000, y1: 1000, t1: 10, x2: 6400, y2: 2800, t2: 50, speed: 142.3 };
+
+test("at the midpoint time the plane sits exactly halfway between the two jumps", () => {
+  const p = planeAt(diagFlight, 30, 8160);
+  expect(p.x).toBeCloseTo((diagFlight.x1 + diagFlight.x2) / 2, 9);
+  expect(p.y).toBeCloseTo((diagFlight.y1 + diagFlight.y2) / 2, 9);
+  expect(p.x).toBeCloseTo(3700, 9);
+  expect(p.y).toBeCloseTo(1900, 9);
+});
+
+test("the plane is at each jump point at that jump's own time", () => {
+  const first = planeAt(diagFlight, 10, 8160);
+  expect(first.x).toBeCloseTo(1000, 9);
+  expect(first.y).toBeCloseTo(1000, 9);
+  const last = planeAt(diagFlight, 50, 8160);
+  expect(last.x).toBeCloseTo(6400, 9);
+  expect(last.y).toBeCloseTo(2800, 9);
+});
+
+test("extrapolating before the first jump stays on the line and behind it", () => {
+  const p = planeAt(diagFlight, 4, 8160);
+  expect(Math.abs(crossOffLine(diagFlight, p.x, p.y))).toBeLessThan(1e-6);
+  expect(p.x).toBeCloseTo(190, 9);
+  expect(p.y).toBeCloseTo(730, 9);
+  // Behind the first jump, never ahead of it: a flipped sign would still land
+  // on the line, so direction is pinned separately from collinearity.
+  expect(p.x).toBeLessThan(diagFlight.x1);
+  expect(p.y).toBeLessThan(diagFlight.y1);
+});
+
+test("extrapolating after the last jump stays on the line and ahead of it", () => {
+  const p = planeAt(diagFlight, 55, 8160);
+  expect(Math.abs(crossOffLine(diagFlight, p.x, p.y))).toBeLessThan(1e-6);
+  expect(p.x).toBeCloseTo(7075, 9);
+  expect(p.y).toBeCloseTo(3025, 9);
+  expect(p.x).toBeGreaterThan(diagFlight.x2);
+  expect(p.y).toBeGreaterThan(diagFlight.y2);
+});
+
+test("the heading is atan2 of the direction of travel", () => {
+  const east = { x1: 1000, y1: 4000, t1: 0, x2: 6600, y2: 4000, t2: 40, speed: 140 };
+  const north = { x1: 4000, y1: 500, t1: 0, x2: 4000, y2: 6100, t2: 40, speed: 140 };
+  const west = { x1: 6600, y1: 4000, t1: 0, x2: 1000, y2: 4000, t2: 40, speed: 140 };
+  expect(planeAt(east, 20, 8000).angle).toBeCloseTo(0, 12);
+  // atan2(dy, dx), not atan2(dx, dy): a swapped pair would read 0 here.
+  expect(planeAt(north, 20, 8000).angle).toBeCloseTo(Math.PI / 2, 12);
+  expect(Math.abs(planeAt(west, 20, 8000).angle)).toBeCloseTo(Math.PI, 12);
+});
+
+test("the heading does not flip when extrapolating backwards", () => {
+  const expected = Math.atan2(diagFlight.y2 - diagFlight.y1, diagFlight.x2 - diagFlight.x1);
+  for (const t of [4, 9.5, 10, 30, 50, 55]) {
+    expect(planeAt(diagFlight, t, 8160).angle).toBeCloseTo(expected, 12);
+  }
+});
+
+// x = 1000 + 140 t, y parked at 4000, on a 8000 m box.
+const horizFlight = { x1: 1000, y1: 4000, t1: 0, x2: 6600, y2: 4000, t2: 40, speed: 140 };
+
+test("the plane is not drawn well before it enters or well after it leaves", () => {
+  expect(planeAt(horizFlight, -20, 8000)).toBe(null);
+  expect(planeAt(horizFlight, -100, 8000)).toBe(null);
+  expect(planeAt(horizFlight, 60, 8000)).toBe(null);
+  expect(planeAt(horizFlight, 600, 8000)).toBe(null);
+  expect(planeAt(diagFlight, -200, 8160)).toBe(null);
+  expect(planeAt(diagFlight, 200, 8160)).toBe(null);
+});
+
+test("the margin keeps the plane drawn at and just past the map edge", () => {
+  // x = 0 exactly, then 120 m off the near edge.
+  expect(planeAt(horizFlight, -50 / 7, 8000)).not.toBe(null);
+  expect(planeAt(horizFlight, -8, 8000).x).toBeCloseTo(-120, 9);
+  // x = 8000 exactly (the far edge), then 140 m past it.
+  expect(planeAt(horizFlight, 50, 8000).x).toBeCloseTo(8000, 9);
+  expect(planeAt(horizFlight, 51, 8000).x).toBeCloseTo(8140, 9);
+});
+
+test("the box is checked on y as well as on x", () => {
+  const north = { x1: 4000, y1: 500, t1: 0, x2: 4000, y2: 6100, t2: 40, speed: 140 };
+  expect(planeAt(north, 20, 8000).y).toBeCloseTo(3300, 9);
+  expect(planeAt(north, 100, 8000)).toBe(null);
+  expect(planeAt(north, -100, 8000)).toBe(null);
+});
+
+test("each call yields an independent result the caller may hold on to", () => {
+  const early = planeAt(diagFlight, 12, 8160);
+  const late = planeAt(diagFlight, 48, 8160);
+  expect(early.x).toBeCloseTo(1270, 9);
+  expect(early.y).toBeCloseTo(1090, 9);
+  expect(late.x).toBeCloseTo(6130, 9);
+  expect(late.y).toBeCloseTo(2710, 9);
+});
+
+test("a degenerate, missing or malformed plane input yields null", () => {
+  const valid = diagFlight;
+  // The two jump points coincide: no direction to fly.
+  expect(planeAt({ ...valid, x2: valid.x1, y2: valid.y1 }, 30, 8160)).toBe(null);
+  // Both jumps at the same instant: no time base to fly on.
+  expect(planeAt({ ...valid, t2: valid.t1 }, 30, 8160)).toBe(null);
+  expect(planeAt(null, 30, 8160)).toBe(null);
+  expect(planeAt(undefined, 30, 8160)).toBe(null);
+  expect(planeAt({}, 30, 8160)).toBe(null);
+  expect(planeAt([], 30, 8160)).toBe(null);
+  expect(planeAt("flight", 30, 8160)).toBe(null);
+  expect(planeAt(valid, 30, 0)).toBe(null);
+  expect(planeAt(valid, 30, -8160)).toBe(null);
+  expect(planeAt(valid, 30, NaN)).toBe(null);
+  expect(planeAt(valid, 30, Infinity)).toBe(null);
+  expect(planeAt(valid, 30)).toBe(null);
+  expect(planeAt(valid, NaN, 8160)).toBe(null);
+  expect(planeAt(valid, Infinity, 8160)).toBe(null);
+  expect(planeAt(valid, undefined, 8160)).toBe(null);
+  expect(planeAt(valid, "30", 8160)).toBe(null);
+  expect(planeAt(valid, null, 8160)).toBe(null);
+  for (const key of ["x1", "y1", "t1", "x2", "y2", "t2"]) {
+    for (const bad of [NaN, Infinity, -Infinity, null, undefined, "5", {}]) {
+      expect(planeAt({ ...valid, [key]: bad }, 30, 8160)).toBe(null);
+    }
+  }
+});
+
+test("a realistic 6000 m / 42 s crossing implies the measured plane speed", () => {
+  // 3600 / 4800 is a 6000 m separation on the integer-metre grid.
+  const real = { x1: 1000, y1: 1000, t1: 33, x2: 4600, y2: 5800, t2: 75, speed: 142.857 };
+  const a = planeAt(real, 33, 8160);
+  const b = planeAt(real, 75, 8160);
+  const implied = Math.hypot(b.x - a.x, b.y - a.y) / (real.t2 - real.t1);
+  expect(implied).toBeCloseTo(6000 / 42, 9);
+  expect(implied).toBeGreaterThan(141.6);
+  expect(implied).toBeLessThan(146.8);
+  // The derived velocity and the payload's own speed field agree.
+  expect(implied).toBeCloseTo(real.speed, 2);
+});
+
 // -------------------------------------------------------------------- alphas
 
 test("flightAlpha holds at 1, fades linearly, then sits at 0", () => {
@@ -403,6 +543,8 @@ test("every export tolerates junk arguments", () => {
     for (const b of junk) {
       expect(() => createShotWindow(a, b).activeAt(a, [])).not.toThrow();
       expect(() => flightSegment(a, b)).not.toThrow();
+      expect(() => planeAt(a, b, b)).not.toThrow();
+      expect(() => planeAt(a, 30, b)).not.toThrow();
       expect(() => flightAlpha(a, b)).not.toThrow();
       expect(() => landingsAlpha(a, b)).not.toThrow();
       expect(() => specialZonesAt(a, b, [])).not.toThrow();

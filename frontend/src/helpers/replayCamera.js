@@ -1,5 +1,9 @@
 export const MIN_ZOOM = 1;
-export const MAX_ZOOM = 6;
+// 16, not 6: at 6 a typical stage still showed 2.4 km across, too wide to
+// follow a fight. Markers are screen-sized, so zoom is what separates players.
+// The map raster is what limits this -- see the two high-res tiers in
+// ReplayStage -- not the camera maths.
+export const MAX_ZOOM = 16;
 
 export const baseScale = (vw, vh, mapMax) => (mapMax > 0 ? Math.min(vw, vh) / mapMax : 0);
 
@@ -42,3 +46,17 @@ export const zoomAt = (cam, vw, vh, nextZoom, px, py) => {
 };
 
 export const fitCamera = (mapMax) => ({ cx: mapMax / 2, cy: mapMax / 2, zoom: MIN_ZOOM, mapMax });
+
+// Centre the camera on a world point, clamped exactly the way panning is. The
+// decision lives here rather than in the component so the edge cases -- a
+// followed player walking into a map corner, a target with no position yet --
+// are reasoned about in one place and tested without a DOM.
+//
+// Returns the same object when nothing moved: the frame loop compares identity
+// to decide whether the background needs redrawing, and a no-op follow must
+// not look like a change.
+export const followCamera = (cam, wx, wy, vw, vh) => {
+  if (!Number.isFinite(wx) || !Number.isFinite(wy)) return cam;
+  const next = clampCamera({ ...cam, cx: wx, cy: wy }, vw, vh);
+  return next.cx === cam.cx && next.cy === cam.cy ? cam : next;
+};

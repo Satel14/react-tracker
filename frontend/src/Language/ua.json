@@ -261,7 +261,9 @@
             "legendKill": "Вбивство",
             "legendCrate": "Аірдроп",
             "legendFlight": "Маршрут літака і висадки",
-            "legendHazard": "Небезпечна зона"
+            "legendHazard": "Небезпечна зона",
+            "follow": "Стежити",
+            "followHint": "Камера стежить за вибраним гравцем"
         },
         "match": {
             "title": "Аналіз матчу",

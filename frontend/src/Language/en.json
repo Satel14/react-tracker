@@ -261,7 +261,9 @@
       "legendKill": "Kill",
       "legendCrate": "Care package",
       "legendFlight": "Flight path and landings",
-      "legendHazard": "Hazard zone"
+      "legendHazard": "Hazard zone",
+      "follow": "Follow",
+      "followHint": "Camera follows the selected player"
     },
     "match": {
       "title": "Match Analysis",

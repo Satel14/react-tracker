@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { getMapMeta, highResUrl } from "../../helpers/mapMeta";
+import { getMapMeta, highResUrl, HIGH_RES_SIZES } from "../../helpers/mapMeta";
 import { buildTracks, sampleTracks } from "../../helpers/replayTracks";
 import { createSweep, pruneFlashes } from "../../helpers/replayEvents";
 import { drawBackground, drawScene, pickIndex, SCREEN } from "../../helpers/replayScene";
@@ -7,20 +7,34 @@ import {
   createShotWindow, flightSegment, flightAlpha, landingsAlpha,
   specialZonesAt, packagesAt,
 } from "../../helpers/replayLayers";
-import { clampCamera, fitCamera, scaleOf, zoomAt } from "../../helpers/replayCamera";
+import { clampCamera, fitCamera, followCamera, scaleOf, zoomAt } from "../../helpers/replayCamera";
 import { buildAtlas } from "./replaySprites";
 import { zoneAt } from "./replayEngine";
 
-const HIGH_RES_SOURCE_PX = 2048;
+// Two raster tiers behind the same idea: fetch the next one up once the map is
+// being sampled past ~70% of the current one's native resolution. The source
+// art is 8192px, so 4096 is a real step rather than an upscale -- it is what
+// makes the far end of the zoom range worth having.
+const RASTER_TIERS = HIGH_RES_SIZES;
 const HIGH_RES_TRIGGER = 0.7;
 const FLASH_CAP = 40;
+// One doubling per double-click: enough to feel like a step, small enough
+// that two of them do not overshoot the whole map.
+const DOUBLE_CLICK_ZOOM = 2;
 
 // Fetch the 2048 raster once the map is being sampled above ~70% of its native
 // resolution. A fixed zoom constant cannot work: the break-even depends on the
 // stage size AND on devicePixelRatio, so on a retina display it arrives at a
 // much lower zoom than on a 1x one.
-const needsHighRes = (v) =>
-  Math.min(v.vw, v.vh) * v.dpr * v.cam.zoom > HIGH_RES_SOURCE_PX * HIGH_RES_TRIGGER;
+// Which tier this view wants: the smallest whose native resolution still
+// covers the sampling, or the largest we have.
+const wantedTier = (v) => {
+  const sampling = Math.min(v.vw, v.vh) * v.dpr * v.cam.zoom;
+  for (let i = 0; i < RASTER_TIERS.length; i += 1) {
+    if (sampling <= RASTER_TIERS[i] * HIGH_RES_TRIGGER) return i;
+  }
+  return RASTER_TIERS.length;
+};
 
 // Last-resort paint: only reached when no stylesheet resolved the token in
 // TOKEN_FOR below. Deliberately approximate rather than a copy of the token
@@ -96,7 +110,7 @@ const normaliseWheel = (e) => {
   return Math.exp(-dy * (e.ctrlKey ? 0.02 : 0.0025));
 };
 
-const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, mapLabel, publish, layers, fullscreenLabel = "Fullscreen", exitFullscreenLabel, children }, ref) => {
+const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, mapLabel, publish, layers, follow, fullscreenLabel = "Fullscreen", exitFullscreenLabel, children }, ref) => {
   const wrapRef = useRef(null);
   const bgRef = useRef(null);
   const fxRef = useRef(null);
@@ -123,7 +137,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     dpr: 1,
     bgDirty: true,
     image: null,
-    highResRequested: false,
+    tier: 0,
     atlas: null,
     colors: { ...FALLBACK_COLORS },
     flashes: [],
@@ -132,6 +146,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     gesture: null,
     mapGen: 0,
     // Reused every frame by the layer selectors; never reallocated.
+    follow: false,
     shotBuf: [],
     zoneBuf: [],
     pkgBuf: [],
@@ -140,6 +155,11 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
 
   const focusedRef = useRef(focusedAccountId);
   useEffect(() => { focusedRef.current = focusedAccountId; }, [focusedAccountId]);
+
+  // Follow is armed by the caller and disarmed by the viewer: any pan or zoom
+  // means they want to look somewhere else, and a camera that snapped back
+  // would be unusable. Selecting someone re-arms it.
+  useEffect(() => { view.current.follow = !!follow && !!focusedAccountId; }, [follow, focusedAccountId]);
 
   // Layer flags are read by the draw loop every frame, so they live in the view
   // ref rather than in state: toggling one must not re-render the tree while
@@ -152,7 +172,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     v.cam = fitCamera(data.mapMax);
     v.bgDirty = true;
     v.flashes.length = 0;
-    v.highResRequested = false;
+    v.tier = 0;
     v.image = null;
     // Also invalidates an in-flight high-res load on unmount, so a late
     // onload with no map change finds a stale generation and drops itself.
@@ -173,18 +193,29 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     return () => { cancelled = true; };
   }, [meta.image]);
 
-  const requestHighRes = useCallback(() => {
+  // Climb one tier at a time, and never back down: a coarser raster arriving
+  // late must not replace a sharper one already on screen.
+  const requestTier = useCallback(() => {
     const v = view.current;
-    if (v.highResRequested || typeof Image === "undefined") return;
-    const url = highResUrl(data.rawMapName);
+    if (typeof Image === "undefined") return;
+    const want = wantedTier(v);
+    if (want <= v.tier) return;
+    const size = RASTER_TIERS[Math.min(want, RASTER_TIERS.length) - 1];
+    const url = highResUrl(data.rawMapName, size);
     if (!url) return;
-    v.highResRequested = true;
+    const climbing = v.tier + 1;
+    v.tier = climbing;
     const gen = v.mapGen;
     const img = new Image();
     img.onload = () => {
       if (v.mapGen !== gen) return;
       v.image = img;
       v.bgDirty = true;
+    };
+    img.onerror = () => {
+      // The tier is not there; drop back so a later zoom can retry the one
+      // below rather than the map being stuck on the base raster forever.
+      if (v.mapGen === gen && v.tier === climbing) v.tier = climbing - 1;
     };
     img.src = url;
   }, [data.rawMapName]);
@@ -215,8 +246,8 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     v.cam = clampCamera(v.cam, vw, vh);
     v.bgDirty = true;
     // A retina display can already be past the trigger at zoom 1.
-    if (needsHighRes(v)) requestHighRes();
-  }, [requestHighRes]);
+    requestTier();
+  }, [requestTier]);
 
   useEffect(() => {
     measure();
@@ -269,8 +300,9 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
       const v = view.current;
       if (!v.vw) return;
       const rect = el.getBoundingClientRect();
+      v.follow = false;
       v.cam = zoomAt(v.cam, v.vw, v.vh, v.cam.zoom * normaliseWheel(e), e.clientX - rect.left, e.clientY - rect.top);
-      if (needsHighRes(v)) requestHighRes();
+      requestTier();
       v.bgDirty = true;
     };
     const blockGesture = (e) => e.preventDefault();
@@ -280,7 +312,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
       el.removeEventListener("wheel", onWheel);
       el.removeEventListener("gesturestart", blockGesture);
     };
-  }, [requestHighRes]);
+  }, [requestTier]);
 
   useEffect(() => {
     let raf = null;
@@ -297,6 +329,16 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
         }
         pruneFlashes(v.flashes, nowMs, SCREEN.flashLifetimeMs, FLASH_CAP);
         sampleTracks(tracks, t);
+
+        if (v.follow && focusedRef.current) {
+          const i = tracks.meta.findIndex((m) => m.accountId === focusedRef.current);
+          if (i >= 0 && tracks.outState[i] !== 0) {
+            const next = followCamera(v.cam, tracks.outX[i], tracks.outY[i], v.vw, v.vh);
+            // followCamera returns the same object when nothing moved, so this
+            // only marks the background dirty on a real change.
+            if (next !== v.cam) { v.cam = next; v.bgDirty = true; }
+          }
+        }
 
         const bgCtx = bg && bg.getContext("2d");
         if (bgCtx && v.bgDirty) {
@@ -321,6 +363,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
             revives: data.revives,
             t,
             flightSeg,
+            flight: data.flight,
             flightAlpha: flightAlpha(t),
             landingsAlpha: landingsAlpha(t),
             focalIds,
@@ -375,11 +418,14 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
       if (g.startDist > 0) {
         const mid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
         v.cam = zoomAt(v.cam, v.vw, v.vh, g.baseZoom * (dist / g.startDist), mid.x, mid.y);
-        if (needsHighRes(v)) requestHighRes();
+        requestTier();
         v.bgDirty = true;
       }
     } else if (g.mode === "pan") {
       const s = scaleOf(v.cam, v.vw, v.vh);
+      // Dragging means the viewer wants to look elsewhere; a camera that
+      // snapped back to the followed player would be unusable.
+      if (g.moved) v.follow = false;
       if (s > 0) {
         g.moved = g.moved || Math.hypot(p.x - g.startX, p.y - g.startY) > 4;
         v.cam = clampCamera(
@@ -446,8 +492,20 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
   // rather than remounting the stage and discarding its loaded rasters.
   useImperativeHandle(ref, () => ({ resetView, toggleFullscreen }), [resetView, toggleFullscreen]);
 
-  // Double-click, the R key and the page's Reset view button are one action.
-  const onDoubleClick = resetView;
+  // Double-click zooms IN, toward the cursor, the way every other map does.
+  // It used to reset the view, which meant selecting two players in quick
+  // succession threw away the zoom the viewer had just set up -- and read as
+  // the camera resetting on its own, because nothing they did looked like a
+  // reset. Reset lives on its button and on R.
+  const onDoubleClick = (e) => {
+    const el = wrapRef.current;
+    const v = view.current;
+    if (!el || !v.vw) return;
+    const rect = el.getBoundingClientRect();
+    v.follow = false;
+    v.cam = zoomAt(v.cam, v.vw, v.vh, v.cam.zoom * DOUBLE_CLICK_ZOOM, e.clientX - rect.left, e.clientY - rect.top);
+    v.bgDirty = true;
+  };
 
   // The button does two jobs, so it needs two names -- a screen reader told
   // "Fullscreen" while already in fullscreen is being told the opposite of
