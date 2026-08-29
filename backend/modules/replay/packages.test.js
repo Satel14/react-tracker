@@ -247,6 +247,59 @@ test("emits exactly the documented shape", () => {
     clock,
   );
   assert.deepEqual(out, [
-    { kind: "bluechip", id, t: 96, ts: 44, x: 250, y: 350, n: 2 },
+    { kind: "bluechip", id, t: 96, ts: 44, x: 250, y: 350, n: 2, lootedAt: null },
   ]);
+});
+
+test("marks a package looted the first time somebody takes from it", () => {
+  // LogItemPickupFromCarepackage names the package type but carries no id that
+  // spawn or land also carries -- carePackageUniqueId is only 0,1,2 per match.
+  // The looter is standing at the crate though: across a real match all 43
+  // pickups were within 4.2 m of the package they came from.
+  const clock = { timeOf: (ev) => ev.at };
+  const land = (id, x, y, at) => ({
+    _T: "LogCarePackageLand", at,
+    itemPackage: { itemPackageId: id, location: { x, y, z: 100 }, items: [] },
+  });
+  const pickup = (name, x, y, at) => ({
+    _T: "LogItemPickupFromCarepackage", at, carePackageName: name,
+    character: { accountId: "account.a", location: { x, y, z: 100 } },
+  });
+
+  const out = extractPackages([
+    land("Carapackage_RedBox_C", 100000, 200000, 60),
+    land("Carapackage_RedBox_C", 500000, 600000, 90),
+    pickup("Carapackage_RedBox_C", 100300, 200200, 140),   // 3.6 m from the first
+    pickup("Carapackage_RedBox_C", 100100, 200100, 200),   // later, same crate
+  ], clock);
+
+  assert.equal(out.length, 2);
+  const first = out.find((p) => p.x === 1000);
+  const second = out.find((p) => p.x === 5000);
+  // The earliest pickup is the one that matters: after that it is open.
+  assert.equal(first.lootedAt, 140);
+  assert.equal(second.lootedAt, null);
+});
+
+test("a pickup nowhere near a package leaves every crate untouched", () => {
+  const clock = { timeOf: (ev) => ev.at };
+  const out = extractPackages([
+    { _T: "LogCarePackageLand", at: 60,
+      itemPackage: { itemPackageId: "Carapackage_RedBox_C", location: { x: 100000, y: 200000, z: 0 }, items: [] } },
+    { _T: "LogItemPickupFromCarepackage", at: 100, carePackageName: "Carapackage_RedBox_C",
+      character: { accountId: "account.a", location: { x: 900000, y: 900000, z: 0 } } },
+  ], clock);
+  assert.equal(out[0].lootedAt, null);
+});
+
+test("a pickup only opens a package of its own type", () => {
+  const clock = { timeOf: (ev) => ev.at };
+  const out = extractPackages([
+    { _T: "LogCarePackageLand", at: 60,
+      itemPackage: { itemPackageId: "Carapackage_SmallPackage_C", location: { x: 100000, y: 200000, z: 0 }, items: [] } },
+    // Standing right on it, but taking from a red box that is elsewhere.
+    { _T: "LogItemPickupFromCarepackage", at: 100, carePackageName: "Carapackage_RedBox_C",
+      character: { accountId: "account.a", location: { x: 100000, y: 200000, z: 0 } } },
+  ], clock);
+  assert.equal(out[0].lootedAt, null);
 });

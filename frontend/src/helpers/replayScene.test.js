@@ -936,3 +936,74 @@ test("a care package is clearly larger than a player marker", () => {
   const [, , , w] = drawn[0];
   expect(w).toBeGreaterThan(SCREEN.focalRadius * 2 * 1.2);
 });
+
+test("an opened crate is drawn open", () => {
+  const drawn = [];
+  const ctx = recordingCtx();
+  ctx.drawImage = (...args) => drawn.push(args);
+  const images = {
+    falling: { width: 144, height: 200 },
+    landed: { width: 144, height: 136 },
+    open: { width: 144, height: 136 },
+  };
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null, images,
+    packages: [
+      { kind: "redbox", x: 4000, y: 4000, falling: false, fall: 1, looted: true },
+      { kind: "redbox", x: 4100, y: 4100, falling: false, fall: 1, looted: false },
+    ],
+  });
+  expect(drawn[0][0]).toBe(images.open);
+  expect(drawn[1][0]).toBe(images.landed);
+});
+
+test("a falling crate is still falling even after somebody will loot it", () => {
+  // looted is about the rest of the match; while it is in the air it is a
+  // crate under a canopy, whatever happens later.
+  const drawn = [];
+  const ctx = recordingCtx();
+  ctx.drawImage = (...args) => drawn.push(args);
+  const images = { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 }, open: { width: 144, height: 136 } };
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null, images,
+    packages: [{ kind: "redbox", x: 4000, y: 4000, falling: true, fall: 0.5, looted: true }],
+  });
+  expect(drawn[0][0]).toBe(images.falling);
+});
+
+test("a crate shrinks towards the ground as it falls", () => {
+  // The drop is straight down, so on a map seen from above nothing moves. Size
+  // is what reads as altitude: bigger is higher.
+  const widthAt = (fall) => {
+    const drawn = [];
+    const ctx = recordingCtx();
+    ctx.drawImage = (...args) => drawn.push(args);
+    paintPackages(ctx, {
+      ...frameAt(1), colors: P2_COLORS, atlas: null,
+      images: { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 }, open: { width: 144, height: 136 } },
+      packages: [{ kind: "redbox", x: 4000, y: 4000, falling: fall < 1, fall, looted: false }],
+    });
+    return drawn[0][3];
+  };
+  expect(widthAt(0)).toBeGreaterThan(widthAt(0.5));
+  expect(widthAt(0.5)).toBeGreaterThan(widthAt(0.99));
+  // And it settles at exactly the landed size rather than overshooting.
+  expect(widthAt(1)).toBeCloseTo(SCREEN.crateRadius * 2 * SCREEN.crateArtScale, 6);
+});
+
+test("crates in the air do not sway in unison", () => {
+  const xs = [];
+  const ctx = recordingCtx();
+  ctx.drawImage = (...args) => xs.push(args[1]);
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null,
+    images: { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 }, open: { width: 144, height: 136 } },
+    packages: [
+      { kind: "redbox", x: 4000, y: 4000, falling: true, fall: 0.4, looted: false },
+      { kind: "redbox", x: 4000, y: 4000, falling: true, fall: 0.4, looted: false },
+    ],
+  });
+  // Same position and the same moment of their descent, but seeded apart, so a
+  // cluster of drops does not read as one rigid object.
+  expect(xs[0]).not.toBe(xs[1]);
+});

@@ -353,6 +353,13 @@ export const packagesAt = (packages, t, out) => {
     if (t < spawnT) continue;
 
     const falling = t < landT;
+    // Spawn and land share x and y exactly -- a crate drops straight down, so
+    // there is no movement to show on a map seen from above. How far through
+    // the descent it is, is what the renderer has to work with instead.
+    const span = landT - spawnT;
+    const fall = span > 0 ? Math.min(1, Math.max(0, (t - spawnT) / span)) : 1;
+    // Open from the moment somebody first takes from it, and it does not close.
+    const looted = isNum(pkg.lootedAt) && t >= pkg.lootedAt;
     const entry = dest[n];
     const kind = typeof pkg.kind === "string" ? pkg.kind : null;
     if (entry) {
@@ -360,8 +367,10 @@ export const packagesAt = (packages, t, out) => {
       entry.x = pkg.x;
       entry.y = pkg.y;
       entry.falling = falling;
+      entry.fall = fall;
+      entry.looted = looted;
     } else {
-      dest.push({ kind, x: pkg.x, y: pkg.y, falling });
+      dest.push({ kind, x: pkg.x, y: pkg.y, falling, fall, looted });
     }
     n += 1;
   }

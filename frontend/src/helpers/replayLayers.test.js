@@ -504,16 +504,16 @@ const orphan = { kind: "brdm", id: "pkg-2", t: 300, ts: null, x: 10, y: 20, n: 0
 
 test("a package falls from its spawn time and stays once landed", () => {
   expect(packagesAt([crate], 59, [])).toHaveLength(0);
-  expect(packagesAt([crate], 60, [])).toEqual([{ kind: "small", x: 1000, y: 2000, falling: true }]);
+  expect(packagesAt([crate], 60, [])).toEqual([{ kind: "small", x: 1000, y: 2000, falling: true, fall: 0, looted: false }]);
   expect(packagesAt([crate], 74, [])[0].falling).toBe(true);
   expect(packagesAt([crate], 74.99, [])[0].falling).toBe(true);
   expect(packagesAt([crate], 75, [])[0].falling).toBe(false);
-  expect(packagesAt([crate], 600, [])).toEqual([{ kind: "small", x: 1000, y: 2000, falling: false }]);
+  expect(packagesAt([crate], 600, [])).toEqual([{ kind: "small", x: 1000, y: 2000, falling: false, fall: 1, looted: false }]);
 });
 
 test("an unpaired land appears at its land time and never falls", () => {
   expect(packagesAt([orphan], 299, [])).toHaveLength(0);
-  expect(packagesAt([orphan], 300, [])).toEqual([{ kind: "brdm", x: 10, y: 20, falling: false }]);
+  expect(packagesAt([orphan], 300, [])).toEqual([{ kind: "brdm", x: 10, y: 20, falling: false, fall: 1, looted: false }]);
   expect(packagesAt([orphan], 900, [])[0].falling).toBe(false);
 });
 
@@ -566,4 +566,42 @@ test("a faded layer still reappears when the viewer scrubs back", () => {
   expect(landingsAlpha(60)).toBe(1);
   expect(landingsAlpha(300)).toBe(0);
   expect(landingsAlpha(60)).toBe(1);
+});
+
+test("a package reports how far through its fall it is", () => {
+  // Spawn and land share x and y exactly -- the crate drops straight down, so
+  // there is no movement to animate on a top-down map. Progress is what the
+  // renderer has to work with instead.
+  const out = [];
+  const pkgs = [{ kind: "redbox", x: 100, y: 200, ts: 60, t: 90, lootedAt: null }];
+  const fallAt = (t) => { packagesAt(pkgs, t, out); return out[0] && out[0].fall; };
+  expect(fallAt(60)).toBeCloseTo(0, 6);
+  expect(fallAt(75)).toBeCloseTo(0.5, 6);
+  expect(fallAt(90)).toBeCloseTo(1, 6);
+  // Once down it stays down, rather than looping.
+  expect(fallAt(600)).toBeCloseTo(1, 6);
+});
+
+test("a package with no spawn time is simply already down", () => {
+  // An unpaired land carries no ts, so there is no descent to show.
+  const out = [];
+  packagesAt([{ kind: "small", x: 1, y: 2, ts: null, t: 50, lootedAt: null }], 50, out);
+  expect(out[0].falling).toBe(false);
+  expect(out[0].fall).toBe(1);
+});
+
+test("a package is open from the moment somebody takes from it", () => {
+  const out = [];
+  const pkgs = [{ kind: "redbox", x: 1, y: 2, ts: 10, t: 20, lootedAt: 140 }];
+  const lootedAt = (t) => { packagesAt(pkgs, t, out); return out[0].looted; };
+  expect(lootedAt(50)).toBe(false);
+  expect(lootedAt(139)).toBe(false);
+  expect(lootedAt(140)).toBe(true);
+  expect(lootedAt(900)).toBe(true);
+});
+
+test("a package nobody touched is never open", () => {
+  const out = [];
+  packagesAt([{ kind: "small", x: 1, y: 2, ts: 10, t: 20, lootedAt: null }], 999, out);
+  expect(out[0].looted).toBe(false);
 });

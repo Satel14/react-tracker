@@ -26,6 +26,12 @@ export const SCREEN = {
   // as wide as the biggest player marker, and the artwork carries its own
   // margin on top of that.
   crateArtScale: 2.6,
+  // How much larger a crate is at the moment it leaves the plane than when it
+  // touches down. Enough to read as coming closer, not so much that it looks
+  // like a different object.
+  crateFallLift: 0.7,
+  crateSway: 3,
+  crateSwayTurns: 2.5,
   chevronRadius: 4,
   // Bigger than a player: it carries sixty of them.
   planeRadius: 9,
@@ -261,18 +267,29 @@ export const paintMarkers = (ctx, { cam, vw, vh, knocks, revives, t, colors }) =
 
 export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas, images }) => {
   if (!ctx || !packages || packages.length === 0) return;
-  for (const pkg of packages) {
+  for (let i = 0; i < packages.length; i += 1) {
+    const pkg = packages[i];
     const p = worldToScreen(cam, vw, vh, pkg.x, pkg.y);
     if (offScreen(p, vw, vh)) continue;
 
     // PUBG's own crate artwork, which is the one thing in their asset repo that
     // is genuinely a map marker rather than a killfeed row or a product render.
-    // It carries the falling-versus-landed distinction the payload already has.
-    const art = images && (pkg.falling ? images.falling : images.landed);
+    // Three states, and the payload knows all three: under canopy, on the
+    // ground, and opened by whoever got there first.
+    const art = images && (pkg.falling ? images.falling : (pkg.looted ? images.open : images.landed));
     if (art && art.width && art.height) {
-      const h = SCREEN.crateRadius * 2 * (art.height / art.width) * SCREEN.crateArtScale;
-      const w = SCREEN.crateRadius * 2 * SCREEN.crateArtScale;
-      ctx.drawImage(art, p.x - w / 2, p.y - h / 2, w, h);
+      // A crate drops straight down, so nothing moves on a map seen from above.
+      // Size is what reads as altitude, and a slow sway is what reads as a
+      // canopy. The phase is seeded off the index rather than the position so a
+      // cluster of drops does not swing as one rigid object.
+      const fall = typeof pkg.fall === "number" ? pkg.fall : 1;
+      const lift = 1 + (1 - fall) * SCREEN.crateFallLift;
+      const w = SCREEN.crateRadius * 2 * SCREEN.crateArtScale * lift;
+      const h = w * (art.height / art.width);
+      const sway = pkg.falling
+        ? Math.sin(fall * SCREEN.crateSwayTurns * Math.PI * 2 + i) * SCREEN.crateSway
+        : 0;
+      ctx.drawImage(art, p.x + sway - w / 2, p.y - h / 2, w, h);
       continue;
     }
 

@@ -186,7 +186,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     if (typeof Image === "undefined") return undefined;
     let cancelled = false;
     const v = view.current;
-    for (const [key, file] of [["falling", "CarePackage_Flying"], ["landed", "CarePackage_Normal"]]) {
+    for (const [key, file] of [["falling", "CarePackage_Flying"], ["landed", "CarePackage_Normal"], ["open", "CarePackage_Open"]]) {
       const img = new Image();
       img.onload = () => {
         if (cancelled) return;
