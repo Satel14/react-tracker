@@ -920,3 +920,19 @@ test("crates still draw before the artwork arrives", () => {
   });
   expect(ctx.calls.filter((c) => c.name === "fill").length).toBeGreaterThan(0);
 });
+
+test("a care package is clearly larger than a player marker", () => {
+  // It is a landmark people move towards and it stays on the map for the rest
+  // of the match, unlike a player who is only ever passing through. Drawn at a
+  // player's size it read as just another dot.
+  const drawn = [];
+  const ctx = recordingCtx();
+  ctx.drawImage = (...args) => drawn.push(args);
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null,
+    images: { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 } },
+    packages: [{ kind: "redbox", x: 4000, y: 4000, falling: false }],
+  });
+  const [, , , w] = drawn[0];
+  expect(w).toBeGreaterThan(SCREEN.focalRadius * 2 * 1.2);
+});

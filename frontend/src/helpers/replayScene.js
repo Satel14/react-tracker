@@ -20,9 +20,12 @@ export const SCREEN = {
   flightDash: [10, 8],
   shotWidth: 1,
   crateRadius: 4,
-  // The artwork carries its own margin, so it needs to be drawn a little
-  // larger than the bare glyph to read at the same weight.
-  crateArtScale: 1.6,
+  // A care package is a landmark: people move towards it and it stays put for
+  // the rest of the match, unlike a player who is only passing through. At a
+  // player's size it read as just another dot, so it is drawn about half again
+  // as wide as the biggest player marker, and the artwork carries its own
+  // margin on top of that.
+  crateArtScale: 2.6,
   chevronRadius: 4,
   // Bigger than a player: it carries sixty of them.
   planeRadius: 9,
