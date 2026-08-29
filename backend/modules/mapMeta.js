@@ -1,3 +1,9 @@
+// Sizes verified against real telemetry for Erangel, Miramar, Taego, Deston,
+// Rondo, Vikendi and Paramo, using the fact that the first safety zone is
+// centred on the map midpoint: centre * 2 is the side. Sanhok, Karakin, Camp
+// Jackal and Haven are unverified -- they did not appear in 1001 sampled
+// matches, so they are out of rotation. The mapMeta test pins that every value
+// is at least one of the six real PUBG map sides, which is what caught Vikendi.
 const MAP_META = {
   Baltic_Main: { displayName: "Erangel", mapMax: 8160 },
   Erangel_Main: { displayName: "Erangel", mapMax: 8160 },
