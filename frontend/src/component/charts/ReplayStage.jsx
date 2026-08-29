@@ -180,7 +180,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     return () => { v.mapGen += 1; };
   }, [data.mapMax, data.rawMapName]);
 
-  // PUBG's own care-package artwork. Two small PNGs, loaded once and shared by
+  // PUBG's own care-package artwork. Three small PNGs, loaded once and shared by
   // every crate on the map; until they arrive the drawn glyph stands in.
   useEffect(() => {
     if (typeof Image === "undefined") return undefined;

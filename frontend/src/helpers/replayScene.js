@@ -34,6 +34,19 @@ export const SCREEN = {
   // crate settles onto its point instead of snapping to it.
   crateSway: 4,
   crateSwayTurns: 2.5,
+  // PUBG's own "open" crate artwork is the same red and blue box with its lid
+  // up. At marker size that difference does not read at all, so a crate that
+  // somebody has already been through has its colour drained instead. Applied
+  // to the marker as drawn, which keeps it working for the stand-in glyph too
+  // and adds no colour of its own.
+  //
+  // Brightness goes UP, not down: desaturating the crate's red leaves a
+  // luminance of about 66, which is darker than the out-of-zone wash and
+  // vanishes into it. Rendered against all four grounds the map actually
+  // shows -- Erangel green, Miramar sand, Vikendi snow, out-of-zone -- 1.7
+  // reads as grey on every one, while past about 2.3 the lid blows out to
+  // white and is lost on snow.
+  lootedFilter: "grayscale(1) brightness(1.7)",
   chevronRadius: 4,
   // Bigger than a player: it carries sixty of them.
   planeRadius: 9,
@@ -289,6 +302,15 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas, image
     const cx = p.x + sway;
     const cy = p.y - rise;
 
+    // A crate somebody has emptied is spent scenery, and the artwork alone does
+    // not say so. Drain it. Still in the air means still worth going to,
+    // whatever happens to it later.
+    const spent = !!pkg.looted && !pkg.falling;
+    if (spent) {
+      ctx.save();
+      ctx.filter = SCREEN.lootedFilter;
+    }
+
     // PUBG's own crate artwork, which is the one thing in their asset repo that
     // is genuinely a map marker rather than a killfeed row or a product render.
     // Three states, and the payload knows all three: under canopy, on the
@@ -298,29 +320,30 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas, image
       const w = SCREEN.crateRadius * 2 * SCREEN.crateArtScale;
       const h = w * (art.height / art.width);
       ctx.drawImage(art, cx - w / 2, cy - h / 2, w, h);
-      continue;
+    } else {
+      // Until it loads, and wherever it cannot be fetched, the drawn glyph
+      // stands in -- there is never a frame with no care packages on it.
+      const red = pkg.kind === "redbox";
+      const colour = red ? colors.danger || colors.crate : colors.crate;
+      if (atlas && atlas.blit) {
+        atlas.blit(ctx, red ? "crateRed" : "crate", Math.round(cx), Math.round(cy), SCREEN.crateRadius);
+      } else {
+        ctx.beginPath();
+        ctx.arc(cx, cy, SCREEN.crateRadius, 0, Math.PI * 2);
+        ctx.fillStyle = colour;
+        ctx.fill();
+      }
+      if (pkg.falling) {
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = SCREEN.shotWidth;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - SCREEN.crateRadius);
+        ctx.lineTo(cx, cy - SCREEN.crateRadius * 3);
+        ctx.stroke();
+      }
     }
 
-    // Until it loads, and wherever it cannot be fetched, the drawn glyph stands
-    // in -- there is never a frame with no care packages on it.
-    const red = pkg.kind === "redbox";
-    const colour = red ? colors.danger || colors.crate : colors.crate;
-    if (atlas && atlas.blit) {
-      atlas.blit(ctx, red ? "crateRed" : "crate", Math.round(cx), Math.round(cy), SCREEN.crateRadius);
-    } else {
-      ctx.beginPath();
-      ctx.arc(cx, cy, SCREEN.crateRadius, 0, Math.PI * 2);
-      ctx.fillStyle = colour;
-      ctx.fill();
-    }
-    if (pkg.falling) {
-      ctx.strokeStyle = colour;
-      ctx.lineWidth = SCREEN.shotWidth;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - SCREEN.crateRadius);
-      ctx.lineTo(cx, cy - SCREEN.crateRadius * 3);
-      ctx.stroke();
-    }
+    if (spent) ctx.restore();
   }
 };
 
