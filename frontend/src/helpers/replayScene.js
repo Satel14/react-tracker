@@ -1,7 +1,7 @@
 import { worldToScreen, scaleOf } from "./replayCamera";
 import { STATE } from "./replayTracks";
 import { healthArc, planeAt } from "./replayLayers";
-import { vehicleGlyph } from "../component/charts/replaySprites";
+import { vehicleGlyph, teamColorIndex } from "../component/charts/replaySprites";
 
 export const SCREEN = {
   dotRadius: 5,
@@ -344,7 +344,7 @@ export const drawScene = (ctx, frame) => {
   if (!ctx) return;
   const {
     cam, vw, vh, tracks, zone, flashes, nowMs, focusedAccountId, hoveredIndex,
-    colors, atlas, labelCap = 24,
+    colors, atlas, labelCap = 24, focalTeamId = null,
     shots, specialZones, packages, landings, landingsT, flightSeg, flight, knocks, revives,
     t: frameT,
     flightAlpha: fAlpha = 1, landingsAlpha: lAlpha = 1, focalIds,
@@ -402,7 +402,13 @@ export const drawScene = (ctx, frame) => {
     const aimed = state === STATE.ALIVE && ((flags & 1) || moving);
     if (atlas && atlas.blit) {
       const angle = aimed && tracks.outAngle ? tracks.outAngle[i] : undefined;
-      atlas.blit(ctx, glyphFor(state, flags, meta.isFocal, moving), Math.round(p.x), Math.round(p.y), r, angle);
+      atlas.blit(
+        ctx, glyphFor(state, flags, meta.isFocal, moving),
+        Math.round(p.x), Math.round(p.y), r, angle,
+        // Colour is the team; form is the state. The focal team resolves to 0,
+        // which is its own colour rather than one drawn from the palette.
+        teamColorIndex(meta.teamId, focalTeamId),
+      );
     } else {
       ctx.beginPath();
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2);

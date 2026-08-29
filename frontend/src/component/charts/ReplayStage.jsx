@@ -354,6 +354,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
             focusedAccountId: focusedRef.current,
             hoveredIndex: v.hoveredIndex,
             colors: v.colors, atlas: v.atlas,
+            focalTeamId: data.focalTeamId ?? null,
             shots: shotWindow.activeAt(t, v.shotBuf),
             specialZones: specialZonesAt(data.specialZones, t, v.zoneBuf),
             packages: packagesAt(data.packages, t, v.pkgBuf),
@@ -376,7 +377,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     raf = requestAnimationFrame(frame);
     return () => { if (raf !== null) cancelAnimationFrame(raf); };
   }, [clockRef, data.zones, data.specialZones, data.packages, data.landings,
-      data.knocks, data.revives,
+      data.knocks, data.revives, data.flight, data.focalTeamId,
       sweep, tracks, publish, shotWindow, flightSeg, focalIds]);
 
   const localPoint = (e) => {

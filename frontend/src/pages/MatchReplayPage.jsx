@@ -59,6 +59,12 @@ const MatchReplayPage = ({ t }) => {
       ? `/player/${platform}/${encodeURIComponent(playerName || accountId)}`
       : "/";
   const [{ loading, error, data }, dispatch] = useReducer(reducer, INITIAL);
+  // react-switch-lang's translate HOC builds a fresh `t` on every render and
+  // re-renders whenever anything above it does (its index.js:150). Listing it
+  // as an effect dependency therefore re-runs that effect constantly; held in
+  // a ref, the error strings stay current without dragging the fetch with them.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [focusedAccountId, setFocusedAccountId] = useState(null);
   const [tab, setTab] = useState("replay");
   const [analysis, setAnalysis] = useState({ loading: false, error: null, data: null });
@@ -156,13 +162,13 @@ const MatchReplayPage = ({ t }) => {
           // load: after that, null means "the viewer deselected".
           setFocusedAccountId(payload.focalAccountId ?? null);
         }
-        else dispatch({ type: "err", error: res?.message || t("pages.replay.errorUnavailable") });
+        else dispatch({ type: "err", error: res?.message || tRef.current("pages.replay.errorUnavailable") });
       })
       .catch((e) => {
-        if (!cancelled) dispatch({ type: "err", error: e?.message || t("pages.replay.errorGeneric") });
+        if (!cancelled) dispatch({ type: "err", error: e?.message || tRef.current("pages.replay.errorGeneric") });
       });
     return () => { cancelled = true; };
-  }, [matchId, platform, accountId, playerName, t]);
+  }, [matchId, platform, accountId, playerName]);
 
   // Mark analysis as wanted the first time a non-replay tab is opened.
   useEffect(() => {
@@ -349,7 +355,7 @@ const MatchReplayPage = ({ t }) => {
       <h2 className="match-replay__title">
         {t("pages.match.title")}{data ? ` — ${data.mapName}` : ""}
       </h2>
-      {loading ? (
+      {loading && !data ? (
         <Skeleton variant="block" label={t("pages.replay.loading")} className="match-replay__loading" />
       ) : error ? (
         <Alert type="error" message={error} showIcon />

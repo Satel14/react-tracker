@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useNavigate } from "react-router-dom";
 import MatchReplayPage from "./MatchReplayPage";
 import { getMatchAnalysis, getMatchReplay } from "../api/player";
@@ -311,4 +311,44 @@ test("selecting someone else, then deselecting, does not snap back to the focal 
   const mine = document.querySelector('.replay-roster__row[data-account="account.me"]');
   fireEvent.click(mine);
   expect(document.querySelector(".replay-roster__row.is-selected")).toBeNull();
+});
+
+test("a re-render from above does not tear the map down", async () => {
+  // The real mechanism behind "the map resets to reset view on its own":
+  // react-switch-lang's translate HOC builds a fresh `t` on every render
+  // (its index.js:150) and re-renders whenever anything above it does. With
+  // `t` in the fetch effect's deps, that re-ran the fetch; "start" set
+  // loading, loading short-circuited the whole tab tree, and ReplayStage was
+  // unmounted and rebuilt with a fresh camera -- throwing away the zoom the
+  // viewer had set up, with no input from them at all.
+  let bump;
+  const Parent = () => {
+    const [, setN] = React.useState(0);
+    bump = () => setN((n) => n + 1);
+    return (
+      <MemoryRouter initialEntries={["/match/steam/m1/replay"]}>
+        <Routes>
+          <Route path="/match/:platform/:matchId/replay" element={<MatchReplayPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  };
+  render(<Parent />);
+  const canvas = await screen.findByRole("img", { name: /erangel/i });
+  getMatchReplay.mockClear();
+
+  await act(async () => { bump(); });
+
+  // Same DOM node: the stage was never unmounted, so its camera survived.
+  expect(screen.getByRole("img", { name: /erangel/i })).toBe(canvas);
+  expect(getMatchReplay).not.toHaveBeenCalled();
+});
+
+test("a reload of the same match keeps the map on screen", async () => {
+  // Defence in depth for the same failure. Even if something does re-trigger
+  // the fetch, the loading state must not blank a replay we already have.
+  renderAt("/match/steam/m1/replay");
+  const canvas = await screen.findByRole("img", { name: /erangel/i });
+  fireEvent.keyDown(window, { key: "ArrowRight", code: "ArrowRight" });
+  expect(screen.getByRole("img", { name: /erangel/i })).toBe(canvas);
 });

@@ -763,3 +763,41 @@ test("the flight layer toggle hides the plane too, not just the corridor", () =>
   });
   expect(blits.filter((k) => k.startsWith("plane"))).toHaveLength(0);
 });
+
+test("each team gets its own colour, and the focal team keeps its own", () => {
+  const blits = [];
+  const atlas = { blit: (_c, kind, _x, _y, _r, _a, ci) => blits.push([kind, ci]) };
+  const lobby = [1, 2, 3, 9].map((teamId, i) => ({
+    name: `P${i}`, accountId: `a.${i}`, teamId, isFocal: teamId === 1,
+    dropTime: null, deathTime: null,
+    positions: [{ t: 0, x: 4000 + i * 20, y: 4000, h: 100, f: 0 },
+                { t: 10, x: 4000 + i * 20, y: 4000, h: 100, f: 0 }],
+  }));
+  drawScene(recordingCtx(), {
+    ...frameAt(1), zone: null, colors: P2_COLORS, atlas,
+    focalTeamId: 1, tracks: sampleTracks(buildTracks(lobby), 5),
+  });
+  const byIndex = blits.map(([, ci]) => ci);
+  // The focal team is index 0 -- its own colour, never drawn from the palette.
+  expect(byIndex[0]).toBe(0);
+  // Every other team gets a non-zero index, and no two of these share one.
+  const others = byIndex.slice(1);
+  expect(others.every((ci) => ci > 0)).toBe(true);
+  expect(new Set(others).size).toBe(others.length);
+});
+
+test("a player with no team does not borrow the focal colour", () => {
+  const blits = [];
+  const atlas = { blit: (_c, _k, _x, _y, _r, _a, ci) => blits.push(ci) };
+  const stray = [{
+    name: "S", accountId: "a.s", teamId: null, isFocal: false, dropTime: null, deathTime: null,
+    positions: [{ t: 0, x: 4000, y: 4000, h: 100, f: 0 }, { t: 10, x: 4000, y: 4000, h: 100, f: 0 }],
+  }];
+  drawScene(recordingCtx(), {
+    ...frameAt(1), zone: null, colors: P2_COLORS, atlas,
+    focalTeamId: 1, tracks: sampleTracks(buildTracks(stray), 5),
+  });
+  // Index 0 is the enemy colour for a non-focal player, which is the safe
+  // answer: an unknown team must not read as "your squad".
+  expect(blits).toEqual([0]);
+});

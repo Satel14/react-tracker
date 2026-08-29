@@ -1,4 +1,7 @@
-import { buildAtlas, vehicleGlyph, ICON_PATHS } from "./replaySprites";
+import {
+  buildAtlas, vehicleGlyph, ICON_PATHS,
+  TEAM_COLORS, DEFAULT_COLOR_INDEX, teamColor, teamColorIndex,
+} from "./replaySprites";
 
 const COLORS = {
   focal: "rgb(1,1,1)",
@@ -21,6 +24,62 @@ const BOX_MAX = CELL - MARGIN;
 const PAD = 5;
 const CELL_BOX = CELL + PAD * 2;
 const HALO = 3;
+
+// The colour axis, held here as a literal for the same reason: growing the
+// palette costs a whole atlas row, so the number has to be re-argued here.
+const TEAM_COLOR_CAP = 12;
+
+// Which glyph FORM each kind takes its team colour from -- the colour axis
+// repaints shapes, not kinds, so movingFocal and movingEnemy share one cell per
+// colour. Spelled out rather than derived from a suffix: `enemy`/`focal` carry
+// no suffix, and the chevron pair does carry one but is deliberately NOT
+// team-coloured, so a suffix rule would silently pull it in.
+const TEAM_FORM_OF = {
+  focal: "focal",
+  enemy: "focal",
+  movingFocal: "movingFocal",
+  movingEnemy: "movingFocal",
+  knockedFocal: "knockedFocal",
+  knockedEnemy: "knockedFocal",
+  vehicleFocal: "vehicleFocal",
+  vehicleEnemy: "vehicleFocal",
+  planeFocal: "planeFocal",
+  planeEnemy: "planeFocal",
+  balloonFocal: "balloonFocal",
+  balloonEnemy: "balloonFocal",
+};
+
+// Declaration order matters: it is the order buildAtlas rasterises a team row.
+const TEAM_FORMS = [...new Set(Object.values(TEAM_FORM_OF))];
+
+// A corpse belongs to nobody, the crates encode contents rather than ownership,
+// and the landing chevron keeps its friend/foe read. These take no team colour.
+const PLAIN_KINDS = ["dead", "crate", "crateRed", "chevronFocal", "chevronEnemy"];
+
+// Hues, in degrees, of the encodings already on this map, measured off
+// style/_tokens.scss. A team colour that lands on one of these is a wrong
+// answer, not a dim one: every entry is a marker-sized glyph or the focal read.
+// --flight (~193), the next-zone ring (~207) and the outside wash (~221) are
+// deliberately absent -- see the HUE_ARCS comment for the collision the palette
+// knowingly accepts there.
+const CLAIMED_HUES = {
+  danger: 0, zoneRed: 3.2, warn: 25.5, zoneStorm: 39.3,
+  brand: 54, ok: 142.7, zoneEmp: 254.6, crate: 317.1,
+};
+
+const hslParts = (css) => {
+  const m = /^hsl\((-?[\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)$/.exec(css);
+  expect(m, `not an hsl() colour: ${css}`).not.toBeNull();
+  return { h: parseFloat(m[1]), s: parseFloat(m[2]), l: parseFloat(m[3]) };
+};
+
+// Hue is a circle, so 350 and 10 are 20 apart, not 340.
+const hueGap = (a, b) => {
+  const d = Math.abs(a - b) % 360;
+  return Math.min(d, 360 - d);
+};
+
+const teamHue = (index) => hslParts(teamColor(index)).h;
 
 // Endpoint-to-center arc parameterization (SVG spec, x-axis-rotation always 0
 // in these paths), sampled finely so a circular arc's true extent -- not just
@@ -181,12 +240,37 @@ const installAtlasEnv = ({ path2d = true, context = true } = {}) => {
 
 const KINDS = Object.keys(ICON_PATHS);
 
-// Every kind is painted twice, halo then colour, in declaration order.
+// The whole sheet, exactly: row 0 is every kind, then one row per team colour
+// holding only the six team forms. Kept as an exact count rather than a floor
+// -- a row that quietly stopped being rasterised has to fail here.
+const TOTAL_DRAWS = (KINDS.length + TEAM_FORMS.length * TEAM_COLOR_CAP) * 2;
+
+// Row 0. Every kind is painted twice, halo then colour, in declaration order,
+// and row 0 comes first so these indices are the ones they always were.
 const passesByKind = (draws) => {
-  expect(draws).toHaveLength(KINDS.length * 2);
+  expect(draws).toHaveLength(TOTAL_DRAWS);
   return Object.fromEntries(
     KINDS.map((kind, i) => [kind, { halo: draws[i * 2], colour: draws[i * 2 + 1] }]),
   );
+};
+
+// Rows 1..TEAM_COLOR_CAP, indexed [colourIndex - 1][form]. Walks the tail of
+// the same draw list and asserts it ends exactly where the sheet does, so an
+// extra or missing team pass cannot hide behind a slice.
+const teamPasses = (draws) => {
+  expect(draws).toHaveLength(TOTAL_DRAWS);
+  const rows = [];
+  let i = KINDS.length * 2;
+  for (let ci = 1; ci <= TEAM_COLOR_CAP; ci += 1) {
+    const row = {};
+    for (const form of TEAM_FORMS) {
+      row[form] = { halo: draws[i], colour: draws[i + 1] };
+      i += 2;
+    }
+    rows.push(row);
+  }
+  expect(i).toBe(draws.length);
+  return rows;
 };
 
 // Every state that ships a per-team pair, derived rather than listed so a
@@ -209,10 +293,13 @@ const fakeTarget = () => {
   };
 };
 
-// The source/destination rectangle blit actually samples for one kind.
-const blitRect = (atlas, kind, r = 5, angle) => {
+// The source/destination rectangle blit actually samples for one kind. Called
+// with four arguments it exercises the pre-team call shape exactly -- six
+// arguments reaching blit, no colour index -- which is what the scene ships
+// today and what must not change.
+const blitRect = (atlas, kind, r = 5, angle, ...colorIndex) => {
   const target = fakeTarget();
-  atlas.blit(target, kind, 100, 200, r, angle);
+  atlas.blit(target, kind, 100, 200, r, angle, ...colorIndex);
   const drawn = target.ops.filter((o) => o.op === "drawImage");
   expect(drawn, kind).toHaveLength(1);
   const [, sx, sy, sw, sh, dx, dy, dw, dh] = drawn[0].args;
@@ -347,17 +434,22 @@ test("rasterises every kind into its own cell of one sheet", () => {
   expect(atlas).not.toBeNull();
   expect(size).toBe(84);
   expect(canvas.width).toBe(size * KINDS.length);
-  expect(canvas.height).toBe(size);
-  // One sheet, one row, so every kind added widens it. A browser canvas caps
-  // out well above this, but not infinitely far above it.
+  expect(canvas.height).toBe(size * (TEAM_COLOR_CAP + 1));
+  // One sheet, one column per kind and one row per colour, so a kind widens it
+  // and a colour heightens it. A browser canvas caps out well above this, but
+  // not infinitely far above it, and BOTH axes have to stay under.
   expect(canvas.width).toBe(1428);
+  expect(canvas.height).toBe(1092);
   expect(canvas.width).toBeLessThan(4096);
+  expect(canvas.height).toBeLessThan(4096);
 
-  // Each glyph drawn twice, in declaration order, scaled so its PADDED box --
-  // not its 32-unit design box -- covers the rasterised cell, and shifted by
-  // PAD so it sits in the middle of it.
-  expect(draws.map((d) => d.d)).toEqual(KINDS.flatMap((k) => [ICON_PATHS[k], ICON_PATHS[k]]));
-  draws.forEach((d, i) => {
+  // Row 0 first, each glyph drawn twice, in declaration order, scaled so its
+  // PADDED box -- not its 32-unit design box -- covers the rasterised cell, and
+  // shifted by PAD so it sits in the middle of it. The team rows that follow
+  // are pinned by the grid test below; this half must stay the sheet it was.
+  const row0 = draws.slice(0, KINDS.length * 2);
+  expect(row0.map((d) => d.d)).toEqual(KINDS.flatMap((k) => [ICON_PATHS[k], ICON_PATHS[k]]));
+  row0.forEach((d, i) => {
     const kind = KINDS[Math.floor(i / 2)];
     expect(d.scale, kind).toBe(size / CELL_BOX);
     expect(d.tx, kind).toBe(Math.floor(i / 2) * size + PAD * (size / CELL_BOX));
@@ -386,6 +478,22 @@ test("paints a dark halo under every glyph, before the colour", () => {
     expect(halo.d, kind).toBe(ICON_PATHS[kind]);
     expect(halo.lineWidth, kind).toBeGreaterThan(colour.op === "stroke" ? colour.lineWidth : 0);
   }
+
+  // The team rows are the same glyph in a different colour, so they carry the
+  // same halo, in the same order. A row rasterised without one would look fine
+  // on Erangel and vanish on Vikendi -- the exact defect the halo exists for.
+  teamPasses(draws).forEach((row, i) => {
+    for (const form of TEAM_FORMS) {
+      const { halo, colour } = row[form];
+      const at = `${form}@${i + 1}`;
+      expect(halo.op, at).toBe("stroke");
+      expect(halo.colour, at).toBe(COLORS.outline);
+      expect(halo.d, at).toBe(ICON_PATHS[form]);
+      expect(colour.d, at).toBe(ICON_PATHS[form]);
+      expect(colour.colour, at).not.toBe(COLORS.outline);
+      expect(halo.lineWidth, at).toBeGreaterThan(colour.op === "stroke" ? colour.lineWidth : 0);
+    }
+  });
 });
 
 test("falls back to a built-in halo colour when the palette has no outline", () => {
@@ -583,6 +691,322 @@ test("the focal and enemy variants of a state paint different palette entries", 
 test("falls back to a built-in colour when the palette is empty", () => {
   const { draws } = installAtlasEnv();
   buildAtlas({ dpr: 1, colors: {} });
-  expect(draws).toHaveLength(KINDS.length * 2);
+  expect(draws).toHaveLength(TOTAL_DRAWS);
   for (const d of draws) expect(typeof d.colour).toBe("string");
+});
+
+// ---------------------------------------------------------------------------
+// Team colours
+// ---------------------------------------------------------------------------
+
+// Which kinds take a team colour is a decision, not a naming accident: it is
+// what sizes every team row. Listed both ways round so neither half can drift
+// -- a seventh form added without a kind, or a kind quietly dropped out of the
+// palette, breaks this before it breaks a cell address.
+test("exactly the six player and vehicle forms take a team colour", () => {
+  expect(TEAM_FORMS).toEqual([
+    "focal", "movingFocal", "knockedFocal", "vehicleFocal", "planeFocal", "balloonFocal",
+  ]);
+  expect([...Object.keys(TEAM_FORM_OF), ...PLAIN_KINDS].sort()).toEqual([...KINDS].sort());
+  // Every form is a real kind, and a form's whole point is that two kinds share
+  // its shape -- so the pair really is one cell's worth of drawing, not two.
+  for (const [kind, form] of Object.entries(TEAM_FORM_OF)) {
+    expect(ICON_PATHS, form).toHaveProperty(form);
+    expect(ICON_PATHS[kind], kind).toBe(ICON_PATHS[form]);
+  }
+});
+
+test("maps a team to a colour index and keeps the focal team out of the palette", () => {
+  expect(TEAM_COLORS).toBe(TEAM_COLOR_CAP);
+  expect(DEFAULT_COLOR_INDEX).toBe(0);
+
+  // Requirement 1. The viewer's own team is never assigned a palette entry: it
+  // takes index 0, which is the row that paints colors.focal.
+  expect(teamColorIndex(7, 7)).toBe(DEFAULT_COLOR_INDEX);
+  expect(teamColorIndex(0, 0)).toBe(DEFAULT_COLOR_INDEX);
+  expect(teamColor(DEFAULT_COLOR_INDEX)).toBeNull();
+
+  // Everyone else lands on a real palette row.
+  for (let id = 1; id <= 40; id += 1) {
+    if (id === 7) continue;
+    const index = teamColorIndex(id, 7);
+    expect(index, `team ${id}`).toBeGreaterThanOrEqual(1);
+    expect(index, `team ${id}`).toBeLessThanOrEqual(TEAM_COLORS);
+  }
+
+  // A caller that does not know which team is the viewer's still gets colours.
+  expect(teamColorIndex(7)).not.toBe(DEFAULT_COLOR_INDEX);
+  expect(teamColorIndex(7, null)).not.toBe(DEFAULT_COLOR_INDEX);
+  expect(teamColorIndex(7, undefined)).not.toBe(DEFAULT_COLOR_INDEX);
+
+  // An id that is not a number falls back to today's two-colour read rather
+  // than hashing to some arbitrary team's colour. Number.isFinite does not
+  // coerce, which is why "3" and null land here and not on a row.
+  for (const bad of [undefined, null, NaN, Infinity, -Infinity, "3", {}, []]) {
+    expect(teamColorIndex(bad, 7), String(bad)).toBe(DEFAULT_COLOR_INDEX);
+  }
+  // A negative id is still an id: the modulo is taken the non-negative way.
+  for (const id of [-1, -5, -13]) {
+    expect(teamColorIndex(id, 7), String(id)).toBeGreaterThanOrEqual(1);
+    expect(teamColorIndex(id, 7), String(id)).toBeLessThanOrEqual(TEAM_COLORS);
+  }
+});
+
+// Requirement 2. Team ids are small integers and the teams that fight each
+// other are usually numerically close, so `hue = id * step` is exactly wrong.
+// The stride scatters consecutive ids across the wheel instead.
+test("adjacent team ids get hues that are nowhere near each other", () => {
+  for (let id = 1; id <= 40; id += 1) {
+    const gap = hueGap(teamHue(teamColorIndex(id, 0)), teamHue(teamColorIndex(id + 1, 0)));
+    expect(gap, `${id} -> ${id + 1}`).toBeGreaterThan(90);
+  }
+  // Two apart is the next-worst case and still must not be a near-miss.
+  for (let id = 1; id <= 40; id += 1) {
+    const gap = hueGap(teamHue(teamColorIndex(id, 0)), teamHue(teamColorIndex(id + 2, 0)));
+    expect(gap, `${id} -> ${id + 2}`).toBeGreaterThan(25);
+  }
+});
+
+test("the palette uses every colour once before repeating, then wraps", () => {
+  const first = [];
+  for (let id = 1; id <= TEAM_COLORS; id += 1) first.push(teamColorIndex(id, 0));
+  expect(new Set(first).size).toBe(TEAM_COLORS);
+  expect(new Set(first)).toEqual(new Set(Array.from({ length: TEAM_COLORS }, (_, i) => i + 1)));
+
+  // Past the cap the sheet stops growing and the hues come round again -- the
+  // 13th team shares with the 1st rather than earning a row nobody could tell
+  // from an existing one.
+  for (let id = 1; id <= 30; id += 1) {
+    expect(teamColorIndex(id + TEAM_COLORS, 0), String(id)).toBe(teamColorIndex(id, 0));
+  }
+  // A 25-team squad lobby is the real case: at most three teams to a colour.
+  const counts = new Map();
+  for (let id = 1; id <= 25; id += 1) {
+    const i = teamColorIndex(id, 0);
+    counts.set(i, (counts.get(i) || 0) + 1);
+  }
+  expect(Math.max(...counts.values())).toBe(3);
+});
+
+test("teamColor answers only for real palette entries", () => {
+  for (const bad of [0, -1, TEAM_COLORS + 1, 99, 1.5, NaN, undefined, null, "2", {}]) {
+    expect(teamColor(bad), String(bad)).toBeNull();
+  }
+  const seen = new Set();
+  for (let i = 1; i <= TEAM_COLORS; i += 1) {
+    expect(typeof teamColor(i), String(i)).toBe("string");
+    seen.add(teamColor(i));
+  }
+  expect(seen.size).toBe(TEAM_COLORS);
+});
+
+// Requirement 2, the other half: it is not enough that neighbouring ids differ,
+// every pair in the palette has to be tellable apart at marker size.
+test("no two palette colours share a hue, and none is a near-miss", () => {
+  const hues = Array.from({ length: TEAM_COLORS }, (_, i) => teamHue(i + 1));
+  for (let i = 0; i < hues.length; i += 1) {
+    for (let j = i + 1; j < hues.length; j += 1) {
+      expect(hueGap(hues[i], hues[j]), `${i + 1} vs ${j + 1}`).toBeGreaterThanOrEqual(15);
+    }
+  }
+});
+
+// Requirement 3. The map already spends most of the wheel: kill tracers and the
+// red crate are red, gunfire amber, the selection ring yellow, the focal team
+// green, loot pins magenta, the EMP zone violet. A team hue landing on one of
+// those reads as that thing.
+test("no team hue lands on an encoding the map already uses", () => {
+  for (let i = 1; i <= TEAM_COLORS; i += 1) {
+    for (const [name, claimed] of Object.entries(CLAIMED_HUES)) {
+      expect(hueGap(teamHue(i), claimed), `colour ${i} vs ${name}`).toBeGreaterThan(12);
+    }
+  }
+});
+
+// Requirement 4. The raster underneath is photographic -- pale desert, dark
+// forest, white snow. The halo does most of the work, but a near-black or
+// washed-out fill inside it is still a marker nobody can name.
+test("every team colour stays saturated and mid-light", () => {
+  const palette = Array.from({ length: TEAM_COLORS }, (_, i) => hslParts(teamColor(i + 1)));
+  for (const [i, { s, l }] of palette.entries()) {
+    expect(s, `colour ${i + 1}`).toBeGreaterThanOrEqual(70);
+    expect(l, `colour ${i + 1}`).toBeGreaterThanOrEqual(50);
+    expect(l, `colour ${i + 1}`).toBeLessThanOrEqual(75);
+  }
+
+  // One lightness for every hue is not one lightness to the eye: at 55% a blue
+  // is a navy that sinks into a forest raster while a yellow-green is a bright
+  // lime. So the blues have to come out measurably lighter than the yellow-
+  // greens -- by construction, not by luck.
+  const near = (h) => palette.filter((c) => hueGap(c.h, h) < 60).map((c) => c.l);
+  const yellowish = near(60);
+  const blueish = near(240);
+  expect(yellowish.length).toBeGreaterThan(0);
+  expect(blueish.length).toBeGreaterThan(0);
+  expect(Math.min(...blueish)).toBeGreaterThan(Math.max(...yellowish) + 5);
+});
+
+// The blocker this pass exists to solve: the atlas bakes one colour per cell,
+// so (six forms) x (twelve colours) needs six times twelve cells on top of the
+// original row -- and every one of them has to be somewhere no other cell is.
+test("the sheet is a form x colour grid and every pair has its own cell", () => {
+  const { canvas, draws } = installAtlasEnv();
+  const dpr = 2;
+  const size = CELL_BOX * dpr;
+  const scale = size / CELL_BOX;
+  const atlas = buildAtlas({ dpr, colors: COLORS });
+
+  const rows = teamPasses(draws);
+  expect(rows).toHaveLength(TEAM_COLOR_CAP);
+  rows.forEach((row, i) => {
+    const ci = i + 1;
+    for (const form of TEAM_FORMS) {
+      const at = `${form}@${ci}`;
+      const col = KINDS.indexOf(form);
+      // A team cell sits in its form's own column, one row down per colour.
+      expect(row[form].colour.tx, at).toBe(col * size + PAD * scale);
+      expect(row[form].colour.ty, at).toBe(ci * size + PAD * scale);
+      expect(row[form].colour.scale, at).toBe(scale);
+      expect(row[form].colour.colour, at).toBe(teamColor(ci));
+    }
+  });
+
+  // And what blit samples is what was painted, for every (kind, colour) pair.
+  const cells = new Map();
+  for (const kind of KINDS) {
+    for (let ci = 0; ci <= TEAM_COLOR_CAP; ci += 1) {
+      const at = `${kind}@${ci}`;
+      const rect = blitRect(atlas, kind, 5, undefined, ci);
+      const teamed = ci > 0 ? TEAM_FORM_OF[kind] : undefined;
+      expect(rect.sx, at).toBe(KINDS.indexOf(teamed || kind) * size);
+      expect(rect.sy, at).toBe(teamed ? ci * size : 0);
+      expect(rect.sw, at).toBe(size);
+      expect(rect.sh, at).toBe(size);
+      // Never off the sheet on either axis.
+      expect(rect.sx + rect.sw, at).toBeLessThanOrEqual(canvas.width);
+      expect(rect.sy + rect.sh, at).toBeLessThanOrEqual(canvas.height);
+      const cellKey = `${rect.sx},${rect.sy}`;
+      if (!cells.has(cellKey)) cells.set(cellKey, []);
+      cells.get(cellKey).push(at);
+    }
+  }
+  // 17 default cells plus 6 forms x 12 colours: the two kinds sharing a form
+  // share its cell (that is the point), nothing else does.
+  expect(cells.size).toBe(KINDS.length + TEAM_FORMS.length * TEAM_COLOR_CAP);
+
+  // Every cell blit can reach was actually rasterised -- no address points at
+  // one of the eleven columns a team row leaves empty.
+  const painted = new Set(draws.map((d) => `${d.tx - PAD * scale},${d.ty - PAD * scale}`));
+  for (const cellKey of cells.keys()) expect([...painted], cellKey).toContain(cellKey);
+});
+
+// The signature change has to be invisible to the caller that has not been
+// wired up yet. `colorIndex` is appended after the already-optional `angle`,
+// so six arguments -- what the scene passes today -- still reach row 0.
+test("a caller that passes no colour index gets exactly the sheet it had", () => {
+  installAtlasEnv();
+  const dpr = 2;
+  const size = CELL_BOX * dpr;
+  const atlas = buildAtlas({ dpr, colors: COLORS });
+
+  for (const [i, kind] of KINDS.entries()) {
+    const legacy = blitRect(atlas, kind);
+    expect(legacy.sy, kind).toBe(0);
+    expect(legacy.sx, kind).toBe(i * size);
+    // And an explicit 0 -- what teamColorIndex hands back for the focal team
+    // and for an unknown one -- is the same cell, not a thirteenth colour.
+    const zero = blitRect(atlas, kind, 5, undefined, DEFAULT_COLOR_INDEX);
+    expect(zero.sx, kind).toBe(legacy.sx);
+    expect(zero.sy, kind).toBe(legacy.sy);
+  }
+
+  // Rotation is still a draw-time transform, not a variant: same cell either
+  // way, with a colour index as without one.
+  const upright = blitRect(atlas, "movingEnemy", 5, undefined, 4);
+  const turned = blitRect(atlas, "movingEnemy", 5, Math.PI / 3, 4);
+  expect(turned.sx).toBe(upright.sx);
+  expect(turned.sy).toBe(upright.sy);
+  expect(turned.ops.map((o) => o.op)).toEqual(["save", "translate", "rotate", "drawImage", "restore"]);
+});
+
+// A colour index the atlas cannot honour must cost the marker its colour, never
+// its existence: an undrawn player is a worse bug than a mis-coloured one.
+test("an unusable colour index degrades to the default cell rather than drawing nothing", () => {
+  installAtlasEnv();
+  const dpr = 2;
+  const size = CELL_BOX * dpr;
+  const atlas = buildAtlas({ dpr, colors: COLORS });
+
+  const base = blitRect(atlas, "movingEnemy");
+  // "constructor" and "length" are the ones that bite: the colour rows live in
+  // an Array, so a truthiness check on the index would hand those two the
+  // Array constructor and the row count in place of a row -- and then a cell
+  // that is not a cell. Only a range check keeps them off it.
+  for (const bad of [
+    -1, 0, TEAM_COLOR_CAP + 1, 99, 1.5, NaN, undefined, null, true,
+    "no", "constructor", "length", {},
+  ]) {
+    const rect = blitRect(atlas, "movingEnemy", 5, undefined, bad);
+    expect(rect.sx, String(bad)).toBe(base.sx);
+    expect(rect.sy, String(bad)).toBe(base.sy);
+    expect(rect.sw, String(bad)).toBe(size);
+  }
+
+  // A kind with no team form ignores a perfectly good index the same way.
+  for (const kind of PLAIN_KINDS) {
+    const plain = blitRect(atlas, kind);
+    const coloured = blitRect(atlas, kind, 5, undefined, 5);
+    expect(coloured.sx, kind).toBe(plain.sx);
+    expect(coloured.sy, kind).toBe(0);
+  }
+
+  // Including the inherited property names a plain object would answer to: the
+  // cell maps are null-prototype precisely so "toString" is an unknown kind and
+  // not a function pretending to be a cell.
+  for (const kind of ["toString", "constructor", "hasOwnProperty"]) {
+    const rect = blitRect(atlas, kind, 5, undefined, 5);
+    expect(rect.sw, kind).toBe(size);
+    expect(rect.sy, kind).toBe(5 * size);
+  }
+});
+
+test("an unknown kind falls back to the enemy cell in whatever colour it was given", () => {
+  installAtlasEnv();
+  const atlas = buildAtlas({ dpr: 2, colors: COLORS });
+  // The enemy cell and the focal cell are the same disc, and the disc's team
+  // row is one cell, so an unknown kind in team 4's colour is team 4's disc.
+  const unknown = blitRect(atlas, "no-such-kind", 5, undefined, 4);
+  const disc = blitRect(atlas, "focal", 5, undefined, 4);
+  expect(unknown.sx).toBe(disc.sx);
+  expect(unknown.sy).toBe(disc.sy);
+  expect(blitRect(atlas, "enemy", 5, undefined, 4).sx).toBe(disc.sx);
+});
+
+// Requirement 1, at the point it actually matters. The focal team's green is
+// the one colour on this map that means "me", so no generated team colour may
+// be it, and no team row may be painted with it.
+test("the focal colour never comes out of the team palette", () => {
+  const { draws } = installAtlasEnv();
+  const atlas = buildAtlas({ dpr: 2, colors: COLORS });
+
+  for (const row of teamPasses(draws)) {
+    for (const form of TEAM_FORMS) {
+      expect(row[form].colour.colour, form).not.toBe(COLORS.focal);
+      expect(row[form].colour.colour, form).not.toBe(COLORS.enemy);
+      expect(row[form].colour.colour, form).not.toBe(COLORS.dead);
+    }
+  }
+
+  // --ok, the token colors.focal resolves from, is a green at ~143 degrees. No
+  // generated hue may sit near it: "which green is mine" is not a question the
+  // map is allowed to ask.
+  for (let i = 1; i <= TEAM_COLORS; i += 1) {
+    expect(hueGap(teamHue(i), CLAIMED_HUES.ok), `colour ${i}`).toBeGreaterThan(20);
+  }
+
+  // And the focal team's own marker still comes from the row that paints
+  // colors.focal, whatever its team id happens to be.
+  const focalCell = blitRect(atlas, "movingFocal", 5, undefined, teamColorIndex(9, 9));
+  expect(focalCell.sy).toBe(0);
+  expect(focalCell.sx).toBe(blitRect(atlas, "movingFocal").sx);
 });
