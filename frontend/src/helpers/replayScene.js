@@ -1,6 +1,7 @@
 import { worldToScreen, scaleOf } from "./replayCamera";
 import { STATE } from "./replayTracks";
 import { healthArc } from "./replayLayers";
+import { vehicleGlyph } from "../component/charts/replaySprites";
 
 export const SCREEN = {
   dotRadius: 5,
@@ -292,10 +293,16 @@ const paintHealthArc = (ctx, x, y, r, health, colors) => {
 // colour, inverting the one distinction that matters most at exactly the
 // moment that player needs watching. Knocked outranks in-vehicle -- being
 // downed is the more urgent read.
-const glyphFor = (state, flags, isFocal) => {
+const glyphFor = (state, flags, isFocal, moving) => {
+  const side = isFocal ? "Focal" : "Enemy";
   if (state === STATE.DEAD) return "dead";
-  if (flags & 2) return isFocal ? "knockedFocal" : "knockedEnemy";
-  if (flags & 1) return isFocal ? "vehicleFocal" : "vehicleEnemy";
+  // Knocked outranks everything: it is the most urgent thing about a player,
+  // and a downed passenger is still downed.
+  if (flags & 2) return `knocked${side}`;
+  // The glyph names live with the glyphs, so the mapping has one home.
+  if (flags & 1) return vehicleGlyph((flags >> 2) & 3, isFocal);
+  // A dart says "going that way", so it may only be drawn when there is a way.
+  if (moving) return `moving${side}`;
   return isFocal ? "focal" : "enemy";
 };
 
@@ -351,8 +358,17 @@ export const drawScene = (ctx, frame) => {
     const r = radiusFor(meta, selected);
     const fill = state === STATE.DEAD ? colors.dead : meta.isFocal ? colors.focal : colors.enemy;
 
+    const flags = tracks.outF ? tracks.outF[i] : 0;
+    const moving = state === STATE.ALIVE && tracks.outMoving && tracks.outMoving[i] === 1;
+    // A vehicle glyph has a nose, so it is aimed even at rest: the cell points
+    // +x, and drawing a stopped car upright would face every parked vehicle
+    // due east. The sampler holds the last real bearing for exactly this. A
+    // still player is a disc with no axis, so it is left unrotated -- and
+    // undefined rather than 0, because 0 is a real heading.
+    const aimed = state === STATE.ALIVE && ((flags & 1) || moving);
     if (atlas && atlas.blit) {
-      atlas.blit(ctx, glyphFor(state, tracks.outF ? tracks.outF[i] : 0, meta.isFocal), Math.round(p.x), Math.round(p.y), r);
+      const angle = aimed && tracks.outAngle ? tracks.outAngle[i] : undefined;
+      atlas.blit(ctx, glyphFor(state, flags, meta.isFocal, moving), Math.round(p.x), Math.round(p.y), r, angle);
     } else {
       ctx.beginPath();
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
@@ -364,7 +380,9 @@ export const drawScene = (ctx, frame) => {
       ctx.lineWidth = SCREEN.ringWidth;
       ctx.strokeStyle = colors.ring;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, r + 3, 0, Math.PI * 2);
+      // r + 4, not r + 3: the marker halo now paints past the glyph box, and
+      // at the selected radius the ring was landing half a pixel off it.
+      ctx.arc(p.x, p.y, r + 4, 0, Math.PI * 2);
       ctx.stroke();
     }
 

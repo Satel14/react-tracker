@@ -14,6 +14,7 @@ export const buildTracks = (players = []) => {
     T: new Array(count),
     X: new Array(count),
     Y: new Array(count),
+    A: new Array(count),
     H: new Array(count),
     F: new Array(count),
     cursor: new Int32Array(count),
@@ -44,9 +45,23 @@ export const buildTracks = (players = []) => {
       H[j] = typeof pos[j].h === "number" ? pos[j].h : 100;
       F[j] = typeof pos[j].f === "number" ? pos[j].f : 0;
     }
+    // Bearing per segment, resolved once. A segment where the player did not
+    // move inherits the last one that they did, so a parked marker keeps a
+    // real heading -- and keeps it whether you scrubbed straight here or
+    // played through, which is the same cursor-free property the rest of this
+    // file is built on.
+    const A = new Float32Array(Math.max(0, n - 1));
+    let lastAngle = 0;
+    for (let j = 0; j < n - 1; j += 1) {
+      const dx = X[j + 1] - X[j];
+      const dy = Y[j + 1] - Y[j];
+      if (dx !== 0 || dy !== 0) lastAngle = Math.atan2(dy, dx);
+      A[j] = lastAngle;
+    }
     tracks.T[i] = T;
     tracks.X[i] = X;
     tracks.Y[i] = Y;
+    tracks.A[i] = A;
     tracks.H[i] = H;
     tracks.F[i] = F;
     tracks.meta[i] = {
@@ -122,11 +137,9 @@ export const sampleTracks = (tracks, t) => {
     // angle -- telemetry carries no rotation at all.
     if (n >= 2) {
       const seg = Math.min(Math.max(c, 0), n - 2);
+      tracks.outAngle[i] = tracks.A[i][seg];
       const dx = X[seg + 1] - X[seg];
       const dy = Y[seg + 1] - Y[seg];
-      // A held angle beats snapping to due east when someone stops; the moving
-      // flag is what tells the renderer to draw an arrow at all.
-      if (dx !== 0 || dy !== 0) tracks.outAngle[i] = Math.atan2(dy, dx);
       tracks.outMoving[i] = Math.hypot(dx, dy) >= MOVING_METRES ? 1 : 0;
     } else {
       tracks.outMoving[i] = 0;

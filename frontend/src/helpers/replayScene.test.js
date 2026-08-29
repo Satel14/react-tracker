@@ -604,3 +604,128 @@ test("dead markers fade out instead of accumulating for the whole match", () => 
   drawScene(later, { ...frameAt(1), zone: null, colors: P2_COLORS, t: 900, tracks: sampleTracks(tracks, 900) });
   expect(later.calls.length).toBeLessThan(soon.calls.length);
 });
+
+// --- state and heading pick the glyph ---------------------------------------
+
+test("a moving player gets a dart aimed along their bearing", () => {
+  const blits = [];
+  const atlas = { blit: (_c, kind, _x, _y, _r, angle) => blits.push([kind, angle]) };
+  // Two samples 100 m due east apart, so the sampler reports a bearing of 0.
+  const runner = [{
+    name: "R", accountId: "a.r", teamId: 1, isFocal: true, dropTime: null, deathTime: null,
+    positions: [{ t: 0, x: 4000, y: 4000, h: 100, f: 0 }, { t: 10, x: 4100, y: 4000, h: 100, f: 0 }],
+  }];
+  drawScene(recordingCtx(), {
+    ...frameAt(1), zone: null, colors: P2_COLORS, atlas,
+    tracks: sampleTracks(buildTracks(runner), 5),
+  });
+  expect(blits).toEqual([["movingFocal", 0]]);
+});
+
+test("a stationary player gets a disc and no rotation at all", () => {
+  const blits = [];
+  const atlas = { blit: (_c, kind, _x, _y, _r, angle) => blits.push([kind, angle]) };
+  const idler = [{
+    name: "I", accountId: "a.i", teamId: 2, isFocal: false, dropTime: null, deathTime: null,
+    positions: [{ t: 0, x: 4000, y: 4000, h: 100, f: 0 }, { t: 10, x: 4000, y: 4000, h: 100, f: 0 }],
+  }];
+  drawScene(recordingCtx(), {
+    ...frameAt(1), zone: null, colors: P2_COLORS, atlas,
+    tracks: sampleTracks(buildTracks(idler), 5),
+  });
+  // undefined, not 0: 0 is due east, and a still marker has no bearing to show.
+  expect(blits).toEqual([["enemy", undefined]]);
+});
+
+test("each vehicle kind gets its own glyph, and an unknown one rides as a car", () => {
+  const kindFor = (f, isFocal) => {
+    const blits = [];
+    const atlas = { blit: (_c, kind) => blits.push(kind) };
+    const rider = [{
+      name: "V", accountId: "a.v", teamId: 1, isFocal, dropTime: null, deathTime: null,
+      positions: [{ t: 0, x: 4000, y: 4000, h: 100, f }, { t: 10, x: 4200, y: 4000, h: 100, f }],
+    }];
+    drawScene(recordingCtx(), {
+      ...frameAt(1), zone: null, colors: P2_COLORS, atlas,
+      tracks: sampleTracks(buildTracks(rider), 5),
+    });
+    return blits[0];
+  };
+  expect(kindFor(1, true)).toBe("vehicleFocal");          // ground
+  expect(kindFor(1, false)).toBe("vehicleEnemy");
+  expect(kindFor(1 | 4, true)).toBe("planeFocal");        // aircraft
+  expect(kindFor(1 | 8, false)).toBe("balloonEnemy");     // rescue balloon
+  expect(kindFor(1 | 12, true)).toBe("vehicleFocal");     // kind 3 is undefined
+});
+
+test("a vehicle marker is aimed along the bearing too", () => {
+  const blits = [];
+  const atlas = { blit: (_c, kind, _x, _y, _r, angle) => blits.push([kind, angle]) };
+  const driver = [{
+    name: "D", accountId: "a.d", teamId: 1, isFocal: true, dropTime: null, deathTime: null,
+    positions: [{ t: 0, x: 4000, y: 4000, h: 100, f: 1 }, { t: 10, x: 4000, y: 4200, h: 100, f: 1 }],
+  }];
+  drawScene(recordingCtx(), {
+    ...frameAt(1), zone: null, colors: P2_COLORS, atlas,
+    tracks: sampleTracks(buildTracks(driver), 5),
+  });
+  expect(blits[0][0]).toBe("vehicleFocal");
+  expect(blits[0][1]).toBeCloseTo(Math.PI / 2, 5); // due south
+});
+
+test("knocked and dead outrank movement and vehicle", () => {
+  const kindFor = (f, deathTime, at) => {
+    const blits = [];
+    const atlas = { blit: (_c, kind) => blits.push(kind) };
+    const p = [{
+      name: "P", accountId: "a.p", teamId: 1, isFocal: true, dropTime: null, deathTime,
+      positions: [{ t: 0, x: 4000, y: 4000, h: 30, f }, { t: 10, x: 4300, y: 4000, h: 30, f }],
+    }];
+    drawScene(recordingCtx(), {
+      ...frameAt(1), zone: null, colors: P2_COLORS, atlas, t: at,
+      tracks: sampleTracks(buildTracks(p), at),
+    });
+    return blits[0];
+  };
+  // Moving fast and in a vehicle, but knocked: the knock is what matters.
+  expect(kindFor(1 | 2 | 4, null, 5)).toBe("knockedFocal");
+  expect(kindFor(1 | 2 | 4, 3, 5)).toBe("dead");
+});
+
+test("a parked vehicle keeps its last bearing instead of always pointing east", () => {
+  // The cell's nose is at +x, so drawing a stopped car upright aims every
+  // parked vehicle due east. The sampler holds the last real bearing exactly
+  // so this case has something honest to use.
+  const blits = [];
+  const atlas = { blit: (_c, kind, _x, _y, _r, angle) => blits.push([kind, angle]) };
+  const parked = [{
+    name: "P", accountId: "a.p", teamId: 1, isFocal: true, dropTime: null, deathTime: null,
+    positions: [
+      { t: 0, x: 4000, y: 4000, h: 100, f: 1 },
+      { t: 10, x: 4000, y: 4200, h: 100, f: 1 },  // drove south
+      { t: 20, x: 4000, y: 4200, h: 100, f: 1 },  // then stopped
+    ],
+  }];
+  const tracks = buildTracks(parked);
+  drawScene(recordingCtx(), { ...frameAt(1), zone: null, colors: P2_COLORS, atlas, tracks: sampleTracks(tracks, 15) });
+  expect(tracks.outMoving[0]).toBe(0);
+  expect(blits[0][0]).toBe("vehicleFocal");
+  expect(blits[0][1]).toBeCloseTo(Math.PI / 2, 5);
+});
+
+test("a player standing still still gets no bearing", () => {
+  // Only vehicles keep a held angle: the still disc has no axis to aim, and
+  // rotating it would be meaningless work every frame.
+  const blits = [];
+  const atlas = { blit: (_c, kind, _x, _y, _r, angle) => blits.push([kind, angle]) };
+  const idler = [{
+    name: "I", accountId: "a.i", teamId: 1, isFocal: true, dropTime: null, deathTime: null,
+    positions: [
+      { t: 0, x: 4000, y: 4000, h: 100, f: 0 },
+      { t: 10, x: 4000, y: 4200, h: 100, f: 0 },
+      { t: 20, x: 4000, y: 4200, h: 100, f: 0 },
+    ],
+  }];
+  drawScene(recordingCtx(), { ...frameAt(1), zone: null, colors: P2_COLORS, atlas, tracks: sampleTracks(buildTracks(idler), 15) });
+  expect(blits).toEqual([["focal", undefined]]);
+});

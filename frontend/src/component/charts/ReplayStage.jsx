@@ -47,6 +47,9 @@ const FALLBACK_COLORS = {
   crate: "rgb(255,62,200)",
   flight: "rgb(79,216,255)",
   shot: "rgb(255,205,80)",
+  // The halo every marker is cut out with. Near-black so it reads against
+  // snow and sand alike, and never mistakable for a team colour.
+  outline: "rgb(20,18,30)",
 };
 
 // These three resolve to a token another entry already uses, so they share its

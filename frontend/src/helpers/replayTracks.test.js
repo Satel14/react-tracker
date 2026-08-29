@@ -195,3 +195,33 @@ test("heading buffers are typed and stable across calls", () => {
   sampleTracks(tracks, 7);
   expect(tracks.outAngle).toBe(a);
 });
+
+test("a stopped player's heading does not depend on having played through", () => {
+  // Everything else here is cursor-free so that scrubbing backwards gives the
+  // same answer as playing forwards. A held angle that only existed if you had
+  // already sampled the earlier segment would break exactly that.
+  const stopped = [
+    { t: 0, x: 1000, y: 1000 },
+    { t: 10, x: 1000, y: 1200 },   // drove south
+    { t: 20, x: 1000, y: 1200 },   // parked
+    { t: 30, x: 1000, y: 1200 },
+  ];
+  const fresh = buildTracks([walker(stopped)]);
+  sampleTracks(fresh, 25);          // first ever sample, mid-park
+  expect(fresh.outMoving[0]).toBe(0);
+  expect(fresh.outAngle[0]).toBeCloseTo(Math.PI / 2, 4);
+
+  // And playing through to the same instant agrees.
+  const played = buildTracks([walker(stopped)]);
+  for (const t of [0, 5, 10, 15, 20, 25]) sampleTracks(played, t);
+  expect(played.outAngle[0]).toBeCloseTo(fresh.outAngle[0], 6);
+});
+
+test("a player who never moves has no heading at all", () => {
+  const tracks = sampleTracks(buildTracks([walker([
+    { t: 0, x: 1000, y: 1000 },
+    { t: 10, x: 1000, y: 1000 },
+  ])]), 5);
+  expect(tracks.outMoving[0]).toBe(0);
+  expect(tracks.outAngle[0]).toBe(0);
+});
