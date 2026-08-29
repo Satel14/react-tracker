@@ -62,17 +62,16 @@ const MOVING = "M30 16 L8 2 L2 16 L8 30 Z";
 // itself is only a few pixels across.
 //
 // Deliberately NOT aimed, by shape rather than by rule. The scene aims every
-// marker that is moving, and a descending player is always moving, so a bearing
-// WILL arrive here -- but a canopy seen from above has no nose to point, and the
-// only direction telemetry offers is the horizontal part of a descent, which
-// shrinks to jitter in the last seconds before touchdown, exactly when the
-// marker is worth watching. Eightfold symmetry answers that in the glyph: the
-// shape repeats every 45 degrees and at the 8-16 px this blits at, any rotation
-// of it is the same picture. blit still turns the cell; there is just nothing to
-// see, and nothing to spin.
-const PARACHUTE = "M30 16 L21.54 18.3 L25.9 25.9 L18.3 21.54 L16 30 L13.7 21.54 "
-  + "L6.1 25.9 L10.46 18.3 L2 16 L10.46 13.7 L6.1 6.1 L13.7 10.46 L16 2 "
-  + "L18.3 10.46 L25.9 6.1 L21.54 13.7 Z";
+// The universally read parachute: a canopy over converging lines, seen from
+// the side. Traced from the silhouette of the icon the user pointed at rather
+// than embedding that PNG -- a raster carries baked colours, and every marker
+// here has to take its team's, which a path gets for free along with the halo
+// and the inscription. The gores and the individual suspension lines in the
+// original vanish at the 8-16 px this blits at; the outline is what survives.
+//
+// This one has an up, so unlike every other glyph it must NOT be turned by the
+// bearing. drawScene excludes it explicitly.
+const PARACHUTE = "M2 16 A14 14 0 0 1 30 16 L16 30 Z";
 
 const DEAD = "M2 2 L30 30 M30 2 L2 30";
 

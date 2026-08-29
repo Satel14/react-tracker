@@ -853,3 +853,26 @@ test("each vehicle class gets its own shape", () => {
   expect(kindFor(1 | (6 << 2))).toBe("vehicleFocal");
   expect(kindFor(1 | (7 << 2))).toBe("vehicleFocal");
 });
+
+test("the parachute is never turned by the bearing", () => {
+  // Every other glyph points +x and is aimed along the direction of travel.
+  // A canopy has an up, and a descending player is always "moving", so this is
+  // the one marker the normal rule would ruin -- it would hang sideways, and
+  // worst of all in the last seconds before touchdown, when the horizontal
+  // component of a fall is jitter.
+  const blits = [];
+  const atlas = { blit: (_c, kind, _x, _y, _r, angle) => blits.push([kind, angle]) };
+  const jumper = [{
+    name: "J", accountId: "a.j", teamId: 1, isFocal: true, dropTime: 10, landTime: 50,
+    deathTime: null, positions: [
+      { t: 0, x: 4000, y: 4000, h: 100, f: 0 },
+      { t: 60, x: 4000, y: 4600, h: 100, f: 0 },
+    ],
+  }];
+  drawScene(recordingCtx(), {
+    ...frameAt(1), zone: null, colors: P2_COLORS, atlas, t: 30,
+    tracks: sampleTracks(buildTracks(jumper), 30),
+  });
+  expect(blits[0][0]).toBe("parachuteFocal");
+  expect(blits[0][1]).toBeUndefined();
+});

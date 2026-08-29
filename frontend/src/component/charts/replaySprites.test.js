@@ -432,35 +432,26 @@ test("the four new forms are their own silhouettes, and the truck cannot collaps
   expect(noseTaper(ICON_PATHS.boatFocal)).toBe(boatHull.maxY - boatHull.minY);
 });
 
-// The one design decision in this pass that a caller could undo without
-// noticing. The scene aims every marker that is moving and a descending player
-// is always moving, so blit WILL be handed a bearing for this glyph; the canopy
-// answers by having no orientation to lose. Eightfold symmetry is the whole of
-// that answer, so it is pinned as a symmetry and not as a comment.
-test("the canopy is eightfold symmetric, so the bearing the scene passes cannot spin it", () => {
+// The canopy has an up, which every other glyph here does not. That makes it
+// the one shape a caller can ruin by doing the normal thing -- the scene aims
+// every marker that is moving, and a descending player is always moving. The
+// guard is in drawScene; this pins the property that makes the guard necessary,
+// so nobody removes it thinking the shape is rotation-proof.
+test("the canopy is not symmetric under rotation, so it must never be turned", () => {
   const subs = pathPoints(ICON_PATHS.parachuteFocal);
   expect(subs).toHaveLength(1);
-  // Eight points at the box edge and eight pulled in between them, so the turn
-  // below is a real symmetry and not the empty one of a shape with no corners.
-  expect(subs[0]).toHaveLength(16);
+  const turned = subs[0].map(([x, y]) => [16 - (y - 16), 16 + (x - 16)]);
+  const same = turned.every(([x, y]) =>
+    subs[0].some(([px, py]) => Math.abs(px - x) < 0.02 && Math.abs(py - y) < 0.02));
+  expect(same).toBe(false);
 
-  const a = Math.PI / 4;
-  const turned = subs[0].map(([x, y]) => [
-    16 + (x - 16) * Math.cos(a) - (y - 16) * Math.sin(a),
-    16 + (x - 16) * Math.sin(a) + (y - 16) * Math.cos(a),
-  ]);
-  for (const [x, y] of turned) {
-    const landed = subs[0].some(([px, py]) => Math.abs(px - x) < 0.02 && Math.abs(py - y) < 0.02);
-    expect(landed, `${x.toFixed(2)} ${y.toFixed(2)}`).toBe(true);
-  }
-
-  // And it is measurably lighter than the disc a player standing still gets:
-  // under half the ink in the same 28-unit box is what reads as "in the air"
-  // once the outline itself is only a few pixels across.
-  const ink = (kind) => subpathAreas(ICON_PATHS[kind]).reduce((sum, s) => sum + Math.abs(s), 0);
-  expect(ink("parachuteFocal")).toBeLessThan(ink("focal") * 0.5);
-  expect(ink("parachuteFocal")).toBeGreaterThan(ink("focal") * 0.3);
+  // Its mass sits above centre and its point below: a canopy over lines, not a
+  // blob. Reversing that would be a different object entirely.
+  const ys = subs[0].map(([, y]) => y);
+  expect(Math.min(...ys)).toBeCloseTo(2, 5);
+  expect(Math.max(...ys)).toBeCloseTo(30, 5);
 });
+
 
 // The inscription rule above bounds the PATH; the halo is ink the path does
 // not account for. Round joins and caps put it exactly half a line width past

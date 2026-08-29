@@ -403,7 +403,11 @@ export const drawScene = (ctx, frame) => {
     // due east. The sampler holds the last real bearing for exactly this. A
     // still player is a disc with no axis, so it is left unrotated -- and
     // undefined rather than 0, because 0 is a real heading.
-    const aimed = state === STATE.ALIVE && ((flags & 1) || moving);
+    // Everything but the canopy: every other glyph points +x and reads better
+    // aimed along the direction of travel, but a parachute has an up. Turning
+    // it would hang the canopy sideways, worst of all in the last seconds of a
+    // descent when the horizontal component is jitter.
+    const aimed = state === STATE.ALIVE && !falling && ((flags & 1) || moving);
     if (atlas && atlas.blit) {
       const angle = aimed && tracks.outAngle ? tracks.outAngle[i] : undefined;
       atlas.blit(
