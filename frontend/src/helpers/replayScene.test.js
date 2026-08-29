@@ -1033,6 +1033,22 @@ test("the swing under the canopy dies out by touchdown", () => {
   expect(swingAt(1)).toBeCloseTo(0, 6);
 });
 
+test("the stand-in glyph descends too, so a slow icon fetch does not freeze the drop", () => {
+  // The artwork is fetched over the network; until it arrives -- and forever,
+  // if it 404s -- this is the crate. It has to fall like one.
+  const arcY = (fall) => {
+    const ctx = recordingCtx();
+    paintPackages(ctx, {
+      ...frameAt(1), colors: P2_COLORS, atlas: null, images: null,
+      packages: [{ kind: "redbox", x: 4000, y: 4000, falling: fall < 1, fall, looted: false }],
+    });
+    return ctx.calls.find((c) => c.name === "arc").args[1];
+  };
+  expect(arcY(0)).toBeLessThan(arcY(0.5));
+  expect(arcY(0.5)).toBeLessThan(arcY(1));
+  expect(arcY(1) - arcY(0)).toBeCloseTo(SCREEN.crateFallHeight, 6);
+});
+
 test("crates in the air do not sway in unison", () => {
   const xs = [];
   const ctx = recordingCtx();
