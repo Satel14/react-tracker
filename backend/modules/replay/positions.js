@@ -23,7 +23,11 @@ function clampHealth(value) {
 }
 
 function packFlags(sample) {
-  return (sample.isInVehicle ? 1 : 0) | (sample.isDBNO ? 2 : 0);
+  // bit 0 in a vehicle, bit 1 knocked, bits 2-3 which vehicle. Ground is kind
+  // 0, so the low bit alone still reads as "in a car" for a legacy sample.
+  const kind = Number(sample.vehicleKind);
+  const kindBits = Number.isInteger(kind) && kind > 0 && kind < 4 ? kind << 2 : 0;
+  return (sample.isInVehicle ? 1 : 0) | (sample.isDBNO ? 2 : 0) | kindBits;
 }
 
 // Sorted by t ascending, with only the first sample of each t kept.
@@ -92,7 +96,7 @@ function decodePositions(encoded) {
       x: curX,
       y: curY,
       h: clampHealth(health[i]),
-      f: toNumber(flags[i], 0) & 3,
+      f: toNumber(flags[i], 0) & 15,
     });
   }
 

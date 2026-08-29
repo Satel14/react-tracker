@@ -121,16 +121,21 @@ test("splits the flag mask into vehicle and knocked bits for all four values", (
   expect(positions.map((p) => !!(p.f & 2))).toEqual([false, false, true, true]);
 });
 
-// Parity requirement: this mask mirrors decodePositions in
-// backend/modules/replay/positions.js, which masks with & 3. The two codecs are
-// inverses of each other and must not fork -- widening the mask to admit a third
-// bit means changing both files together.
-test("masks the flag byte to the two defined bits, matching the backend decoder", () => {
+test("masks the flag byte to the four defined bits, matching the backend decoder", () => {
+  // bit 0 in a vehicle, bit 1 knocked, bits 2-3 which vehicle. The mask has to
+  // stay in step with decodePositions in backend/modules/replay/positions.js:
+  // the two are inverses, and widening one alone silently drops a glyph.
   const fs = decodeReplay({
     format: 2,
-    players: [{ positions: { t: [0, 1, 1], x: [0, 0, 0], y: [0, 0, 0], h: [100, 100, 100], f: [7, 4, 6] } }],
+    players: [{ positions: {
+      t: [0, 1, 1, 1, 1], x: [0, 0, 0, 0, 0], y: [0, 0, 0, 0, 0],
+      h: [100, 100, 100, 100, 100],
+      // 5 = car in the aircraft slot, 9 = balloon, 15 = every defined bit,
+      // 16 and 31 spill past the field and must be trimmed to it.
+      f: [5, 9, 15, 16, 31],
+    } }],
   }).players[0].positions.map((p) => p.f);
-  expect(fs).toEqual([3, 0, 2]);
+  expect(fs).toEqual([5, 9, 15, 0, 15]);
 });
 
 test("carries absolute health through untouched by the delta pass", () => {

@@ -179,3 +179,22 @@ test("empty and missing input never throws", () => {
   assert.deepEqual(decodePositions({}), []);
   assert.deepEqual(decodePositions(EMPTY), []);
 });
+
+test("the flag byte carries the vehicle kind alongside the two state bits", () => {
+  // LogPlayerPosition names the vehicle it carries (WheeledVehicle,
+  // TransportAircraft, EmergencyPickup), and the map wants a different glyph
+  // for each. Two spare bits in the existing byte are cheaper than a column.
+  const sample = (over) => ({ t: 0, x: 1000, y: 2000, health: 100, ...over });
+  const f = (over) => decodePositions(encodePositions([sample(over)]))[0].f;
+
+  assert.equal(f({}), 0);
+  assert.equal(f({ isInVehicle: true }), 1);
+  assert.equal(f({ isDBNO: true }), 2);
+  // Ground vehicle is kind 0, so the low bit alone still means "in a car".
+  assert.equal(f({ isInVehicle: true, vehicleKind: 0 }), 1);
+  assert.equal(f({ isInVehicle: true, vehicleKind: 1 }), 1 | 4);   // aircraft
+  assert.equal(f({ isInVehicle: true, vehicleKind: 2 }), 1 | 8);   // balloon
+  assert.equal(f({ isInVehicle: true, isDBNO: true, vehicleKind: 2 }), 1 | 2 | 8);
+  // A kind out of range must not spill into a neighbouring bit.
+  assert.equal(f({ isInVehicle: true, vehicleKind: 9 }), 1);
+});

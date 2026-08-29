@@ -1,5 +1,10 @@
 export const STATE = { ABSENT: 0, ALIVE: 1, DEAD: 2 };
 
+// Metres covered across one 10 s sample gap before a player counts as moving.
+// Walking is ~20-40 m over that window, so this only rejects standing still
+// and the jitter of a player holding position.
+const MOVING_METRES = 5;
+
 export const buildTracks = (players = []) => {
   const list = Array.isArray(players) ? players : [];
   const count = list.length;
@@ -16,6 +21,8 @@ export const buildTracks = (players = []) => {
     outY: new Float32Array(count),
     outH: new Uint8Array(count),
     outF: new Uint8Array(count),
+    outAngle: new Float32Array(count),
+    outMoving: new Uint8Array(count),
     outState: new Uint8Array(count),
     lastT: -Infinity,
   };
@@ -109,6 +116,21 @@ export const sampleTracks = (tracks, t) => {
     }
     tracks.outH[i] = tracks.H[i][held];
     tracks.outF[i] = tracks.F[i][held];
+
+    // Heading is the direction of the segment being crossed. Samples are 10 s
+    // apart, so this is a real bearing over that window rather than a facing
+    // angle -- telemetry carries no rotation at all.
+    if (n >= 2) {
+      const seg = Math.min(Math.max(c, 0), n - 2);
+      const dx = X[seg + 1] - X[seg];
+      const dy = Y[seg + 1] - Y[seg];
+      // A held angle beats snapping to due east when someone stops; the moving
+      // flag is what tells the renderer to draw an arrow at all.
+      if (dx !== 0 || dy !== 0) tracks.outAngle[i] = Math.atan2(dy, dx);
+      tracks.outMoving[i] = Math.hypot(dx, dy) >= MOVING_METRES ? 1 : 0;
+    } else {
+      tracks.outMoving[i] = 0;
+    }
 
     tracks.outState[i] =
       meta.deathTime !== null && t > meta.deathTime ? STATE.DEAD : STATE.ALIVE;

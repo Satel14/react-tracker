@@ -17,6 +17,15 @@ const REPLAY_FORMAT = 2;
 const replayCache = new Map();
 const REPLAY_CACHE_LIMIT = 30;
 
+// The map draws a different glyph for a car, the drop plane and the rescue
+// balloon, and LogPlayerPosition names the vehicle it carries. Ground is 0 so
+// it stays the default for anything unrecognised.
+const VEHICLE_KIND = { TransportAircraft: 1, EmergencyPickup: 2 };
+
+function vehicleKind(vehicle) {
+  return VEHICLE_KIND[vehicle?.vehicleType] || 0;
+}
+
 function lower(s) {
   return typeof s === "string" ? s.trim().toLowerCase() : null;
 }
@@ -70,6 +79,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
         health: ch.health,
         isInVehicle: !!ch.isInVehicle,
         isDBNO: !!ch.isDBNO,
+        vehicleKind: vehicleKind(ev.vehicle),
       });
       continue;
     }

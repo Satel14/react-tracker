@@ -132,3 +132,66 @@ test("keeps health and flag buffers stable across sample calls", () => {
   sampleTracks(tracks, 15);
   expect(tracks.outH).toBe(h);
 });
+
+// --- movement heading -------------------------------------------------------
+// Telemetry carries no facing angle, so a marker cannot show where a player is
+// looking. It can show where they are GOING, from the track itself, which is
+// what makes a map of sixty dots readable: you can see who is pushing where.
+
+const walker = (positions, over = {}) => ({
+  name: "W", accountId: "a.w", teamId: 1, isFocal: false,
+  positions, deathTime: null, dropTime: null, ...over,
+});
+
+test("heading points along the segment the player is crossing", () => {
+  const tracks = buildTracks([walker([
+    { t: 0, x: 1000, y: 1000 },
+    { t: 10, x: 1100, y: 1000 },   // due east
+    { t: 20, x: 1100, y: 1100 },   // due south (world y grows downward)
+  ])]);
+  sampleTracks(tracks, 5);
+  expect(tracks.outAngle[0]).toBeCloseTo(0, 4);
+  expect(tracks.outMoving[0]).toBe(1);
+  sampleTracks(tracks, 15);
+  expect(tracks.outAngle[0]).toBeCloseTo(Math.PI / 2, 4);
+});
+
+test("a stationary player has no heading, rather than a stale one", () => {
+  const tracks = buildTracks([walker([
+    { t: 0, x: 1000, y: 1000 },
+    { t: 10, x: 1100, y: 1000 },
+    { t: 20, x: 1100, y: 1000 },   // stopped
+  ])]);
+  sampleTracks(tracks, 5);
+  expect(tracks.outMoving[0]).toBe(1);
+  const moving = tracks.outAngle[0];
+  sampleTracks(tracks, 15);
+  expect(tracks.outMoving[0]).toBe(0);
+  // The angle is held rather than reset, so a marker that stops does not snap
+  // to east; it just stops being drawn as an arrow.
+  expect(tracks.outAngle[0]).toBeCloseTo(moving, 4);
+});
+
+test("heading holds at both ends of the track instead of vanishing", () => {
+  const tracks = buildTracks([walker([
+    { t: 10, x: 1000, y: 1000 },
+    { t: 20, x: 1000, y: 900 },    // due north
+  ])]);
+  sampleTracks(tracks, 0);
+  expect(tracks.outAngle[0]).toBeCloseTo(-Math.PI / 2, 4);
+  sampleTracks(tracks, 999);
+  expect(tracks.outAngle[0]).toBeCloseTo(-Math.PI / 2, 4);
+});
+
+test("a one-sample track is never treated as moving", () => {
+  const tracks = sampleTracks(buildTracks([walker([{ t: 0, x: 1000, y: 1000 }])]), 5);
+  expect(tracks.outMoving[0]).toBe(0);
+});
+
+test("heading buffers are typed and stable across calls", () => {
+  const tracks = buildTracks([walker([{ t: 0, x: 0, y: 0 }, { t: 10, x: 50, y: 0 }])]);
+  const a = tracks.outAngle;
+  sampleTracks(tracks, 3);
+  sampleTracks(tracks, 7);
+  expect(tracks.outAngle).toBe(a);
+});
