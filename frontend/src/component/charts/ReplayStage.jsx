@@ -14,12 +14,6 @@ import { zoneAt } from "./replayEngine";
 const HIGH_RES_SOURCE_PX = 2048;
 const HIGH_RES_TRIGGER = 0.7;
 const FLASH_CAP = 40;
-const SEEK_STEP = 5;
-const SEEK_STEP_BIG = 30;
-// One telemetry tick. Positions arrive every 10 s, so a smaller step just
-// re-renders the same interpolated frame.
-const TICK = 10;
-const SPEED_KEYS = [1, 2, 4, 8, 16];
 
 // Fetch the 2048 raster once the map is being sampled above ~70% of its native
 // resolution. A fixed zoom constant cannot work: the break-even depends on the
@@ -99,7 +93,7 @@ const normaliseWheel = (e) => {
   return Math.exp(-dy * (e.ctrlKey ? 0.02 : 0.0025));
 };
 
-const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, mapLabel, publish, layers, fullscreenLabel = "Fullscreen", exitFullscreenLabel, onSpeed, children }, ref) => {
+const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, mapLabel, publish, layers, fullscreenLabel = "Fullscreen", exitFullscreenLabel, children }, ref) => {
   const wrapRef = useRef(null);
   const bgRef = useRef(null);
   const fxRef = useRef(null);
@@ -407,6 +401,9 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
       onSelect(id && id === focusedRef.current ? null : id);
     }
     if (v.pointers.size === 0) v.gesture = null;
+    // A pinch with one finger left is not a pinch. Without this the gesture
+    // stays stuck and the remaining finger neither pans nor zooms.
+    else if (g && g.mode === "pinch" && v.pointers.size < 2) v.gesture = null;
   };
 
   const onPointerLeave = () => {
@@ -444,61 +441,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
 
   // The page's Reset view button drives the same code path as the R shortcut,
   // rather than remounting the stage and discarding its loaded rasters.
-  useImperativeHandle(ref, () => ({ resetView }), [resetView]);
-
-  const onKeyDown = (e) => {
-    // Never steal a keystroke from a control or a field the user is typing in.
-    // BUTTON matters as much as INPUT here: the fullscreen button lives inside
-    // this subtree, and swallowing its keys would stop it activating.
-    const tag = e.target && e.target.tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" ||
-        e.target?.isContentEditable) return;
-    // Leave every browser and OS chord alone. Alt+Left is Back, Ctrl+R reloads,
-    // Cmd+1 switches tab -- preventDefault on any of those is theft.
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const core = clockRef.current;
-    if (!core) return;
-    // core.seek() always pauses, which is what a scrubber drag wants and not
-    // what nudging the playhead mid-watch wants.
-    const seekBy = (d) => {
-      const wasPlaying = core.playing;
-      core.seek(core.t + d);
-      if (wasPlaying) core.play();
-    };
-    const step = e.shiftKey ? SEEK_STEP_BIG : SEEK_STEP;
-
-    // e.code, not e.key: code is the physical key, so the shortcuts survive a
-    // non-Latin layout. On the Ukrainian layout this app is translated into,
-    // e.key for F is "ф" and for R is "к".
-    //
-    // Space is deliberately absent. MatchReplayPage owns it on window, and two
-    // handlers each toggling meant play() then pause() -- Space stopped working
-    // the moment the user clicked the map.
-    switch (e.code) {
-      case "ArrowRight": e.preventDefault(); seekBy(step); break;
-      case "ArrowLeft": e.preventDefault(); seekBy(-step); break;
-      case "Period": seekBy(TICK); break;
-      case "Comma": seekBy(-TICK); break;
-      case "KeyF": toggleFullscreen(); break;
-      case "KeyR": resetView(); break;
-      default: {
-        const digit = /^(Digit|Numpad)([0-9])$/.exec(e.code);
-        const index = digit ? Number(digit[2]) : -1;
-        if (index >= 0 && index < SPEED_KEYS.length) {
-          // Through the caller, so React's copy of the speed stays in step:
-          // setting it straight on the core desyncs the speed control, and Ant
-          // fires no onChange for an already-selected value, so the user cannot
-          // click their way back to the speed the UI claims is active.
-          if (onSpeed) onSpeed(SPEED_KEYS[index]);
-          else core.setSpeed(SPEED_KEYS[index]);
-        }
-        break;
-      }
-    }
-    // No publish() here on purpose: the rAF loop already publishes on its own
-    // 100 ms throttle, and publishing per keydown turned a held arrow key into
-    // a ~30 Hz re-render of the whole replay pane.
-  };
+  useImperativeHandle(ref, () => ({ resetView, toggleFullscreen }), [resetView, toggleFullscreen]);
 
   // Double-click, the R key and the page's Reset view button are one action.
   const onDoubleClick = resetView;
@@ -519,8 +462,6 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
       onLostPointerCapture={endPointer}
       onPointerLeave={onPointerLeave}
       onDoubleClick={onDoubleClick}
-      onKeyDown={onKeyDown}
-      tabIndex={0}
     >
       <canvas ref={bgRef} className="replay-stage__layer replay-stage__layer--bg" aria-hidden="true" />
       <canvas ref={fxRef} className="replay-stage__layer replay-stage__layer--fx" role="img" aria-label={mapLabel} />

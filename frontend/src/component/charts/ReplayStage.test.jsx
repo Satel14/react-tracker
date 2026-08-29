@@ -194,66 +194,10 @@ test("drops the hover highlight when the pointer leaves the stage", () => {
 
 // --- keyboard and fullscreen -------------------------------------------------
 
-const stageOf = (container) => container.querySelector(".replay-stage");
 
-test("arrows seek, and Shift makes the step bigger", () => {
-  const { container, clockRef } = renderStage();
-  const stage = stageOf(container);
-  clockRef.current.seek(50);
-  fireEvent.keyDown(stage, { key: "ArrowRight", code: "ArrowRight" });
-  expect(clockRef.current.t).toBe(55);
-  fireEvent.keyDown(stage, { key: "ArrowLeft", code: "ArrowLeft" });
-  expect(clockRef.current.t).toBe(50);
-  fireEvent.keyDown(stage, { key: "ArrowLeft", code: "ArrowLeft", shiftKey: true });
-  expect(clockRef.current.t).toBe(20);
-});
 
-test("seeking clamps at both ends instead of going negative", () => {
-  const { container, clockRef } = renderStage();
-  const stage = stageOf(container);
-  clockRef.current.seek(2);
-  fireEvent.keyDown(stage, { key: "ArrowLeft", code: "ArrowLeft", shiftKey: true });
-  expect(clockRef.current.t).toBe(0);
-  clockRef.current.seek(98);
-  fireEvent.keyDown(stage, { key: "ArrowRight", code: "ArrowRight", shiftKey: true });
-  expect(clockRef.current.t).toBe(data.duration);
-});
 
-test("comma and period step exactly one telemetry tick", () => {
-  const { container, clockRef } = renderStage();
-  const stage = stageOf(container);
-  clockRef.current.seek(50);
-  fireEvent.keyDown(stage, { key: ".", code: "Period" });
-  expect(clockRef.current.t).toBe(60);
-  fireEvent.keyDown(stage, { key: ",", code: "Comma" });
-  expect(clockRef.current.t).toBe(50);
-});
 
-test("digits set the speed", () => {
-  const { container, clockRef } = renderStage();
-  const stage = stageOf(container);
-  fireEvent.keyDown(stage, { key: "3", code: "Digit3" });
-  expect(clockRef.current.speed).toBe(8);
-  fireEvent.keyDown(stage, { key: "0", code: "Digit0" });
-  expect(clockRef.current.speed).toBe(1);
-});
-
-test("keys are inert while the user is typing in a field", () => {
-  const { container, clockRef } = renderStage();
-  const stage = stageOf(container);
-  const input = document.createElement("input");
-  stage.appendChild(input);
-  clockRef.current.seek(50);
-  fireEvent.keyDown(input, { key: "ArrowRight", code: "ArrowRight" });
-  fireEvent.keyDown(input, { key: " " });
-  expect(clockRef.current.t).toBe(50);
-  expect(clockRef.current.playing).toBe(false);
-});
-
-test("the stage is keyboard reachable", () => {
-  const { container } = renderStage();
-  expect(stageOf(container)).toHaveAttribute("tabindex", "0");
-});
 
 test("the fullscreen button is hidden when the browser has no Fullscreen API", () => {
   // jsdom has none, which is also the older-iOS-Safari case. It must not throw
@@ -278,50 +222,7 @@ test("the fullscreen button appears and calls the API when it exists", async () 
 
 // --- P3 review findings ------------------------------------------------------
 
-test("the stage does not also handle Space: the page owns that binding", () => {
-  // MatchReplayPage already listens for Space on window. Two handlers each
-  // toggling meant play() then pause() -- Space silently stopped working the
-  // moment the user clicked the map and gave the stage focus.
-  const { container, clockRef } = renderStage();
-  const stage = stageOf(container);
-  expect(clockRef.current.playing).toBe(false);
-  fireEvent.keyDown(stage, { key: " ", code: "Space" });
-  expect(clockRef.current.playing).toBe(false);
-});
 
-test("shortcuts key off the physical key, not the produced character", () => {
-  // On the Ukrainian layout this app ships a full dictionary for, F yields "ф"
-  // and R yields "к", so matching on e.key silently broke two of the six
-  // shortcuts the translated hint promises.
-  const { container, clockRef } = renderStage();
-  const stage = stageOf(container);
-  fireEvent.keyDown(stage, { key: "ф", code: "KeyF" });
-  fireEvent.keyDown(stage, { key: "й", code: "Digit3" });
-  expect(clockRef.current.speed).toBe(8);
-});
-
-test("browser and OS chords are left alone", () => {
-  const { container, clockRef } = renderStage();
-  const stage = stageOf(container);
-  clockRef.current.seek(50);
-  // Alt+Left is Back; Ctrl+R is reload; Cmd+1 switches tab.
-  const alt = new KeyboardEvent("keydown", { key: "ArrowLeft", code: "ArrowLeft", altKey: true, bubbles: true, cancelable: true });
-  stage.dispatchEvent(alt);
-  expect(clockRef.current.t).toBe(50);
-  expect(alt.defaultPrevented).toBe(false);
-  fireEvent.keyDown(stage, { key: "1", code: "Digit1", ctrlKey: true });
-  expect(clockRef.current.speed).toBe(4);
-});
-
-test("speed changes reach React, not just the clock core", () => {
-  // Setting speed straight on the core desynced the Segmented control, and Ant
-  // fires no onChange for an already-selected value, so the user could not
-  // click their way back to the speed the UI claimed was active.
-  const onSpeed = vi.fn();
-  const { container } = renderStage({ onSpeed });
-  fireEvent.keyDown(stageOf(container), { key: "2", code: "Digit2" });
-  expect(onSpeed).toHaveBeenCalledWith(4);
-});
 
 test("the fullscreen button does not clear the focused player", () => {
   const request = vi.fn(() => Promise.resolve());
@@ -340,19 +241,3 @@ test("the fullscreen button does not clear the focused player", () => {
   }
 });
 
-test("seeking with the keyboard does not stop playback", () => {
-  // core.seek() always pauses, which is right for a scrubber drag and wrong
-  // for nudging the playhead while watching.
-  const { container, clockRef } = renderStage();
-  clockRef.current.play();
-  expect(clockRef.current.playing).toBe(true);
-  fireEvent.keyDown(stageOf(container), { key: "ArrowRight", code: "ArrowRight" });
-  expect(clockRef.current.t).toBe(5);
-  expect(clockRef.current.playing).toBe(true);
-});
-
-test("seeking while paused stays paused", () => {
-  const { container, clockRef } = renderStage();
-  fireEvent.keyDown(stageOf(container), { key: "ArrowRight", code: "ArrowRight" });
-  expect(clockRef.current.playing).toBe(false);
-});

@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { parseTimeline } = require("./getMatchAnalysis");
+const { parseTimeline, parseKillFeed } = require("./getMatchAnalysis");
 const { canonicalWeaponKey, readableWeaponName, telemetryWeaponName, weaponCategory } = require("./weaponMeta");
 
 // LogPlayerAttack names a gun "Item_Weapon_FooBar_C"; LogPlayerTakeDamage names the
@@ -178,4 +178,38 @@ test("accuracy row and event log agree on the label when the two sides carry dif
   const dealtEvent = tl.events.find((e) => e.kind === "dealt");
   assert.equal(row.weapon, "Frag Grenade");
   assert.equal(row.weapon, dealtEvent.weapon);
+});
+
+// The replay tab and these tabs live on one page, so a kill has to carry the
+// same timestamp in both. The replay moved onto buildMatchClock; these were
+// left on the wall clock, and the gap grows 5-19 s across a match.
+//
+// Note the fixture: real LogPlayerKillV2 and LogPlayerTakeDamage events carry
+// NO top-level elapsedTime -- only LogPlayerPosition does. Every other fixture
+// in this file attaches one anyway, which short-circuits the conversion at its
+// first line and is why the clock rework landed with no red test here.
+test("kill and damage times use the same clock as the replay", () => {
+  const iso = (sec) => new Date(Date.UTC(2026, 0, 1, 0, 0, sec)).toISOString();
+  // Positions put the in-game origin 7 s after createdAt.
+  const positions = [0, 10, 20, 30].map((t) => ({
+    _T: "LogPlayerPosition",
+    _D: iso(t + 7),
+    common: { isGame: 1 },
+    elapsedTime: t,
+    character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 100, y: 100, z: 0 } },
+  }));
+  const telemetry = [
+    { _T: "LogMatchStart", characters: [
+      { character: { accountId: "account.me", name: "Me", teamId: 1 } },
+      { character: { accountId: "account.foe", name: "Foe", teamId: 2 } },
+    ] },
+    ...positions,
+    // _D only, as the real event has.
+    { _T: "LogPlayerKillV2", _D: iso(27),
+      killer: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 100, y: 100, z: 0 } },
+      victim: { accountId: "account.foe", name: "Foe", teamId: 2, location: { x: 200, y: 200, z: 0 } } },
+  ];
+  // 27 s wall clock is 20 s in game. The old clock reported 27.
+  const feed = parseKillFeed(telemetry, { accountId: "account.me" });
+  assert.equal(feed[0].t, 20);
 });

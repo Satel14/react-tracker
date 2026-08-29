@@ -1,7 +1,7 @@
 const { getMapMeta } = require("./mapMeta");
 const { loadMatchBundle } = require("./matchLoader");
 const { shardForMatch } = require("./pubgTelemetry");
-const { isFocalActor, readXY, eventTime } = require("./telemetryUtils");
+const { isFocalActor, readXY, buildMatchClock } = require("./telemetryUtils");
 const { telemetryWeaponName, canonicalWeaponKey } = require("./weaponMeta");
 
 const analysisCache = new Map();
@@ -76,13 +76,16 @@ function buildNameToTeam(telemetry) {
   return map;
 }
 
-function parseKillFeed(telemetry, { matchStartMs = 0, accountId = null, playerName = null } = {}) {
+function parseKillFeed(telemetry, { clock, accountId = null, playerName = null } = {}) {
+  // Callable on its own: build the clock here when nobody handed one in,
+  // rather than making every caller remember to.
+  const matchClock = clock || buildMatchClock(telemetry);
   const { accountKey, lowerName } = focalKeys({ accountId, playerName });
   const nameToTeam = buildNameToTeam(telemetry);
   const kills = [];
   for (const ev of Array.isArray(telemetry) ? telemetry : []) {
     if (ev?._T !== "LogPlayerKillV2") continue;
-    const t = eventTime(ev, matchStartMs);
+    const t = matchClock.timeOf(ev);
     const victim = ev.victim || null;
     const killer = ev.killer ?? ev.finisher ?? ev.dBNOMaker ?? null;
     const dmgInfo = ev.killerDamageInfo || ev.finishDamageInfo || {};
@@ -180,7 +183,10 @@ function parseDamage(telemetry, { accountId = null, playerName = null } = {}) {
   return { dealt, taken, dealtByWeapon, headshotDamagePct };
 }
 
-function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerName = null } = {}) {
+function parseTimeline(telemetry, { clock, accountId = null, playerName = null } = {}) {
+  // Callable on its own: build the clock here when nobody handed one in,
+  // rather than making every caller remember to.
+  const matchClock = clock || buildMatchClock(telemetry);
   const { accountKey, lowerName } = focalKeys({ accountId, playerName });
   const nameToTeam = buildNameToTeam(telemetry);
   const events = [];
@@ -201,7 +207,7 @@ function parseTimeline(telemetry, { matchStartMs = 0, accountId = null, playerNa
     if (type === "LogPlayerTakeDamage") {
       const amount = Number(ev.damage);
       if (!Number.isFinite(amount) || amount <= 0) continue;
-      const t = eventTime(ev, matchStartMs);
+      const t = matchClock.timeOf(ev);
       const meDealt = isFocalActor(ev.attacker, accountKey, lowerName) && !isFocalActor(ev.victim, accountKey, lowerName);
       const meTaken = isFocalActor(ev.victim, accountKey, lowerName);
       if (meDealt) {
@@ -250,11 +256,14 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
 
   const rawMapName = matchAttributes.mapName || "";
   const meta = getMapMeta(rawMapName);
-  const matchStartMs = Date.parse(matchAttributes.createdAt || "");
+  // One clock for the whole page. These tabs sit beside the replay, so a kill
+  // has to carry the same timestamp in both; the wall clock they used before
+  // drifts 5-19 s away from the in-game one across a match.
+  const clock = buildMatchClock(telemetry);
   const scoreboard = parseScoreboard(matchPayload, { accountId, playerName });
-  const killFeed = parseKillFeed(telemetry, { matchStartMs, accountId, playerName });
+  const killFeed = parseKillFeed(telemetry, { clock, accountId, playerName });
   const damage = parseDamage(telemetry, { accountId, playerName });
-  const timeline = parseTimeline(telemetry, { matchStartMs, accountId, playerName });
+  const timeline = parseTimeline(telemetry, { clock, accountId, playerName });
 
   const result = {
     matchId,

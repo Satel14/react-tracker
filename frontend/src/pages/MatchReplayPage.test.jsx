@@ -225,3 +225,64 @@ test("falls back to duration when a legacy payload carries no endTime", async ()
   await screen.findAllByText("Me");
   expect(screen.getByRole("slider")).toHaveAttribute("aria-valuemax", "100");
 });
+
+test("shortcuts work without first clicking the map", async () => {
+  // The hint is printed page-wide, so the shortcuts have to be page-wide too:
+  // they used to need focus on a div nothing ever focused, and entering
+  // fullscreen or clicking a control silently disabled them.
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  const slider = screen.getByRole("slider");
+  expect(slider).toHaveAttribute("aria-valuenow", "0");
+  fireEvent.keyDown(window, { key: "ArrowRight", code: "ArrowRight" });
+  expect(screen.getByRole("slider")).toHaveAttribute("aria-valuenow", "5");
+  fireEvent.keyDown(window, { key: "ArrowLeft", code: "ArrowLeft", shiftKey: true });
+  expect(screen.getByRole("slider")).toHaveAttribute("aria-valuenow", "0");
+});
+
+test("shortcuts stay out of the way of typing and of chords", async () => {
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  const input = document.createElement("input");
+  document.body.appendChild(input);
+  fireEvent.keyDown(input, { key: "ArrowRight", code: "ArrowRight" });
+  expect(screen.getByRole("slider")).toHaveAttribute("aria-valuenow", "0");
+  fireEvent.keyDown(window, { key: "ArrowRight", code: "ArrowRight", ctrlKey: true });
+  expect(screen.getByRole("slider")).toHaveAttribute("aria-valuenow", "0");
+  input.remove();
+});
+
+test("every shortcut the hint promises actually works", async () => {
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  const at = () => Number(screen.getByRole("slider").getAttribute("aria-valuenow"));
+
+  fireEvent.keyDown(window, { key: "ArrowRight", code: "ArrowRight", shiftKey: true });
+  expect(at()).toBe(30);
+  fireEvent.keyDown(window, { key: ".", code: "Period" });
+  expect(at()).toBe(40);
+  fireEvent.keyDown(window, { key: ",", code: "Comma" });
+  expect(at()).toBe(30);
+  // Clamps at both ends rather than running negative or past the end.
+  fireEvent.keyDown(window, { key: "ArrowLeft", code: "ArrowLeft", shiftKey: true });
+  expect(at()).toBe(0);
+  fireEvent.keyDown(window, { key: "ArrowLeft", code: "ArrowLeft" });
+  expect(at()).toBe(0);
+});
+
+test("digit keys move the speed control the user can see", async () => {
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  // Physical key: on the Ukrainian layout e.key would be a Cyrillic letter.
+  fireEvent.keyDown(window, { key: "й", code: "Digit3" });
+  expect(document.querySelector(".ant-segmented-item-selected").textContent).toBe("8×");
+});
+
+test("Space plays and pauses", async () => {
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  const label = () => document.querySelector(".match-replay__controls .ant-btn").textContent;
+  const before = label();
+  fireEvent.keyDown(window, { key: " ", code: "Space" });
+  expect(label()).not.toBe(before);
+});

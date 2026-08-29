@@ -4183,19 +4183,23 @@ body {
 
   &__alive { top: 8px; left: 8px; }
   &__clock { top: 8px; right: 44px; text-align: right; }
-  &__team { bottom: 8px; left: 8px; min-width: 150px; }
+  &__team { bottom: 8px; left: 8px; min-width: 150px; max-width: 60%; }
 
-  &__alive-players { color: var(--text-strong); font-weight: 600; }
-  &__alive-teams { color: var(--text-muted); }
-  &__time { color: var(--text-strong); font-variant-numeric: tabular-nums; }
-  &__phase { color: var(--text-muted); }
+  // Block, not inline: JSX strips the newline between the two spans, so as
+  // inline elements they render as one run of text ("Alive: 62Teams: 16").
+  &__alive-players { display: block; color: var(--text-strong); font-weight: 600; }
+  &__alive-teams { display: block; color: var(--text-muted); }
+  &__time { display: block; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+  &__phase { display: block; color: var(--text-muted); }
   &__team-title { color: var(--brand); font-weight: 700; margin-bottom: 4px; }
 
+  // One row per member, not a four-line block: on a 360px screen the squad
+  // card was taller than the map it sits on.
   &__member {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) 34px auto auto;
     align-items: center;
-    gap: 2px 8px;
+    gap: 2px 6px;
     padding: 1px 0;
 
     &.is-dead { opacity: 0.45; }
@@ -4208,9 +4212,8 @@ body {
     min-width: 0;
   }
   &__kills { color: var(--text-muted); }
-  &__state { grid-column: 1 / -1; color: var(--text-faint); font-size: 10px; }
+  &__state { color: var(--text-faint); font-size: 10px; }
   &__health {
-    grid-column: 1 / -1;
     display: block;
     height: 3px;
     border-radius: 2px;

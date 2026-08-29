@@ -92,20 +92,54 @@ const MatchReplayPage = ({ t }) => {
     [data, rosterT]
   );
 
+  // One keyboard owner for the whole replay, on window. The stage used to hold
+  // half the bindings on its own div, so they only worked once the user had
+  // clicked the map -- while the hint advertising them is printed page-wide --
+  // and stopped again the moment focus moved to a control or into fullscreen.
   useEffect(() => {
     if (tab !== "replay") return undefined;
     const onKey = (e) => {
-      if (e.code !== "Space") return;
       const el = e.target;
       const tag = el && el.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el && el.isContentEditable)) return;
-      if (el && typeof el.closest === "function" && el.closest("button, [role='button'], .ant-slider")) return;
-      e.preventDefault();
-      toggle();
+      // Leave browser and OS chords alone: Alt+Left is Back, Ctrl+R reloads.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const core = clock.clockRef.current;
+      if (!core) return;
+      // core.seek always pauses, which a scrubber drag wants and a nudge does not.
+      const seekBy = (d) => {
+        const wasPlaying = core.playing;
+        core.seek(core.t + d);
+        if (wasPlaying) core.play();
+        clock.publish();
+      };
+      const step = e.shiftKey ? 30 : 5;
+      switch (e.code) {
+        case "Space":
+          // A focused control owns its own Space.
+          if (el && typeof el.closest === "function" && el.closest("button, [role='button'], .ant-slider")) return;
+          e.preventDefault();
+          toggle();
+          return;
+        case "ArrowRight": e.preventDefault(); seekBy(step); return;
+        case "ArrowLeft": e.preventDefault(); seekBy(-step); return;
+        // One telemetry tick: positions arrive every 10 s, so a smaller step
+        // just re-renders the same interpolated frame.
+        case "Period": seekBy(10); return;
+        case "Comma": seekBy(-10); return;
+        case "KeyF": stageRef.current?.toggleFullscreen(); return;
+        case "KeyR": stageRef.current?.resetView(); return;
+        default: {
+          // e.code, not e.key: on the Ukrainian layout this app is translated
+          // into, e.key for F is "ф" and for R is "к".
+          const digit = /^(Digit|Numpad)([0-4])$/.exec(e.code);
+          if (digit) clock.setSpeed(SPEEDS[Number(digit[2])]);
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tab, toggle]);
+  }, [tab, toggle, clock]);
 
   useEffect(() => {
     let cancelled = false;
@@ -133,6 +167,13 @@ const MatchReplayPage = ({ t }) => {
   useEffect(() => {
     setWantAnalysis(tab !== "replay");
     setAnalysis({ loading: false, error: null, data: null });
+    // The clock and the selection outlive a client-side navigation, so without
+    // this a new match opens at the previous one's playhead with a player from
+    // the previous lobby still highlighted.
+    setFocusedAccountId(null);
+    clock.clockRef.current?.seek(0);
+    clock.publish();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId, platform, accountId, playerName]);
 
   // Fetch analysis once wanted; keyed on match identity, NOT on tab, so
@@ -167,7 +208,6 @@ const MatchReplayPage = ({ t }) => {
             onSelect={setFocusedAccountId}
             mapLabel={data.mapName}
             layers={layers}
-            onSpeed={clock.setSpeed}
             fullscreenLabel={t("pages.replay.fullscreen")}
             exitFullscreenLabel={t("pages.replay.exitFullscreen")}
           >

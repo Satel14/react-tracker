@@ -3,7 +3,11 @@ import { groupRosterIntoTeams } from "./replayEngine";
 
 // Health is a step-held telemetry reading, so it can be absent on a legacy
 // payload: treat that as unhurt rather than as a zero-width bar.
-const clampHealth = (h) => {
+// A dead player has no health, whatever their last sample said. Without the
+// alive check the row read "Health 100%" for a corpse while the map overlay
+// showed the same player at 0.
+const clampHealth = (h, alive) => {
+  if (!alive) return 0;
   const value = typeof h === "number" && Number.isFinite(h) ? h : 100;
   return Math.max(0, Math.min(100, Math.round(value)));
 };
@@ -57,7 +61,7 @@ const ReplayRoster = ({ rows = [], focusedAccountId = null, onSelect, t }) => {
                 const selected = row.accountId === focusedAccountId;
                 const knocked = row.alive && !!row.knocked;
                 const state = row.alive ? (knocked ? STATE.knocked : STATE.alive) : STATE.dead;
-                const health = clampHealth(row.h);
+                const health = clampHealth(row.h, row.alive);
                 const cls = [
                   "replay-roster__row",
                   state.cls,
