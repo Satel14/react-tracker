@@ -147,6 +147,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     mapGen: 0,
     // Reused every frame by the layer selectors; never reallocated.
     follow: false,
+    crateArt: null,
     shotBuf: [],
     zoneBuf: [],
     pkgBuf: [],
@@ -178,6 +179,24 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     // onload with no map change finds a stale generation and drops itself.
     return () => { v.mapGen += 1; };
   }, [data.mapMax, data.rawMapName]);
+
+  // PUBG's own care-package artwork. Two small PNGs, loaded once and shared by
+  // every crate on the map; until they arrive the drawn glyph stands in.
+  useEffect(() => {
+    if (typeof Image === "undefined") return undefined;
+    let cancelled = false;
+    const v = view.current;
+    for (const [key, file] of [["falling", "CarePackage_Flying"], ["landed", "CarePackage_Normal"]]) {
+      const img = new Image();
+      img.onload = () => {
+        if (cancelled) return;
+        v.crateArt = { ...(v.crateArt || {}), [key]: img };
+        v.bgDirty = true;
+      };
+      img.src = `/map-icons/${file}.png`;
+    }
+    return () => { cancelled = true; };
+  }, []);
 
   // Base raster first, so there is never a blank frame.
   useEffect(() => {
@@ -355,6 +374,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
             hoveredIndex: v.hoveredIndex,
             colors: v.colors, atlas: v.atlas,
             focalTeamId: data.focalTeamId ?? null,
+            crateArt: v.crateArt,
             shots: shotWindow.activeAt(t, v.shotBuf),
             specialZones: specialZonesAt(data.specialZones, t, v.zoneBuf),
             packages: packagesAt(data.packages, t, v.pkgBuf),

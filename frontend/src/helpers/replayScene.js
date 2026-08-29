@@ -20,9 +20,16 @@ export const SCREEN = {
   flightDash: [10, 8],
   shotWidth: 1,
   crateRadius: 4,
+  // The artwork carries its own margin, so it needs to be drawn a little
+  // larger than the bare glyph to read at the same weight.
+  crateArtScale: 1.6,
   chevronRadius: 4,
   // Bigger than a player: it carries sixty of them.
   planeRadius: 9,
+  // A canopy is four shrouds fanning out, and they need room to be four rather
+  // than one blob -- the halo is as wide as the lines themselves. Larger than a
+  // player, and the state is brief and only at the start of a match.
+  parachuteRadius: 9,
   healthArcRadius: 4,
   healthArcWidth: 2,
   zoneFillAlpha: 0.18,
@@ -249,11 +256,25 @@ export const paintMarkers = (ctx, { cam, vw, vh, knocks, revives, t, colors }) =
   ctx.restore();
 };
 
-export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas }) => {
+export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas, images }) => {
   if (!ctx || !packages || packages.length === 0) return;
   for (const pkg of packages) {
     const p = worldToScreen(cam, vw, vh, pkg.x, pkg.y);
     if (offScreen(p, vw, vh)) continue;
+
+    // PUBG's own crate artwork, which is the one thing in their asset repo that
+    // is genuinely a map marker rather than a killfeed row or a product render.
+    // It carries the falling-versus-landed distinction the payload already has.
+    const art = images && (pkg.falling ? images.falling : images.landed);
+    if (art && art.width && art.height) {
+      const h = SCREEN.crateRadius * 2 * (art.height / art.width) * SCREEN.crateArtScale;
+      const w = SCREEN.crateRadius * 2 * SCREEN.crateArtScale;
+      ctx.drawImage(art, p.x - w / 2, p.y - h / 2, w, h);
+      continue;
+    }
+
+    // Until it loads, and wherever it cannot be fetched, the drawn glyph stands
+    // in -- there is never a frame with no care packages on it.
     const red = pkg.kind === "redbox";
     const colour = red ? colors.danger || colors.crate : colors.crate;
     if (atlas && atlas.blit) {
@@ -264,7 +285,6 @@ export const paintPackages = (ctx, { cam, vw, vh, packages, colors, atlas }) => 
       ctx.fillStyle = colour;
       ctx.fill();
     }
-    // A falling crate gets a parachute tick so the drop reads as it happens.
     if (pkg.falling) {
       ctx.strokeStyle = colour;
       ctx.lineWidth = SCREEN.shotWidth;
@@ -348,7 +368,7 @@ export const drawScene = (ctx, frame) => {
   const {
     cam, vw, vh, tracks, zone, flashes, nowMs, focusedAccountId, hoveredIndex,
     colors, atlas, labelCap = 24, focalTeamId = null,
-    shots, specialZones, packages, landings, landingsT, flightSeg, flight, knocks, revives,
+    shots, specialZones, packages, landings, landingsT, flightSeg, flight, knocks, revives, crateArt,
     t: frameT,
     flightAlpha: fAlpha = 1, landingsAlpha: lAlpha = 1, focalIds,
     layers = {},
@@ -367,7 +387,7 @@ export const drawScene = (ctx, frame) => {
     paintPlane(ctx, { cam, vw, vh, flight, t: frameT, colors, atlas });
   }
   if (on("landings")) paintLandings(ctx, { cam, vw, vh, landings, alpha: lAlpha, colors, atlas, focalIds, t: landingsT });
-  if (on("packages")) paintPackages(ctx, { cam, vw, vh, packages, colors, atlas });
+  if (on("packages")) paintPackages(ctx, { cam, vw, vh, packages, colors, atlas, images: crateArt });
   if (on("shots")) paintShots(ctx, { cam, vw, vh, shots, colors });
   paintMarkers(ctx, { cam, vw, vh, knocks, revives, t: frameT, colors });
   drawFlashes(ctx, { cam, vw, vh, flashes, nowMs, colors });
@@ -392,12 +412,14 @@ export const drawScene = (ctx, frame) => {
     ctx.globalAlpha = markerAlpha;
 
     const selected = !!focusedAccountId && meta.accountId === focusedAccountId;
-    const r = radiusFor(meta, selected);
-    const fill = state === STATE.DEAD ? colors.dead : meta.isFocal ? colors.focal : colors.enemy;
-
     const flags = tracks.outF ? tracks.outF[i] : 0;
     const moving = state === STATE.ALIVE && tracks.outMoving && tracks.outMoving[i] === 1;
     const falling = state === STATE.ALIVE && tracks.outFalling && tracks.outFalling[i] === 1;
+    // The canopy is drawn larger than the player it replaces: four shrouds need
+    // room to read as four rather than as one blob. See SCREEN.parachuteRadius.
+    const r = falling ? SCREEN.parachuteRadius : radiusFor(meta, selected);
+    const fill = state === STATE.DEAD ? colors.dead : meta.isFocal ? colors.focal : colors.enemy;
+
     // A vehicle glyph has a nose, so it is aimed even at rest: the cell points
     // +x, and drawing a stopped car upright would face every parked vehicle
     // due east. The sampler holds the last real bearing for exactly this. A

@@ -876,3 +876,47 @@ test("the parachute is never turned by the bearing", () => {
   expect(blits[0][0]).toBe("parachuteFocal");
   expect(blits[0][1]).toBeUndefined();
 });
+
+test("care packages use the official artwork when it has loaded", () => {
+  // PUBG publishes a falling and a landed crate icon, and they are the one
+  // thing in that repo that is genuinely a map marker: 144x200 and 144x136,
+  // already the right shape. Drawing them beats anything hand-traced here.
+  const drawn = [];
+  const ctx = recordingCtx();
+  ctx.drawImage = (...args) => drawn.push(args);
+  const images = { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 } };
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null, images,
+    packages: [
+      { kind: "redbox", x: 4000, y: 4000, falling: true },
+      { kind: "small", x: 4100, y: 4100, falling: false },
+    ],
+  });
+  expect(drawn).toHaveLength(2);
+  expect(drawn[0][0]).toBe(images.falling);
+  expect(drawn[1][0]).toBe(images.landed);
+});
+
+test("a crate keeps its aspect ratio rather than being squashed to a square", () => {
+  const drawn = [];
+  const ctx = recordingCtx();
+  ctx.drawImage = (...args) => drawn.push(args);
+  const images = { falling: { width: 144, height: 200 }, landed: { width: 144, height: 136 } };
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null, images,
+    packages: [{ kind: "small", x: 4000, y: 4000, falling: true }],
+  });
+  const [, , , w, h] = drawn[0];
+  expect(h / w).toBeCloseTo(200 / 144, 3);
+});
+
+test("crates still draw before the artwork arrives", () => {
+  // The images load asynchronously; until then the drawn glyph stands in, so
+  // there is never a frame with no care packages on it.
+  const ctx = recordingCtx();
+  paintPackages(ctx, {
+    ...frameAt(1), colors: P2_COLORS, atlas: null, images: null,
+    packages: [{ kind: "redbox", x: 4000, y: 4000, falling: false }],
+  });
+  expect(ctx.calls.filter((c) => c.name === "fill").length).toBeGreaterThan(0);
+});
