@@ -132,7 +132,10 @@ const extendArc = (x1, y1, rx, ry, largeArc, sweep, x2, y2, extend) => {
 
 // Walks the M/L/A/Z vocabulary ICON_PATHS uses and returns one point list per
 // subpath, arcs sampled so their true extent -- not just their listed
-// endpoints -- is represented.
+// endpoints -- is represented. Each list carries a `closed` flag: a fill closes
+// every subpath implicitly, but a STROKE only paints the segments that are
+// there, and the parachute's canopy is an open half-circle whose closing chord
+// would otherwise be counted as ink nobody draws.
 const pathPoints = (d) => {
   const tokens = d.match(/[MLAZ]|-?\d*\.?\d+/g) || [];
   let i = 0;
@@ -146,10 +149,13 @@ const pathPoints = (d) => {
     const cmd = tokens[i++];
     if (cmd === "M") {
       current = [];
+      current.closed = false;
       subpaths.push(current);
       cx = next();
       cy = next();
       push(cx, cy);
+    } else if (cmd === "Z") {
+      if (current) current.closed = true;
     } else if (cmd === "L") {
       cx = next();
       cy = next();
@@ -405,11 +411,24 @@ test("the four new forms are their own silhouettes, and the truck cannot collaps
   // 2. The car's nose tapers to a wedge; the truck's steps out to a flat face.
   expect(noseTaper(ICON_PATHS.vehicleFocal)).toBeGreaterThan(0);
   expect(noseTaper(ICON_PATHS.truckFocal)).toBe(0);
-  // 3. The truck's body is the deeper of the two.
+  // 3. The cab stands proud of the cargo box, and that is what gives a hollow
+  //    rectangle a front. A closed box reads the same turned through 90, 180
+  //    and 270 degrees and the scene turns every moving marker to its bearing,
+  //    so without a subpath reaching past it the truck would be the one vehicle
+  //    on the map with no heading. (The cue that used to sit here -- "the
+  //    truck's body is the deeper of the two" -- described a solid truck, and
+  //    was measured as worth nothing against the car anyway: see the separation
+  //    test below.)
+  // Depth of the deepest subpath that is NOT full height -- a hull rather than
+  // an axle. The truck no longer has one, which is the point of it.
   const hullDepth = (d) => Math.max(...subpathBoxes(d)
     .map((b) => b.maxY - b.minY)
     .filter((h) => h < BOX_MAX - BOX_MIN));
-  expect(hullDepth(ICON_PATHS.truckFocal)).toBeGreaterThan(hullDepth(ICON_PATHS.vehicleFocal));
+  const cargo = truck[0];
+  const cab = subpathBoxes(ICON_PATHS.truckFocal).find((b) => b.maxX === BOX_MAX);
+  expect(cargo.maxX).toBeLessThan(BOX_MAX);
+  expect(cab).not.toBe(cargo);
+  expect(cab.minX).toBeGreaterThanOrEqual(cargo.maxX);
 
   // The bike is the light one: one thin block, at the FRONT, on a hairline hull
   // less than half the depth of the truck's body.
@@ -417,7 +436,9 @@ test("the four new forms are their own silhouettes, and the truck cannot collaps
   expect(bike).toHaveLength(1);
   expect(midX(bike[0])).toBeGreaterThan(CELL / 2);
   expect(bike[0].maxX - bike[0].minX).toBeLessThan(car[0].maxX - car[0].minX);
-  expect(hullDepth(ICON_PATHS.bikeFocal) * 2).toBeLessThan(hullDepth(ICON_PATHS.truckFocal));
+  // Measured against the car, not the truck: the truck has no hull left to be
+  // half of, and the car is the ride the bike actually has to stay off.
+  expect(hullDepth(ICON_PATHS.bikeFocal) * 2).toBeLessThan(hullDepth(ICON_PATHS.vehicleFocal));
 
   // The boat is the one that has to stay off the moving dart, and the transom
   // is what does it: the boat is at its WIDEST at the very back, where the dart
@@ -430,6 +451,182 @@ test("the four new forms are their own silhouettes, and the truck cannot collaps
   // ...and its hull is a wedge, coming to a point at the bow rather than a face.
   const boatHull = subpathBoxes(ICON_PATHS.boatFocal).find((b) => b.maxX === BOX_MAX);
   expect(noseTaper(ICON_PATHS.boatFocal)).toBe(boatHull.maxY - boatHull.minY);
+});
+
+// ---------------------------------------------------------------------------
+// Silhouette separation
+// ---------------------------------------------------------------------------
+
+// The checks above ask WHERE a glyph's ink sits -- how many full-height blocks,
+// which end the nose tapers to. A pair can satisfy every one of them and still
+// be one shape drawn twice: the boat's wedge sat entirely INSIDE the truck's
+// box, and the balloon's canopy was the standing player's disc with the corners
+// rounded differently. Neither showed up until the overlap was measured, which
+// is what this does -- intersection over union of the two shapes as painted.
+//
+// IoU between two shapes is scale-free: the same pair overlaps by the same
+// fraction at the 10 CSS px an enemy blits at and at the 16 a selected one
+// does. That is the finding worth keeping, because it rules out the obvious
+// fix -- a marker the reader cannot resolve does not become resolvable by
+// being drawn bigger. What separates two glyphs at 10 px is how much ink each
+// carries and whether it is solid or hollow, not the shape of its outline.
+const GRID = 64;
+
+// Two shapes may cover at most this much of each other. Not a perceptual
+// threshold -- there is no such number for silhouettes -- but the level that
+// admits every pair a reader can currently tell apart on the map and rejects
+// the four that were measured as collisions.
+const OVERLAP_CEILING = 0.65;
+
+// One per shape a player's marker can take. Focal and enemy variants share a
+// path, so only one of each pair is listed; the crates and the landing chevron
+// are not player markers and never stand where one does.
+const MARKER_SHAPES = [
+  "enemy", "movingEnemy", "parachuteEnemy", "knockedEnemy", "dead",
+  "vehicleEnemy", "truckEnemy", "bikeEnemy", "boatEnemy", "planeEnemy", "balloonEnemy",
+];
+
+// Pairs still over the ceiling, each with the figure measured when it was
+// accepted. Both are collisions with the standing player's disc, which this
+// pass deliberately left alone: it is the most common marker on the map and
+// the one every reader already knows, so it is the wrong end of the pair to
+// redraw. `max` is a one-way ratchet -- a pair may improve and the entry can
+// then be tightened, but an entry that stops being needed fails outright.
+const ACCEPTED_OVERLAP = [
+  {
+    pair: "enemy/vehicleEnemy",
+    max: 0.7,
+    why: "Both nearly fill the inscription box: a 28-unit disc against a hull with two full-height axles.",
+  },
+  {
+    pair: "enemy/knockedEnemy",
+    max: 0.68,
+    why: "The ring IS the disc with a hole punched in it, and the hole is what carries the meaning.",
+  },
+];
+
+// Nonzero winding -- the rule the atlas fills with, so the knocked ring reads
+// as a ring rather than as a disc.
+const windingAt = (subpaths, px, py) => {
+  let winding = 0;
+  for (const pts of subpaths) {
+    for (let i = 0; i < pts.length; i += 1) {
+      const [x0, y0] = pts[i];
+      const [x1, y1] = pts[(i + 1) % pts.length];
+      const side = (x1 - x0) * (py - y0) - (px - x0) * (y1 - y0);
+      if (y0 <= py) {
+        if (y1 > py && side > 0) winding += 1;
+      } else if (y1 <= py && side < 0) winding -= 1;
+    }
+  }
+  return winding;
+};
+
+// A stroked glyph has no fill at all: its ink is the band within half a line
+// width of the path, and an open subpath contributes no closing segment.
+const withinStroke = (subpaths, px, py, width) => {
+  const limit = (width / 2) * (width / 2);
+  for (const pts of subpaths) {
+    const last = pts.closed ? pts.length : pts.length - 1;
+    for (let i = 0; i < last; i += 1) {
+      const [x0, y0] = pts[i];
+      const [x1, y1] = pts[(i + 1) % pts.length];
+      const dx = x1 - x0;
+      const dy = y1 - y0;
+      const len = dx * dx + dy * dy;
+      const t = len ? Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / len)) : 0;
+      const ex = px - (x0 + t * dx);
+      const ey = py - (y0 + t * dy);
+      if (ex * ex + ey * ey <= limit) return true;
+    }
+  }
+  return false;
+};
+
+// Whether the kind is filled or stroked comes from the pass the atlas actually
+// painted, not from a copy of PAINT kept here: a stroke width that changed in
+// one place and not the other would otherwise be measured as the shape nobody
+// draws.
+const glyphMask = (kind, colourPass) => {
+  const subpaths = pathPoints(ICON_PATHS[kind]);
+  const stroked = colourPass.op === "stroke";
+  const mask = new Uint8Array(GRID * GRID);
+  for (let gy = 0; gy < GRID; gy += 1) {
+    const py = ((gy + 0.5) * CELL) / GRID;
+    for (let gx = 0; gx < GRID; gx += 1) {
+      const px = ((gx + 0.5) * CELL) / GRID;
+      const inked = stroked
+        ? withinStroke(subpaths, px, py, colourPass.lineWidth)
+        : windingAt(subpaths, px, py) !== 0;
+      if (inked) mask[gy * GRID + gx] = 1;
+    }
+  }
+  return mask;
+};
+
+const inkOf = (mask) => mask.reduce((total, on) => total + on, 0);
+
+const overlapOf = (a, b) => {
+  let both = 0;
+  let either = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] && b[i]) both += 1;
+    if (a[i] || b[i]) either += 1;
+  }
+  return either ? both / either : 1;
+};
+
+const markerMasks = () => {
+  const { draws } = installAtlasEnv();
+  buildAtlas({ dpr: 1, colors: COLORS });
+  const passes = passesByKind(draws);
+  return Object.fromEntries(MARKER_SHAPES.map((k) => [k, glyphMask(k, passes[k].colour)]));
+};
+
+const overlapPairs = (masks) => {
+  const pairs = [];
+  for (let i = 0; i < MARKER_SHAPES.length; i += 1) {
+    for (let j = i + 1; j < MARKER_SHAPES.length; j += 1) {
+      pairs.push({
+        pair: `${MARKER_SHAPES[i]}/${MARKER_SHAPES[j]}`,
+        overlap: overlapOf(masks[MARKER_SHAPES[i]], masks[MARKER_SHAPES[j]]),
+      });
+    }
+  }
+  return pairs;
+};
+
+test("no two marker shapes cover the same ground", () => {
+  const masks = markerMasks();
+
+  // A glyph that sampled to nothing would overlap nothing and sail through
+  // every assertion below. The floor is loose on purpose -- the lightest glyph
+  // here is the bike, at about a quarter of the grid.
+  for (const kind of MARKER_SHAPES) {
+    expect(inkOf(masks[kind]), kind).toBeGreaterThan(GRID * GRID * 0.05);
+  }
+
+  const allowed = new Map(ACCEPTED_OVERLAP.map((a) => [a.pair, a.max]));
+  const tooAlike = overlapPairs(masks)
+    .filter(({ pair, overlap }) => overlap > (allowed.get(pair) ?? OVERLAP_CEILING))
+    .map(({ pair, overlap }) => `${pair} ${overlap.toFixed(3)}`);
+
+  expect(tooAlike, "redraw one of each pair, or accept it in ACCEPTED_OVERLAP with why").toEqual([]);
+});
+
+test("keeps no allowance for an overlap that is gone", () => {
+  const pairs = new Map(overlapPairs(markerMasks()).map((p) => [p.pair, p.overlap]));
+
+  for (const { pair, max, why } of ACCEPTED_OVERLAP) {
+    expect(pairs.has(pair), `${pair} is not a pair of marker shapes`).toBe(true);
+    expect(why.length, `${pair} has no reason recorded`).toBeGreaterThan(20);
+    // Still over the ceiling, so the allowance is still doing something, and
+    // still under its own figure, so it can only ever be tightened.
+    expect(pairs.get(pair), `${pair} no longer needs its allowance -- delete it`)
+      .toBeGreaterThan(OVERLAP_CEILING);
+    expect(pairs.get(pair), `${pair} has got worse than the figure it was accepted at`)
+      .toBeLessThanOrEqual(max);
+  }
 });
 
 // The canopy has an up, which every other glyph here does not. That makes it
@@ -803,11 +1000,22 @@ test("paints every glyph from the palette it was handed", () => {
   // wedge and it stops reading as a parachute at all.
   expect(paint.parachuteFocal.op).toBe("stroke");
   expect(paint.parachuteEnemy.op).toBe("stroke");
+  // So do the truck and the balloon, and for them it is the whole separation
+  // rather than a drawing preference. Solid, each was covering most of another
+  // marker -- the truck the boat and the car, the balloon the standing player --
+  // because every glyph fills the same 28-unit box and two filled boxes must
+  // overlap. Hollow is the one channel a filled glyph cannot follow them into,
+  // so flipping either back to a fill undoes the fix. The separation test is
+  // what measures the damage; this is what names the cause.
+  expect(paint.truckFocal.op).toBe("stroke");
+  expect(paint.truckEnemy.op).toBe("stroke");
+  expect(paint.balloonFocal.op).toBe("stroke");
+  expect(paint.balloonEnemy.op).toBe("stroke");
   for (const kind of [
     "focal", "enemy", "movingFocal", "movingEnemy",
     "knockedFocal", "knockedEnemy", "vehicleFocal", "vehicleEnemy", "bikeFocal",
-    "bikeEnemy", "truckFocal", "truckEnemy", "boatFocal", "boatEnemy", "planeFocal",
-    "planeEnemy", "balloonFocal", "balloonEnemy", "crate", "crateRed",
+    "bikeEnemy", "boatFocal", "boatEnemy", "planeFocal", "planeEnemy",
+    "crate", "crateRed",
   ]) {
     expect(paint[kind].op, kind).toBe("fill");
   }

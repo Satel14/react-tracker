@@ -117,13 +117,25 @@ const CAR = "M2 8 L23 8 L30 13 L30 19 L23 24 L2 24 Z M4 2 L11 2 L11 30 L4 30 Z M
 
 // Truck: pickups, vans, buses, UAZs, the BRDM. 1813 samples across 8 matches,
 // second only to the car -- which makes car-vs-truck the pair most likely to
-// collapse, since both are four-wheeled boxes. One cue is not enough at 8 px,
-// so it is separated on three at once: the mass sits at ONE end (a single rear
-// axle) where the car has a block at each, the nose is a blunt step out to a
-// flat face where the car tapers to a wedge, and the cargo box is parallel-
-// sided and 18 deep against the car's narrowing 16. Even and pointed against
-// back-heavy and square; nothing about it has to be resolved to tell them apart.
-const TRUCK = "M2 7 L22 7 L22 25 L2 25 Z M20 12 L30 12 L30 20 L20 20 Z M3 2 L11 2 L11 30 L3 30 Z";
+// collapse, since both are four-wheeled boxes.
+//
+// It used to be separated from the car on three drawn cues at once: one rear
+// axle against the car's two, a blunt nose against a tapered one, a deeper
+// cargo box. Measured, all three together were worth nothing: the two covered
+// 74% of each other, and the boat's wedge sat ENTIRELY inside this box. The
+// reason is the inscription rule -- every glyph fills the same 28-unit square,
+// so two solid glyphs must overlap most of it however their edges are drawn,
+// and no amount of redrawing an outline escapes that. See the separation test.
+//
+// So this one stops being solid. Hollow is the one channel a filled glyph
+// cannot follow it into: the cargo box is a ring, and the ink drops to the
+// walls. Against the car that is 0.74 -> 0.29, against the boat 0.70 -> 0.24.
+//
+// The nose bar is not decoration. A closed rectangle looks the same turned
+// through 90, 180 and 270 degrees, and the scene turns every moving marker to
+// its bearing, so a bare box would have thrown away the heading every other
+// vehicle here reads out. The bar is what says which end is the front.
+const TRUCK = "M2 2 L22 2 L22 30 L2 30 Z M22 16 L30 16";
 
 // Bike: motorcycles and bicycles, 312 samples. The car's trick inverted -- the
 // handlebars are the only thing reaching the box edges, so the 28-unit box is
@@ -146,6 +158,15 @@ const PLANE = "M30 16 L22 21 L2 20 L2 12 L22 11 Z M11 2 L19 2 L19 30 L11 30 Z M2
 // Rescue balloon: from directly above, a canopy -- four lobes bulging off a
 // 14-unit square, which reads as a canopy rather than as the plain disc a
 // circle would collide with.
+//
+// Except that filled, it WAS that disc. The lobes cover 82% of the standing
+// player's marker, which is the worst collision the map had: a rescue balloon
+// and an enemy standing still are opposite things to find, and they were the
+// same ink. Deepening the notches between the lobes does not fix it -- pulled
+// in as far as they go, the pair only falls to 0.73, because both shapes still
+// have to fill the 28-unit inscription box. Painted hollow the same outline
+// falls to 0.30, and the lobes finally read as lobes rather than as a rounded
+// edge. The path is untouched; only PAINT changed.
 const BALLOON = "M9 9 A7 7 0 0 1 23 9 A7 7 0 0 1 23 23 A7 7 0 0 1 9 23 A7 7 0 0 1 9 9 Z";
 
 // Airdrop: a canopy over a payload, one closed silhouette. The shrouds are a
@@ -231,14 +252,19 @@ const PAINT = {
   vehicleEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   bikeFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   bikeEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
-  truckFocal: { key: "focal", fallback: "rgb(255,255,255)" },
-  truckEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
+  // Hollow, and 4 rather than the parachute's 3: the cargo ring is the widest
+  // shape here, so its walls can afford to be the thickest without the box
+  // closing up at the 10 px an enemy marker blits at.
+  truckFocal: { key: "focal", fallback: "rgb(255,255,255)", stroke: 4 },
+  truckEnemy: { key: "enemy", fallback: "rgb(255,255,255)", stroke: 4 },
   boatFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   boatEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   planeFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   planeEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
-  balloonFocal: { key: "focal", fallback: "rgb(255,255,255)" },
-  balloonEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
+  // Hollow, at the parachute's 3: the four lobes are the read, and a wall any
+  // thicker fills the notches between them back in.
+  balloonFocal: { key: "focal", fallback: "rgb(255,255,255)", stroke: 3 },
+  balloonEnemy: { key: "enemy", fallback: "rgb(255,255,255)", stroke: 3 },
   dead: { key: "dead", fallback: "rgb(150,150,150)", stroke: 4 },
   crate: { key: "crate", fallback: "rgb(255,196,74)" },
   crateRed: { key: "danger", fallback: "rgb(220,80,80)" },
