@@ -1,4 +1,5 @@
 const { readXY } = require("../telemetryUtils");
+const { telemetryWeaponName } = require("../weaponMeta");
 
 function accountOf(actor) {
   const id = actor?.accountId;
@@ -44,7 +45,11 @@ function extractKnocks(telemetry, clock) {
       ay: axy ? axy.y : null,
       vx: vxy.x,
       vy: vxy.y,
-      w: ev.damageCauserName || null,
+      // Resolved here, not on the client: the frontend has no copy of the
+      // weapon table, and one gun has to read the same in a knock line as in
+      // the kill line under it. A knock the zone or a fall made has no
+      // attacker, and then this names what did it.
+      w: ev.damageCauserName ? telemetryWeaponName(ev.damageCauserName) : null,
       r: ev.damageReason || null,
       dist: distanceMetres(ev.distance),
       id: ev.dBNOId ?? null,

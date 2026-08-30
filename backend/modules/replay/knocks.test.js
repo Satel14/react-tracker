@@ -38,7 +38,7 @@ test("maps every field of a full knock, with dist in metres", () => {
       ay: 2881,
       vx: 4186,
       vy: 2881,
-      w: "WeapHK416_C",
+      w: "M416",
       r: "TorsoShot",
       // 6289.604 cm rounds to 63 m -- NOT 6290, and NOT 62.
       dist: 63,
@@ -184,4 +184,22 @@ test("ignores kills and every other event type", () => {
   assert.equal(knocks.length, 1);
   assert.equal(knocks[0].t, 14);
   assert.deepEqual(revives, []);
+});
+
+// The kill feed shows a knock line with the gun that made it, so the raw
+// causer name has to be resolved here rather than shipped for the client to
+// guess at -- the frontend has no copy of the weapon table. Same helper the
+// kill records and getMatchAnalysis use, so one gun reads the same everywhere.
+test("a knock names its weapon the way the rest of the app does", () => {
+  const { knocks } = extractKnocks([knock({ damageCauserName: "WeapAUG_C" })], clock);
+  assert.equal(knocks[0].w, "AUG");
+});
+
+test("a knock nobody made still names what did it", () => {
+  const { knocks } = extractKnocks(
+    [knock({ attacker: null, damageCauserName: "BlueZone", distance: 0 })],
+    clock,
+  );
+  assert.equal(knocks[0].a, null);
+  assert.equal(knocks[0].w, "Blue Zone");
 });

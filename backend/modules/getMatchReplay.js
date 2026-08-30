@@ -6,6 +6,7 @@ const { encodePositions } = require("./replay/positions");
 const { extractFlight } = require("./replay/flight");
 const { extractLandings } = require("./replay/landings");
 const { extractKnocks } = require("./replay/knocks");
+const { telemetryWeaponName } = require("./weaponMeta");
 const { extractShots } = require("./replay/shots");
 const { extractPackages } = require("./replay/packages");
 const { extractSpecialZones, extractPhases } = require("./replay/zones");
@@ -125,8 +126,22 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       const vxy = readXY(victim?.location);
       if (!vxy) continue;
       const kxy = readXY(killer?.location);
+      // Resolved the way getMatchAnalysis resolves it, and prettified here
+      // rather than on the client: the frontend has no copy of the weapon
+      // table, and "WeapAUG_C" is not a thing to show a reader. A death the
+      // zone or a fall caused has no killer, and then this names what did it --
+      // the same field, because that is the line the game writes too.
+      const dmg = ev.killerDamageInfo || ev.finishDamageInfo || ev.dBNODamageInfo || {};
+      const causer = dmg.damageCauserName || ev.damageCauserName || null;
+      const range = Number(dmg.distance);
       kills.push({
         t,
+        w: causer ? telemetryWeaponName(causer) : null,
+        // Centimetres in the telemetry, metres everywhere this project shows a
+        // distance. Absent rather than 0 when the event carries none: a kill at
+        // an unknown range is not a kill at point-blank.
+        dist: Number.isFinite(range) ? Math.round(range / 100) : null,
+        r: dmg.damageReason || null,
         killer: killer?.name || null,
         victim: victim?.name || null,
         killerAccountId: killer?.accountId || null,
@@ -266,7 +281,11 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
 async function getMatchReplay({ shard, matchId, accountId, playerName }) {
   if (!matchId) throw new Error("matchId is required");
   const focalTag = accountId || playerName || "-";
-  const cacheKey = `${shardForMatch(shard)}:${matchId}:${focalTag}`;
+  // REPLAY_FORMAT is in the key because the cached value is a parsed payload,
+  // not a raw response: bump the format and every entry already in here is the
+  // shape the code no longer expects. In-process, so a deploy clears it anyway
+  // -- this is what makes that true by construction rather than by luck.
+  const cacheKey = `${REPLAY_FORMAT}:${shardForMatch(shard)}:${matchId}:${focalTag}`;
   if (replayCache.has(cacheKey)) return replayCache.get(cacheKey);
 
   const { matchAttributes, telemetry } = await loadMatchBundle({ shard, matchId });

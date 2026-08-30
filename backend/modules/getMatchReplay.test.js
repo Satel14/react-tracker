@@ -20,7 +20,7 @@ const telemetry = [
   { _T: "LogPlayerPosition", common: { isGame: 1 }, elapsedTime: 20, character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 500000, y: 500000, z: 0 } } },
   { _T: "LogPlayerPosition", common: { isGame: 1 }, elapsedTime: 10, character: { accountId: "account.mate", name: "Mate", teamId: 1, location: { x: 405000, y: 405000, z: 0 } } },
   { _T: "LogPlayerPosition", common: { isGame: 1 }, elapsedTime: 10, character: { accountId: "account.foe", name: "Foe", teamId: 2, location: { x: 410000, y: 410000, z: 0 } } },
-  { _T: "LogPlayerKillV2", elapsedTime: 15, killer: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 450000, y: 450000, z: 0 } }, victim: { accountId: "account.foe", name: "Foe", teamId: 2, location: { x: 460000, y: 460000, z: 0 } } },
+  { _T: "LogPlayerKillV2", elapsedTime: 15, killerDamageInfo: { damageCauserName: "WeapAUG_C", distance: 8700, damageReason: "TorsoShot" }, killer: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 450000, y: 450000, z: 0 } }, victim: { accountId: "account.foe", name: "Foe", teamId: 2, location: { x: 460000, y: 460000, z: 0 } } },
   { _T: "LogGameStatePeriodic", elapsedTime: 0, gameState: { safetyZonePosition: { x: 400000, y: 400000, z: 0 }, safetyZoneRadius: 0, poisonGasWarningPosition: { x: 400000, y: 400000, z: 0 }, poisonGasWarningRadius: 0 } },
   { _T: "LogGameStatePeriodic", elapsedTime: 10, gameState: { safetyZonePosition: { x: 400000, y: 400000, z: 0 }, safetyZoneRadius: 300000, poisonGasWarningPosition: { x: 420000, y: 420000, z: 0 }, poisonGasWarningRadius: 200000 } },
   { _T: "LogGameStatePeriodic", elapsedTime: 20, gameState: { safetyZonePosition: { x: 410000, y: 410000, z: 0 }, safetyZoneRadius: 250000, poisonGasWarningPosition: { x: 420000, y: 420000, z: 0 }, poisonGasWarningRadius: 200000 } },
@@ -261,4 +261,58 @@ test("reports when each player stopped falling, so the map can draw a canopy", (
   // A player who never jumped has neither, rather than a misleading zero.
   const mate = r.players.find((p) => p.accountId === "account.mate");
   assert.equal(mate.landTime, null);
+});
+
+// The kill feed shows what killed whom with what, so the weapon has to reach
+// the payload. It is resolved the way getMatchAnalysis already resolves it --
+// killerDamageInfo, then finishDamageInfo, then the event -- and prettified
+// through weaponMeta, because the raw "WeapAUG_C" is not a thing to show a
+// reader and the frontend has no copy of that table.
+test("a kill carries the weapon it was made with and the range it was made at", () => {
+  const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
+  assert.equal(r.kills[0].w, "AUG");
+  assert.equal(r.kills[0].dist, 87); // centimetres in the telemetry, metres here
+  assert.equal(r.kills[0].r, "TorsoShot");
+});
+
+// The blue zone, a fall and the red zone all kill with nobody credited. A feed
+// that invented a killer for those would report something that did not happen,
+// so the killer stays null and what did it goes in the same field a weapon
+// would -- which is how the game writes those lines too.
+test("a kill nobody made names what did it and credits no killer", () => {
+  const zoneDeath = [
+    { _T: "LogMatchStart", characters: [
+      { character: { accountId: "account.me", name: "Me", teamId: 1 } },
+      { character: { accountId: "account.foe", name: "Foe", teamId: 2 } },
+    ] },
+    { _T: "LogPlayerPosition", common: { isGame: 1 }, elapsedTime: 10, character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 400000, y: 400000, z: 0 } } },
+    { _T: "LogPlayerKillV2", elapsedTime: 30, killer: null, finisher: null, dBNOMaker: null,
+      finishDamageInfo: { damageCauserName: "BlueZone", damageTypeCategory: "Damage_BlueZone" },
+      victim: { accountId: "account.foe", name: "Foe", teamId: 2, location: { x: 460000, y: 460000, z: 0 } } },
+  ];
+  const r = parseReplayTelemetry(zoneDeath, { matchAttributes, accountId: "account.me" });
+
+  assert.equal(r.kills.length, 1);
+  assert.equal(r.kills[0].killer, null);
+  assert.equal(r.kills[0].killerAccountId, null);
+  assert.equal(r.kills[0].w, "Blue Zone");
+});
+
+// A vehicle is a legitimate killer and reads as one -- the feed says a car did
+// it rather than falling back to the victim's own name or to nothing.
+test("a roadkill names the vehicle", () => {
+  const roadkill = [
+    { _T: "LogMatchStart", characters: [
+      { character: { accountId: "account.me", name: "Me", teamId: 1 } },
+      { character: { accountId: "account.foe", name: "Foe", teamId: 2 } },
+    ] },
+    { _T: "LogPlayerPosition", common: { isGame: 1 }, elapsedTime: 10, character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 400000, y: 400000, z: 0 } } },
+    { _T: "LogPlayerKillV2", elapsedTime: 20,
+      killerDamageInfo: { damageCauserName: "BP_CoupeRB_C", distance: 0 },
+      killer: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 455000, y: 455000, z: 0 } },
+      victim: { accountId: "account.foe", name: "Foe", teamId: 2, location: { x: 456000, y: 456000, z: 0 } } },
+  ];
+  const r = parseReplayTelemetry(roadkill, { matchAttributes, accountId: "account.me" });
+
+  assert.equal(r.kills[0].w, "Coupe RB");
 });
