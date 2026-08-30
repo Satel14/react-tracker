@@ -252,17 +252,18 @@ const PAINT = {
   vehicleEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   bikeFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   bikeEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
-  // Hollow, and 4 rather than the parachute's 3: the cargo ring is the widest
-  // shape here, so its walls can afford to be the thickest without the box
-  // closing up at the 10 px an enemy marker blits at.
+  // Hollow, and the widest wall on the sheet: the cargo ring is the largest
+  // shape here, so it can carry 4 without the box closing up at the 10 CSS px
+  // an enemy marker blits at.
   truckFocal: { key: "focal", fallback: "rgb(255,255,255)", stroke: 4 },
   truckEnemy: { key: "enemy", fallback: "rgb(255,255,255)", stroke: 4 },
   boatFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   boatEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   planeFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   planeEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
-  // Hollow, at the parachute's 3: the four lobes are the read, and a wall any
-  // thicker fills the notches between them back in.
+  // Hollow, at 3: the four lobes are the read, and a wall any thicker fills
+  // the notches between them back in. The parachute's 2 would be too thin
+  // here -- the scene draws the canopy at r = 9 and this at r = 5.
   balloonFocal: { key: "focal", fallback: "rgb(255,255,255)", stroke: 3 },
   balloonEnemy: { key: "enemy", fallback: "rgb(255,255,255)", stroke: 3 },
   dead: { key: "dead", fallback: "rgb(150,150,150)", stroke: 4 },

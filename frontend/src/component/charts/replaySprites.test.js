@@ -614,6 +614,21 @@ test("no two marker shapes cover the same ground", () => {
   expect(tooAlike, "redraw one of each pair, or accept it in ACCEPTED_OVERLAP with why").toEqual([]);
 });
 
+// The measurement above is only worth its numbers if it measures what the
+// atlas paints. A fill closes every subpath implicitly; a stroke paints only
+// the segments that are there, and the parachute's canopy is an open arc whose
+// closing chord would turn it into a solid dome nobody draws.
+test("a stroked glyph is measured without the segments its path does not have", () => {
+  const masks = markerMasks();
+  const canopy = pathPoints(ICON_PATHS.parachuteEnemy)[0];
+
+  expect(canopy.closed).toBe(false);
+  // Grid cell (31, 31) sits at (15.75, 15.75): a quarter of a unit off the
+  // chord from (2 16) to (30 16), and 4.9 units from the nearest shroud. It
+  // can only be inked by a segment that is not in the path.
+  expect(masks.parachuteEnemy[31 * GRID + 31]).toBe(0);
+});
+
 test("keeps no allowance for an overlap that is gone", () => {
   const pairs = new Map(overlapPairs(markerMasks()).map((p) => [p.pair, p.overlap]));
 
@@ -1018,6 +1033,25 @@ test("paints every glyph from the palette it was handed", () => {
     "crate", "crateRed",
   ]) {
     expect(paint[kind].op, kind).toBe("fill");
+  }
+
+  // A wall too thin to see is not a glyph. haloWidth is the wall plus HALO on
+  // each side, so a hairline colour band sits inside a halo six units wider
+  // than itself and the marker blits as a dark blob in nobody's team colour.
+  for (const kind of [
+    "dead", "chevronFocal", "chevronEnemy", "parachuteFocal", "parachuteEnemy",
+    "truckFocal", "truckEnemy", "balloonFocal", "balloonEnemy",
+  ]) {
+    expect(paint[kind].lineWidth, kind).toBeGreaterThanOrEqual(2);
+  }
+
+  // 2 is only enough because the scene draws the canopy at its own, larger
+  // radius: blit maps 32 design units onto 2r, so a 2-unit wall is 1.1 CSS px
+  // at the parachute's r = 9 and 0.6 at a plain marker's r = 5. The truck and
+  // the balloon blit at the plain radius, and hollow only separates them from
+  // the solid markers while their walls can be seen, so they carry a full HALO.
+  for (const kind of ["truckFocal", "truckEnemy", "balloonFocal", "balloonEnemy"]) {
+    expect(paint[kind].lineWidth, kind).toBeGreaterThanOrEqual(HALO);
   }
 });
 
