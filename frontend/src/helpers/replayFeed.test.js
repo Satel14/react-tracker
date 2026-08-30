@@ -47,6 +47,20 @@ describe("buildFeedEvents", () => {
     expect(line.dist).toBe(40);
   });
 
+  it("prefers the record's own name to a roster entry that never learned one", () => {
+    // The backend falls the roster back to `name: info.name || id`, so a player
+    // whose name never appeared in the telemetry is carried under their own
+    // account id. The kill record has the real one, and that is the whole
+    // reason the record wins the tie rather than the roster.
+    const [line] = buildFeedEvents(
+      [kill({ killer: "Real Name", killerAccountId: "account.nameless", killerTeamId: 4 })],
+      [],
+      [...players, { accountId: "account.nameless", name: "account.nameless", teamId: 4, isFocal: false }],
+    );
+
+    expect(line.killer.name).toBe("Real Name");
+  });
+
   it("takes a kill's own names over the roster, since it carries them", () => {
     // A player who left before the match start event was recorded is in the
     // kill record and not in the roster; the line still has to read.
