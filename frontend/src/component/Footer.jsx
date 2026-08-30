@@ -3,39 +3,32 @@ import { BugOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { translate } from "react-switch-lang";
 
-class Footer extends React.Component {
-  render() {
-    const { t } = this.props;
-    return (
-      <div className="footer">
-        <div className="footer-text">
-          {t("footer.text1")}
-        </div>
-        <b>
-          {t("footer.text2")}
-        </b>
-        <div className="copyright">
-          {t("footer.developed")}
-          <a href="mailto:ostaplvov@gmail.com"
-            title="Mail Ostap"
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: "#fff" }}
-          >
-          </a>
-        </div>
-        <div className="footer-menu">
-          <Link to="/bugreport" className="footer-bug-report" aria-label={t("footer.bugReport")}>
-            <BugOutlined />
-            <span>{t("footer.bugReport")}</span>
-          </Link>
-        </div>
-        <div className="copyright">
-          PUBG Tracker is not affiliated with KRAFTON, Inc. PUBG is a registered trademark of KRAFTON, Inc.
-        </div>
+const AUTHOR_EMAIL = "ostaplvov@gmail.com";
+
+const Footer = ({ t }) => (
+  <footer className="footer">
+    <div className="footer__top">
+      <div className="footer__lead">
+        <p className="footer__tagline">{t("footer.tagline")}</p>
+        <p className="footer__summary">{t("footer.summary")}</p>
+        <p className="footer__help">{t("footer.helpLine")}</p>
       </div>
-    );
-  }
-}
+      {/* aria-hidden keeps antd's own aria-label="bug" out of the link name. */}
+      <Link to="/bugreport" className="footer__action">
+        <BugOutlined aria-hidden="true" />
+        <span>{t("footer.bugReport")}</span>
+      </Link>
+    </div>
+    <div className="footer__legal">
+      <p className="footer__credit">
+        <span>{t("footer.developed")}</span>
+        <a className="footer__mail" href={`mailto:${AUTHOR_EMAIL}`}>
+          {t("footer.contact")}
+        </a>
+      </p>
+      <p className="footer__disclaimer">{t("footer.disclaimer")}</p>
+    </div>
+  </footer>
+);
 
 export default translate(Footer);

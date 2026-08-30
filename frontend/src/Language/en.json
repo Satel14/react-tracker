@@ -355,10 +355,13 @@
     }
   },
   "footer": {
-    "text1": "Real-time PUBG stats - K/D, damage, win rate, longest kills, ranked progression and recent matches across every platform.",
-    "text2": "Save favorites, follow friends and streamers, and watch your performance evolve season after season.",
+    "tagline": "Real-time PUBG stats for every platform.",
+    "summary": "K/D, damage, win rate and ranked progression, match by match - save the players you follow and watch a season take shape.",
+    "helpLine": "A wrong stat, a player we cannot find, a page that will not load - send it over and it gets fixed.",
+    "bugReport": "Report a bug",
     "developed": "Built by Satel for the PUBG community",
-    "bugReport": "Report a bug"
+    "contact": "Email the developer",
+    "disclaimer": "PUBG Tracker is not affiliated with KRAFTON, Inc. PUBG is a registered trademark of KRAFTON, Inc."
   },
   "other": {
     "words": {
