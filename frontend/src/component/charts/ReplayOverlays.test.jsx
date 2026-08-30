@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import ReplayOverlays from "./ReplayOverlays";
+import { teamColor, teamColorIndex } from "./replaySprites";
 
 const t = (key, vars) => (vars ? `${key}:${JSON.stringify(vars)}` : key);
 
@@ -161,4 +162,105 @@ test("renders without throwing when phases is empty", () => {
   const { container } = renderOverlays({ phases: [] });
   expect(container.querySelector(".replay-overlay__phase").textContent)
     .toBe('pages.replay.phase:{"phase":0}');
+});
+
+// ---------------------------------------------------------------------------
+// Kill feed
+// ---------------------------------------------------------------------------
+
+const feedEvents = [
+  {
+    id: "knock:7:90:a.foe", t: 90, kind: "knock",
+    killer: { name: "Me", teamId: 1, isFocal: true },
+    victim: { name: "Foe", teamId: 22, isFocal: false },
+    weapon: "M416", dist: 40,
+  },
+  {
+    id: "kill:95:a.foe", t: 95, kind: "kill",
+    killer: { name: "Me", teamId: 1, isFocal: true },
+    victim: { name: "Foe", teamId: 22, isFocal: false },
+    weapon: "AUG", dist: 87,
+  },
+  {
+    id: "kill:96:a.mate", t: 96, kind: "kill",
+    killer: null,
+    victim: { name: "Mate", teamId: 1, isFocal: true },
+    weapon: "Blue Zone", dist: null,
+  },
+];
+
+const lines = (container) => [...container.querySelectorAll(".replay-feed__line")];
+
+test("shows no feed at all when nothing has happened yet", () => {
+  const { container } = renderOverlays({ feed: feedEvents, displayT: 0 });
+  expect(container.querySelector(".replay-feed")).toBeNull();
+});
+
+test("writes a kill line as team, killer, weapon, victim, team", () => {
+  const { container } = renderOverlays({ feed: feedEvents, displayT: 95 });
+  const line = lines(container).find((el) => el.textContent.includes("AUG"));
+
+  // Order matters: this is the line the game writes, read left to right.
+  expect(line.textContent.replace(/\s+/g, " ").trim()).toBe("1 Me AUG Foe 22");
+});
+
+test("marks a knock line and leaves a kill line unmarked", () => {
+  const { container } = renderOverlays({ feed: feedEvents, displayT: 95 });
+  const knockLine = lines(container).find((el) => el.textContent.includes("M416"));
+  const killLine = lines(container).find((el) => el.textContent.includes("AUG"));
+
+  expect(knockLine.querySelector(".replay-feed__knock")).toBeInTheDocument();
+  expect(killLine.querySelector(".replay-feed__knock")).toBeNull();
+});
+
+test("names the knock mark for a reader who cannot see it", () => {
+  const { container } = renderOverlays({ feed: feedEvents, displayT: 90 });
+  const mark = container.querySelector(".replay-feed__knock");
+
+  // The mark is the only thing separating a knock from a kill, so it cannot be
+  // decoration: it carries a label, and the icon itself stays out of the tree
+  // so the label is not read twice.
+  expect(mark.textContent).toContain("pages.replay.knockMark");
+  expect(mark.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+});
+
+test("gives a death nobody caused no killer side", () => {
+  const { container } = renderOverlays({ feed: feedEvents, displayT: 96 });
+  const line = lines(container).find((el) => el.textContent.includes("Blue Zone"));
+
+  expect(line.textContent.replace(/\s+/g, " ").trim()).toBe("Blue Zone Mate 1");
+  expect(line.querySelectorAll(".replay-feed__team")).toHaveLength(1);
+});
+
+test("paints a line in the colour the map paints that team", () => {
+  const { container } = renderOverlays({ feed: feedEvents, displayT: 95, focalTeamId: 1 });
+  const line = lines(container).find((el) => el.textContent.includes("AUG"));
+  const [killer, victim] = [...line.querySelectorAll(".replay-feed__side")];
+
+  // The focal team takes the overlay's own colour rather than a palette one --
+  // index 0 is not a team colour -- so it is marked by class instead.
+  expect(killer.className).toContain("is-focal");
+  expect(killer).not.toHaveAttribute("style");
+  // Exactly the colour the atlas bakes for that team, not merely some colour:
+  // the point of it is that a line and its marker can be matched by eye.
+  // toHaveStyle rather than the raw attribute -- jsdom rewrites hsl() to rgb().
+  expect(victim).toHaveStyle({ color: teamColor(teamColorIndex(22, 1)) });
+});
+
+test("ages a line out without being told the playhead moved backwards", () => {
+  const { container, rerender } = render(
+    <ReplayOverlays rows={rows} phases={phases} t={t} displayT={400} focalTeamId={1} feed={feedEvents} />
+  );
+  expect(lines(container)).toHaveLength(0);
+
+  rerender(
+    <ReplayOverlays rows={rows} phases={phases} t={t} displayT={95} focalTeamId={1} feed={feedEvents} />
+  );
+  expect(lines(container).length).toBeGreaterThan(0);
+});
+
+test("the feed swallows no pointer events either", () => {
+  const { container } = renderOverlays({ feed: feedEvents, displayT: 95 });
+  expect(container.querySelector(".replay-feed").style.pointerEvents).toBe("none");
+  expect(container.querySelectorAll('[style*="pointer-events: auto"]')).toHaveLength(0);
 });

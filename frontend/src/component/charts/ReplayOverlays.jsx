@@ -1,4 +1,7 @@
 import React from "react";
+import { ArrowDownOutlined } from "@ant-design/icons";
+import { feedAt } from "../../helpers/replayFeed";
+import { teamColor, teamColorIndex } from "./replaySprites";
 
 // The stage reads pan/zoom from pointer events on its own wrapper, so any
 // overlay pixel that swallows a pointer silently freezes dragging in that
@@ -37,8 +40,39 @@ export const formatElapsed = (seconds) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
-const ReplayOverlays = ({ rows = [], phases = [], t, displayT = 0, focalTeamId = null }) => {
+// One end of a feed line. The team number sits on the outside of each name --
+// number, killer, weapon, victim, number -- which is the order the game writes
+// and reads outward from the pair in the middle.
+//
+// The colour is the one the map paints that team, so a line and the marker it
+// is about can be matched by eye. The focal team has no palette colour by
+// design (teamColorIndex sends it to index 0, which is not a team colour), so
+// it is marked by class and the overlay's own styling takes it from there.
+const FeedSide = ({ side, focalTeamId, mirrored }) => {
+  const colour = teamColor(teamColorIndex(side.teamId, focalTeamId));
+  const number = side.teamId == null
+    ? null
+    : <span className="replay-feed__team">{side.teamId}</span>;
+  const name = <span className="replay-feed__name">{side.name}</span>;
+
+  return (
+    <span
+      className={`replay-feed__side${side.isFocal ? " is-focal" : ""}`}
+      style={colour ? { color: colour } : undefined}
+    >
+      {mirrored ? name : number}
+      {number && name ? " " : null}
+      {mirrored ? number : name}
+    </span>
+  );
+};
+
+const ReplayOverlays = ({ rows = [], phases = [], t, displayT = 0, focalTeamId = null, feed = [] }) => {
   const list = rows || [];
+  // Windowed here rather than handed down already sliced, for the same reason
+  // phaseAt is called here: it is a function of the playhead, so scrubbing --
+  // in either direction -- needs no notification and no state to reset.
+  const shown = feedAt(feed, displayT);
   const alive = list.filter((row) => row && row.alive);
   const teamsAlive = new Set(alive.map((row) => row.teamId ?? "none")).size;
   const members = focalTeamId == null ? [] : list.filter((row) => row && row.teamId === focalTeamId);
@@ -60,6 +94,28 @@ const ReplayOverlays = ({ rows = [], phases = [], t, displayT = 0, focalTeamId =
           {t("pages.replay.phase", { phase: phaseAt(phases, displayT) })}
         </span>
       </div>
+
+      {shown.length > 0 && (
+        <div className="replay-feed" style={PASSTHROUGH}>
+          {shown.map((line) => (
+            <div key={line.id} className={`replay-feed__line is-${line.kind}`}>
+              {line.killer ? (
+                <FeedSide side={line.killer} focalTeamId={focalTeamId} mirrored={false} />
+              ) : null}
+              {line.killer ? " " : null}
+              {line.weapon ? <span className="replay-feed__weapon">{line.weapon}</span> : null}
+              {line.kind === "knock" ? (
+                <span className="replay-feed__knock">
+                  <ArrowDownOutlined aria-hidden="true" />
+                  <span className="sr-only">{t("pages.replay.knockMark")}</span>
+                </span>
+              ) : null}
+              {line.weapon ? " " : null}
+              <FeedSide side={line.victim} focalTeamId={focalTeamId} mirrored />
+            </div>
+          ))}
+        </div>
+      )}
 
       {members.length > 0 && (
         <div className="replay-overlay__team" style={PASSTHROUGH}>

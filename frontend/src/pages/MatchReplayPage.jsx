@@ -15,6 +15,7 @@ import { useReplayClock } from "../component/charts/useReplayClock";
 import { rosterAt } from "../component/charts/replayEngine";
 import { formatClock as fmt } from "../helpers/formatClock";
 import { decodeReplay } from "../helpers/replayModel";
+import { buildFeedEvents } from "../helpers/replayFeed";
 import ReplayOverlays from "../component/charts/ReplayOverlays";
 import { LAYER_KEYS, readLayerPrefs, writeLayerPrefs } from "../helpers/replayPrefs";
 
@@ -97,6 +98,14 @@ const MatchReplayPage = ({ t }) => {
   const roster = useMemo(
     () => (data ? rosterAt(data.players, data.kills, rosterT) : []),
     [data, rosterT]
+  );
+
+  // Merged and resolved once per match, not per frame: the overlay windows it
+  // against the playhead itself. Keyed on `data` rather than on rosterT for
+  // exactly that reason -- nothing here depends on the clock.
+  const feedEvents = useMemo(
+    () => (data ? buildFeedEvents(data.kills, data.knocks, data.players) : []),
+    [data]
   );
 
   // One keyboard owner for the whole replay, on window. The stage used to hold
@@ -231,6 +240,7 @@ const MatchReplayPage = ({ t }) => {
               t={t}
               displayT={clock.displayT}
               focalTeamId={data.focalTeamId ?? null}
+              feed={feedEvents}
             />
           </ReplayStage>
           <p className="match-replay__hint">{t("pages.replay.hint")}</p>

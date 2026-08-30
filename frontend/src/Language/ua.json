@@ -235,6 +235,7 @@
             "teamsAlive": "Команд: {count}",
             "phase": "Фаза {phase}",
             "stateKnocked": "У нокдауні",
+            "knockMark": "Збито",
             "stateDead": "Мертвий",
             "healthLabel": "Здоров'я {value}%",
             "yourTeam": "Твоя команда",

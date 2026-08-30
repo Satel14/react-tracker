@@ -235,6 +235,7 @@
       "teamsAlive": "Teams: {count}",
       "phase": "Phase {phase}",
       "stateKnocked": "Knocked",
+      "knockMark": "Knocked",
       "stateDead": "Dead",
       "healthLabel": "Health {value}%",
       "yourTeam": "Your Team",
