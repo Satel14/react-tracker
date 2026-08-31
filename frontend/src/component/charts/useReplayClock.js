@@ -1,46 +1,55 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { advanceClock } from "./replayEngine";
+import { createClockCore } from "../../helpers/replayClockCore";
 
 export const useReplayClock = (duration) => {
-  const [t, setT] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(4);
-  const raf = useRef(null);
-  const last = useRef(null);
+  const clockRef = useRef(null);
+  if (clockRef.current === null) clockRef.current = createClockCore({ duration });
 
-  const stop = useCallback(() => {
-    if (raf.current) cancelAnimationFrame(raf.current);
-    raf.current = null;
-    last.current = null;
-  }, []);
+  const [displayT, setDisplayT] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeedState] = useState(4);
 
   useEffect(() => {
-    if (!playing) {
-      stop();
-      return undefined;
-    }
-    const tick = (now) => {
-      if (last.current == null) last.current = now;
-      const dtMs = now - last.current;
-      last.current = now;
-      setT((prev) => {
-        const r = advanceClock(prev, dtMs, speed, duration || 0);
-        if (!r.playing) setPlaying(false);
-        return r.t;
-      });
-      raf.current = requestAnimationFrame(tick);
-    };
-    raf.current = requestAnimationFrame(tick);
-    return stop;
-  }, [playing, speed, duration, stop]);
+    clockRef.current.setDuration(duration);
+    setDisplayT(clockRef.current.t);
+  }, [duration]);
+
+  const publish = useCallback(() => {
+    const core = clockRef.current;
+    setDisplayT(core.t);
+    setPlaying(core.playing);
+  }, []);
+
+  const toggle = useCallback(() => {
+    const core = clockRef.current;
+    core.toggle();
+    setPlaying(core.playing);
+    setDisplayT(core.t);
+  }, []);
 
   const play = useCallback(() => {
-    setT((prev) => (prev >= (duration || 0) ? 0 : prev));
+    const core = clockRef.current;
+    core.play();
     setPlaying(true);
-  }, [duration]);
-  const pause = useCallback(() => setPlaying(false), []);
-  const toggle = useCallback(() => (playing ? pause() : play()), [playing, pause, play]);
-  const seek = useCallback((value) => { setPlaying(false); setT(Math.max(0, Math.min(duration || 0, value))); }, [duration]);
+    setDisplayT(core.t);
+  }, []);
 
-  return { t, playing, play, pause, toggle, seek, speed, setSpeed };
+  const pause = useCallback(() => {
+    clockRef.current.pause();
+    setPlaying(false);
+  }, []);
+
+  const seek = useCallback((v) => {
+    const core = clockRef.current;
+    core.seek(v);
+    setPlaying(false);
+    setDisplayT(core.t);
+  }, []);
+
+  const setSpeed = useCallback((v) => {
+    clockRef.current.setSpeed(v);
+    setSpeedState(v);
+  }, []);
+
+  return { clockRef, displayT, playing, speed, play, pause, toggle, seek, setSpeed, publish };
 };

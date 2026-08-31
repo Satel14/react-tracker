@@ -1,9 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { profilePath } from "../../helpers/profileLink";
 import { formatClock as fmtSurvival } from "../../helpers/formatClock";
 import EmptyState from "../EmptyState";
 
-const isHandle = (name) => typeof name === "string" && name && !/^account\./i.test(name);
 
 const MatchScoreboard = ({ scoreboard, platform, t }) => {
   const teams = scoreboard?.teams || [];
@@ -32,17 +32,20 @@ const MatchScoreboard = ({ scoreboard, platform, t }) => {
               <span>{t("pages.match.colHs")}</span>
               <span>{t("pages.match.colSurvival")}</span>
             </div>
-            {team.players.map((p) => (
+            {team.players.map((p) => {
+              // The name is not enough on its own: most of a PUBG lobby is AI
+              // and a bot's name reads exactly like a person's, so this linked
+              // ninety-two dead profiles in a hundred-entrant match.
+              // profilePath asks the account id instead, and returns null for
+              // anyone who has no profile to open.
+              const to = profilePath(platform, p.name, p.accountId);
+              return (
               <div
                 key={p.accountId || p.name}
                 className={`match-scoreboard__row${p.isFocal ? " is-focal" : ""}`}
               >
                 <span className="match-scoreboard__name">
-                  {isHandle(p.name) ? (
-                    <Link to={`/player/${platform}/${encodeURIComponent(p.name)}`}>{p.name}</Link>
-                  ) : (
-                    p.name
-                  )}
+                  {to ? <Link to={to}>{p.name}</Link> : p.name}
                 </span>
                 <span>{p.kills}</span>
                 <span>{p.damageDealt}</span>
@@ -51,7 +54,8 @@ const MatchScoreboard = ({ scoreboard, platform, t }) => {
                 <span>{p.headshotKills}</span>
                 <span>{fmtSurvival(p.timeSurvived)}</span>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
