@@ -1,6 +1,5 @@
 // One-off generator for frontend/public/map-hi/*.webp.
 // Usage: npm i --no-save sharp && node scripts/build-map-rasters.mjs && npm un sharp
-/* global fetch, Buffer, console, process */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";

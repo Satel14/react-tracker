@@ -176,21 +176,6 @@ const pathPoints = (d) => {
   return subpaths;
 };
 
-// One bounding box per subpath. The union's box is what the inscription rule
-// reads; this is what says WHERE inside that box the ink sits, which is the
-// whole basis on which the rides are told apart at 8 px.
-const subpathBoxes = (d) => pathPoints(d).map((pts) => ({
-  minX: Math.min(...pts.map(([x]) => x)),
-  maxX: Math.max(...pts.map(([x]) => x)),
-  minY: Math.min(...pts.map(([, y]) => y)),
-  maxY: Math.max(...pts.map(([, y]) => y)),
-}));
-
-// Subpaths that span the box top to bottom -- the axles, the handlebars, the
-// wing, the transom. Where these sit along the hull is the coarsest cue a
-// vehicle glyph has, and the only one that survives being 8 px wide.
-const fullHeightBlocks = (d) => subpathBoxes(d).filter((b) => b.maxY - b.minY === BOX_MAX - BOX_MIN);
-
 const pathBBox = (d) => {
   let minX = Infinity;
   let minY = Infinity;
@@ -365,92 +350,45 @@ test("every icon glyph is inscribed in the same centred 28-unit box", () => {
     expect(box.minY, kind).toBeGreaterThanOrEqual(BOX_MIN);
     expect(box.maxX, kind).toBeLessThanOrEqual(BOX_MAX);
     expect(box.maxY, kind).toBeLessThanOrEqual(BOX_MAX);
-    expect(box.width, kind).toBeCloseTo(BOX_MAX - BOX_MIN, 5);
-    expect(box.height, kind).toBeCloseTo(BOX_MAX - BOX_MIN, 5);
+    // Filling the box on ONE axis, not both. The hand-drawn glyphs were built
+    // to fill it on both, but the vehicle and corpse marks are traced from
+    // real art and stretching a car to be as tall as it is wide would be a
+    // distortion, not an inscription. One axis is still enough to fix the
+    // on-screen size, which is what the rule is for.
+    expect(Math.max(box.width, box.height), kind).toBeCloseTo(BOX_MAX - BOX_MIN, 5);
   }
 });
 
-// How much the subpath that reaches the front of the box narrows on its way
-// there: 0 is a flat face, and a subpath's own full depth is a point.
-const noseTaper = (d) => {
-  const subs = pathPoints(d);
-  const boxes = subpathBoxes(d);
-  const i = boxes.findIndex((b) => b.maxX === BOX_MAX);
-  const face = subs[i].filter(([x]) => x === BOX_MAX).map(([, y]) => y);
-  return (boxes[i].maxY - boxes[i].minY) - (Math.max(...face) - Math.min(...face));
-};
-
-const midX = (b) => (b.minX + b.maxX) / 2;
-
-// The four shapes this pass adds have one job the inscription rule cannot
-// check: being tellable apart from each other, and from what already ships, at
-// the 8-16 px they blit at. That is a question about silhouette CLASS, so it is
-// pinned as class -- how many blocks reach the full depth of the box, where
-// along the hull they sit, and whether the nose is a point or a face. Detail
-// finer than that is eaten by the halo and cannot be relied on.
-test("the four new forms are their own silhouettes, and the truck cannot collapse into the car", () => {
-  // Nothing was added by copying a neighbour and forgetting to redraw it.
-  expect(new Set(TEAM_FORMS.map((f) => ICON_PATHS[f])).size).toBe(TEAM_FORMS.length);
-  for (const form of NEW_FORMS) {
-    expect(ICON_PATHS, form).toHaveProperty(form);
-    const box = pathBBox(ICON_PATHS[form]);
-    expect(box.width, form).toBeCloseTo(BOX_MAX - BOX_MIN, 5);
-    expect(box.height, form).toBeCloseTo(BOX_MAX - BOX_MIN, 5);
+// The vehicle and corpse marks are traced from the map markers PUBG's own
+// replay tools draw, not drawn here. What used to be pinned in their place --
+// how many blocks reach the full depth of the box, whether the nose tapers to
+// a point -- was a vocabulary for hand-drawn glyphs and describes nothing
+// about a traced contour. Two things about the tracing are worth holding.
+test("the traced marks keep the holes that make them readable", () => {
+  // These icons are a light body with the detail drawn into it in black:
+  // wheels, a window, eye sockets. Threshold them on alpha and all of that
+  // flattens into one blob -- the first pass did exactly that and produced a
+  // car nobody could name. Masking on luminance leaves the dark linework
+  // outside the mask, and it comes back as holes wound the other way.
+  for (const kind of ["vehicleFocal", "bikeFocal", "dead"]) {
+    const areas = subpathAreas(ICON_PATHS[kind]).filter((a) => Math.abs(a) > 1e-6);
+    expect(areas.length, kind).toBeGreaterThan(1);
+    expect(new Set(areas.map((a) => Math.sign(a))).size, kind).toBe(2);
+    // The holes are the small ones. A body smaller than its own wheels would
+    // mean the winding came out inverted and the glyph renders as a negative.
+    const [body] = [...areas].sort((a, b) => Math.abs(b) - Math.abs(a));
+    const holes = areas.filter((a) => Math.sign(a) !== Math.sign(body));
+    for (const hole of holes) expect(Math.abs(hole)).toBeLessThan(Math.abs(body));
   }
+});
 
-  // The pair most likely to fail, since both are four-wheeled boxes. Three
-  // separate cues, because at 8 px any one of them can be lost.
-  const car = fullHeightBlocks(ICON_PATHS.vehicleFocal);
-  const truck = fullHeightBlocks(ICON_PATHS.truckFocal);
-  // 1. The car has a block at each end; the truck has one, and it is at the back.
-  expect(car).toHaveLength(2);
-  expect(midX(car[0])).toBeLessThan(CELL / 2);
-  expect(midX(car[1])).toBeGreaterThan(CELL / 2);
-  expect(truck).toHaveLength(1);
-  expect(midX(truck[0])).toBeLessThan(CELL / 2);
-  // 2. The car's nose tapers to a wedge; the truck's steps out to a flat face.
-  expect(noseTaper(ICON_PATHS.vehicleFocal)).toBeGreaterThan(0);
-  expect(noseTaper(ICON_PATHS.truckFocal)).toBe(0);
-  // 3. The cab stands proud of the cargo box, and that is what gives a hollow
-  //    rectangle a front. A closed box reads the same turned through 90, 180
-  //    and 270 degrees and the scene turns every moving marker to its bearing,
-  //    so without a subpath reaching past it the truck would be the one vehicle
-  //    on the map with no heading. (The cue that used to sit here -- "the
-  //    truck's body is the deeper of the two" -- described a solid truck, and
-  //    was measured as worth nothing against the car anyway: see the separation
-  //    test below.)
-  // Depth of the deepest subpath that is NOT full height -- a hull rather than
-  // an axle. The truck no longer has one, which is the point of it.
-  const hullDepth = (d) => Math.max(...subpathBoxes(d)
-    .map((b) => b.maxY - b.minY)
-    .filter((h) => h < BOX_MAX - BOX_MIN));
-  const cargo = truck[0];
-  const cab = subpathBoxes(ICON_PATHS.truckFocal).find((b) => b.maxX === BOX_MAX);
-  expect(cargo.maxX).toBeLessThan(BOX_MAX);
-  expect(cab).not.toBe(cargo);
-  expect(cab.minX).toBeGreaterThanOrEqual(cargo.maxX);
-
-  // The bike is the light one: one thin block, at the FRONT, on a hairline hull
-  // less than half the depth of the truck's body.
-  const bike = fullHeightBlocks(ICON_PATHS.bikeFocal);
-  expect(bike).toHaveLength(1);
-  expect(midX(bike[0])).toBeGreaterThan(CELL / 2);
-  expect(bike[0].maxX - bike[0].minX).toBeLessThan(car[0].maxX - car[0].minX);
-  // Measured against the car, not the truck: the truck has no hull left to be
-  // half of, and the car is the ride the bike actually has to stay off.
-  expect(hullDepth(ICON_PATHS.bikeFocal) * 2).toBeLessThan(hullDepth(ICON_PATHS.vehicleFocal));
-
-  // The boat is the one that has to stay off the moving dart, and the transom
-  // is what does it: the boat is at its WIDEST at the very back, where the dart
-  // it would be confused with comes to a single point.
-  const boat = fullHeightBlocks(ICON_PATHS.boatFocal);
-  expect(boat).toHaveLength(1);
-  expect(boat[0].minX).toBe(BOX_MIN);
-  const dartBack = pathPoints(ICON_PATHS.movingFocal)[0].filter(([x]) => x === BOX_MIN);
-  expect(dartBack).toHaveLength(1);
-  // ...and its hull is a wedge, coming to a point at the bow rather than a face.
-  const boatHull = subpathBoxes(ICON_PATHS.boatFocal).find((b) => b.maxX === BOX_MAX);
-  expect(noseTaper(ICON_PATHS.boatFocal)).toBe(boatHull.maxY - boatHull.minY);
+test("one car stands for every car", () => {
+  // A van and a sedan are the same thing to a reader following a fight, and
+  // two silhouettes that mean the same thing cost more to tell apart than
+  // they are worth. Kept as separate KINDS so the payload's vehicle codes and
+  // the team-colour rows need no change; they simply draw the same picture.
+  expect(ICON_PATHS.truckFocal).toBe(ICON_PATHS.vehicleFocal);
+  expect(ICON_PATHS.truckEnemy).toBe(ICON_PATHS.vehicleEnemy);
 });
 
 // ---------------------------------------------------------------------------
@@ -481,9 +419,12 @@ const OVERLAP_CEILING = 0.65;
 // One per shape a player's marker can take. Focal and enemy variants share a
 // path, so only one of each pair is listed; the crates and the landing chevron
 // are not player markers and never stand where one does.
+// One entry per DISTINCT silhouette a marker can take. The truck is absent on
+// purpose: it draws the car, so measuring the pair would only ever report the
+// 1.000 that "one car stands for every car" already pins deliberately.
 const MARKER_SHAPES = [
   "enemy", "movingEnemy", "parachuteEnemy", "knockedEnemy", "dead",
-  "vehicleEnemy", "truckEnemy", "bikeEnemy", "boatEnemy", "planeEnemy", "balloonEnemy",
+  "vehicleEnemy", "bikeEnemy", "boatEnemy", "planeEnemy", "balloonEnemy",
 ];
 
 // Pairs still over the ceiling, each with the figure measured when it was
@@ -494,9 +435,9 @@ const MARKER_SHAPES = [
 // then be tightened, but an entry that stops being needed fails outright.
 const ACCEPTED_OVERLAP = [
   {
-    pair: "enemy/vehicleEnemy",
-    max: 0.7,
-    why: "Both nearly fill the inscription box: a 28-unit disc against a hull with two full-height axles.",
+    pair: "enemy/dead",
+    max: 0.75,
+    why: "A skull at 10 px is a disc with two notches. It is the only kind painted in a colour no live marker can take -- dead is deliberately absent from TEAM_FORM -- so the shape is not the only channel telling it from a player.",
   },
   {
     pair: "enemy/knockedEnemy",
@@ -726,7 +667,12 @@ test("only the knocked ring is wound to punch a hole; every other fill unions", 
     expect(areas.length, kind).toBeGreaterThan(0);
     if (new Set(areas.map((a) => Math.sign(a))).size > 1) holed.push(kind);
   }
-  expect(holed.sort()).toEqual(["knockedEnemy", "knockedFocal"]);
+  // The knocked ring punches its hole to read as a ring; the traced marks
+  // punch theirs because the wheels and eye sockets are holes in the real art.
+  expect(holed.sort()).toEqual([
+    "bikeEnemy", "bikeFocal", "dead", "knockedEnemy", "knockedFocal",
+    "truckEnemy", "truckFocal", "vehicleEnemy", "vehicleFocal",
+  ]);
 
   const ring = subpathAreas(ICON_PATHS.knockedFocal);
   expect(ring).toHaveLength(2);
@@ -1008,22 +954,24 @@ test("paints every glyph from the palette it was handed", () => {
   // Paint op is per glyph, not per naming pattern: the state pairs and both
   // crates are solid marks, while the corpse cross and the landing chevron are
   // stroked ticks with no interior to fill.
-  expect(paint.dead.op).toBe("stroke");
+  // The corpse mark is a filled skull traced from the real marker, where it
+  // used to be a stroked cross drawn here.
+  expect(paint.dead.op).toBe("fill");
   expect(paint.chevronFocal.op).toBe("stroke");
   expect(paint.chevronEnemy.op).toBe("stroke");
   // The canopy joins them: filled, it and its shrouds merge into one solid
   // wedge and it stops reading as a parachute at all.
   expect(paint.parachuteFocal.op).toBe("stroke");
   expect(paint.parachuteEnemy.op).toBe("stroke");
-  // So do the truck and the balloon, and for them it is the whole separation
-  // rather than a drawing preference. Solid, each was covering most of another
-  // marker -- the truck the boat and the car, the balloon the standing player --
-  // because every glyph fills the same 28-unit box and two filled boxes must
-  // overlap. Hollow is the one channel a filled glyph cannot follow them into,
-  // so flipping either back to a fill undoes the fix. The separation test is
+  // So does the balloon, and for it that is the whole separation rather than a
+  // drawing preference. Solid, it covered most of the standing player's disc,
+  // because a hand-drawn glyph fills the same 28-unit box and two filled boxes
+  // must overlap. Hollow is the one channel a filled glyph cannot follow it
+  // into, so flipping it back to a fill undoes the fix. The separation test is
   // what measures the damage; this is what names the cause.
-  expect(paint.truckFocal.op).toBe("stroke");
-  expect(paint.truckEnemy.op).toBe("stroke");
+  //
+  // The truck was hollow for the same reason and is not any more: it stopped
+  // being a shape of its own and became the car.
   expect(paint.balloonFocal.op).toBe("stroke");
   expect(paint.balloonEnemy.op).toBe("stroke");
   for (const kind of [
@@ -1047,10 +995,11 @@ test("paints every glyph from the palette it was handed", () => {
 
   // 2 is only enough because the scene draws the canopy at its own, larger
   // radius: blit maps 32 design units onto 2r, so a 2-unit wall is 1.1 CSS px
-  // at the parachute's r = 9 and 0.6 at a plain marker's r = 5. The truck and
-  // the balloon blit at the plain radius, and hollow only separates them from
-  // the solid markers while their walls can be seen, so they carry a full HALO.
-  for (const kind of ["truckFocal", "truckEnemy", "balloonFocal", "balloonEnemy"]) {
+  // at the parachute's r = 9 and 0.6 at a plain marker's r = 5. The balloon
+  // blits at the plain radius, and hollow only separates it from the solid
+  // markers while its wall can be seen, so it carries a full HALO. The truck
+  // was here too until it stopped being drawn and became the car.
+  for (const kind of ["balloonFocal", "balloonEnemy"]) {
     expect(paint[kind].lineWidth, kind).toBeGreaterThanOrEqual(HALO);
   }
 });

@@ -83,7 +83,14 @@ const MOVING = "M30 16 L8 2 L2 16 L8 30 Z";
 const PARACHUTE = "M2 16 A14 14 0 0 1 30 16"
   + " M2 16 L16 30 M11 16.9 L16 30 M21 16.9 L16 30 M30 16 L16 30";
 
-const DEAD = "M2 2 L30 30 M30 2 L2 30";
+// Traced from the map markers PUBG's own replay tools draw, thresholded on
+// luminance rather than alpha: these are a light body with the detail --
+// wheels, windows, eye sockets -- drawn into it in black, so masking on
+// alpha alone flattens a car into an unrecognisable blob. The dark linework
+// falls outside the mask and comes back as holes with the opposite winding,
+// which a nonzero fill punches out. Inscribed in the same 28-unit box as
+// every hand-drawn glyph here.
+const DEAD = "M11.92 2 L18.92 2 L18.92 3.17 L21.25 3.17 L21.25 4.33 L23.58 4.33 L23.58 5.5 L24.75 5.5 L24.75 6.67 L25.92 6.67 L25.92 9 L27.08 9 L27.08 12.5 L28.25 12.5 L28.25 16 L27.08 16 L27.08 20.67 L25.92 20.67 L25.92 24.17 L22.42 24.17 L22.42 25.33 L21.25 25.33 L21.25 27.67 L20.08 27.67 L20.08 30 L10.75 30 L10.75 27.67 L9.58 27.67 L9.58 25.33 L8.42 25.33 L8.42 24.17 L4.92 24.17 L4.92 19.5 L3.75 19.5 L3.75 9 L4.92 9 L4.92 6.67 L6.08 6.67 L6.08 5.5 L7.25 5.5 L7.25 4.33 L9.58 4.33 L9.58 3.17 L11.92 3.17 Z M11.92 13.67 L10.75 13.67 L10.75 14.83 L8.42 14.83 L8.42 17.17 L7.25 17.17 L7.25 19.5 L8.42 19.5 L8.42 20.67 L11.92 20.67 L11.92 19.5 L13.08 19.5 L13.08 14.83 L11.92 14.83 Z M20.08 13.67 L18.92 13.67 L18.92 14.83 L17.75 14.83 L17.75 19.5 L18.92 19.5 L18.92 20.67 L22.42 20.67 L22.42 19.5 L23.58 19.5 L23.58 17.17 L22.42 17.17 L22.42 14.83 L20.08 14.83 Z M14.25 20.67 L14.25 23 L16.58 23 L16.58 20.67 Z";
 
 // Ring: the outer circle is the disc's, the inner one is wound the other way
 // (sweep 1 against sweep 0) so the nonzero fill punches it out as a hole.
@@ -113,7 +120,7 @@ const KNOCKED = "M16 2 A14 14 0 1 0 16 30 A14 14 0 1 0 16 2 Z M16 8 A8 8 0 1 1 1
 // reach the full width of the box. The hull alone would have to be square to
 // fill the box, and a square hull is not a car; the axles are what let it stay
 // long and thin.
-const CAR = "M2 8 L23 8 L30 13 L30 19 L23 24 L2 24 Z M4 2 L11 2 L11 30 L4 30 Z M21 2 L28 2 L28 30 L21 30 Z";
+const CAR = "M14.13 9.47 L23.47 9.47 L23.47 10.4 L25.33 10.4 L25.33 11.33 L26.27 11.33 L26.27 12.27 L27.2 12.27 L27.2 14.13 L28.13 14.13 L28.13 15.07 L29.07 15.07 L29.07 18.8 L30 18.8 L30 19.73 L29.07 19.73 L29.07 20.67 L26.27 20.67 L26.27 21.6 L25.33 21.6 L25.33 22.53 L24.4 22.53 L24.4 21.6 L22.53 21.6 L22.53 20.67 L12.27 20.67 L12.27 21.6 L9.47 21.6 L9.47 20.67 L8.53 20.67 L8.53 21.6 L7.6 21.6 L7.6 22.53 L5.73 22.53 L5.73 21.6 L4.8 21.6 L4.8 19.73 L3.87 19.73 L3.87 20.67 L2.93 20.67 L2.93 19.73 L2 19.73 L2 18.8 L2.93 18.8 L2.93 15.07 L5.73 15.07 L5.73 14.13 L10.4 14.13 L10.4 12.27 L11.33 12.27 L11.33 11.33 L12.27 11.33 L12.27 10.4 L14.13 10.4 Z M13.2 11.33 L13.2 12.27 L12.27 12.27 L12.27 14.13 L24.4 14.13 L24.4 13.2 L23.47 13.2 L23.47 11.33 L18.8 11.33 L18.8 12.27 L16.93 12.27 L16.93 11.33 Z M5.73 17.87 L4.8 17.87 L4.8 18.8 L5.73 18.8 Z M9.47 18.8 L8.53 18.8 L8.53 19.73 L9.47 19.73 Z";
 
 // Truck: pickups, vans, buses, UAZs, the BRDM. 1813 samples across 8 matches,
 // second only to the car -- which makes car-vs-truck the pair most likely to
@@ -135,13 +142,16 @@ const CAR = "M2 8 L23 8 L30 13 L30 19 L23 24 L2 24 Z M4 2 L11 2 L11 30 L4 30 Z M
 // through 90, 180 and 270 degrees, and the scene turns every moving marker to
 // its bearing, so a bare box would have thrown away the heading every other
 // vehicle here reads out. The bar is what says which end is the front.
-const TRUCK = "M2 2 L22 2 L22 30 L2 30 Z M22 16 L30 16";
+// One car for every car. A van and a sedan are the same thing to a reader
+// following a fight, and two silhouettes that mean the same thing cost
+// more to tell apart than they are worth.
+const TRUCK = CAR;
 
 // Bike: motorcycles and bicycles, 312 samples. The car's trick inverted -- the
 // handlebars are the only thing reaching the box edges, so the 28-unit box is
 // filled while the hull stays a 6-unit hairline. It carries well under half the
 // car's ink and that is the read: the bike is the light one.
-const BIKE = "M2 13 L25 13 L30 15 L30 17 L25 19 L2 19 Z M21 2 L25 2 L25 30 L21 30 Z";
+const BIKE = "M8.53 7.6 L12.27 7.6 L12.27 9.47 L14.13 9.47 L14.13 8.53 L15.07 8.53 L15.07 9.47 L17.87 9.47 L17.87 10.4 L18.8 10.4 L18.8 12.27 L22.53 12.27 L22.53 11.33 L23.47 11.33 L23.47 10.4 L29.07 10.4 L29.07 11.33 L30 11.33 L30 14.13 L28.13 14.13 L28.13 15.07 L25.33 15.07 L25.33 16 L27.2 16 L27.2 16.93 L29.07 16.93 L29.07 18.8 L30 18.8 L30 21.6 L29.07 21.6 L29.07 23.47 L28.13 23.47 L28.13 24.4 L23.47 24.4 L23.47 23.47 L22.53 23.47 L22.53 22.53 L21.6 22.53 L21.6 21.6 L13.2 21.6 L13.2 20.67 L12.27 20.67 L12.27 17.87 L11.33 17.87 L11.33 16.93 L10.4 16.93 L10.4 23.47 L9.47 23.47 L9.47 24.4 L3.87 24.4 L3.87 23.47 L2.93 23.47 L2.93 21.6 L2 21.6 L2 19.73 L2.93 19.73 L2.93 17.87 L3.87 17.87 L3.87 16.93 L4.8 16.93 L4.8 16 L8.53 16 L8.53 16.93 L9.47 16.93 L9.47 15.07 L8.53 15.07 L8.53 14.13 L5.73 14.13 L5.73 10.4 L6.67 10.4 L6.67 8.53 L8.53 8.53 Z M5.73 17.87 L5.73 18.8 L4.8 18.8 L4.8 19.73 L3.87 19.73 L3.87 21.6 L4.8 21.6 L4.8 22.53 L8.53 22.53 L8.53 20.67 L9.47 20.67 L9.47 19.73 L7.6 19.73 L7.6 20.67 L5.73 20.67 L5.73 19.73 L6.67 19.73 L6.67 18.8 L7.6 18.8 L7.6 17.87 Z M24.4 17.87 L24.4 18.8 L25.33 18.8 L25.33 19.73 L26.27 19.73 L26.27 21.6 L23.47 21.6 L23.47 22.53 L27.2 22.53 L27.2 21.6 L28.13 21.6 L28.13 18.8 L27.2 18.8 L27.2 17.87 Z M23.47 16 L22.53 16 L22.53 16.93 L23.47 16.93 Z";
 
 // Boat: 5 samples across 8 matches, and still worth a glyph, because when it
 // happens it is on water where nothing else is. A sharp wedge of a hull with a
@@ -149,11 +159,11 @@ const BIKE = "M2 13 L25 13 L30 15 L30 17 L25 19 L2 19 Z M21 2 L25 2 L25 30 L21 3
 // the dart is at its NARROWEST at the back and the boat at its widest, with the
 // transom standing 6 units proud of the hull on each side -- the same proudness
 // the car's axles have, which is what survives the halo at r = 4.
-const BOAT = "M30 16 L8 24 L8 8 Z M2 2 L10 2 L10 30 L2 30 Z";
+const BOAT = "M16 11 L17 11 L17 14 L19 14 L19 15 L25 15 L25 16 L29 16 L29 19 L30 19 L30 21 L7 21 L7 20 L6 20 L6 19 L5 19 L5 18 L4 18 L4 16 L3 16 L3 15 L2 15 L2 14 L12 14 L12 13 L14 13 L14 12 L16 12 Z";
 
 // Aircraft: fuselage tapering to a nose at +x, one wing bar across it, a
 // shorter tailplane at the back.
-const PLANE = "M30 16 L22 21 L2 20 L2 12 L22 11 Z M11 2 L19 2 L19 30 L11 30 Z M2 8 L7 8 L7 24 L2 24 Z";
+const PLANE = "M15.64 6.67 L16.36 6.67 L16.36 7.38 L17.08 7.38 L17.08 12.41 L17.79 12.41 L17.79 13.13 L19.23 13.13 L19.23 11.69 L19.95 11.69 L19.95 13.13 L22.1 13.13 L22.1 12.41 L23.54 12.41 L23.54 13.13 L29.28 13.13 L29.28 13.85 L30 13.85 L30 15.28 L24.26 15.28 L24.26 16 L17.79 16 L17.79 16.72 L17.08 16.72 L17.08 21.74 L19.95 21.74 L19.95 22.46 L21.38 22.46 L21.38 23.9 L17.79 23.9 L17.79 24.62 L16.36 24.62 L16.36 25.33 L15.64 25.33 L15.64 24.62 L14.21 24.62 L14.21 23.9 L10.62 23.9 L10.62 22.46 L12.05 22.46 L12.05 21.74 L14.21 21.74 L14.21 21.03 L14.92 21.03 L14.92 20.31 L14.21 20.31 L14.21 16 L7.03 16 L7.03 15.28 L2 15.28 L2 13.85 L2.72 13.85 L2.72 13.13 L8.46 13.13 L8.46 11.69 L9.18 11.69 L9.18 13.13 L12.05 13.13 L12.05 11.69 L12.77 11.69 L12.77 13.13 L14.21 13.13 L14.21 8.82 L14.92 8.82 L14.92 7.38 L15.64 7.38 Z";
 
 // Rescue balloon: from directly above, a canopy -- four lobes bulging off a
 // 14-unit square, which reads as a canopy rather than as the plain disc a
@@ -255,8 +265,8 @@ const PAINT = {
   // Hollow, and the widest wall on the sheet: the cargo ring is the largest
   // shape here, so it can carry 4 without the box closing up at the 10 CSS px
   // an enemy marker blits at.
-  truckFocal: { key: "focal", fallback: "rgb(255,255,255)", stroke: 4 },
-  truckEnemy: { key: "enemy", fallback: "rgb(255,255,255)", stroke: 4 },
+  truckFocal: { key: "focal", fallback: "rgb(255,255,255)" },
+  truckEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   boatFocal: { key: "focal", fallback: "rgb(255,255,255)" },
   boatEnemy: { key: "enemy", fallback: "rgb(255,255,255)" },
   planeFocal: { key: "focal", fallback: "rgb(255,255,255)" },
@@ -266,7 +276,7 @@ const PAINT = {
   // here -- the scene draws the canopy at r = 9 and this at r = 5.
   balloonFocal: { key: "focal", fallback: "rgb(255,255,255)", stroke: 3 },
   balloonEnemy: { key: "enemy", fallback: "rgb(255,255,255)", stroke: 3 },
-  dead: { key: "dead", fallback: "rgb(150,150,150)", stroke: 4 },
+  dead: { key: "dead", fallback: "rgb(150,150,150)" },
   crate: { key: "crate", fallback: "rgb(255,196,74)" },
   crateRed: { key: "danger", fallback: "rgb(220,80,80)" },
   chevronFocal: { key: "focal", fallback: "rgb(120,180,255)", stroke: 4 },
