@@ -1,4 +1,4 @@
-const { telemetryWeaponCategory, canonicalWeaponKey, WEAPON_IMAGE_ALIAS } = require("../weaponMeta");
+const { telemetryWeaponCategory, canonicalWeaponKey } = require("../weaponMeta");
 
 // The closed set of silhouettes the kill feed can draw. Exported so a test can
 // hold this side and the frontend's drawing table to the same vocabulary: a
@@ -142,7 +142,11 @@ function weaponIconKey(rawName) {
   if (typeof rawName !== "string" || !rawName) return null;
   const key = canonicalWeaponKey(rawName);
   if (!key) return null;
-  return WEAPON_ICON_FILES[WEAPON_IMAGE_ALIAS[key] || key] || null;
+  // No alias step: the table was generated from every key weaponMeta
+  // labels, so the aliased keys (UMP9, Win94, Crossbow_1, TacticalRifle)
+  // carry their own rows and resolve to the same file already. Mutating
+  // the alias lookup away changed nothing, which is how it was found.
+  return WEAPON_ICON_FILES[key] || null;
 }
 
 module.exports = { weaponIcon, weaponIconKey, ICON_KINDS, WEAPON_ICON_FILES };
