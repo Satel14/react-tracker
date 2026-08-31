@@ -38,8 +38,13 @@ const Player = () => {
               <Radio.Button value="kakao">Kakao</Radio.Button>
             </Radio.Group>
 
+            {/* Same search semantics as the homepage box -- see the note there. */}
             <Input.Search
               size="large"
+              type="search"
+              name="q"
+              autoComplete="off"
+              aria-label="Enter name, id or url"
               placeholder="Enter name, id or url"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

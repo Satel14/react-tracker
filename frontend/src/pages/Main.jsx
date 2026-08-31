@@ -177,8 +177,18 @@ const Main = ({ t }) => {
                   );
                 })}
               </div>
+              {/* Search semantics, not decoration. Google flagged this site for
+                  "phishing during user login" -- there is no login here, and the
+                  likely trigger was someone typing a Steam password into a box
+                  that mentions a Steam URL. A field that declares itself a
+                  search and refuses autofill is not one a password heuristic
+                  reads as a credential prompt. */}
               <Input
                 size="large"
+                type="search"
+                name="q"
+                autoComplete="off"
+                aria-label={placeholder}
                 placeholder={placeholder}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
