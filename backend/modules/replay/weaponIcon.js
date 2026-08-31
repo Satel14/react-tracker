@@ -32,7 +32,7 @@ const VEHICLE = /^BP_/i;
 const PROJECTILE = /^Proj/i;
 
 function weaponIcon(rawName) {
-  if (typeof rawName !== "string" || !rawName) return null;
+  if (typeof rawName !== "string" || !rawName || /^none$/i.test(rawName.trim())) return null;
 
   const category = telemetryWeaponCategory(rawName);
 
@@ -138,8 +138,12 @@ const WEAPON_ICON_FILES = Object.freeze({
 // the M9 are gone from PUBG and its CDN carries no picture of them. A null
 // here is not an error: weaponIcon's class silhouette is the fallback, and
 // saying "an assault rifle" is honest where drawing some other rifle is not.
+// The zone under either of its names, so both reach the one file.
+const ZONE = /^(BlueZone|TslGameMode)/i;
+
 function weaponIconKey(rawName) {
-  if (typeof rawName !== "string" || !rawName) return null;
+  if (typeof rawName !== "string" || !rawName || /^none$/i.test(rawName.trim())) return null;
+  if (ZONE.test(rawName)) return WEAPON_ICON_FILES.BlueZone;
   const key = canonicalWeaponKey(rawName);
   if (!key) return null;
   // No alias step: the table was generated from every key weaponMeta

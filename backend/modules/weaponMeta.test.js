@@ -28,7 +28,11 @@ test("telemetryWeaponName bridges Weap*_C telemetry names to labels", () => {
 
 test("telemetryWeaponName prettifies non-weapon causers", () => {
   assert.equal(telemetryWeaponName("Buff_DamageBluezone_C"), "Damage Bluezone");
+  // An absent name and the engine's word for an absent name are different
+  // answers: a caller that never had a causer still gets "Unknown", where
+  // "None" arrives instead of a real one and must read as nothing.
   assert.equal(telemetryWeaponName(null), "Unknown");
+  assert.equal(telemetryWeaponName("None"), null);
 });
 
 test("telemetryWeaponCategory resolves category via the bridge", () => {

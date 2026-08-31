@@ -210,6 +210,11 @@ function prettifyCauser(name) {
 const CAUSER_LABELS = [
   [/^RedZone/i, "Red Zone"],
   [/^BlueZone/i, "Blue Zone"],
+  // The zone's OTHER name: the game mode object itself. All 355 appearances of
+  // it in a 25,565-event sample carry damageTypeCategory Damage_BlueZone,
+  // kills included, so this is what it means rather than a guess. Left raw it
+  // reached the kill feed as "Tsl Game Mode Base Battle Royale BP".
+  [/^TslGameMode/i, "Blue Zone"],
   [/^UltAIPawn/i, "Falling"],
   [/^Player(Male|Female)/i, "Fists"],
   [/^ProjMolotov/i, "Molotov"],
@@ -221,13 +226,33 @@ function causerLabel(name) {
   return null;
 }
 
+// UE4 serialises an unset name as the literal string "None", which is truthy
+// and so beat every real block in the kill chain that took the first non-empty
+// causer it found.
+const EMPTY_CAUSER = /^none$/i;
+// Longest a real name runs after prettifying. Every weapon and vehicle in a
+// real match lands on three words or fewer -- "Coupe RB", "Motorbike 04", "Uaz
+// C 01", "Frag Grenade" -- and every game-system object on four or more. The
+// point is that this catches the NEXT unknown asset without waiting for
+// somebody to report reading it in the feed.
+const MAX_NAME_WORDS = 3;
+
 function telemetryWeaponName(name) {
+  // An absent name and the engine's word for an absent name are different
+  // answers on purpose: callers that never had a causer have always been given
+  // "Unknown", while "None" arrives INSTEAD of a real causer and must read as
+  // nothing so the feed leaves the weapon out altogether.
   if (!name) return "Unknown";
+  if (typeof name === "string" && EMPTY_CAUSER.test(name.trim())) return null;
   const plain = causerLabel(name);
   if (plain) return plain;
   const key = canonicalWeaponKey(name);
   if (key && WEAPON_LABELS[key]) return WEAPON_LABELS[key];
-  return prettifyCauser(name);
+  const pretty = prettifyCauser(name);
+  // Not a name, an asset path with the underscores taken out. Better to say
+  // nothing than to print it.
+  if (pretty.split(" ").length > MAX_NAME_WORDS) return null;
+  return pretty;
 }
 
 function telemetryWeaponCategory(name) {

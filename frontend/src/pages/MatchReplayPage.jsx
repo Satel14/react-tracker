@@ -20,7 +20,7 @@ import ReplayOverlays from "../component/charts/ReplayOverlays";
 import { LAYER_KEYS, readLayerPrefs, writeLayerPrefs } from "../helpers/replayPrefs";
 
 const SPEEDS = [1, 2, 4, 8, 16];
-// Eleven things can be on the canvas at once and none of them is
+// A dozen things can be on the canvas at once and none of them is
 // self-explanatory. The swatch classes are styled to match what the canvas
 // paints, so the legend is the one place a viewer can learn the encoding.
 const LEGEND = [
@@ -28,7 +28,10 @@ const LEGEND = [
   { key: "legendEnemy", cls: "is-enemy" },
   { key: "legendKnocked", cls: "is-knocked" },
   { key: "legendDead", cls: "is-dead" },
+  { key: "legendVehicle", cls: "is-vehicle" },
+  { key: "legendParachute", cls: "is-parachute" },
   { key: "legendShot", cls: "is-shot" },
+  { key: "legendDamage", cls: "is-damage" },
   { key: "legendKill", cls: "is-kill" },
   { key: "legendCrate", cls: "is-crate" },
   { key: "legendFlight", cls: "is-flight" },

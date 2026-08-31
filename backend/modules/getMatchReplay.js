@@ -139,9 +139,14 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       // because on a bleed-out the finish names the pawn that stopped
       // ticking while the knock names the grenade -- and the grenade is
       // what the game writes on that line.
+      // "None" is the engine's word for an unset name. It is a non-empty
+      // string, so it counted as a named cause and beat the block that named
+      // the gun that actually did it.
+      const named = (d) => d && d.damageCauserName && !/^none$/i.test(d.damageCauserName);
       const infos = [ev.killerDamageInfo, ev.dBNODamageInfo, ev.finishDamageInfo];
-      const dmg = infos.find((d) => d && d.damageCauserName) || {};
-      const causer = dmg.damageCauserName || ev.damageCauserName || null;
+      const dmg = infos.find(named) || {};
+      const own = named(ev) ? ev.damageCauserName : null;
+      const causer = dmg.damageCauserName || own;
       const range = Number(dmg.distance);
       kills.push({
         t,

@@ -403,3 +403,46 @@ test("stops shipping a per-shot damage column now that damage has its own layer"
   const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
   assert.equal(r.shots.dmg, undefined);
 });
+
+// Raw asset names must not reach a reader. Found in the feed: a blue-zone
+// death that read "Tsl Game Mode Base Battle Royale BP".
+test("names the blue zone the same whichever of its two names the game used", () => {
+  const { telemetryWeaponName } = require("./weaponMeta");
+  assert.equal(telemetryWeaponName("TslGameModeBase_BattleRoyaleBP_C"), "Blue Zone");
+  assert.equal(telemetryWeaponName("BlueZone"), "Blue Zone");
+});
+
+test("refuses to invent a name out of an asset it does not recognise", () => {
+  // The catch-all that stops the next one of these reaching the feed rather
+  // than waiting for someone to report it. Every real weapon and vehicle
+  // prettifies to three words or fewer -- "Coupe RB", "Motorbike 04", "Uaz C
+  // 01", "Frag Grenade" -- and every game-system object to four or more.
+  const { telemetryWeaponName } = require("./weaponMeta");
+  assert.equal(telemetryWeaponName("SomeFuture_Internal_Object_Name_Thing_C"), null);
+  assert.equal(telemetryWeaponName("None"), null);
+  // Not at the cost of the things that do read: guns and vehicles survive.
+  assert.equal(telemetryWeaponName("WeapAK47_C"), "AKM");
+  assert.equal(telemetryWeaponName("BP_CoupeRB_C"), "Coupe RB");
+  assert.equal(telemetryWeaponName("Uaz_C_01_C"), "Uaz C 01");
+});
+
+test("a kill whose only named cause is the engine's empty name credits none", () => {
+  const noName = [
+    { _T: "LogMatchStart", characters: [
+      { character: { accountId: "account.me", name: "Me", teamId: 1 } },
+      { character: { accountId: "account.foe", name: "Foe", teamId: 2 } },
+    ] },
+    { _T: "LogPlayerPosition", common: { isGame: 1 }, elapsedTime: 10, character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 400000, y: 400000, z: 0 } } },
+    { _T: "LogPlayerKillV2", elapsedTime: 20,
+      killerDamageInfo: { damageCauserName: "None" },
+      dBNODamageInfo: { damageCauserName: "WeapAUG_C", distance: 5000 },
+      killer: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 450000, y: 450000, z: 0 } },
+      victim: { accountId: "account.foe", name: "Foe", teamId: 2, location: { x: 460000, y: 460000, z: 0 } } },
+  ];
+  const r = parseReplayTelemetry(noName, { matchAttributes, accountId: "account.me" });
+  // "None" is truthy, so picking the first block with a non-empty string put it
+  // ahead of the block that names the gun that actually did it.
+  assert.equal(r.kills[0].w, "AUG");
+  assert.equal(r.kills[0].wk, "aug_a3");
+  assert.equal(r.kills[0].dist, 50);
+});

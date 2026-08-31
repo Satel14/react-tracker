@@ -156,3 +156,21 @@ test("gives the blue zone the mark the game draws for it", () => {
   // Still no class silhouette: nothing shot them.
   assert.equal(weaponIcon("BlueZone"), null);
 });
+
+test("knows the blue zone under the second name the game gives it", () => {
+  // In a real match the zone appears as BOTH "BlueZone" and the game mode
+  // object itself. All 355 appearances of the second name in a 25,565-event
+  // sample carry damageTypeCategory Damage_BlueZone, kills included -- so this
+  // is what it means, not a guess at what it might mean.
+  assert.equal(weaponIconKey("TslGameModeBase_BattleRoyaleBP_C"), "bluezone");
+  assert.equal(weaponIconKey("TslGameModeBase_Something_C"), "bluezone");
+  assert.equal(weaponIcon("TslGameModeBase_BattleRoyaleBP_C"), null);
+});
+
+test("treats the string the engine writes for an empty name as no causer", () => {
+  // UE4 serialises an unset name as the literal "None", which is truthy and
+  // therefore beat every real block in the kill chain that picked the first
+  // non-empty one.
+  assert.equal(weaponIconKey("None"), null);
+  assert.equal(weaponIcon("None"), null);
+});
