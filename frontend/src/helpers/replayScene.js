@@ -1,7 +1,7 @@
 import { worldToScreen, scaleOf } from "./replayCamera";
 import { STATE } from "./replayTracks";
 import { healthArc, planeAt } from "./replayLayers";
-import { vehicleGlyph, teamColorIndex } from "../component/charts/replaySprites";
+import { vehicleGlyph, teamColorIndex, isFlatGlyph } from "../component/charts/replaySprites";
 
 export const SCREEN = {
   dotRadius: 5,
@@ -19,6 +19,13 @@ export const SCREEN = {
   // 1..16 and is viewport-independent, which is why the threshold is on it
   // rather than on the pixel scale.
   labelAllZoom: 4,
+  // Traced vehicle art is inscribed by its long side, so a car fills the
+  // marker box across and under half of it down -- ten pixels by 4.7 at the
+  // plain radius, which is a smudge rather than a car. A multiplier rather
+  // than a radius of its own, so a focal or selected vehicle stays above a
+  // plain one; the canopy takes a flat value and loses that hierarchy, which
+  // matters less for something on screen for ten seconds.
+  flatGlyphScale: 1.5,
   flashLifetimeMs: 1200,
   // P2 layers. Every one of these is CSS pixels and must never be multiplied
   // by the camera scale -- only zone radii, the map blit and the flight line's
@@ -473,7 +480,10 @@ export const drawScene = (ctx, frame) => {
     const falling = state === STATE.ALIVE && tracks.outFalling && tracks.outFalling[i] === 1;
     // The canopy is drawn larger than the player it replaces: four shrouds need
     // room to read as four rather than as one blob. See SCREEN.parachuteRadius.
-    const r = falling ? SCREEN.parachuteRadius : radiusFor(meta, selected);
+    const kind = glyphFor(state, flags, meta.isFocal, moving, falling);
+    const r = falling
+      ? SCREEN.parachuteRadius
+      : radiusFor(meta, selected) * (isFlatGlyph(kind) ? SCREEN.flatGlyphScale : 1);
     const fill = state === STATE.DEAD ? colors.dead : meta.isFocal ? colors.focal : colors.enemy;
 
     // A vehicle glyph has a nose, so it is aimed even at rest: the cell points
@@ -489,7 +499,7 @@ export const drawScene = (ctx, frame) => {
     if (atlas && atlas.blit) {
       const angle = aimed && tracks.outAngle ? tracks.outAngle[i] : undefined;
       atlas.blit(
-        ctx, glyphFor(state, flags, meta.isFocal, moving, falling),
+        ctx, kind,
         Math.round(p.x), Math.round(p.y), r, angle,
         // Colour is the team; form is the state. The focal team resolves to 0,
         // which is its own colour rather than one drawn from the palette.

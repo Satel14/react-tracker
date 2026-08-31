@@ -1175,3 +1175,60 @@ test("unlocks the extra names two double-clicks in, and no sooner", () => {
   // the fight before it will tell you who you are looking at.
   expect(SCREEN.labelAllZoom).toBe(4);
 });
+
+// A traced vehicle is inscribed by its LONG side, so a car 28 units wide and
+// 13 tall fills the marker box across and less than half of it down. At the
+// plain radius that is ten pixels by under five -- a smudge, not a car. The
+// canopy already has this exemption for the same kind of reason; see
+// SCREEN.parachuteRadius.
+describe("a flat glyph gets a bigger box so it reads at the same weight", () => {
+  const blitFor = (flags, isFocal, over = {}) => {
+    const out = [];
+    const atlas = { blit: (_c, kind, _x, _y, r) => out.push({ kind, r }) };
+    const one = [{
+      name: "P", accountId: "a.p", teamId: 1, isFocal, dropTime: null, deathTime: null,
+      positions: [{ t: 0, x: 4000, y: 4000, h: 100, f: flags }, { t: 10, x: 4000, y: 4000, h: 100, f: flags }],
+    }];
+    drawScene(recordingCtx(), {
+      ...frameAt(1), atlas, tracks: sampleTracks(buildTracks(one), 5), ...over,
+    });
+    return out[0];
+  };
+
+  it("draws a player in a vehicle larger than the same player on foot", () => {
+    const onFoot = blitFor(0, false);
+    const driving = blitFor(1, false);
+    expect(driving.kind).toBe("vehicleEnemy");
+    expect(driving.r).toBeCloseTo(onFoot.r * SCREEN.flatGlyphScale, 6);
+    expect(driving.r).toBeGreaterThan(onFoot.r);
+  });
+
+  it("keeps the focal and selected sizes above the plain one inside a vehicle", () => {
+    // A multiplier rather than a radius of its own: the canopy takes a flat
+    // value and loses the friend/foe/selected hierarchy with it, and a car is
+    // on the map far longer than a canopy is.
+    const enemy = blitFor(1, false).r;
+    const focal = blitFor(1, true).r;
+    const chosen = blitFor(1, true, { focusedAccountId: "a.p" }).r;
+    expect(focal).toBeGreaterThan(enemy);
+    expect(chosen).toBeGreaterThan(focal);
+  });
+
+  it("leaves a glyph that fills its box on both axes alone", () => {
+    // On foot is a disc and the balloon is a circle: both already use the
+    // whole box, and scaling them would just make two markers bigger than
+    // every other one on the map.
+    expect(blitFor(0, false).r).toBe(SCREEN.dotRadius);
+    expect(blitFor(0, true).r).toBe(SCREEN.focalRadius);
+    const balloon = blitFor(1 | (2 << 2), false);
+    expect(balloon.kind).toBe("balloonEnemy");
+    expect(balloon.r).toBe(SCREEN.dotRadius);
+  });
+
+  it("is a nudge, not a redesign", () => {
+    // Pinned because the number is the judgment. At 1.5 an enemy car is 15px
+    // across and 7 down, against 10 by 4.7 before -- readable without
+    // outweighing the players it is carrying.
+    expect(SCREEN.flatGlyphScale).toBe(1.5);
+  });
+});

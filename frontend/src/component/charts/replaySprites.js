@@ -477,6 +477,15 @@ const SIDE_VIEW = new Set([
   "boatFocal", "boatEnemy",
 ]);
 
+// Traced art is inscribed by its LONG side, so a shape wider than it is tall
+// fills the marker box across and only part of it down: a car is 28 units by
+// 13, which at the plain radius is ten pixels by under five. These are the
+// kinds that need a bigger box to carry the same weight as a disc. The balloon
+// is absent because it fills both axes already, and so is every player glyph.
+export const FLAT_GLYPHS = new Set([...SIDE_VIEW, "planeFocal", "planeEnemy"]);
+
+export const isFlatGlyph = (kind) => FLAT_GLYPHS.has(kind);
+
 // The halo has to sit outside whatever the colour pass puts down, so a stroked
 // glyph needs its own width plus HALO on each side; a filled one needs HALO on
 // each side of the path and lets the fill cover the inner half.
