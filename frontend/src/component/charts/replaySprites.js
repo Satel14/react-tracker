@@ -458,12 +458,18 @@ const TEAM_FORM = {
 
 const TEAM_FORM_KINDS = [...new Set(Object.values(TEAM_FORM))];
 
-// Glyphs traced from side-view art: they have a roof and wheels, so there is a
-// way up. Rotating one to a westward bearing stands it on its head, which a
-// hand-drawn hull with an axle at each end never did because it was symmetric.
-// Not the plane -- that is a plan view, with a nose and a tail rather than a
-// roof -- and not the darts, which are symmetric about the axis they point
-// along.
+// Glyphs traced from side-view art. These are never turned to their bearing: a
+// car icon reads as a car only while it is level, and turning one puts it on
+// its head going west and on its nose going north. The hand-drawn hull they
+// replaced got away with it by being symmetric top to bottom.
+//
+// The art faces WEST as traced -- car, bike and boat all have their nose on
+// the left -- so an eastward heading is the one that mirrors.
+//
+// Not the plane: that is a plan view with a nose and a tail rather than a
+// roof, and one flying north that refused to turn would be reporting a
+// heading it does not have. Not the darts either, which are symmetric about
+// the axis they point along.
 const SIDE_VIEW = new Set([
   "vehicleFocal", "vehicleEnemy",
   "truckFocal", "truckEnemy",
@@ -586,19 +592,34 @@ export const buildAtlas = ({ dpr = 1, colors = {} } = {}) => {
       // the glyph itself exactly 2r across. The halo is what hangs outside.
       const d = (2 * r * CELL_BOX) / CELL;
       const half = d / 2;
-      if (!angle) {
+      const plain = () => {
         target.drawImage(canvas, cell.sx, cell.sy, cell.sw, cell.sh, x - half, y - half, d, d);
+      };
+
+      if (SIDE_VIEW.has(known)) {
+        // Level, always. The bearing decides which way it faces and nothing
+        // else. A finite angle is a heading -- 0 is due east and mirrors --
+        // where an absent one is a marker with no heading to face, such as a
+        // parked car, and is drawn as the art was traced.
+        //
+        // Due north and due south sit exactly on the boundary and land on the
+        // eastward side. A bearing hovering there could flicker, but a
+        // vehicle's track direction is smooth enough over the replay's sample
+        // spacing that it has not, and a dead band would need state that this
+        // function deliberately does not have.
+        if (!Number.isFinite(angle) || Math.cos(angle) < 0) { plain(); return; }
+        target.save();
+        target.translate(x, y);
+        target.scale(-1, 1);
+        target.drawImage(canvas, cell.sx, cell.sy, cell.sw, cell.sh, -half, -half, d, d);
+        target.restore();
         return;
       }
+
+      if (!angle) { plain(); return; }
       target.save();
       target.translate(x, y);
       target.rotate(angle);
-      // Turned to the bearing, then mirrored about its own long axis when that
-      // bearing points into the left half-plane. cos(angle) < 0 is exactly the
-      // set of headings that would put the roof below the wheels. The mirror
-      // is on the local y axis, so the nose still points where the player is
-      // going -- only the up/down of the art is flipped back.
-      if (SIDE_VIEW.has(known) && Math.cos(angle) < 0) target.scale(1, -1);
       target.drawImage(canvas, cell.sx, cell.sy, cell.sw, cell.sh, -half, -half, d, d);
       target.restore();
     },

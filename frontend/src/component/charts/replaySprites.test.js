@@ -1441,57 +1441,64 @@ test("the focal colour never comes out of the team palette", () => {
   expect(focalCell.sx).toBe(blitRect(atlas, "movingFocal").sx);
 });
 
-// A hand-drawn hull with an axle at each end was symmetric top to bottom, so
-// rotating it to any bearing looked the same. The traced marks are side views
-// with a roof and wheels, and rotating one to a westward heading stands the
-// car on its head. The fix is the one every map uses: turn the glyph to the
-// bearing, then mirror it about its own long axis when that heading would
-// invert it. The nose still points where the player is going and the wheels
-// stay on the ground.
-describe("a side view keeps its roof up", () => {
+// A car icon reads as a car only while it is level. Turning one to its bearing
+// puts it on its head going west and stands it on its nose going north, and a
+// hand-drawn hull got away with it only because it was symmetric top to
+// bottom. So a side view is never turned: it stays horizontal and the bearing
+// decides which way it faces, which is the whole of what a reader needs.
+//
+// The art faces WEST as traced -- car, bike and boat all have their nose on
+// the left -- so an eastward heading is the one that mirrors.
+describe("a side view stays level and only turns to face", () => {
   const atlas = () => { installAtlasEnv(); return buildAtlas({ dpr: 1, colors: COLORS }); };
   const opsFor = (kind, angle) => {
     const target = fakeTarget();
     atlas().blit(target, kind, 100, 200, 5, angle);
-    return target.ops.map((o) => o.op);
+    return target.ops;
   };
-  const flipped = (kind, angle) => {
-    const target = fakeTarget();
-    atlas().blit(target, kind, 100, 200, 5, angle);
-    return target.ops.some((o) => o.op === "scale" && o.x === 1 && o.y === -1);
-  };
+  const names = (kind, angle) => opsFor(kind, angle).map((o) => o.op);
+  const mirrored = (kind, angle) =>
+    opsFor(kind, angle).some((o) => o.op === "scale" && o.x === -1 && o.y === 1);
 
-  it("mirrors a vehicle heading west and leaves one heading east alone", () => {
-    for (const kind of ["vehicleFocal", "vehicleEnemy", "truckFocal", "bikeFocal", "boatFocal"]) {
-      expect(flipped(kind, Math.PI), `${kind} west`).toBe(true);
-      expect(flipped(kind, 0), `${kind} east`).toBe(false);
-      // Due north and due south are the tipping point either way; what matters
-      // is that neither crosses into upside down.
-      expect(flipped(kind, -Math.PI * 0.75), `${kind} north-west`).toBe(true);
-      expect(flipped(kind, -Math.PI * 0.25), `${kind} north-east`).toBe(false);
+  const SIDES = ["vehicleFocal", "vehicleEnemy", "truckFocal", "bikeFocal", "boatFocal"];
+
+  it("never rotates, whatever the bearing", () => {
+    for (const kind of SIDES) {
+      for (const angle of [0, Math.PI, Math.PI / 2, -Math.PI / 2, -Math.PI * 0.75, 2.1]) {
+        expect(names(kind, angle), `${kind} @ ${angle}`).not.toContain("rotate");
+      }
     }
   });
 
-  it("leaves a glyph seen from above alone, whichever way it is pointing", () => {
-    // The plane is a plan view: it has a nose and a tail, not a roof, and
-    // mirroring it would be meaningless at best.
-    for (const angle of [0, Math.PI, -Math.PI * 0.75, Math.PI / 2]) {
-      expect(flipped("planeFocal", angle), `plane ${angle}`).toBe(false);
-      expect(flipped("movingFocal", angle), `dart ${angle}`).toBe(false);
+  it("faces west as traced and mirrors to face east", () => {
+    for (const kind of SIDES) {
+      expect(mirrored(kind, Math.PI), `${kind} west`).toBe(false);
+      expect(mirrored(kind, -Math.PI * 0.75), `${kind} north-west`).toBe(false);
+      expect(mirrored(kind, 0), `${kind} east`).toBe(true);
+      expect(mirrored(kind, -Math.PI * 0.25), `${kind} north-east`).toBe(true);
     }
   });
 
-  it("still leaves the target's transform as it found it", () => {
-    expect(opsFor("vehicleFocal", Math.PI))
-      .toEqual(["save", "translate", "rotate", "scale", "drawImage", "restore"]);
-    // A quarter turn east, not 0: an angle of 0 takes the no-rotation fast
-    // path, which is a different claim and already has its own test.
-    expect(opsFor("vehicleFocal", Math.PI * 0.25))
+  it("draws it as traced when there is no bearing at all", () => {
+    // A parked car has no heading to face. Undefined is not the same as due
+    // east, which is what an angle of 0 means, and only one of them mirrors.
+    expect(names("vehicleFocal", undefined)).toEqual(["drawImage"]);
+    expect(mirrored("vehicleFocal", undefined)).toBe(false);
+    expect(mirrored("vehicleFocal", 0)).toBe(true);
+  });
+
+  it("leaves the target's transform as it found it when it does mirror", () => {
+    expect(names("vehicleFocal", 0)).toEqual(["save", "translate", "scale", "drawImage", "restore"]);
+    expect(names("vehicleFocal", Math.PI)).toEqual(["drawImage"]);
+  });
+
+  it("still turns a glyph seen from above to its bearing", () => {
+    // The plane is a plan view with a nose and a tail rather than a roof, and
+    // a plane flying north that refused to turn would be reporting a heading
+    // it does not have.
+    expect(names("planeFocal", Math.PI))
       .toEqual(["save", "translate", "rotate", "drawImage", "restore"]);
-  });
-
-  it("does not mirror a glyph blitted with no bearing at all", () => {
-    expect(flipped("vehicleFocal", undefined)).toBe(false);
-    expect(opsFor("vehicleFocal", undefined)).toEqual(["drawImage"]);
+    expect(mirrored("planeFocal", Math.PI)).toBe(false);
+    expect(mirrored("movingFocal", Math.PI)).toBe(false);
   });
 });
