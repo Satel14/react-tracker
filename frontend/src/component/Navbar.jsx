@@ -5,6 +5,7 @@ import { translate } from "react-switch-lang";
 import {
   HomeOutlined,
   TrophyOutlined,
+  CrownOutlined,
   HeartOutlined,
   QuestionCircleOutlined,
   MenuOutlined,
@@ -26,6 +27,7 @@ const navItems = [
 
 const rightNavItems = [
   { key: "leaderboards", path: "/leaderboards", icon: <TrophyOutlined /> },
+  { key: "ranks", path: "/ranks", icon: <CrownOutlined /> },
 ];
 
 const allNavItems = [...navItems, ...rightNavItems];

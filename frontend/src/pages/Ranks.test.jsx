@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { setTranslations, setDefaultLanguage, setLanguage } from "react-switch-lang";
 import Ranks from "./Ranks";
 import { ROUTE_META } from "../helpers/routeMeta";
+import { SURVIVOR_SLOTS } from "../helpers/rankLadder";
 import en from "../Language/en.json";
 import ua from "../Language/ua.json";
 
@@ -107,4 +108,28 @@ test("renders in Ukrainian too", () => {
   );
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(ua.pages.ranks.title);
   expect(screen.getByText(ua.pages.ranks.ladder.heading)).toBeInTheDocument();
+});
+
+// SURVIVOR_SLOTS shipped in rankLadder.js with the Update 36.1 sourcing and a
+// test, and then rendered nowhere. It is the closest thing to a free answer to
+// "how rare is Survivor" -- the exact question a month-long API crawl was being
+// sized to answer worse.
+test("shows how many Survivor slots each region gets", () => {
+  const { container } = renderPage();
+  const rows = container.querySelectorAll(".ranks-page__slot");
+  expect(rows).toHaveLength(SURVIVOR_SLOTS.length);
+
+  const text = container.textContent;
+  for (const region of SURVIVOR_SLOTS) {
+    expect(text, region.key).toContain(String(region.slots));
+  }
+  // The number that makes the point. 460 is every PC region in the table;
+  // the 410 quoted elsewhere excludes Kakao, which runs on its own shard --
+  // so the copy has to say which one it means.
+  expect(text).toContain("460");
+});
+
+test("dates the slot table instead of passing it off as current", () => {
+  const { container } = renderPage();
+  expect(container.textContent).toContain(en.pages.ranks.survivorTier.p5);
 });

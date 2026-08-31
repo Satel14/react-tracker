@@ -20,6 +20,7 @@ export const canonicalFor = (path) => `${SITE_ORIGIN}${path}`;
 export const ROUTE_META = [
   {
     path: "/",
+    nav: "PUBG Tracker",
     file: "index.html",
     // Unchanged from the shell: this is the one page that already ranks, and a
     // new title would restart whatever standing it has.
@@ -35,6 +36,7 @@ export const ROUTE_META = [
   },
   {
     path: "/leaderboards",
+    nav: "Ranked leaderboards",
     file: "leaderboards.html",
     title: "PUBG ranked leaderboards by region",
     description:
@@ -47,6 +49,7 @@ export const ROUTE_META = [
   },
   {
     path: "/help",
+    nav: "How to look up stats",
     file: "help.html",
     title: "How to look up PUBG stats",
     description:
@@ -59,6 +62,7 @@ export const ROUTE_META = [
   },
   {
     path: "/ranks",
+    nav: "PUBG ranks explained",
     file: "ranks.html",
     title: "PUBG Ranks Explained: Tiers, RP, Survivor (Season 42)",
     description: "The PUBG ranked ladder as it actually stands in Season 42: all eight tiers in order, how RP is earned and lost after Update 42.1, Survivor, and RP decay.",
@@ -120,5 +124,21 @@ export const ROUTE_META = [
     body: true,
   },
 ];
+
+// The links every prerendered shell carries. Nothing in the raw HTML links
+// anywhere otherwise -- the navbar's anchors are rendered by React -- so a
+// crawler that does not run JS can only find pages through the sitemap.
+//
+// Reading order is stated here rather than inherited from the table above,
+// which is ordered indexable-first for its own reasons. Membership follows
+// the sitemap: a route linked from every page ought to be one we are willing
+// to have indexed, and renderHead.test.js pins exactly that.
+const NAV_ORDER = ["/", "/leaderboards", "/ranks", "/help"];
+
+export const NAV_ROUTES = NAV_ORDER.map((path) => {
+  const route = ROUTE_META.find((item) => item.path === path);
+  if (!route?.nav) throw new Error(`routeMeta: ${path} is in the nav but has no label`);
+  return route;
+});
 
 export const routeMetaFor = (path) => ROUTE_META.find((route) => route.path === path);

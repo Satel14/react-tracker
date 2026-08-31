@@ -52,6 +52,7 @@ const ownDeclarations = (rule) => {
 const BLOCKS_WITH_PROSE_LINKS = [
   ".ranks-page",
   ".leaderboard-page__explainer",
+  ".prerender__nav",
 ];
 
 describe("prose links state their own colour", () => {

@@ -1,16 +1,16 @@
-// Rewrites the built shell's <head> for one route, and optionally puts a
-// heading and a sentence inside the mount point.
+// Rewrites the built shell's <head> for one route, and puts a nav -- and for
+// most routes a heading and a sentence -- inside the mount point.
 //
-// Pure: `scripts/prerender-head.mjs` does the reading and writing. Every
-// substitution must match exactly once and the function throws otherwise --
-// four of the shell's meta tags carry `content=` on the line after the tag name,
-// so a pattern built around a single space silently matches nothing, and the
-// route would ship its own title over the homepage's description with no error
-// anywhere.
+// Pure: the prerenderHead plugin in vite.config.js does the reading and writing.
+// Every substitution must match exactly once and the function throws otherwise
+// -- four of the shell's meta tags carry `content=` on the line after the tag
+// name, so a pattern built around a single space silently matches nothing, and
+// the route would ship its own title over the homepage's description with no
+// error anywhere.
 
-// Extension spelled out, unlike the rest of src/: the build script imports
-// this under plain Node, where extensionless ESM specifiers do not resolve.
-import { canonicalFor } from "./routeMeta.js";
+// Extension spelled out, unlike the rest of src/: vite.config.js imports this
+// under Node's resolver, where extensionless ESM specifiers do not resolve.
+import { canonicalFor, NAV_ROUTES } from "./routeMeta.js";
 
 const escape = (value) =>
   String(value)
@@ -34,6 +34,10 @@ const replaceOnce = (html, pattern, replacement, what) => {
   // A function replacement so a "$&" or "$1" in the copy stays literal.
   return html.replace(pattern, () => replacement);
 };
+
+// English, like the rest of the shell: the static HTML is what a crawler and a
+// visitor see before the bundle runs, and language is chosen client-side.
+const NAV_LABEL = "Site";
 
 const required = ["path", "file", "title", "description"];
 
@@ -90,6 +94,15 @@ export const renderHead = (shell, route) => {
       `<meta name="twitter:description" content="${description}" />`,
       "twitter:description",
     ],
+    // The shell carries one WebApplication block describing the site, and it
+    // named the site root on every page -- so each route's structured data
+    // contradicted its own canonical. The node still describes the app; it just
+    // says so at the URL it is being served from.
+    [
+      /"url": "https:\/\/[^"]*"/g,
+      `"url": "${url}"`,
+      "structured-data url",
+    ],
   ];
 
   let html = shell;
@@ -97,14 +110,25 @@ export const renderHead = (shell, route) => {
     html = replaceOnce(html, pattern, replacement, what);
   }
 
-  if (route.body) {
-    html = replaceOnce(
-      html,
-      /<div id="root"><\/div>/g,
-      `<div id="root"><div class="prerender"><h1>${escape(route.h1)}</h1><p>${escape(route.intro)}</p></div></div>`,
-      'empty <div id="root">',
-    );
-  }
+  // The nav goes into every shell, the prose does not. The homepage is
+  // body:false because its file is also what Pages serves for every unmatched
+  // URL, and its prose would then be duplicated across an unbounded set of
+  // them. A nav is site furniture -- identical on every page by design, and
+  // pointing only at pages we want indexed -- so it carries none of that.
+  const nav = [
+    `<nav class="prerender__nav" aria-label="${escape(NAV_LABEL)}">`,
+    ...NAV_ROUTES.map((item) => `<a href="${item.path}">${escape(item.nav)}</a>`),
+    "</nav>",
+  ].join("");
 
-  return html;
+  const prose = route.body
+    ? `<h1>${escape(route.h1)}</h1><p>${escape(route.intro)}</p>`
+    : "";
+
+  return replaceOnce(
+    html,
+    /<div id="root"><\/div>/g,
+    `<div id="root"><div class="prerender">${nav}${prose}</div></div>`,
+    'empty <div id="root">',
+  );
 };
