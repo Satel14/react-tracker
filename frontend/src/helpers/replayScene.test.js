@@ -1288,6 +1288,16 @@ describe("damage numbers", () => {
     expect(shown.map((n) => n.text)).toEqual(["-4"]);
   });
 
+  it("starts the number clear of the marker rather than on top of it", () => {
+    // At age zero the rise has not lifted it at all, so without a standing
+    // offset the first frame -- the one most worth reading -- prints over the
+    // glyph. A marker is up to 12px across.
+    const [n] = draw([{ t: 5, a: -1, v: 1, d: 19 }]);
+    const f = frameAt(1);
+    const marker = worldToScreen(f.cam, f.vw, f.vh, f.tracks.outX[1], f.tracks.outY[1]);
+    expect(marker.y - n.y).toBeCloseTo(SCREEN.damageLift, 6);
+  });
+
   it("floats the number up and fades it as it ages", () => {
     const fresh = draw([{ t: 5, a: -1, v: 1, d: 19 }])[0];
     const old = draw([{ t: 4.2, a: -1, v: 1, d: 19 }])[0];
