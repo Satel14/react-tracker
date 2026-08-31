@@ -5361,19 +5361,55 @@ body {
   }
 }
 
+// A pannable, zoomable map with a canvas over it. Two canvases, both absolute:
+// the raster underneath and whatever the caller paints on top.
+.map-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #080e18;
+  cursor: grab;
+  user-select: none;
+  // Without this the browser claims the drag for scrolling and panning dies on
+  // touch. Same rule as .map-field and .replay-stage.
+  touch-action: none;
+
+  &:active { cursor: grabbing; }
+
+  // Square sizing via a padding-ratio spacer only (NO aspect-ratio). On iOS
+  // Safari, aspect-ratio makes the box height "definite" and -- because both
+  // canvases are absolutely positioned -- it collapses to 0 and the map
+  // vanishes. See .map-field, which learned this the hard way.
+  &::before {
+    content: "";
+    display: block;
+    padding-top: 100%;
+  }
+
+  &__bg,
+  &__fx {
+    position: absolute;
+    inset: 0;
+    // Pointers belong to the wrapper, which owns the gestures; a canvas that
+    // swallowed them would kill panning over its own pixels.
+    pointer-events: none;
+  }
+}
+
 .kill-map {
   max-width: 560px;
   margin-bottom: 14px;
 
-  &__stage {
-    position: relative;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
+  // The stage squares and rounds itself; this only adds the border the card
+  // around it expects.
+  &__stage { border: 1px solid var(--border); }
+
+  &__hint {
+    margin: 6px 0 0;
+    color: var(--text-faint);
+    font-size: 11px;
   }
-  // No aspect-ratio here — the .map-field padding-spacer squares the box
-  // (aspect-ratio collapses to 0 on iOS Safari; see .map-field).
-  &__canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   &__range {
     display: flex;
     align-items: center;

@@ -341,7 +341,7 @@ const MatchReplayPage = ({ t }) => {
           label: t("pages.match.tabKills"),
           children: renderAnalysisPane((a) => (
             <>
-              <KillMap kills={a.killFeed} rawMapName={a.rawMapName} mapMax={a.mapMax} duration={a.duration} t={t} />
+              <KillMap kills={a.killFeed} rawMapName={a.rawMapName} duration={a.duration} t={t} />
               <KillFeed kills={a.killFeed} platform={platform} t={t} />
             </>
           )),

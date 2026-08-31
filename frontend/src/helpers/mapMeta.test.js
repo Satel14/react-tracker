@@ -1,4 +1,5 @@
-import { getMapMeta, worldToPercent, MAP_LIST, highResUrl } from "./mapMeta";
+import { describe, it, expect } from "vitest";
+import { getMapMeta, worldToPercent, MAP_LIST, highResUrl, wantedRasterTier, HIGH_RES_SIZES } from "./mapMeta";
 
 test("maps raw names to display names and mapMax", () => {
   expect(getMapMeta("Baltic_Main").displayName).toBe("Erangel");
@@ -39,4 +40,33 @@ test("each raster tier has its own url, and an unknown size has none", () => {
   expect(highResUrl("Baltic_Main", 4096)).toBe("/map-hi/erangel-4096.v1.webp");
   expect(highResUrl("Baltic_Main", 8192)).toBeNull();
   expect(highResUrl("Nope_Main", 4096)).toBeNull();
+});
+
+// Which raster tier a view wants. Lived inside ReplayStage; the kill map needs
+// the same answer, and two copies of it would drift the moment one map's
+// trigger was tuned.
+describe("wantedRasterTier", () => {
+  it("asks for the base raster until the view samples past the trigger", () => {
+    // 900px at dpr 1 and zoom 1 samples well inside the 2048 tier.
+    expect(wantedRasterTier({ vw: 1600, vh: 900, dpr: 1, zoom: 1 })).toBe(0);
+  });
+
+  it("climbs as the view zooms in", () => {
+    const at = (zoom, dpr = 1) => wantedRasterTier({ vw: 1600, vh: 900, dpr, zoom });
+    expect(at(2)).toBe(1);
+    expect(at(8)).toBe(HIGH_RES_SIZES.length);
+    // A retina display samples twice as hard at the same zoom, so it climbs
+    // sooner -- which is the whole reason dpr is in the sum.
+    expect(at(1, 2)).toBeGreaterThan(at(1, 1));
+  });
+
+  it("never asks for a tier that does not exist", () => {
+    expect(wantedRasterTier({ vw: 4000, vh: 4000, dpr: 3, zoom: 16 })).toBe(HIGH_RES_SIZES.length);
+  });
+
+  it("treats a degenerate view as wanting nothing better", () => {
+    for (const v of [{}, { vw: 0, vh: 0, dpr: 0, zoom: 0 }, { vw: NaN, vh: 900, dpr: 1, zoom: 1 }]) {
+      expect(wantedRasterTier(v)).toBe(0);
+    }
+  });
 });

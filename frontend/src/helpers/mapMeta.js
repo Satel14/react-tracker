@@ -50,6 +50,27 @@ export const HIGH_RES_VERSION = "v1";
 // 4096 is only fetched when someone zooms far enough in to see the difference.
 export const HIGH_RES_SIZES = [2048, 4096];
 
+// Fetch the next tier up once the view is sampling past this much of the
+// current one's native resolution. Below it the finer raster is invisible and
+// only costs bandwidth.
+export const HIGH_RES_TRIGGER = 0.7;
+
+// Which tier a view wants: 0 is the base raster shipped with the page, and
+// HIGH_RES_SIZES.length means the sharpest one there is. dpr belongs in the sum
+// because a retina display samples twice as hard at the same zoom, so it needs
+// the finer raster sooner.
+//
+// Shared rather than private to one stage: the replay and the kill map draw the
+// same rasters, and two copies of this would drift the moment one was tuned.
+export const wantedRasterTier = ({ vw = 0, vh = 0, dpr = 1, zoom = 1 } = {}) => {
+  const sampling = Math.min(vw, vh) * dpr * zoom;
+  if (!Number.isFinite(sampling) || sampling <= 0) return 0;
+  for (let i = 0; i < HIGH_RES_SIZES.length; i += 1) {
+    if (sampling <= HIGH_RES_SIZES[i] * HIGH_RES_TRIGGER) return i;
+  }
+  return HIGH_RES_SIZES.length;
+};
+
 export const highResUrl = (rawMapName, size = HIGH_RES_SIZES[0]) => {
   const meta = MAP_META[rawMapName];
   if (!meta || !meta.slug) return null;

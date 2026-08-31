@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { getMapMeta, highResUrl, HIGH_RES_SIZES } from "../../helpers/mapMeta";
+import { getMapMeta, highResUrl, HIGH_RES_SIZES, wantedRasterTier } from "../../helpers/mapMeta";
 import { buildTracks, sampleTracks } from "../../helpers/replayTracks";
 import { createSweep, pruneFlashes } from "../../helpers/replayEvents";
 import { drawBackground, drawScene, pickIndex, SCREEN } from "../../helpers/replayScene";
@@ -12,11 +12,12 @@ import { buildAtlas } from "./replaySprites";
 import { zoneAt } from "./replayEngine";
 
 // Two raster tiers behind the same idea: fetch the next one up once the map is
-// being sampled past ~70% of the current one's native resolution. The source
-// art is 8192px, so 4096 is a real step rather than an upscale -- it is what
-// makes the far end of the zoom range worth having.
+// being sampled past HIGH_RES_TRIGGER of the current one's native resolution.
+// The source art is 8192px, so 4096 is a real step rather than an upscale --
+// it is what makes the far end of the zoom range worth having. The trigger and
+// the rule that reads it live in mapMeta, because the kill map draws the same
+// rasters and a second copy would drift.
 const RASTER_TIERS = HIGH_RES_SIZES;
-const HIGH_RES_TRIGGER = 0.7;
 const FLASH_CAP = 40;
 // One doubling per double-click: enough to feel like a step, small enough
 // that two of them do not overshoot the whole map.
@@ -28,13 +29,8 @@ const DOUBLE_CLICK_ZOOM = 2;
 // much lower zoom than on a 1x one.
 // Which tier this view wants: the smallest whose native resolution still
 // covers the sampling, or the largest we have.
-const wantedTier = (v) => {
-  const sampling = Math.min(v.vw, v.vh) * v.dpr * v.cam.zoom;
-  for (let i = 0; i < RASTER_TIERS.length; i += 1) {
-    if (sampling <= RASTER_TIERS[i] * HIGH_RES_TRIGGER) return i;
-  }
-  return RASTER_TIERS.length;
-};
+// Shared with the kill map, which draws the same rasters; see mapMeta.
+const wantedTier = (v) => wantedRasterTier({ vw: v.vw, vh: v.vh, dpr: v.dpr, zoom: v.cam.zoom });
 
 // Last-resort paint: only reached when no stylesheet resolved the token in
 // TOKEN_FOR below. Deliberately approximate rather than a copy of the token
