@@ -1984,7 +1984,6 @@ body {
       }
     }
 
-
     svg {
       font-size: 24px;
     }
@@ -3391,116 +3390,270 @@ body {
 }
 
 .ranks-page {
-  max-width: 900px;
+  // 68ch of prose, a 44px gutter and a 248px rail. Wider than the 900px it
+  // used to be, but every pixel of the gain went to the nav that now fills the
+  // column which used to sit empty.
+  max-width: 980px;
   margin: 0 auto;
   padding: 20px 0 8px;
   color: var(--text);
 
   &__hero {
-    margin-bottom: 26px;
+    margin-bottom: 34px;
 
     h1 {
-      margin: 0 0 10px;
-      font-size: 30px;
+      margin: 0 0 12px;
+      font-size: 34px;
+      line-height: 1.18;
       letter-spacing: 1px;
       color: var(--text-strong);
       text-transform: uppercase;
     }
 
-    p {
+    // Direct child only: the fact strip below is also inside the hero and must
+    // not inherit the intro's measure or muted colour.
+    > p {
       margin: 0;
       max-width: 68ch;
+      line-height: 1.7;
       color: var(--text-muted);
     }
   }
 
+  &__facts {
+    list-style: none;
+    margin: 26px 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  &__fact {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+  }
+
+  &__fact-value {
+    font-size: 28px;
+    line-height: 1;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__fact-label {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--text-faint);
+  }
+
+  // The first column is the prose measure itself, not a fraction of what is
+  // left over: the ladder rows and the panels have to stop where the sentences
+  // above them stop, or the column reads as two ragged right edges.
+  &__body {
+    display: grid;
+    grid-template-columns: minmax(0, 68ch) 248px;
+    align-items: start;
+    gap: 0 44px;
+  }
+
+  &__sections {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  // Column 2 by placement, first in the DOM: a nav landmark ahead of the prose
+  // is what a screen reader and a phone both want, and the grid puts it back on
+  // the right for a mouse.
+  &__toc {
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    top: 24px;
+    padding: 16px 18px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+  }
+
+  &__toc-title {
+    margin: 0 0 10px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  &__toc-list {
+    counter-reset: toc;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    li {
+      counter-increment: toc;
+    }
+
+    // Without a colour of its own this anchor takes the browser's link and
+    // visited-link defaults, which belong to no theme on this site.
+    a {
+      color: var(--text-muted);
+      display: block;
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.35;
+      text-decoration: none;
+      transition: color 0.15s ease, background 0.15s ease;
+
+      &::before {
+        content: counter(toc, decimal-leading-zero);
+        margin-right: 8px;
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+      }
+
+      // Hover only. Keyboard focus is the one global :focus-visible ring near
+      // the top of this file, which already covers every anchor inside .app.
+      &:hover {
+        color: var(--text-strong);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+      }
+    }
+  }
+
   &__section {
-    margin-bottom: 30px;
+    margin-bottom: 34px;
+    scroll-margin-top: 20px;
 
     h2 {
-      margin: 0 0 10px;
-      font-size: 20px;
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.25;
       color: var(--text-strong);
     }
 
     p {
-      margin: 0 0 10px;
+      margin: 0 0 12px;
       max-width: 68ch;
-      line-height: 1.65;
+      line-height: 1.7;
+    }
+  }
+
+  &__section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0 0 14px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+
+  &__section-index {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+    color: color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+
+  // The one correction on a page of statements. --brand, not --warn: the warn
+  // hue is a map-overlay data encoding and has to keep meaning one thing.
+  &__section--myth {
+    padding: 4px 22px 20px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent);
+    background: color-mix(in srgb, var(--brand) 5%, transparent);
+
+    .ranks-page__section-head {
+      border-top: none;
+    }
+
+    .ranks-page__section-index {
+      color: var(--brand);
+    }
+
+    p:last-child {
+      margin-bottom: 0;
     }
   }
 
   &__ladder {
     list-style: none;
-    margin: 0 0 16px;
+    margin: 0 0 22px;
     padding: 0;
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
 
+  // Every tier row is this one rule; the eight modifiers below only swap the
+  // hue it paints with. The hues match the player-card tier headers earlier in
+  // this file, so a tier looks the same wherever the site draws it.
   &__tier {
+    --tier-hue: var(--accent);
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    background: color-mix(in srgb, var(--accent) 5%, transparent);
-    border: 1px solid var(--border);
-  }
+    gap: 14px;
+    padding: 10px 16px 10px 19px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--tier-hue) 20%, transparent);
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--tier-hue) 12%, transparent), transparent 55%),
+      color-mix(in srgb, var(--tier-hue) 5%, transparent);
 
-  &__slots {
-    margin: 12px 0 16px;
-
-    h3 {
-      margin: 0 0 8px;
-      font-size: 16px;
-      color: var(--text-strong);
-    }
-
-    ul {
-      margin: 0 0 8px;
-      padding: 0;
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    p {
-      color: var(--text-muted);
-      font-size: 14px;
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 3px;
+      background: var(--tier-hue);
     }
   }
 
-  &__slot {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--accent) 5%, transparent);
-
-    b {
-      color: var(--text-strong);
-      font-variant-numeric: tabular-nums;
-    }
-  }
+  &__tier--bronze { --tier-hue: rgb(205, 127, 50); }
+  &__tier--silver { --tier-hue: rgb(192, 192, 192); }
+  &__tier--gold { --tier-hue: var(--tier-gold); }
+  &__tier--platinum { --tier-hue: rgb(120, 230, 230); }
+  &__tier--crystal { --tier-hue: rgb(170, 145, 243); }
+  &__tier--diamond { --tier-hue: rgb(120, 180, 255); }
+  &__tier--master { --tier-hue: rgb(220, 110, 230); }
+  &__tier--survivor { --tier-hue: rgb(255, 220, 100); }
 
   &__tier-icon {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     flex: none;
     object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  }
+
+  &__tier-body {
+    flex: 1;
+    min-width: 0;
   }
 
   &__tier-body p {
     margin: 0;
+    max-width: none;
   }
 
   &__tier-name {
     color: var(--text-strong);
     font-weight: 600;
+    line-height: 1.45;
   }
 
   &__tier-divisions {
@@ -3508,27 +3661,178 @@ body {
     color: var(--text-faint);
   }
 
+  &__tier-pips {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: none;
+    display: flex;
+    gap: 4px;
+
+    li {
+      min-width: 28px;
+      padding: 3px 0;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: color-mix(in srgb, var(--tier-hue) 80%, transparent);
+      background: color-mix(in srgb, var(--tier-hue) 12%, transparent);
+    }
+  }
+
+  &__slots {
+    margin: 20px 0 0;
+    padding: 16px 18px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+
+    h3 {
+      margin: 0 0 14px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+
+    ul {
+      margin: 0 0 12px;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    p {
+      margin: 0;
+      max-width: none;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+  }
+
+  &__slot {
+    display: grid;
+    grid-template-columns: 148px minmax(0, 1fr) 46px;
+    align-items: center;
+    gap: 14px;
+
+    b {
+      color: var(--text-strong);
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__slot-name {
+    font-size: 14px;
+  }
+
+  // Width off the largest region rather than off the total: the point is that
+  // AS gets forty times what NA does, not what share of 460 each one holds.
+  &__slot-bar {
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 45%, transparent), var(--accent));
+    }
+  }
+
   &__outro {
-    margin: 24px 0 0;
+    margin: 30px 0 0;
     font-weight: 600;
 
     // Without this the anchor takes the browser's own link colours -- a
     // visited-purple that belongs to no theme on this site.
     a {
       color: var(--text);
-      text-decoration: underline;
-      text-underline-offset: 2px;
-      transition: color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+      text-decoration: none;
+      transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+
+      &::after {
+        content: "\2192";
+        color: var(--accent);
+        transition: transform 0.15s ease;
+      }
 
       &:hover {
-        color: var(--accent);
+        color: var(--text-strong);
+        border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
       }
+
+      &:hover::after {
+        transform: translateX(3px);
+      }
+    }
+  }
+
+  // One column below this: 248px of nav plus 68ch of prose stops fitting, and
+  // the contents card is more use above the text than squeezed beside it.
+  @media (max-width: 1080px) {
+    // The rail is gone, so the page is the prose measure and nothing else --
+    // otherwise the hero, the ladder and the panels all run 300px past the
+    // sentences, which is the same ragged edge the two-column rule avoids.
+    max-width: 68ch;
+
+    &__facts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    &__body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    &__toc {
+      grid-column: 1;
+      grid-row: 1;
+      position: static;
+      margin-bottom: 28px;
+    }
+
+    &__sections {
+      grid-row: 2;
     }
   }
 
   @media (max-width: 680px) {
     &__hero h1 {
       font-size: 24px;
+    }
+
+
+    &__tier {
+      gap: 12px;
+      padding: 10px 12px 10px 15px;
+    }
+
+    &__tier-pips {
+      display: none;
+    }
+
+    &__slot {
+      grid-template-columns: 96px minmax(0, 1fr) 40px;
+      gap: 10px;
+    }
+
+    &__section--myth {
+      padding: 4px 16px 16px;
     }
   }
 }
