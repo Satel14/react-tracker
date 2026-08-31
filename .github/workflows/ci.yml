@@ -36,3 +36,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      # Also the only place the prerender step is exercised: a build that emits
+      # no per-route shells fails here rather than in production.
+      - run: npm run build

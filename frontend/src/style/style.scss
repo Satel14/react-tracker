@@ -29,6 +29,32 @@ body {
   }
 }
 
+// The static shells scripts/prerender-head.mjs writes put a heading and a
+// sentence inside #root, so a route has real text in its raw HTML and a visitor
+// sees something on the first paint instead of a blank page. React's createRoot
+// clears the container on mount, so this is only ever on screen until the bundle
+// runs -- and it sits OUTSIDE .app, which is where `color` is declared, so it
+// has to state its own or it inherits the UA's black onto --bg.
+.prerender {
+  color: var(--text);
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 96px 20px;
+  text-align: center;
+
+  h1 {
+    color: var(--text-strong);
+    font-size: 32px;
+    line-height: 1.15;
+    margin: 0 0 12px;
+  }
+
+  p {
+    color: var(--text-muted);
+    margin: 0;
+  }
+}
+
 .app {
   color: var(--text);
   max-width: 1200px;

@@ -17,9 +17,10 @@
     "react-switch-lang": "^1.0.2",
     "recharts": "^3.8.1"
   },
+  "type": "module",
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/prerender-head.mjs",
     "preview": "vite preview --port 4173",
     "test": "vitest run",
     "test:watch": "vitest",
