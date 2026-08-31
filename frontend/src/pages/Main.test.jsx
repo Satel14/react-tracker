@@ -98,3 +98,19 @@ test("resets the exit animation state when the Steam resolver throws", async () 
   expect(navigate).not.toHaveBeenCalled();
   expect(container.querySelector(".mainpage").className).not.toMatch(/exit/);
 });
+
+// Every other test here leaves the snapshot null, so <CountUp> never renders and
+// the homepage's most fragile import went unexercised: react-countup is
+// CommonJS, and a bad default-import interop makes it an object, which React
+// rejects outright. See bundleInterop.test.js for the config that caused it.
+test("counts the players online once the live snapshot arrives", async () => {
+  getLiveSnapshot.mockResolvedValue({
+    data: { playersOnline: { value: 533310, source: "steam" }, season: null },
+  });
+
+  renderPage();
+
+  await waitFor(() => {
+    expect(screen.getByText(/533,310|533310|^0$/)).toBeInTheDocument();
+  });
+});
