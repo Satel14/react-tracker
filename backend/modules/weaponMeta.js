@@ -202,8 +202,29 @@ function prettifyCauser(name) {
     .trim() || "Unknown";
 }
 
+// Things that kill without being weapons. prettifyCauser turns an asset name
+// into title case, which is right for a gun and wrong for these: the red zone
+// came out "Red Zone Bombing Field Def" and the pawn behind fall damage as
+// "Ult AIPawn Base Male". Matched on a prefix because the pawn and the player
+// character each ship a male and a female variant.
+const CAUSER_LABELS = [
+  [/^RedZone/i, "Red Zone"],
+  [/^BlueZone/i, "Blue Zone"],
+  [/^UltAIPawn/i, "Falling"],
+  [/^Player(Male|Female)/i, "Fists"],
+  [/^ProjMolotov/i, "Molotov"],
+  [/^Drown/i, "Drowning"],
+];
+
+function causerLabel(name) {
+  for (const [pattern, label] of CAUSER_LABELS) if (pattern.test(name)) return label;
+  return null;
+}
+
 function telemetryWeaponName(name) {
   if (!name) return "Unknown";
+  const plain = causerLabel(name);
+  if (plain) return plain;
   const key = canonicalWeaponKey(name);
   if (key && WEAPON_LABELS[key]) return WEAPON_LABELS[key];
   return prettifyCauser(name);
@@ -224,6 +245,7 @@ function canonicalWeaponKey(rawName) {
 }
 
 module.exports = {
+  CAUSER_LABELS,
   WEAPON_LABELS,
   WEAPON_CATEGORY,
   WEAPON_IMAGE_ALIAS,

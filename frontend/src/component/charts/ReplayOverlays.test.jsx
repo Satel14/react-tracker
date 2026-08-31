@@ -315,6 +315,17 @@ test("names the headshot mark for a reader who cannot see it", () => {
   expect(mark.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
 });
 
+test("uses the game's own marks for a headshot and a knock", () => {
+  // Drawn stand-ins to begin with; these are the real ones, out of the same
+  // killfeed folder PUBG's own 2D replay reads.
+  const { container } = renderOverlays({ feed: shotEvents, displayT: 95 });
+
+  expect(lineWith(container, "AUG").querySelector(".replay-feed__headshot img"))
+    .toHaveAttribute("src", "/images/weapon-icons/_headshot.png");
+  expect(lineWith(container, "M416").querySelector(".replay-feed__knock img"))
+    .toHaveAttribute("src", "/images/weapon-icons/_dbno.png");
+});
+
 test("puts the team number in a badge painted that team's colour", () => {
   const { container } = renderOverlays({ feed: shotEvents, displayT: 95, focalTeamId: 1 });
   const line = lineWith(container, "AUG");
@@ -337,4 +348,62 @@ test("tells the killer's end of a line from the victim's", () => {
   // which end of the line it is -- so which end has to be in the markup.
   expect(line.querySelector(".replay-feed__side.is-killer").textContent).toContain("Me");
   expect(line.querySelector(".replay-feed__side.is-victim").textContent).toContain("Foe");
+});
+
+// --- the game's own weapon icon, with the drawn silhouette behind it -------
+
+const iconEvents = [
+  {
+    id: "kill:95:a.foe", t: 95, kind: "kill",
+    killer: { name: "Me", teamId: 1, isFocal: true },
+    victim: { name: "Foe", teamId: 22, isFocal: false },
+    weapon: "AUG", icon: "ar", iconKey: "aug_a3", headshot: false, dist: 87,
+  },
+  {
+    id: "kill:94:a.mate", t: 94, kind: "kill",
+    killer: { name: "Me", teamId: 1, isFocal: true },
+    victim: { name: "Mate", teamId: 1, isFocal: true },
+    weapon: "Scar-L", icon: "ar", iconKey: null, headshot: false, dist: 12,
+  },
+];
+
+test("shows the game's own icon for a gun it has one for", () => {
+  const { container } = renderOverlays({ feed: iconEvents, displayT: 95 });
+  // Found by its accessible name rather than by the line's text: with a real
+  // icon the gun's name is the alt and is deliberately not in the text.
+  const img = container.querySelector("img.replay-feed__weapon");
+
+  expect(img).toHaveAttribute("src", "/images/weapon-icons/aug_a3.png");
+  // Named with the gun, not the file: the picture is of an AUG.
+  expect(img).toHaveAttribute("alt", "AUG");
+  expect(img.closest(".replay-feed__line").querySelector("svg.replay-feed__weapon")).toBeNull();
+});
+
+test("falls back to the drawn silhouette for a gun it has none of", () => {
+  const { container } = renderOverlays({ feed: iconEvents, displayT: 94 });
+  const line = lineWith(container, "Scar-L");
+
+  expect(line.querySelector("img.replay-feed__weapon")).toBeNull();
+  expect(line.querySelector("svg.replay-feed__weapon")).toBeInTheDocument();
+  expect(line.querySelector("svg.replay-feed__weapon path")).toHaveAttribute("d", WEAPON_GLYPHS.ar);
+});
+
+test("names a weapon it can draw neither an icon nor a silhouette for", () => {
+  // A class the backend starts sending before this side has a drawing for it.
+  // Substituting some other gun would report a weapon that was not used, and
+  // rendering nothing would lose the kill's cause entirely -- so it falls all
+  // the way back to the name, the same place a zone death lands.
+  const { container } = renderOverlays({
+    feed: [{
+      id: "kill:95:x", t: 95, kind: "kill",
+      killer: { name: "Me", teamId: 1, isFocal: true },
+      victim: { name: "Foe", teamId: 22, isFocal: false },
+      weapon: "Flamethrower", icon: "flamethrower", iconKey: null, headshot: false,
+    }],
+    displayT: 95,
+  });
+  const line = lines(container)[0];
+
+  expect(line.querySelector(".replay-feed__weapon")).toBeNull();
+  expect(line.querySelector(".replay-feed__weapon-name").textContent).toBe("Flamethrower");
 });

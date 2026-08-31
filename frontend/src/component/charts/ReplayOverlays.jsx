@@ -40,9 +40,32 @@ export const formatElapsed = (seconds) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
-// The weapon, drawn rather than named. Labelled with the exact gun, so a
-// reader who cannot see the picture is told "AUG" and not "assault rifle" --
-// the class is what got drawn, never what got said.
+// The weapon, drawn rather than named. Two sources, in order: PUBG ships an
+// icon per gun for its own 2D replay and those are what the feed shows, and
+// behind them sit the drawn class silhouettes for the guns it has no icon of
+// -- the SCAR-L and the M9, removed from the game, and anything shipped after
+// the icon table was written.
+//
+// Either way the picture is labelled with the exact gun, so a reader who
+// cannot see it is told "AUG" and not "assault rifle": the class is what got
+// drawn, never what got said.
+const WeaponIcon = ({ iconKey, kind, name }) => {
+  if (iconKey) {
+    return (
+      <img
+        className="replay-feed__weapon"
+        src={`/images/weapon-icons/${iconKey}.png`}
+        alt={name || iconKey}
+      />
+    );
+  }
+  if (WEAPON_GLYPHS[kind]) return <WeaponGlyph kind={kind} name={name} />;
+  // Neither an icon nor a silhouette: a class this side has no drawing for
+  // yet. Substituting some other gun would report a weapon that was not used,
+  // and drawing nothing would lose the cause of the kill, so the name it is.
+  return name ? <span className="replay-feed__weapon-name">{name}</span> : null;
+};
+
 const WeaponGlyph = ({ kind, name }) => {
   const d = WEAPON_GLYPHS[kind];
   if (!d) return null;
@@ -60,30 +83,16 @@ const WeaponGlyph = ({ kind, name }) => {
 };
 
 // A crosshair for a headshot and a downed figure for a knock: the two marks
-// the game puts between the weapon and the name. Both are decoration in the
-// tree and carry their meaning in a label beside them, so neither is read out
-// twice and neither is read out as nothing.
-const HeadshotMark = () => (
-  <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
-    <circle cx="8" cy="8" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-    <path
-      d="M8 0.5 L8 3.5 M8 12.5 L8 15.5 M0.5 8 L3.5 8 M12.5 8 L15.5 8"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-    />
-  </svg>
+// the game puts between the weapon and the name, taken from the same killfeed
+// folder its own 2D replay reads. Both are decoration in the tree and carry
+// their meaning in a label beside them, so neither is read out twice and
+// neither is read out as nothing.
+const Mark = ({ file }) => (
+  <img src={`/images/weapon-icons/${file}.png`} alt="" aria-hidden="true" />
 );
 
-const KnockMark = () => (
-  <svg viewBox="0 0 20 16" focusable="false" aria-hidden="true">
-    <circle cx="15.5" cy="5" r="2.8" fill="currentColor" />
-    <path d="M5 8 L14 6 L15 9.5 L6 11.5 Z" fill="currentColor" />
-    <path d="M13.5 7 L19.5 9.5 L18.5 12 L12.5 9.5 Z" fill="currentColor" />
-    <path d="M5 8 L8 8 L6 14.5 L2.5 14.5 Z" fill="currentColor" />
-    <path d="M7.5 9.5 L10.5 9.5 L9.5 14.5 L6.5 14.5 Z" fill="currentColor" />
-  </svg>
-);
+const HeadshotMark = () => <Mark file="_headshot" />;
+const KnockMark = () => <Mark file="_dbno" />;
 
 // One end of a feed line. The team number sits on the outside of each name --
 // number, killer, weapon, victim, number -- which is the order the game writes
@@ -161,11 +170,7 @@ const ReplayOverlays = ({ rows = [], phases = [], t, displayT = 0, focalTeamId =
               {/* A silhouette when the class is known, the name when it is not:
                   the zone and a fall have no picture, and neither does a gun
                   shipped after the classifier's table was written. */}
-              {line.icon ? (
-                <WeaponGlyph kind={line.icon} name={line.weapon} />
-              ) : line.weapon ? (
-                <span className="replay-feed__weapon-name">{line.weapon}</span>
-              ) : null}
+              <WeaponIcon iconKey={line.iconKey} kind={line.icon} name={line.weapon} />
               {line.headshot ? (
                 <span className="replay-feed__headshot">
                   <HeadshotMark />

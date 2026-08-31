@@ -169,11 +169,11 @@ test("assigns a phase index that changes only when the warning circle jumps", ()
   assert.deepEqual(r.zones.map((z) => z.phase), [0, 1, 1, 2, 2]);
 });
 
-// --- format 3 payload wiring ---------------------------------------------
+// --- format 4 payload wiring ---------------------------------------------
 
 test("stamps the wire format so a stale cached payload is detectable", () => {
   const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
-  assert.equal(r.format, 3);
+  assert.equal(r.format, 4);
 });
 
 test("ships every new layer as an array, never undefined", () => {
@@ -276,6 +276,8 @@ test("a kill carries the weapon it was made with and the range it was made at", 
   // The feed draws the weapon as a silhouette, so the record says which one.
   // Classified here, not on the client, for the same reason the name is.
   assert.equal(r.kills[0].wi, "ar");
+  // The game's own icon for that exact gun; wi is only the fallback.
+  assert.equal(r.kills[0].wk, "aug_a3");
 });
 
 // The blue zone, a fall and the red zone all kill with nobody credited. A feed
@@ -321,4 +323,47 @@ test("a roadkill names the vehicle", () => {
 
   assert.equal(r.kills[0].w, "Coupe RB");
   assert.equal(r.kills[0].wi, "vehicle");
+  assert.equal(r.kills[0].wk, null);
+});
+
+// A bleed-out carries three damage blocks: killerDamageInfo present but blank,
+// finishDamageInfo naming the pawn that stopped ticking, and dBNODamageInfo
+// naming what actually did it. Picking the first block that EXISTS lands on
+// the blank one and the kill loses its cause entirely; picking the first that
+// names a causer, knock before finish, is what the game's own feed shows.
+test("reads through a blank damage block to the one that names the cause", () => {
+  const bleedOut = [
+    { _T: "LogMatchStart", characters: [
+      { character: { accountId: "account.me", name: "Me", teamId: 1 } },
+      { character: { accountId: "account.foe", name: "Foe", teamId: 2 } },
+    ] },
+    { _T: "LogPlayerPosition", common: { isGame: 1 }, elapsedTime: 10, character: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 400000, y: 400000, z: 0 } } },
+    { _T: "LogPlayerKillV2", elapsedTime: 30, killer: null,
+      killerDamageInfo: { damageCauserName: "", damageReason: "", distance: -1 },
+      finishDamageInfo: { damageCauserName: "UltAIPawn_Base_Female_C", damageTypeCategory: "Damage_DBNO" },
+      dBNODamageInfo: { damageCauserName: "ProjGrenade_C", damageReason: "NonSpecific", distance: 1500 },
+      victim: { accountId: "account.foe", name: "Foe", teamId: 2, location: { x: 460000, y: 460000, z: 0 } } },
+  ];
+  const r = parseReplayTelemetry(bleedOut, { matchAttributes, accountId: "account.me" });
+
+  assert.equal(r.kills[0].w, "Frag Grenade");
+  assert.equal(r.kills[0].wk, "grenade");
+  assert.equal(r.kills[0].dist, 15);
+});
+
+// Raw asset names must not reach a reader. Found by running every causer in a
+// real match through the chain: the red zone came out "Red Zone Bombing Field
+// Def", and the pawn behind fall damage as "Ult AIPawn Base Male".
+test("names the things that kill without being weapons", () => {
+  const { telemetryWeaponName } = require("./weaponMeta");
+  assert.equal(telemetryWeaponName("RedZoneBombingField_Def_C"), "Red Zone");
+  assert.equal(telemetryWeaponName("BlueZone"), "Blue Zone");
+  assert.equal(telemetryWeaponName("Bluezone"), "Blue Zone");
+  assert.equal(telemetryWeaponName("UltAIPawn_Base_Male_C"), "Falling");
+  assert.equal(telemetryWeaponName("UltAIPawn_Base_Female_C"), "Falling");
+  assert.equal(telemetryWeaponName("PlayerMale_A_C"), "Fists");
+  assert.equal(telemetryWeaponName("PlayerFemale_A_C"), "Fists");
+  assert.equal(telemetryWeaponName("ProjMolotov_DamageField_C"), "Molotov");
+  // Guns are untouched by any of this.
+  assert.equal(telemetryWeaponName("WeapAUG_C"), "AUG");
 });

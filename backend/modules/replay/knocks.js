@@ -1,6 +1,6 @@
 const { readXY } = require("../telemetryUtils");
 const { telemetryWeaponName } = require("../weaponMeta");
-const { weaponIcon } = require("./weaponIcon");
+const { weaponIcon, weaponIconKey } = require("./weaponIcon");
 
 function accountOf(actor) {
   const id = actor?.accountId;
@@ -52,6 +52,7 @@ function extractKnocks(telemetry, clock) {
       // attacker, and then this names what did it.
       w: ev.damageCauserName ? telemetryWeaponName(ev.damageCauserName) : null,
       wi: weaponIcon(ev.damageCauserName),
+      wk: weaponIconKey(ev.damageCauserName),
       r: ev.damageReason || null,
       dist: distanceMetres(ev.distance),
       id: ev.dBNOId ?? null,

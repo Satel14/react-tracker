@@ -7,14 +7,14 @@ const { extractFlight } = require("./replay/flight");
 const { extractLandings } = require("./replay/landings");
 const { extractKnocks } = require("./replay/knocks");
 const { telemetryWeaponName } = require("./weaponMeta");
-const { weaponIcon } = require("./replay/weaponIcon");
+const { weaponIcon, weaponIconKey } = require("./replay/weaponIcon");
 const { extractShots } = require("./replay/shots");
 const { extractPackages } = require("./replay/packages");
 const { extractSpecialZones, extractPhases } = require("./replay/zones");
 
 // Bumped whenever the wire shape changes, so a stale cached payload is detected
 // rather than silently mis-decoded. 2 = delta-coded position columns.
-const REPLAY_FORMAT = 3;
+const REPLAY_FORMAT = 4;
 
 const replayCache = new Map();
 const REPLAY_CACHE_LIMIT = 30;
@@ -132,7 +132,14 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       // table, and "WeapAUG_C" is not a thing to show a reader. A death the
       // zone or a fall caused has no killer, and then this names what did it --
       // the same field, because that is the line the game writes too.
-      const dmg = ev.killerDamageInfo || ev.finishDamageInfo || ev.dBNODamageInfo || {};
+      // The first block that NAMES a cause, not the first that exists: a
+      // bleed-out ships a present-but-blank killerDamageInfo, and taking
+      // it leaves the kill with no cause at all. Knock before finish,
+      // because on a bleed-out the finish names the pawn that stopped
+      // ticking while the knock names the grenade -- and the grenade is
+      // what the game writes on that line.
+      const infos = [ev.killerDamageInfo, ev.dBNODamageInfo, ev.finishDamageInfo];
+      const dmg = infos.find((d) => d && d.damageCauserName) || {};
       const causer = dmg.damageCauserName || ev.damageCauserName || null;
       const range = Number(dmg.distance);
       kills.push({
@@ -141,6 +148,10 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
         // Which silhouette the feed draws. Null for the zone and a fall,
         // where the game draws none either.
         wi: weaponIcon(causer),
+        // The game's own icon for that exact gun. Null where PUBG has
+        // none -- a removed gun, a vehicle, the zone -- and wi carries
+        // the drawn class silhouette for those.
+        wk: weaponIconKey(causer),
         // Centimetres in the telemetry, metres everywhere this project shows a
         // distance. Absent rather than 0 when the event carries none: a kill at
         // an unknown range is not a kill at point-blank.

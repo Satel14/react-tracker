@@ -40,6 +40,7 @@ test("maps every field of a full knock, with dist in metres", () => {
       vy: 2881,
       w: "M416",
       wi: "ar",
+      wk: "m416",
       r: "TorsoShot",
       // 6289.604 cm rounds to 63 m -- NOT 6290, and NOT 62.
       dist: 63,
@@ -90,7 +91,9 @@ test("emits an attacker-less knock with null attacker fields", () => {
   assert.equal(knocks[0].v, "account.vic");
   assert.equal(knocks[0].vx, 4186);
   assert.equal(knocks[0].vy, 2881);
-  assert.equal(knocks[0].w, "Bluezone");
+  // "Bluezone" here and "Blue Zone" on the kill under it were two
+  // spellings of one thing; both now read the same.
+  assert.equal(knocks[0].w, "Blue Zone");
   assert.equal(knocks[0].r, "None");
   assert.equal(knocks[0].dist, 0);
   assert.equal(knocks[0].id, null);
@@ -211,6 +214,7 @@ test("a knock nobody made still names what did it", () => {
 test("a knock says which silhouette its weapon draws as", () => {
   const { knocks } = extractKnocks([knock({ damageCauserName: "WeapAUG_C" })], clock);
   assert.equal(knocks[0].wi, "ar");
+  assert.equal(knocks[0].wk, "aug_a3");
 });
 
 test("a knock nobody made draws no weapon silhouette", () => {

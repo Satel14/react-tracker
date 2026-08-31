@@ -198,3 +198,24 @@ describe("what a line hands the renderer", () => {
     expect(line.headshot).toBe(false);
   });
 });
+
+describe("the gun's own icon", () => {
+  it("carries the icon file key alongside the class fallback", () => {
+    const [line] = buildFeedEvents([kill({ w: "AUG", wi: "ar", wk: "aug_a3" })], [], players);
+
+    expect(line.iconKey).toBe("aug_a3");
+    expect(line.icon).toBe("ar");
+  });
+
+  it("leaves the key null for a gun the game has no picture of", () => {
+    // Then the class silhouette is all there is, and it is still something.
+    const [line] = buildFeedEvents([kill({ w: "Scar-L", wi: "ar", wk: null })], [], players);
+
+    expect(line.iconKey).toBeNull();
+    expect(line.icon).toBe("ar");
+  });
+
+  it("carries a knock's icon key too", () => {
+    expect(buildFeedEvents([], [knock({ wk: "m416" })], players)[0].iconKey).toBe("m416");
+  });
+});

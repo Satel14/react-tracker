@@ -66,6 +66,7 @@ export const buildFeedEvents = (kills, knocks, players) => {
       victim,
       weapon: k.w ?? null,
       icon: k.wi ?? null,
+      iconKey: k.wk ?? null,
       headshot: k.r === HEADSHOT,
       dist: Number.isFinite(k.dist) ? k.dist : null,
     });
@@ -84,6 +85,7 @@ export const buildFeedEvents = (kills, knocks, players) => {
       victim,
       weapon: n.w ?? null,
       icon: n.wi ?? null,
+      iconKey: n.wk ?? null,
       headshot: n.r === HEADSHOT,
       dist: Number.isFinite(n.dist) ? n.dist : null,
     });

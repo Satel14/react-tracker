@@ -4284,15 +4284,22 @@ body {
     &.is-focal { background: var(--ok); }
   }
 
-  // Sized by height so every silhouette lands on the same baseline whatever
-  // its aspect. 40x16 design units, so this is 32px wide. Carried at full
-  // --text rather than muted: at this size a dimmed silhouette stops being a
-  // shape and becomes a smudge, and the shape is the entire point.
+  // Sized by height, never by width, so a pistol and a sniper rifle land on
+  // the same baseline at their own aspects. PUBG's icons are 32px tall and the
+  // drawn fallbacks are 16 units tall, and both come out right from this.
+  //
+  // The colour reaches the drawn silhouette only -- the shipped icons carry
+  // their own. Full --text rather than muted: at this size a dimmed silhouette
+  // stops being a shape and becomes a smudge, and the shape is the whole point.
   &__weapon {
     flex: 0 0 auto;
     height: 13px;
     width: auto;
     color: var(--text);
+    // PUBG ships these muzzle-left; the feed reads left to right, killer then
+    // weapon then victim, so the gun points at who it hit. The drawn fallbacks
+    // are muzzle-left too, so one rule turns both and they stay consistent.
+    transform: scaleX(-1);
   }
 
   // What a weapon with no silhouette falls back to: the zone, a fall, a gun
@@ -4308,9 +4315,8 @@ body {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
-    color: var(--danger);
 
-    svg { height: 11px; width: 11px; }
+    img { height: 13px; width: auto; }
   }
 
   &__knock {
@@ -4319,7 +4325,7 @@ body {
     align-items: center;
     color: var(--warn);
 
-    svg { height: 12px; width: 15px; }
+    img { height: 13px; width: auto; }
   }
 
   @media (max-width: 760px) {
