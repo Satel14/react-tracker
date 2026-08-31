@@ -72,3 +72,50 @@ test("buildCardPng throws 'Player not found' when the envelope lacks platformInf
     /Player not found/
   );
 });
+
+// Every tier the ranked pipeline can produce, in ladder order. Kept here rather
+// than imported so the card's palette is pinned against the ladder itself, not
+// against whatever the card already happens to know.
+const PLAYABLE_TIERS = [
+  "bronze",
+  "silver",
+  "gold",
+  "platinum",
+  "crystal",
+  "diamond",
+  "master",
+  "grandmaster",
+  "survivor",
+];
+
+const cardFor = async (tier) => {
+  rankImpl = async () => ({
+    data: {
+      ...rankResult.data,
+      season: { rankedInfo: { label: tier, tier, currentRankPoint: 2500 } },
+    },
+  });
+  await buildCardPng({ platform: "steam", gameId: "Ninja" });
+  return lastSvg;
+};
+
+// The fallback in getPlayerCard.js. A real tier reaching it means the card is
+// painting the accent green and claiming it is that tier's colour -- which is
+// what every Crystal player's share card did, because the palette was written
+// before Crystal existed and nothing failed when it was added to the ladder.
+const FALLBACK = "#78f7a8";
+
+test("paints every ranked tier in its own colour, never the fallback", async () => {
+  for (const tier of PLAYABLE_TIERS) {
+    const svg = await cardFor(tier);
+    assert.ok(
+      !svg.includes(FALLBACK),
+      `${tier} fell back to ${FALLBACK} instead of having a colour of its own`,
+    );
+  }
+});
+
+test("still falls back for a tier that is not a tier", async () => {
+  assert.ok((await cardFor("")).includes(FALLBACK));
+  assert.ok((await cardFor("nonsense")).includes(FALLBACK));
+});

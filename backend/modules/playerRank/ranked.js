@@ -41,8 +41,12 @@ function toTierScore(tier, subTier) {
     silver: 20,
     gold: 30,
     platinum: 40,
+    // Crystal sits between Platinum and Diamond, not above it: RP decay stops
+    // below 3,000 -- "when you reach Platinum I" (Update 13.1) -- and Crystal
+    // tops out under that floor. Scored at 55 it beat Diamond outright, and the
+    // division bonus below carried Crystal I to 64, past Master's 60.
+    crystal: 45,
     diamond: 50,
-    crystal: 55,
     master: 60,
     grandmaster: 70,
     survivor: 75,
