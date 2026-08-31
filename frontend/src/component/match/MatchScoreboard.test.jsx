@@ -46,3 +46,25 @@ test("renders survival time with zero-padded minutes", () => {
   renderSb();
   expect(screen.getByText("05:03")).toBeInTheDocument();
 });
+
+test("leaves a bot's row as plain text while a real player still links", () => {
+  // It linked every name, and most of a PUBG lobby is AI: in the match this
+  // was measured on, 92 of the 100 entrants were bots, so 92 of the rows
+  // pointed at a profile that does not exist.
+  const board = {
+    teams: [{
+      teamId: 1, rank: 1, isFocalTeam: true,
+      players: [
+        { name: "Satel14", accountId: "account.me", kills: 3, damage: 400, assists: 0, dbnos: 1, survivalTime: 900, headshotKills: 1, longestKill: 87, revives: 0, isFocal: true },
+        { name: "Bot_Frank", accountId: "ai.1031", kills: 0, damage: 12, assists: 0, dbnos: 0, survivalTime: 120, headshotKills: 0, longestKill: 0, revives: 0, isFocal: false },
+      ],
+    }],
+  };
+  const { container } = render(
+    <MemoryRouter><MatchScoreboard scoreboard={board} platform="steam" t={t} /></MemoryRouter>
+  );
+  const links = [...container.querySelectorAll("a")];
+  expect(links.map((a) => a.textContent)).toEqual(["Satel14"]);
+  expect(links[0].getAttribute("href")).toBe("/player/steam/Satel14");
+  expect(container.textContent).toContain("Bot_Frank");
+});

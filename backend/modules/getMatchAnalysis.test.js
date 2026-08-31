@@ -176,3 +176,35 @@ test("parseTimeline flags a third party when a second team hits the focal player
   assert.equal(tl.thirdParties.length, 1);
   assert.equal(tl.thirdParties[0].teamCount, 2);
 });
+
+// A kill feed row names two players, and a name alone cannot be linked to a
+// profile: a bot's name looks exactly like a person's, and 92 of the 100
+// entrants in a real match are bots. The account id is what tells them apart.
+test("a kill feed row carries the account ids behind both names", () => {
+  const telemetry = [
+    { _T: "LogMatchStart", characters: [], common: {}, _D: "2026-01-01T00:00:00.000Z" },
+    { _T: "LogPlayerKillV2", _D: "2026-01-01T00:01:00.000Z",
+      killer: { name: "Me", accountId: "account.me", location: { x: 100000, y: 100000, z: 0 } },
+      victim: { name: "Bot_Frank", accountId: "ai.1031", location: { x: 200000, y: 200000, z: 0 } },
+      killerDamageInfo: { damageCauserName: "WeapAUG_C", distance: 5000 } },
+  ];
+  const [row] = parseKillFeed(telemetry, {});
+  assert.equal(row.killerAccountId, "account.me");
+  assert.equal(row.victimAccountId, "ai.1031");
+});
+
+test("a kill feed row reads through a blank damage block, like the replay does", () => {
+  // Same defect the replay payload had: "None" and an empty causer name are
+  // non-empty strings that beat the block naming the gun that did it.
+  const telemetry = [
+    { _T: "LogMatchStart", characters: [], common: {}, _D: "2026-01-01T00:00:00.000Z" },
+    { _T: "LogPlayerKillV2", _D: "2026-01-01T00:01:00.000Z",
+      killer: { name: "Me", accountId: "account.me", location: { x: 100000, y: 100000, z: 0 } },
+      victim: { name: "Foe", accountId: "account.foe", location: { x: 200000, y: 200000, z: 0 } },
+      killerDamageInfo: { damageCauserName: "None", distance: -1 },
+      dBNODamageInfo: { damageCauserName: "WeapAUG_C", distance: 5000 } },
+  ];
+  const [row] = parseKillFeed(telemetry, {});
+  assert.equal(row.weapon, "AUG");
+  assert.equal(row.distance, 50);
+});

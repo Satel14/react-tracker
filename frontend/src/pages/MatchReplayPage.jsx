@@ -342,7 +342,7 @@ const MatchReplayPage = ({ t }) => {
           children: renderAnalysisPane((a) => (
             <>
               <KillMap kills={a.killFeed} rawMapName={a.rawMapName} mapMax={a.mapMax} duration={a.duration} t={t} />
-              <KillFeed kills={a.killFeed} t={t} />
+              <KillFeed kills={a.killFeed} platform={platform} t={t} />
             </>
           )),
         },

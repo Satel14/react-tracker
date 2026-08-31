@@ -88,8 +88,15 @@ function parseKillFeed(telemetry, { clock, accountId = null, playerName = null }
     const t = matchClock.timeOf(ev);
     const victim = ev.victim || null;
     const killer = ev.killer ?? ev.finisher ?? ev.dBNOMaker ?? null;
-    const dmgInfo = ev.killerDamageInfo || ev.finishDamageInfo || {};
-    const weaponKey = dmgInfo.damageCauserName || ev.damageCauserName || null;
+    // The first block that NAMES a cause, not the first that exists: a
+    // bleed-out ships a present-but-blank killerDamageInfo, and "None" is how
+    // the engine writes an unset name -- both are strings that beat the block
+    // naming the gun that did it. Knock before finish, because on a bleed-out
+    // the finish names the pawn that stopped ticking. Same rule as the replay
+    // payload; see getMatchReplay.
+    const named = (d) => d && d.damageCauserName && !/^none$/i.test(d.damageCauserName);
+    const dmgInfo = [ev.killerDamageInfo, ev.dBNODamageInfo, ev.finishDamageInfo].find(named) || {};
+    const weaponKey = dmgInfo.damageCauserName || (named(ev) ? ev.damageCauserName : null);
     const rawDistance = dmgInfo.distance;
     const distance = Number.isFinite(Number(rawDistance)) ? Math.round(Number(rawDistance) / 100) : null;
     const killerName = killer?.name || null;
@@ -99,8 +106,13 @@ function parseKillFeed(telemetry, { clock, accountId = null, playerName = null }
     kills.push({
       t,
       killerName,
+      // The account id behind each name. A name alone cannot be linked to a
+      // profile -- a bot's looks exactly like a person's, and most of the
+      // entrants in a match are bots -- and this is what tells them apart.
+      killerAccountId: killer?.accountId || null,
       killerTeamId: killerName != null ? (nameToTeam.get(killerName) ?? null) : null,
       victimName,
+      victimAccountId: victim?.accountId || null,
       victimTeamId: victimName != null ? (nameToTeam.get(victimName) ?? null) : null,
       weapon: telemetryWeaponName(weaponKey),
       weaponKey,

@@ -44,6 +44,16 @@ const REVIEWED = [
     why: 'Both branches are "/player/" + platform + "/" + name; the search box only ever fills the last segment.',
   },
   {
+    file: "component/match/KillFeed.jsx",
+    target: "to",
+    why: 'Held from profilePath(), which returns either null or `/player/${shard}/...`, and the link renders only when it is not null.',
+  },
+  {
+    file: "component/match/MatchScoreboard.jsx",
+    target: "to",
+    why: 'profileLink.js builds every path it returns from the literal "/player/" root, and returns null rather than a path it cannot root; the link renders only when it is not null.',
+  },
+  {
     file: "pages/MatchReplayPage.jsx",
     target: "backTo",
     why: 'Ternary over `/player/${platform}/${encodeURIComponent(...)}` and "/", so both branches are literal-rooted.',
