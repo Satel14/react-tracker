@@ -11,20 +11,18 @@ describe("damageAt", () => {
     expect(damageAt(events, 0)).toEqual([]);
   });
 
-  it("puts a red number on whoever lost the health and a green one on who took it", () => {
+  it("puts one number on whoever lost the health, and none on who took it", () => {
+    // Only what a player received. Who dealt it is already on the map: the
+    // tracer runs from the shooter to them, so a second number saying the same
+    // thing twice is noise.
     const shown = damageAt(events, 10);
-    expect(shown.map((n) => [n.player, n.kind, n.amount])).toEqual([
-      [1, "taken", 19],
-      [0, "dealt", 19],
-    ]);
+    expect(shown.map((n) => [n.player, n.amount])).toEqual([[1, 19]]);
   });
 
-  it("credits nobody for a hit with no attacker", () => {
-    // The zone, a fall, a jerry can. Somebody lost health and nobody dealt it.
-    // Its own list: at t=11 the hit at t=10 is one second old and still up,
-    // because a number lives 1.6 replay seconds.
-    const shown = damageAt([ev(11, -1, 2, 4)], 11);
-    expect(shown.map((n) => [n.player, n.kind])).toEqual([[2, "taken"]]);
+  it("counts a hit nobody dealt exactly like one somebody did", () => {
+    // The zone, a fall, a jerry can. The number came off a health bar either
+    // way, and that is the whole of what this layer says.
+    expect(damageAt([ev(11, -1, 2, 4)], 11).map((n) => [n.player, n.amount])).toEqual([[2, 4]]);
   });
 
   it("ages a number out of its life", () => {
@@ -51,10 +49,11 @@ describe("damageAt", () => {
     expect(shown.map((n) => n.stack)).toEqual([0, 1, 2]);
   });
 
-  it("stacks the dealer's side separately from the taker's", () => {
+  it("says nothing about the player who dealt the hit", () => {
+    // Player 0 lands two hits on player 1 and gets no numbers of their own.
     const shown = damageAt([ev(10, 0, 1, 5), ev(10.1, 0, 1, 6)], 10.1);
-    expect(shown.filter((n) => n.player === 1).map((n) => n.stack)).toEqual([0, 1]);
-    expect(shown.filter((n) => n.player === 0).map((n) => n.stack)).toEqual([0, 1]);
+    expect(shown.every((n) => n.player === 1)).toBe(true);
+    expect(shown).toHaveLength(2);
   });
 
   it("keeps the newest when a firefight makes more than fit", () => {
@@ -62,6 +61,16 @@ describe("damageAt", () => {
     const shown = damageAt(burst, 10.4);
     expect(shown).toHaveLength(DAMAGE.cap);
     expect(shown[0].amount).toBe(40);
+  });
+
+  it("still reads an attacker column it no longer shows", () => {
+    // The column stays in the payload for the roster's damage-dealt figure,
+    // which is a different feature on a different surface. Nothing here reads
+    // it, and nothing here may start drawing from it by accident.
+    const withAttacker = damageAt([ev(10, 0, 1, 19)], 10);
+    const without = damageAt([ev(10, -1, 1, 19)], 10);
+    expect(withAttacker.map((n) => [n.player, n.amount, n.stack]))
+      .toEqual(without.map((n) => [n.player, n.amount, n.stack]));
   });
 
   it("answers the same for a time whether or not a later one was asked first", () => {
@@ -79,7 +88,7 @@ describe("damageAt", () => {
   });
 
   it("takes a lifetime and a cap from the caller", () => {
-    expect(damageAt(events, 12, { lifetime: 5 }).map((n) => n.amount)).toEqual([4, 19, 19]);
+    expect(damageAt(events, 12, { lifetime: 5 }).map((n) => n.amount)).toEqual([4, 19]);
     expect(damageAt(events, 12, { lifetime: 5, cap: 1 })).toHaveLength(1);
   });
 

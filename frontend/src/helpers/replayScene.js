@@ -31,12 +31,13 @@ export const SCREEN = {
   // number is on screen for under two seconds and has to be read at a
   // glance, where a name can be studied.
   damageFont: "700 12px system-ui, sans-serif",
-  // How far a number climbs over its life, and how far apart a burst
-  // stacks. Sideways too: what a player took goes to one side and what
-  // they dealt to the other, so a trade does not print both on one pixel.
+  // Where a number starts above the marker, how far it climbs over its life,
+  // and how far apart a burst stacks. It starts clear of the glyph rather than
+  // on it -- a marker is up to 12px across and the first frame of a number
+  // printed over one is the frame it is most worth reading.
+  damageLift: 14,
   damageRise: 22,
   damageStack: 13,
-  damageOffset: 10,
   flashLifetimeMs: 1200,
   // P2 layers. Every one of these is CSS pixels and must never be multiplied
   // by the camera scale -- only zone radii, the map blit and the flight line's
@@ -439,9 +440,9 @@ const radiusFor = (meta, selected) => {
 // while running would otherwise leave it behind. Positions come from the same
 // sample the marker was drawn from, so the two cannot disagree.
 //
-// The minus belongs to the player whose health went down. On the dealer the
-// same figure is a gain, and a green "-19" there reads as if they were the one
-// who lost it.
+// Only what a player received, and the minus says so. Who dealt it is already
+// drawn: the tracer runs from the shooter to them, and a number on both ends
+// states the same hit twice.
 const paintDamage = (ctx, { cam, vw, vh, tracks, damage, t, colors }) => {
   const numbers = damageAt(damage, t);
   if (!numbers.length) return;
@@ -449,18 +450,17 @@ const paintDamage = (ctx, { cam, vw, vh, tracks, damage, t, colors }) => {
   ctx.save();
   ctx.font = SCREEN.damageFont;
   ctx.textAlign = "center";
+  ctx.fillStyle = colors.danger;
   for (const n of numbers) {
     if (n.player >= tracks.count) continue;
     if (tracks.outState[n.player] === STATE.ABSENT) continue;
     const p = worldToScreen(cam, vw, vh, tracks.outX[n.player], tracks.outY[n.player]);
     if (p.x < -40 || p.y < -40 || p.x > vw + 40 || p.y > vh + 40) continue;
-    const taken = n.kind === "taken";
     ctx.globalAlpha = Math.max(0, 1 - n.age);
-    ctx.fillStyle = taken ? colors.danger : colors.healthOk;
     ctx.fillText(
-      taken ? `-${n.amount}` : `${n.amount}`,
-      p.x + (taken ? SCREEN.damageOffset : -SCREEN.damageOffset),
-      p.y - SCREEN.damageRise * n.age - n.stack * SCREEN.damageStack,
+      `-${n.amount}`,
+      p.x,
+      p.y - SCREEN.damageLift - SCREEN.damageRise * n.age - n.stack * SCREEN.damageStack,
     );
   }
   ctx.restore();

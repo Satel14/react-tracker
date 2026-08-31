@@ -1276,15 +1276,11 @@ describe("damage numbers", () => {
     expect(n.fill).toBe(COLORS.danger);
   });
 
-  it("puts a green number on whoever dealt it, without the minus", () => {
-    // The minus means health went down, so it belongs to the player it went
-    // down on. On the dealer the same figure is a gain, and a green -19 there
-    // reads as if they were the one who lost it.
+  it("says nothing on the player who dealt it", () => {
+    // The tracer already runs from the shooter to whoever they hit. A number
+    // on both ends states the same hit twice and doubles the text in a fight.
     const shown = draw([{ t: 5, a: 0, v: 1, d: 19 }]);
-    expect(shown.map((n) => [n.text, n.fill])).toEqual([
-      ["-19", COLORS.danger],
-      ["19", COLORS.healthOk],
-    ]);
+    expect(shown.map((n) => [n.text, n.fill])).toEqual([["-19", COLORS.danger]]);
   });
 
   it("counts damage nobody dealt, from the zone or a fall", () => {
@@ -1312,18 +1308,15 @@ describe("damage numbers", () => {
     expect(Math.abs(shown[0].y - shown[1].y)).toBeCloseTo(SCREEN.damageStack, 6);
   });
 
-  it("stacks what a player dealt separately from what they took", () => {
-    // Player 0 takes 10 and deals 20 in the same instant. One counter for both
-    // would push one of the two numbers a row up for no reason -- and it is
-    // only visible when the same player is on both sides at once, which is why
-    // the first version of this test missed it.
+  it("gives two players trading blows one number each", () => {
     const shown = draw([
       { t: 5, a: 1, v: 0, d: 10 },
       { t: 5, a: 0, v: 1, d: 20 },
     ]);
-    const ownTaken = shown.find((n) => n.text === "-10");
-    const ownDealt = shown.find((n) => n.text === "20");
-    expect(ownTaken.y).toBeCloseTo(ownDealt.y, 6);
+    // One apiece. Their heights are not comparable -- the two markers stand in
+    // different places on the map -- and whether either is stacked is a
+    // question for damageAt, which pins it.
+    expect(shown.map((n) => n.text).sort()).toEqual(["-10", "-20"]);
   });
 
   it("says nothing for an index no player has", () => {
