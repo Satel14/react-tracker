@@ -42,4 +42,11 @@ export const SURVIVOR_SLOTS = [
   { key: "sa", slots: 5 },
 ];
 
+// Division labels for the tiers that have them, lowest division first, matching
+// the "IV up to I" wording in the copy. Roman numerals read the same in both
+// locales, so they live here rather than in the dictionaries. A tier renders
+// the last `divisions` of these, so a tier that ever regained a fifth division
+// would render four pips and fail rankLadder's own test rather than lie.
+export const DIVISION_PIPS = ["IV", "III", "II", "I"];
+
 export default RANK_LADDER;

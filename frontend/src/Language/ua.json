@@ -365,6 +365,25 @@
         "ranks": {
             "title": "Ранги PUBG: як влаштовані тіри, RP і Survivor",
             "intro": "Вісім тірів, одне спільне RP для складів і виду камери та найвищий тір, який можна втратити за одну ніч — ось як рейтингова система працює станом на 31 серпня 2026 року, за патчноутами й офіційними дописами самої KRAFTON, а де джерело слабше, ми кажемо про це одразу.",
+            "onThisPage": "На цій сторінці",
+            "keyFacts": {
+                "tiers": {
+                    "value": "8",
+                    "label": "рейтингових тірів — від Bronze до Survivor"
+                },
+                "survivorRp": {
+                    "value": "3700",
+                    "label": "RP — поріг входу в Survivor"
+                },
+                "protection": {
+                    "value": "3",
+                    "label": "заряди Tier Protection, від Silver і вище"
+                },
+                "decay": {
+                    "value": "100",
+                    "label": "RP на добу з'їдає спад на Diamond і вище"
+                }
+            },
             "ladder": {
                 "heading": "Усі вісім тірів за порядком",
                 "p1": "У PUBG: BATTLEGROUNDS вісім рейтингових тірів. Від найнижчого до найвищого: Bronze, Silver, Gold, Platinum, Crystal, Diamond, Master, Survivor.",

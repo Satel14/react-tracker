@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { setTranslations, setDefaultLanguage, setLanguage } from "react-switch-lang";
 import Ranks from "./Ranks";
 import { ROUTE_META } from "../helpers/routeMeta";
-import { SURVIVOR_SLOTS } from "../helpers/rankLadder";
+import { RANK_LADDER, SURVIVOR_SLOTS, DIVISION_PIPS } from "../helpers/rankLadder";
 import en from "../Language/en.json";
 import ua from "../Language/ua.json";
 
@@ -107,7 +107,11 @@ test("renders in Ukrainian too", () => {
     </MemoryRouter>
   );
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(ua.pages.ranks.title);
-  expect(screen.getByText(ua.pages.ranks.ladder.heading)).toBeInTheDocument();
+  // By role, not by text: the contents rail repeats every heading verbatim, so
+  // a bare getByText finds two nodes and throws.
+  expect(
+    screen.getByRole("heading", { level: 2, name: ua.pages.ranks.ladder.heading })
+  ).toBeInTheDocument();
 });
 
 // SURVIVOR_SLOTS shipped in rankLadder.js with the Update 36.1 sourcing and a
@@ -132,4 +136,69 @@ test("shows how many Survivor slots each region gets", () => {
 test("dates the slot table instead of passing it off as current", () => {
   const { container } = renderPage();
   expect(container.textContent).toContain(en.pages.ranks.survivorTier.p5);
+});
+
+// The rail reuses each section's own heading rather than a second set of short
+// labels, so a heading reworded in the copy cannot leave a nav entry quoting
+// the old wording at an anchor that still resolves.
+test("points the contents rail at every section on the page", () => {
+  const { container } = renderPage();
+  const links = Array.from(container.querySelectorAll(".ranks-page__toc-list a"));
+  const sections = Array.from(container.querySelectorAll(".ranks-page__section"));
+  expect(links).toHaveLength(sections.length);
+  expect(links.map((link) => link.getAttribute("href"))).toEqual(
+    sections.map((section) => `#${section.id}`)
+  );
+  expect(links.map((link) => link.textContent)).toEqual(
+    sections.map((section) => section.querySelector("h2").textContent)
+  );
+});
+
+// Every headline number has to be one KRAFTON published and has not since
+// contradicted. The per-match RP swing is the one that fails that bar: Season
+// 36 capped it at -44/+44 and Update 42.1 stacked bonuses on top without
+// restating the cap, so the copy refuses to call it current. However quotable
+// it looks, it may not appear in large type here.
+test("puts four published numbers in the key-fact strip, and not the RP swing", () => {
+  const { container } = renderPage();
+  const facts = Array.from(container.querySelectorAll(".ranks-page__fact"));
+  const values = facts.map(
+    (fact) => fact.querySelector(".ranks-page__fact-value").textContent
+  );
+  expect(values).toEqual(["8", "3,700", "3", "100"]);
+  expect(values[0]).toBe(String(RANK_LADDER.length));
+  expect(container.querySelector(".ranks-page__facts").textContent).not.toContain("44");
+});
+
+// The seat counts only make their point beside one another: NA gets five where
+// AS gets two hundred. The bar is that comparison, so it is scaled off the
+// largest region rather than off the 460-seat total.
+test("scales each Survivor slot bar off the largest region", () => {
+  const { container } = renderPage();
+  const bars = Array.from(container.querySelectorAll(".ranks-page__slot-bar > span"));
+  const largest = Math.max(...SURVIVOR_SLOTS.map((region) => region.slots));
+  expect(bars).toHaveLength(SURVIVOR_SLOTS.length);
+  expect(bars.map((bar) => bar.style.width)).toEqual(
+    SURVIVOR_SLOTS.map((region) => `${(region.slots / largest) * 100}%`)
+  );
+});
+
+// Decoration that repeats what the row already says in prose: hidden from the
+// accessibility tree, and pinned to the division count so the pips cannot
+// quietly disagree with the sentence beside them.
+test("draws one division pip per division, and none for a single rank", () => {
+  const { container } = renderPage();
+  const tiers = Array.from(container.querySelectorAll(".ranks-page__tier"));
+  expect(tiers).toHaveLength(RANK_LADDER.length);
+  tiers.forEach((tier, index) => {
+    const pips = tier.querySelector(".ranks-page__tier-pips");
+    const { divisions } = RANK_LADDER[index];
+    if (divisions === 1) {
+      expect(pips, RANK_LADDER[index].key).toBeNull();
+      return;
+    }
+    expect(pips).toHaveAttribute("aria-hidden", "true");
+    expect(pips.querySelectorAll("li")).toHaveLength(divisions);
+    expect(pips.textContent).toBe(DIVISION_PIPS.slice(-divisions).join(""));
+  });
 });

@@ -365,6 +365,25 @@
     "ranks": {
       "title": "PUBG ranks explained: tiers, RP and Survivor",
       "intro": "Eight tiers, one RP number shared across party types and perspectives, and a top tier you can lose overnight — this is the ranked system as it stands on 31 August 2026, sourced to KRAFTON's patch notes and official posts, with every exception labelled.",
+      "onThisPage": "On this page",
+      "keyFacts": {
+        "tiers": {
+          "value": "8",
+          "label": "ranked tiers, Bronze to Survivor"
+        },
+        "survivorRp": {
+          "value": "3,700",
+          "label": "RP for the Survivor gate"
+        },
+        "protection": {
+          "value": "3",
+          "label": "Tier Protection charges, Silver and up"
+        },
+        "decay": {
+          "value": "100",
+          "label": "RP a day lost to decay at Diamond and up"
+        }
+      },
       "ladder": {
         "heading": "The eight tiers, in order",
         "p1": "PUBG: BATTLEGROUNDS has eight ranked tiers. From lowest to highest: Bronze, Silver, Gold, Platinum, Crystal, Diamond, Master, Survivor.",
