@@ -3339,6 +3339,105 @@ body {
   }
 }
 
+// The ranked-system explainer. Same measure and rhythm as .help-page -- it is
+// the other long-form page on the site and they should read as a pair.
+.ranks-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 0 8px;
+  color: var(--text);
+
+  &__hero {
+    margin-bottom: 26px;
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+      letter-spacing: 1px;
+      color: var(--text-strong);
+      text-transform: uppercase;
+    }
+
+    p {
+      margin: 0;
+      max-width: 68ch;
+      color: var(--text-muted);
+    }
+  }
+
+  &__section {
+    margin-bottom: 30px;
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      color: var(--text-strong);
+    }
+
+    p {
+      margin: 0 0 10px;
+      max-width: 68ch;
+      line-height: 1.65;
+    }
+  }
+
+  &__ladder {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__tier {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+    border: 1px solid var(--border);
+  }
+
+  &__tier-icon {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    object-fit: contain;
+  }
+
+  &__tier-body p {
+    margin: 0;
+  }
+
+  &__tier-name {
+    color: var(--text-strong);
+    font-weight: 600;
+  }
+
+  &__tier-divisions {
+    font-size: 13px;
+    color: var(--text-faint);
+  }
+
+  &__outro {
+    margin: 24px 0 0;
+    font-weight: 600;
+  }
+
+  @media (max-width: 680px) {
+    &__hero h1 {
+      font-size: 24px;
+    }
+  }
+}
+
+.leaderboard-page__explainer {
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+
 .help-page {
   max-width: 900px;
   margin: 0 auto;
