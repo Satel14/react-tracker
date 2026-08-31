@@ -1939,23 +1939,51 @@ body {
       transform: translateY(-50%);
       background: transparent;
       border: none;
-      line-height: 1;
       min-width: 0;
 
       &.ant-menu-horizontal {
         border-bottom: none;
       }
 
+      // The gap goes on the row, not inside the items. Ant's own 16px of inline
+      // padding would work too, but it also pads the two outer edges, and this
+      // cluster is 140px from a centred logo it cannot afford to grow towards.
+      // Flattening the gap altogether is what made the Ranks crown butt into
+      // the "s" of "Leaderboards".
+      column-gap: 30px;
+
+      // No line-height override either: Ant sizes a horizontal item to 46px,
+      // and collapsing that dropped the selected-route underline 16px above
+      // the one the left menu draws.
       .ant-menu-item {
-        top: 0;
         padding-inline: 0;
         color: var(--text-strong);
 
+        // Ant insets the underline by its own padding, which these items no
+        // longer have, so it would sit 16px short at each end.
         &::after {
-          display: none;
+          inset-inline: 0;
         }
       }
     }
+
+    // The logo is centred absolutely while the two menus grow inwards from the
+    // edges, so on a narrow desktop they meet in the middle -- and they meet
+    // sooner in Ukrainian, whose labels run about 40% longer than the English
+    // ones. Above the phone breakpoint but below this width, the logo is the
+    // part that gives up room, because it is the one element on the bar that
+    // stays legible at any size.
+    @media (max-width: 1240px) {
+      &__logo {
+        font-size: 24px;
+      }
+
+      .right-menu {
+        right: 124px;
+        column-gap: 18px;
+      }
+    }
+
 
     svg {
       font-size: 24px;
