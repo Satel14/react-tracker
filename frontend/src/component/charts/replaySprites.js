@@ -458,6 +458,19 @@ const TEAM_FORM = {
 
 const TEAM_FORM_KINDS = [...new Set(Object.values(TEAM_FORM))];
 
+// Glyphs traced from side-view art: they have a roof and wheels, so there is a
+// way up. Rotating one to a westward bearing stands it on its head, which a
+// hand-drawn hull with an axle at each end never did because it was symmetric.
+// Not the plane -- that is a plan view, with a nose and a tail rather than a
+// roof -- and not the darts, which are symmetric about the axis they point
+// along.
+const SIDE_VIEW = new Set([
+  "vehicleFocal", "vehicleEnemy",
+  "truckFocal", "truckEnemy",
+  "bikeFocal", "bikeEnemy",
+  "boatFocal", "boatEnemy",
+]);
+
 // The halo has to sit outside whatever the colour pass puts down, so a stroked
 // glyph needs its own width plus HALO on each side; a filled one needs HALO on
 // each side of the path and lets the fill cover the inner half.
@@ -580,6 +593,12 @@ export const buildAtlas = ({ dpr = 1, colors = {} } = {}) => {
       target.save();
       target.translate(x, y);
       target.rotate(angle);
+      // Turned to the bearing, then mirrored about its own long axis when that
+      // bearing points into the left half-plane. cos(angle) < 0 is exactly the
+      // set of headings that would put the roof below the wheels. The mirror
+      // is on the local y axis, so the nose still points where the player is
+      // going -- only the up/down of the art is flipped back.
+      if (SIDE_VIEW.has(known) && Math.cos(angle) < 0) target.scale(1, -1);
       target.drawImage(canvas, cell.sx, cell.sy, cell.sw, cell.sh, -half, -half, d, d);
       target.restore();
     },

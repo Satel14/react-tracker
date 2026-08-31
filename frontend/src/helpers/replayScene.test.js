@@ -1126,3 +1126,40 @@ test("crates in the air do not sway in unison", () => {
   // cluster of drops does not read as one rigid object.
   expect(xs[0]).not.toBe(xs[1]);
 });
+
+// Zoomed out, sixty names over a map is noise and the focal team plus whatever
+// is selected is the whole useful set. Zoomed in on a fight there are only a
+// handful of markers on screen and the question changes from "who is mine" to
+// "who is that" -- so past a threshold every visible player is named.
+test("names every visible player once the map is zoomed in close", () => {
+  const ctx = recordingCtx();
+  drawScene(ctx, frameAt(SCREEN.labelAllZoom));
+  const texts = ctx.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
+  expect(texts).toEqual(["Me", "Foe"]);
+});
+
+test("names only the focal team and the selection until then", () => {
+  const ctx = recordingCtx();
+  drawScene(ctx, frameAt(SCREEN.labelAllZoom - 0.01));
+  const texts = ctx.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
+  expect(texts).toEqual(["Me"]);
+});
+
+test("gives the names that always show the cap before the ones zoom added", () => {
+  // The cap exists so a crowded compound cannot bury the map in text. Which
+  // names it keeps matters: dropping your own squad to fit a stranger in would
+  // be the wrong way round, and track order alone would do exactly that.
+  const crowd = [
+    { name: "Enemy1", accountId: "a.e1", teamId: 9, isFocal: false, dropTime: null, deathTime: null,
+      positions: [{ t: 0, x: 4050, y: 4050 }, { t: 10, x: 4050, y: 4050 }] },
+    ...players,
+  ];
+  const ctx = recordingCtx();
+  drawScene(ctx, {
+    ...frameAt(SCREEN.labelAllZoom),
+    tracks: sampleTracks(buildTracks(crowd), 5),
+    labelCap: 1,
+  });
+  const texts = ctx.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
+  expect(texts).toEqual(["Me"]);
+});

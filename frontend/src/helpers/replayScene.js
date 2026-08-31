@@ -12,6 +12,13 @@ export const SCREEN = {
   ringWidth: 2,
   labelFont: "600 11px system-ui, sans-serif",
   labelOffset: 12,
+  // Past this zoom every visible player is named, not only the focal team
+  // and the selection. Zoomed out, sixty names over a map is noise; two
+  // double-clicks in there are a handful of markers on screen and the
+  // question has changed from "who is mine" to "who is that". Zoom runs
+  // 1..16 and is viewport-independent, which is why the threshold is on it
+  // rather than on the pixel scale.
+  labelAllZoom: 4,
   flashLifetimeMs: 1200,
   // P2 layers. Every one of these is CSS pixels and must never be multiplied
   // by the camera scale -- only zone radii, the map blit and the flight line's
@@ -436,7 +443,12 @@ export const drawScene = (ctx, frame) => {
   paintMarkers(ctx, { cam, vw, vh, knocks, revives, t: frameT, colors });
   drawFlashes(ctx, { cam, vw, vh, flashes, nowMs, colors });
 
+  // Two lists, joined at the end, so labelCap trims the ones zoom added
+  // rather than the ones that always show. Track order alone would drop a
+  // player's own squad to fit a stranger in.
   const labels = [];
+  const zoomed = [];
+  const labelAll = cam.zoom >= SCREEN.labelAllZoom;
   for (let i = 0; i < tracks.count; i += 1) {
     const state = tracks.outState[i];
     if (state === STATE.ABSENT) continue;
@@ -506,14 +518,17 @@ export const drawScene = (ctx, frame) => {
       paintHealthArc(ctx, p.x, p.y, r, tracks.outH ? tracks.outH[i] : 100, colors);
     }
 
-    if (meta.isFocal || selected || i === hoveredIndex) labels.push({ name: meta.name, x: p.x, y: p.y });
+    const named = meta.isFocal || selected || i === hoveredIndex;
+    if (named) labels.push({ name: meta.name, x: p.x, y: p.y });
+    else if (labelAll) zoomed.push({ name: meta.name, x: p.x, y: p.y });
   }
   ctx.globalAlpha = 1;
 
   ctx.font = SCREEN.labelFont;
   ctx.fillStyle = colors.label;
-  for (let i = 0; i < Math.min(labels.length, labelCap); i += 1) {
-    const l = labels[i];
+  const shown = labels.concat(zoomed);
+  for (let i = 0; i < Math.min(shown.length, labelCap); i += 1) {
+    const l = shown[i];
     ctx.fillText(l.name, l.x + SCREEN.labelOffset, l.y - SCREEN.labelOffset);
   }
 };
