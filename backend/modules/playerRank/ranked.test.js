@@ -16,9 +16,11 @@ const mode = (tier, subTier, currentRankPoint = 0) => ({
 const higherOf = (a, b) =>
   extractRankedInfo({ "squad-fpp": a, solo: b }).tier.toLowerCase();
 
-// PUBG's ladder, lowest first. Crystal sits between Platinum and Diamond, which
-// is where its RP band puts it: decay stops below 3,000 RP, "when you reach
-// Platinum I", and Crystal tops out under that floor.
+// PUBG's ladder, lowest first, as the Season 42 reward table lists it. Crystal
+// sits between Platinum and Diamond because the Season 36 dev letter puts it
+// there. Grandmaster is deliberately absent: it was a tier in the 2018 ranked
+// beta and in nothing since, so pinning it here would assert a rung the game
+// does not have.
 const LADDER = [
   "Bronze",
   "Silver",
@@ -27,7 +29,7 @@ const LADDER = [
   "Crystal",
   "Diamond",
   "Master",
-  "Grandmaster",
+  "Survivor",
 ];
 
 test("orders every adjacent pair of tiers the way the ladder does", () => {
