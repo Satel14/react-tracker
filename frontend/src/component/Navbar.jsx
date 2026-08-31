@@ -105,9 +105,9 @@ const Navbar = ({ t }) => {
 
   // The badge wraps the link rather than the other way round: its count sits
   // outside the anchor, so it stays out of the link's accessible name.
-  const menuLabel = (item) => {
-    const link = <Link to={item.path}>{t(`menu.${item.key}`)}</Link>;
-    if (item.key !== "favorites") return link;
+  const menuLabel = ({ key, path }) => {
+    const link = <Link to={path}>{t(`menu.${key}`)}</Link>;
+    if (key !== "favorites") return link;
     return (
       <Badge
         count={favoritesCount}
@@ -121,17 +121,17 @@ const Navbar = ({ t }) => {
     );
   };
 
-  const toMenuItem = (item) => ({
-    key: item.key,
-    icon: item.icon,
-    label: menuLabel(item),
+  const toMenuItem = ({ key, icon, path }) => ({
+    key,
+    icon,
+    label: menuLabel({ key, path }),
     // The anchor handles clicks on the label itself. Ant Design renders the icon
     // as a sibling of the label span and pads the item, and the anchor's overlay
     // is trapped inside that span -- so this catches the icon and the padding,
     // which would otherwise look clickable and do nothing.
     onClick: ({ domEvent }) => {
       if (domEvent?.target?.closest?.("a")) return;
-      navigate(item.path);
+      navigate(path);
     },
   });
 
@@ -210,19 +210,19 @@ const Navbar = ({ t }) => {
           >
             <div className="navbar__mobile-drawer">
               <div className="navbar__mobile-items">
-                {allNavItems.map((item) => (
+                {allNavItems.map(({ key, path, icon }) => (
                   <Link
-                    key={item.key}
-                    to={item.path}
-                    className={`navbar__mobile-item ${current === item.key ? "active" : ""}`}
+                    key={key}
+                    to={path}
+                    className={`navbar__mobile-item ${current === key ? "active" : ""}`}
                     // Navigating closes the drawer through the location effect,
                     // but tapping the route you are already on changes no
                     // location -- so close it here too.
                     onClick={() => setMobileOpen(false)}
                     onKeyDown={activateOnSpace}
                   >
-                    {item.icon}
-                    <span>{t(`menu.${item.key}`)}</span>
+                    {icon}
+                    <span>{t(`menu.${key}`)}</span>
                   </Link>
                 ))}
               </div>
