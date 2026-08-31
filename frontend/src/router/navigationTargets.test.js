@@ -44,6 +44,21 @@ const REVIEWED = [
     why: 'Both branches are "/player/" + platform + "/" + name; the search box only ever fills the last segment.',
   },
   {
+    file: "pages/PlayerPage.jsx",
+    target: "to",
+    why: 'Held from profilePath() or profilePathByName(), both of which return either null or `/player/${shard}/...`, and the link renders only when it is not null.',
+  },
+  {
+    file: "component/charts/ReplayOverlays.jsx",
+    target: "to",
+    why: 'Held from profilePath(), which returns either null or `/player/${shard}/...`, and the link renders only when it is not null.',
+  },
+  {
+    file: "component/charts/ReplayRoster.jsx",
+    target: "to",
+    why: 'Held from profilePath(), which returns either null or `/player/${shard}/...`, and the link renders only when it is not null.',
+  },
+  {
     file: "component/match/KillFeed.jsx",
     target: "to",
     why: 'Held from profilePath(), which returns either null or `/player/${shard}/...`, and the link renders only when it is not null.',

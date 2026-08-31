@@ -41,8 +41,8 @@ describe("buildFeedEvents", () => {
   it("resolves a knock's account ids, which are all it carries", () => {
     const [line] = buildFeedEvents([], [knock()], players);
 
-    expect(line.killer).toEqual({ name: "Me", teamId: 1, isFocal: true });
-    expect(line.victim).toEqual({ name: "Foe", teamId: 22, isFocal: false });
+    expect(line.killer).toEqual({ name: "Me", accountId: "account.me", teamId: 1, isFocal: true });
+    expect(line.victim).toEqual({ name: "Foe", accountId: "account.foe", teamId: 22, isFocal: false });
     expect(line.weapon).toBe("M416");
     expect(line.dist).toBe(40);
   });
@@ -70,7 +70,7 @@ describe("buildFeedEvents", () => {
       players,
     );
 
-    expect(line.killer).toEqual({ name: "Ghost", teamId: 9, isFocal: false });
+    expect(line.killer).toEqual({ name: "Ghost", accountId: "account.ghost", teamId: 9, isFocal: false });
   });
 
   it("gives a death nobody caused no killer side", () => {
@@ -217,5 +217,37 @@ describe("the gun's own icon", () => {
 
   it("carries a knock's icon key too", () => {
     expect(buildFeedEvents([], [knock({ wk: "m416" })], players)[0].iconKey).toBe("m416");
+  });
+});
+
+describe("who a line is about", () => {
+  it("carries each side's account id, not only their name", () => {
+    // The view needs it to decide whether a name can link to a profile: a
+    // lobby is mostly AI and a bot's name reads like anyone else's. Without it
+    // the feed rendered no links at all while a test that built its own sides
+    // by hand passed happily.
+    const [k] = buildFeedEvents([kill()], [], players);
+    expect(k.killer.accountId).toBe("account.me");
+    expect(k.victim.accountId).toBe("account.foe");
+
+    const [n] = buildFeedEvents([], [knock()], players);
+    expect(n.killer.accountId).toBe("account.me");
+    expect(n.victim.accountId).toBe("account.foe");
+  });
+
+  it("carries the id of a player the roster never had", () => {
+    // The record's own name wins over the roster's, and its id has to come
+    // along with it or the name links nowhere.
+    const [line] = buildFeedEvents(
+      [kill({ killer: "Ghost", killerAccountId: "account.ghost", killerTeamId: 9 })],
+      [],
+      players,
+    );
+    expect(line.killer).toEqual({ name: "Ghost", accountId: "account.ghost", teamId: 9, isFocal: false });
+  });
+
+  it("leaves the id null when nobody caused the death", () => {
+    const [line] = buildFeedEvents([kill({ killer: null, killerAccountId: null })], [], players);
+    expect(line.killer).toBeNull();
   });
 });

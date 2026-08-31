@@ -1,5 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import ReplayRoster from "./ReplayRoster";
 
 const DICT = {
@@ -155,4 +156,43 @@ test("renders nothing but the title when the roster is empty", () => {
   const { container } = render(<ReplayRoster t={t} onSelect={() => {}} />);
   expect(container.querySelectorAll(".replay-roster__team")).toHaveLength(0);
   expect(screen.getByText("Roster")).toBeInTheDocument();
+});
+
+test("offers a profile link beside a real player's row, but not a bot's", () => {
+  // A PUBG lobby is mostly AI and a bot's name reads like anyone else's, so
+  // linking every row would be mostly dead links. The link is a SIBLING of the
+  // row button rather than inside it: a link nested in a button is neither.
+  const mixed = [
+    { name: "Satel14", accountId: "account.me", teamId: 1, kills: 3, alive: true, knocked: false, h: 100, isFocal: true },
+    { name: "Bot_Frank", accountId: "ai.1031", teamId: 1, kills: 0, alive: true, knocked: false, h: 100, isFocal: true },
+  ];
+  const { container } = render(
+    <MemoryRouter>
+      <ReplayRoster rows={mixed} focusedAccountId={null} onSelect={() => {}} platform="steam" t={t} />
+    </MemoryRouter>
+  );
+  const links = [...container.querySelectorAll("a")];
+  expect(links).toHaveLength(1);
+  expect(links[0]).toHaveAttribute("href", "/player/steam/Satel14");
+  expect(links[0].closest("button")).toBeNull();
+});
+
+test("keeps a name's own colour when it becomes a link", () => {
+  // The row tints the name by team and by focal, and an antd-styled <a> would
+  // paint over all of it. The shared .profile-link class is what stops that.
+  const { container } = render(
+    <MemoryRouter>
+      <ReplayRoster
+        rows={[row({ name: "Satel14", accountId: "account.me", isFocal: true })]}
+        focusedAccountId={null}
+        onSelect={() => {}}
+        platform="steam"
+        t={t}
+      />
+    </MemoryRouter>
+  );
+  expect(container.querySelectorAll("a")).toHaveLength(1);
+  for (const a of container.querySelectorAll("a")) {
+    expect(a.className).toContain("profile-link");
+  }
 });

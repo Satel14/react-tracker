@@ -1,6 +1,8 @@
 import React from "react";
 import { feedAt } from "../../helpers/replayFeed";
+import { Link } from "react-router-dom";
 import { teamColor, teamColorIndex } from "./replaySprites";
+import { profilePath } from "../../helpers/profileLink";
 import { WEAPON_GLYPHS, GLYPH_BOX } from "./weaponGlyphs";
 
 // The stage reads pan/zoom from pointer events on its own wrapper, so any
@@ -107,7 +109,7 @@ const KnockMark = () => <Mark file="_dbno" />;
 // Which end this is has to be in the markup and not merely in the order: a
 // kill greys the victim out and a knock does not, and that is a rule about the
 // end, not about the position.
-const FeedSide = ({ side, focalTeamId, role }) => {
+const FeedSide = ({ side, focalTeamId, role, platform }) => {
   const colour = teamColor(teamColorIndex(side.teamId, focalTeamId));
   const badge = side.teamId == null
     ? null
@@ -119,7 +121,21 @@ const FeedSide = ({ side, focalTeamId, role }) => {
         {side.teamId}
       </span>
     );
-  const name = <span className="replay-feed__name">{side.name}</span>;
+  // The overlay is pointer-transparent on purpose: any pixel of it that
+  // swallows a pointer freezes dragging in that corner of the map. A link has
+  // to take the pointer to be clickable at all, so ONLY the link does -- the
+  // badge, the weapon and the line around it stay transparent, and the map
+  // still drags everywhere except over a name.
+  //
+  // .profile-link keeps the colour the name already has: a kill turns the
+  // victim red and the focal side green, and an antd-styled <a> would paint
+  // over both.
+  const to = profilePath(platform, side.name, side.accountId);
+  const name = (
+    <span className="replay-feed__name">
+      {to ? <Link className="replay-feed__link profile-link" to={to}>{side.name}</Link> : side.name}
+    </span>
+  );
   const mirrored = role === "victim";
 
   return (
@@ -131,7 +147,7 @@ const FeedSide = ({ side, focalTeamId, role }) => {
   );
 };
 
-const ReplayOverlays = ({ rows = [], phases = [], t, displayT = 0, focalTeamId = null, feed = [] }) => {
+const ReplayOverlays = ({ rows = [], phases = [], t, displayT = 0, focalTeamId = null, feed = [], platform }) => {
   const list = rows || [];
   // Windowed here rather than handed down already sliced, for the same reason
   // phaseAt is called here: it is a function of the playhead, so scrubbing --
@@ -164,7 +180,7 @@ const ReplayOverlays = ({ rows = [], phases = [], t, displayT = 0, focalTeamId =
           {shown.map((line) => (
             <div key={line.id} className={`replay-feed__line is-${line.kind}`}>
               {line.killer ? (
-                <FeedSide side={line.killer} focalTeamId={focalTeamId} role="killer" />
+                <FeedSide side={line.killer} focalTeamId={focalTeamId} role="killer" platform={platform} />
               ) : null}
               {line.killer ? " " : null}
               {/* A silhouette when the class is known, the name when it is not:
@@ -184,7 +200,7 @@ const ReplayOverlays = ({ rows = [], phases = [], t, displayT = 0, focalTeamId =
                 </span>
               ) : null}
               {line.weapon ? " " : null}
-              <FeedSide side={line.victim} focalTeamId={focalTeamId} role="victim" />
+              <FeedSide side={line.victim} focalTeamId={focalTeamId} role="victim" platform={platform} />
             </div>
           ))}
         </div>

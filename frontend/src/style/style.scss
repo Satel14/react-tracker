@@ -4255,6 +4255,13 @@ body {
     white-space: nowrap;
   }
 
+  // The only pixels of this overlay that take a pointer. The feed as a whole is
+  // deliberately transparent to them -- a pixel that swallows a pointer freezes
+  // dragging in that corner of the map -- and a link cannot be clicked without
+  // taking one. So the trade is made here and nowhere else: the map drags
+  // everywhere except across a name.
+  &__link { pointer-events: auto; }
+
   // A kill is the end of that player's match and the line says so. A knock is
   // not, and leaves the name alone -- which is the only thing separating the
   // two lines when the same pair appears twice in a row.
@@ -4625,12 +4632,37 @@ body {
   }
   &__state-mark { color: var(--warn); font-weight: 700; }
   &__state { color: var(--text-faint); font-size: 11px; }
+  // The row button and the profile link side by side. The link cannot live
+  // inside the button -- a link nested in a button is neither -- so the wrap is
+  // what puts them on one line.
+  &__row-wrap {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  &__profile {
+    flex: 0 0 auto;
+    padding: 2px 4px;
+    border-radius: 4px;
+    color: var(--text-faint);
+    font-size: 12px;
+    line-height: 1;
+
+    &:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
+      text-decoration: none;
+    }
+  }
   &__row {
     display: grid;
     grid-template-columns: 1fr auto auto auto;
     align-items: center;
     gap: 4px 8px;
-    width: 100%;
+    // Was 100%: the row shares its line with the profile link now, so it takes
+    // what is left rather than the whole width.
+    flex: 1;
+    min-width: 0;
     box-sizing: border-box;
     background: none;
     border: 1px solid transparent;
@@ -5363,6 +5395,26 @@ body {
 
 // A pannable, zoomable map with a canvas over it. Two canvases, both absolute:
 // the raster underneath and whatever the caller paints on top.
+// A name that happens to be a link.
+//
+// antd's reset paints every <a> its own link colour, and these names are
+// already coloured by what they mean: the roster tints them by team, the feed
+// turns a victim red, a focal row goes green. A link colour on top would throw
+// all of that away, so the rule here is that the link takes the colour it
+// inherits and says it is a link by underlining on hover instead.
+.profile-link {
+  color: inherit;
+  text-decoration: none;
+
+  // Hover only. The focus ring is defined once for the whole app -- see the
+  // single :focus-visible rule tokens.test.js holds the stylesheet to -- and a
+  // second one here would be a second answer to the same question.
+  &:hover {
+    color: inherit;
+    text-decoration: underline;
+  }
+}
+
 .map-stage {
   position: relative;
   width: 100%;

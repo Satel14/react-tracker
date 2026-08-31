@@ -245,6 +245,7 @@ const MatchReplayPage = ({ t }) => {
               displayT={clock.displayT}
               focalTeamId={data.focalTeamId ?? null}
               feed={feedEvents}
+            platform={platform}
             />
           </ReplayStage>
           <p className="match-replay__hint">{t("pages.replay.hint")}</p>
@@ -312,6 +313,7 @@ const MatchReplayPage = ({ t }) => {
         rows={roster}
         focusedAccountId={focusedAccountId}
         onSelect={setFocusedAccountId}
+        platform={platform}
         t={t}
       />
     </>

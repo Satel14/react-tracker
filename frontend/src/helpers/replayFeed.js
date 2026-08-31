@@ -39,6 +39,10 @@ const sideOf = (roster, accountId, name, teamId) => {
   if (!label) return null;
   return {
     name: label,
+    // The id travels with the name because the view needs it to decide whether
+    // the name can link to a profile: a lobby is mostly AI, and a bot's name
+    // reads exactly like a person's.
+    accountId: accountId || known?.accountId || null,
     teamId: teamId ?? known?.teamId ?? null,
     isFocal: !!known?.isFocal,
   };

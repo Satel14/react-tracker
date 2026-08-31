@@ -228,6 +228,8 @@
       "open": "Replay",
       "back": "← Back to profile",
       "roster": "Roster",
+      "openProfile": "Open {name}’s profile",
+      "openProfile": "Open {name}’s profile",
       "killsShort": "{count} K",
       "resetView": "Reset view",
       "hint": "Scroll to zoom, drag to pan, double-click to fit",

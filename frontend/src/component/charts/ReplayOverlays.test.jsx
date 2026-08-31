@@ -1,5 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { describe, it, expect } from "vitest";
 import ReplayOverlays from "./ReplayOverlays";
 import { teamColor, teamColorIndex } from "./replaySprites";
 import { WEAPON_GLYPHS } from "./weaponGlyphs";
@@ -406,4 +408,59 @@ test("names a weapon it can draw neither an icon nor a silhouette for", () => {
 
   expect(line.querySelector(".replay-feed__weapon")).toBeNull();
   expect(line.querySelector(".replay-feed__weapon-name").textContent).toBe("Flamethrower");
+});
+
+// --- profile links over the map -------------------------------------------
+
+describe("profile links in the feed", () => {
+  const line = (over = {}) => ({
+    id: "kill:95:a.foe", t: 95, kind: "kill",
+    killer: { name: "Me", accountId: "account.me", teamId: 1, isFocal: true },
+    victim: { name: "Foe", accountId: "account.foe", teamId: 22, isFocal: false },
+    weapon: "AUG", icon: "ar", iconKey: "aug_a3", headshot: false, dist: 87,
+    ...over,
+  });
+  const show = (feed, over = {}) => render(
+    <MemoryRouter>
+      <ReplayOverlays rows={rows} phases={phases} t={t} displayT={95} focalTeamId={1} feed={feed} platform="steam" {...over} />
+    </MemoryRouter>
+  );
+
+  it("links both names", () => {
+    const { container } = show([line()]);
+    expect([...container.querySelectorAll(".replay-feed a")].map((a) => a.getAttribute("href")))
+      .toEqual(["/player/steam/Me", "/player/steam/Foe"]);
+  });
+
+  it("leaves a bot's name and a causeless death unlinked", () => {
+    const { container } = show([
+      line({ id: "a", victim: { name: "Bot_Frank", accountId: "ai.1031", teamId: 22, isFocal: false } }),
+      line({ id: "b", killer: null, weapon: "Blue Zone", icon: null, iconKey: null }),
+    ]);
+    // Sorted: the feed shows the newest line first, and which of the two got
+    // rendered first is not what this test is about.
+    expect([...container.querySelectorAll(".replay-feed a")].map((a) => a.textContent).sort())
+      .toEqual(["Foe", "Me"]);
+  });
+
+  it("keeps the name's own colour, which is the point of the class", () => {
+    // A kill turns the victim red and the focal side green. An antd-styled <a>
+    // would paint over both, so every link here carries .profile-link.
+    const { container } = show([line()]);
+    const links = [...container.querySelectorAll(".replay-feed a")];
+    expect(links).not.toHaveLength(0);
+    for (const a of links) expect(a.className).toContain("profile-link");
+  });
+
+  it("takes the pointer only on the names, so the map still drags elsewhere", () => {
+    // The overlay is deliberately pointer-transparent: any pixel of it that
+    // swallows a pointer freezes dragging in that corner of the map. A link has
+    // to take the pointer to be clickable, so only the link does -- and the
+    // line, the badges and the weapon around it stay transparent.
+    const { container } = show([line()]);
+    expect(container.querySelector(".replay-feed").style.pointerEvents).toBe("none");
+    for (const a of container.querySelectorAll(".replay-feed a")) {
+      expect(a.className).toContain("replay-feed__link");
+    }
+  });
 });

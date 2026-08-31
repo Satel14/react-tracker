@@ -1,5 +1,7 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { groupRosterIntoTeams } from "./replayEngine";
+import { profilePath } from "../../helpers/profileLink";
 
 // Health is a step-held telemetry reading, so it can be absent on a legacy
 // payload: treat that as unhurt rather than as a zero-width bar.
@@ -20,7 +22,7 @@ const STATE = {
   dead: { key: "pages.replay.stateDead", mark: "✕", cls: "is-dead" },
 };
 
-const ReplayRoster = ({ rows = [], focusedAccountId = null, onSelect, t }) => {
+const ReplayRoster = ({ rows = [], focusedAccountId = null, onSelect, platform, t }) => {
   const teams = groupRosterIntoTeams(rows);
 
   return (
@@ -70,10 +72,15 @@ const ReplayRoster = ({ rows = [], focusedAccountId = null, onSelect, t }) => {
                 ]
                   .filter(Boolean)
                   .join(" ");
+                // A sibling of the row button, never inside it: a link nested
+                // in a button is neither, for a keyboard or a screen reader.
+                // Only a real account gets one -- a lobby is mostly AI and a
+                // bot's name reads like anyone else's.
+                const to = profilePath(platform, row.name, row.accountId);
                 return (
+                  <div className="replay-roster__row-wrap" key={row.accountId}>
                   <button
                     type="button"
-                    key={row.accountId}
                     className={cls}
                     data-account={row.accountId}
                     aria-pressed={selected}
@@ -97,6 +104,17 @@ const ReplayRoster = ({ rows = [], focusedAccountId = null, onSelect, t }) => {
                     ) : null}
                     <span className="replay-roster__state">{t(state.key)}</span>
                   </button>
+                  {to ? (
+                    <Link
+                      className="replay-roster__profile profile-link"
+                      to={to}
+                      title={t("pages.replay.openProfile", { name: row.name })}
+                      aria-label={t("pages.replay.openProfile", { name: row.name })}
+                    >
+                      &#8599;
+                    </Link>
+                  ) : null}
+                  </div>
                 );
               })}
             </div>
