@@ -98,6 +98,22 @@ describe("MapStage", () => {
     expect(cams.length).toBe(settled);
   });
 
+  it("ignores a move with no drag behind it", () => {
+    // Every mouse move across the map with no button held comes through here,
+    // so this is the common case rather than an edge one.
+    //
+    // Honest note on what this does NOT pin: dropping the `if (!v.drag)` guard
+    // makes the handler throw on a null drag, and that is indistinguishable
+    // here. The repaint count is unchanged either way, jsdom swallows the
+    // throw out of a listener, and it reaches neither expect().toThrow nor a
+    // console.error spy -- both were tried. The guard stays because a browser
+    // would show the crash even though this cannot.
+    const { stage, cams } = mount();
+    const before = cams.length;
+    fireEvent.pointerMove(stage, { pointerId: 1, clientX: 120, clientY: 340 });
+    expect(cams.length).toBe(before);
+  });
+
   it("steps in on a double-click, and back out to the fit on the next one", () => {
     const { stage, cams } = mount();
     fireEvent.doubleClick(stage, { clientX: 300, clientY: 300 });
