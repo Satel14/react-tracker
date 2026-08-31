@@ -1163,3 +1163,15 @@ test("gives the names that always show the cap before the ones zoom added", () =
   const texts = ctx.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
   expect(texts).toEqual(["Me"]);
 });
+
+test("unlocks the extra names two double-clicks in, and no sooner", () => {
+  // The tests above read labelAllZoom, so they follow it wherever it goes and
+  // a silent move to 1 would mean "always name everyone" without failing
+  // anything. The number itself is the judgment, so it is pinned here.
+  //
+  // Zoom runs 1..16 and a double-click doubles it, so 4 is exactly two of
+  // them -- a quarter of the map's width filling the viewport. Lower and a
+  // mid-zoom overview fills with text; higher and you have to push in past
+  // the fight before it will tell you who you are looking at.
+  expect(SCREEN.labelAllZoom).toBe(4);
+});
