@@ -11,6 +11,10 @@ const TIER_COLOR = {
   silver: "#c0c0c0",
   gold: "#fde82b",
   platinum: "#78e6e6",
+  // Between platinum's cyan and diamond's blue, which is where the tier sits on
+  // the ladder. Missing entirely until now, so every Crystal player's share card
+  // came out in the fallback accent green.
+  crystal: "#a8dcff",
   diamond: "#78b4ff",
   master: "#dc6ee6",
   grandmaster: "#dc6ee6",
