@@ -1,47 +1,67 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Slider } from "antd";
-import MapField from "../charts/MapField";
+import MapStage from "../charts/MapStage";
+import { worldToScreen } from "../../helpers/replayCamera";
 import { formatClock as fmt } from "../../helpers/formatClock";
 
-const CANVAS_SIZE = 1000;
+// Line and dot sizes are CSS pixels and are NOT multiplied by the camera scale:
+// a tracer that thickened with zoom would swallow the ground it is drawn over,
+// which is the same rule the replay's own marks follow.
+const LINE_WIDTH = 1.6;
+const DOT_RADIUS = 3;
+const HALO = 3;
+const OUTLINE = "rgb(20,18,30)";
+const FOCAL_KILL = "rgba(120,247,168,0.95)";
+const FOCAL_DEATH = "rgba(255,155,155,0.95)";
+const OTHER = "rgba(235,238,248,0.6)";
 
-const KillMap = ({ kills = [], rawMapName, mapMax = 8160, duration = 0, t }) => {
-  const canvasRef = useRef(null);
+const KillMap = ({ kills = [], rawMapName, duration = 0, t }) => {
   const [range, setRange] = useState([0, duration || 0]);
 
   const visible = useMemo(
     () => kills.filter((k) => k.kx != null && k.vx != null && (k.t ?? 0) >= range[0] && (k.t ?? 0) <= range[1]),
-    [kills, range]
+    [kills, range],
   );
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-    const sx = (v) => (v / mapMax) * CANVAS_SIZE;
+  // Rebuilt whenever the window moves, which is what makes MapStage repaint.
+  const paint = useCallback((ctx, { cam, vw, vh }) => {
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     for (const k of visible) {
-      ctx.strokeStyle = k.isFocalKill ? "rgba(120,247,168,0.9)" : k.isFocalDeath ? "rgba(255,155,155,0.9)" : "rgba(255,255,255,0.5)";
-      ctx.lineWidth = CANVAS_SIZE * 0.0022;
+      const from = worldToScreen(cam, vw, vh, k.kx, k.ky);
+      const to = worldToScreen(cam, vw, vh, k.vx, k.vy);
+      const colour = k.isFocalKill ? FOCAL_KILL : k.isFocalDeath ? FOCAL_DEATH : OTHER;
+
+      // Cut out of the raster the same way every marker is: a pale tracer over
+      // Miramar sand is otherwise a tracer nobody can see.
       ctx.beginPath();
-      ctx.moveTo(sx(k.kx), sx(k.ky));
-      ctx.lineTo(sx(k.vx), sx(k.vy));
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.strokeStyle = OUTLINE;
+      ctx.lineWidth = LINE_WIDTH + HALO;
       ctx.stroke();
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = LINE_WIDTH;
+      ctx.stroke();
+
+      // The dot marks where the victim fell, which is the end of the line that
+      // matters -- the other end is only where it came from.
       ctx.beginPath();
-      ctx.arc(sx(k.vx), sx(k.vy), CANVAS_SIZE * 0.004, 0, Math.PI * 2);
-      ctx.fillStyle = ctx.strokeStyle;
+      ctx.arc(to.x, to.y, DOT_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = colour;
       ctx.fill();
+      ctx.strokeStyle = OUTLINE;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     }
-  }, [visible, mapMax]);
+  }, [visible]);
 
   return (
     <div className="kill-map">
-      <div className="kill-map__stage">
-        <MapField rawMapName={rawMapName} className="kill-map__field">
-          <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} className="kill-map__canvas" />
-        </MapField>
-      </div>
+      {/* No label override: MapStage names itself after the map, and the tab
+          around it already says these are kills. */}
+      <MapStage rawMapName={rawMapName} paint={paint} className="kill-map__stage" />
+      <div className="kill-map__hint">{t("pages.replay.hint")}</div>
       <div className="kill-map__range">
         <span>{t("pages.match.timeRange")}</span>
         <Slider

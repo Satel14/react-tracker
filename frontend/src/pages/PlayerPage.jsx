@@ -20,10 +20,11 @@ import {
   HomeOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getPlayerData, getPlayerReports, getPlayerExtras } from "../api/player";
+import { getPlayerData, getPlayerReports, getPlayerExtras, prefetchMatchReplay } from "../api/player";
 import { resolveAbsoluteApiUrl } from "../api/config";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
 import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
+import { profilePath, profilePathByName } from "../helpers/profileLink";
 import { mergeProfileExtras } from "../helpers/playerExtras";
 import { getCurrentLocale } from "../helpers/locale";
 import { classifyPlayerError } from "../helpers/playerError";
@@ -129,6 +130,14 @@ const REPORT_FILTER_OPTIONS = [
   { value: "kill", label: "Kills" },
   { value: "death", label: "Deaths" },
 ];
+
+// One end of a pubg.report encounter. Named text when there is no profile to
+// point at, a link when there is.
+const ReportName = ({ name, platform }) => {
+  const to = profilePathByName(platform, name);
+  const label = name || "Unknown";
+  return <strong>{to ? <Link className="profile-link" to={to}>{label}</Link> : label}</strong>;
+};
 
 const getDisplay = (stats, key, fallback = "0") => statDisplay(stats, key, fallback);
 
@@ -332,6 +341,8 @@ const INITIAL_SESSION = {
   isFavorited: false,
   favoriteLoading: false,
 };
+const REPLAY_HOVER_DELAY_MS = 150;
+
 function sessionReducer(state, action) {
   switch (action.type) {
     case "reset": return INITIAL_SESSION;
@@ -355,8 +366,39 @@ const PlayerPage = ({ t }) => {
   const { activeTabKey, selectedSeasonId, isFavorited, favoriteLoading } = session;
   const reportsRequestKeyRef = useRef(null);
   const dataRequestKeyRef = useRef(null);
+  const replayWarmTimerRef = useRef(null);
   const { platform, gameId } = useParams();
   const navigate = useNavigate();
+
+  const warmReplay = useCallback((matchId) => {
+    // Match telemetry is much larger than the route chunk. Start both as soon
+    // as the user signals intent; getMatchReplay reuses this same promise after
+    // navigation instead of issuing a second request.
+    void import("./MatchReplayPage");
+    void prefetchMatchReplay(
+      matchId,
+      platform,
+      data?.platformInfo?.platformUserId || "",
+      data?.platformInfo?.platformUserHandle || gameId || ""
+    ).catch(() => {});
+  }, [data, gameId, platform]);
+
+  const cancelReplayWarmup = useCallback(() => {
+    if (replayWarmTimerRef.current !== null) {
+      window.clearTimeout(replayWarmTimerRef.current);
+      replayWarmTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleReplayWarmup = useCallback((matchId) => {
+    cancelReplayWarmup();
+    replayWarmTimerRef.current = window.setTimeout(() => {
+      replayWarmTimerRef.current = null;
+      warmReplay(matchId);
+    }, REPLAY_HOVER_DELAY_MS);
+  }, [cancelReplayWarmup, warmReplay]);
+
+  useEffect(() => cancelReplayWarmup, [cancelReplayWarmup]);
 
   const routeKey = `${platform || ""}|${gameId || ""}`;
   const [loadedRouteKey, setLoadedRouteKey] = useState(routeKey);
@@ -912,12 +954,20 @@ const PlayerPage = ({ t }) => {
         </div>
 
         <div className="player-squad-list">
-          {squadAggregates.map((mate) => (
+          {squadAggregates.map((mate) => {
+            // Hoisted rather than called inline: an inline expression cannot be
+            // vouched for by name, so navigationTargets.test.js refuses to
+            // review one -- and it stops being evaluated twice per row.
+            const to = profilePath(platform, mate.name, mate.accountId);
+            return (
             <article className="player-squad-item" key={mate.accountId}>
               <div className="player-squad-item__main">
                 <div className="player-squad-item__avatar">{mate.name?.charAt(0)?.toUpperCase() || "?"}</div>
                 <div className="player-squad-item__meta">
-                  <strong>{mate.name}</strong>
+                  {/* Ids are available here, so the bot guard applies. */}
+                  <strong>
+                    {to ? <Link className="profile-link" to={to}>{mate.name}</Link> : mate.name}
+                  </strong>
                   <span>
                     {t("pages.squad.matchesShared", { count: mate.shared })}
                     {mate.bestPlacement ? ` - ${t("pages.squad.bestPlace")} #${mate.bestPlacement}` : ""}
@@ -929,7 +979,8 @@ const PlayerPage = ({ t }) => {
                 <div><span>{t("pages.squad.damage")}</span><strong>{mate.totalDamage.toLocaleString()}</strong></div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       </section>
     );
@@ -1061,8 +1112,7 @@ const PlayerPage = ({ t }) => {
       const tone = value > 0 ? "up" : value < 0 ? "down" : "zero";
       return (
         <div className={`player-rp-delta player-rp-delta--${tone}`}>
-          <span>{t("pages.player.matches.rp")}</span>
-          <strong>{formatSignedRp(value)}</strong>
+          <strong>{`${formatSignedRp(value)} RP`}</strong>
         </div>
       );
     }
@@ -1092,24 +1142,6 @@ const PlayerPage = ({ t }) => {
       return renderEmptyCard("Recent Matches", "No recent match history returned for this player.");
     }
 
-    const rankPoints = matchSummary.rankPoints;
-    const rpSummary =
-      rankPoints && (rankPoints.kind === "group" || rankPoints.kind === "adjustment")
-        ? {
-            kind: rankPoints.kind,
-            text: t(
-              rankPoints.kind === "group"
-                ? "pages.player.matches.rpSummaryGroup"
-                : "pages.player.matches.rpSummaryAdjustment",
-              {
-                value: formatSignedRp(rankPoints.value),
-                count: rankPoints.matches,
-                since: formatMatchDate(rankPoints.since),
-              }
-            ),
-          }
-        : null;
-
     return (
       <section className="player-card">
         <div className="player-card__head">
@@ -1135,10 +1167,6 @@ const PlayerPage = ({ t }) => {
             <strong>{Math.round(Number(matchSummary.avgDamage || 0))}</strong>
           </div>
         </div>
-
-        {rpSummary ? (
-          <p className={`player-rp-summary player-rp-summary--${rpSummary.kind}`}>{rpSummary.text}</p>
-        ) : null}
 
         <div className="player-card__divider" />
 
@@ -1178,6 +1206,10 @@ const PlayerPage = ({ t }) => {
               <Link
                 className="player-match-item__replay"
                 to={`/match/${platform}/${encodeURIComponent(match.id)}/replay?accountId=${encodeURIComponent(data?.platformInfo?.platformUserId || "")}&playerName=${encodeURIComponent(data?.platformInfo?.platformUserHandle || gameId || "")}`}
+                onMouseEnter={() => scheduleReplayWarmup(match.id)}
+                onMouseLeave={cancelReplayWarmup}
+                onFocus={() => warmReplay(match.id)}
+                onTouchStart={() => warmReplay(match.id)}
               >
                 {t("pages.replay.open")}
               </Link>
@@ -1259,10 +1291,14 @@ const PlayerPage = ({ t }) => {
                 </span>
               </div>
 
+              {/* pubg.report answers with names and no account ids, so the
+                  bot guard has nothing to check here and a bot's name links to
+                  a "not found" page. Every other list on the site uses the
+                  guarded path; this is the one that cannot. */}
               <div className="player-report-item__line">
-                <strong>{item.killer || "Unknown"}</strong>
+                <ReportName name={item.killer} platform={platform} />
                 <span>vs</span>
-                <strong>{item.victim || "Unknown"}</strong>
+                <ReportName name={item.victim} platform={platform} />
               </div>
 
               <div className="player-report-meta">

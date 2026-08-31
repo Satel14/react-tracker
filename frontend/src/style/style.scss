@@ -509,21 +509,6 @@ body {
         gap: 8px;
       }
 
-      .player-rp-summary {
-        margin: 10px 0 0;
-        font-size: 12px;
-        letter-spacing: 0.3px;
-        color: var(--text-muted);
-
-        &--group {
-          color: var(--text-strong);
-        }
-
-        &--adjustment {
-          color: var(--text-strong);
-        }
-      }
-
       .player-meta-badge {
         border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
         border-radius: 10px;
@@ -2190,6 +2175,7 @@ body {
 // cannot be shipped without a focus indicator. Keyboard focus only; mouse
 // clicks should not flash a ring.
 .app :is(a, button, [role="button"], input, select, textarea,
+         [tabindex]:not([tabindex="-1"]),
          .ant-btn, .ant-tabs-tab, .ant-segmented-item-label):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -2211,70 +2197,64 @@ body {
 }
 
 .footer {
-  color: var(--text-strong);
-  font-size: 15px;
-  margin: 50px 0;
-  flex-wrap: wrap;
-  padding-bottom: 25px;
-  padding-top: 25px;
-  padding-left: 4px;
-  padding-right: 4px;
   display: flex;
-  justify-content: space-between;
-  gap: 10px 22px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 16px;
+  margin: 48px 0 32px;
+  padding: 24px 4px 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
 
-  >b {
-    width: 63%;
-    margin: 0;
-    color: var(--text);
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 1.4;
+  &__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px 16px;
   }
 
-  .copyright {
+  &__lead {
+    flex: 1 1 320px;
+    max-width: 640px;
     display: flex;
-    margin-top: 5px;
-    width: 63%;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__tagline {
+    margin: 0;
+    color: var(--text-strong);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  &__summary,
+  &__help {
+    margin: 0;
     color: var(--text-muted);
     font-size: 13px;
-    line-height: 1.35;
-    flex-wrap: wrap;
-
-    a {
-      margin: 0 5px;
-
-      svg {
-        margin-right: 3px;
-      }
-    }
   }
 
-  &-menu {
-    width: 33%;
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .footer-bug-report {
+  &__action {
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
-    border-radius: 10px;
     border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 10px;
     background: color-mix(in srgb, var(--accent) 8%, transparent);
     color: var(--text-strong);
-    font-family: "Bebas Neue Regular";
-    font-size: 14px;
-    letter-spacing: 1px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
     text-transform: uppercase;
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 
     svg {
-      font-size: 18px;
+      font-size: 16px;
       color: var(--accent);
       transition: transform 0.2s ease;
     }
@@ -2282,7 +2262,7 @@ body {
     &:hover {
       background: color-mix(in srgb, var(--accent) 16%, transparent);
       border-color: color-mix(in srgb, var(--accent) 70%, transparent);
-      color: var(--text-strong);
+      transform: translateY(-1px);
 
       svg {
         transform: rotate(-12deg) scale(1.1);
@@ -2290,78 +2270,57 @@ body {
     }
   }
 
-  &-text {
-    width: 63%;
+  &__legal {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  &__credit {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
     margin: 0;
-    font-size: 14px;
+    color: var(--text-muted);
+  }
 
-    b {
-      font-weight: 400;
+  &__mail {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: var(--accent);
     }
   }
 
-  @media (max-width: 980px) {
-    margin: 38px 0 28px;
-    padding-top: 20px;
-    padding-bottom: 20px;
-    padding-left: 10px;
-    padding-right: 10px;
+  &__disclaimer {
+    margin: 0;
+    color: var(--text-faint);
+  }
+
+  @media (max-width: 768px) {
     gap: 14px;
-
-    &-text,
-    >b,
-    .copyright {
-      width: 100%;
-    }
-
-    &-menu {
-      width: 100%;
-      margin: 10px 0 0;
-      justify-content: flex-start;
-    }
-
-    .footer-bug-report {
-      padding: 9px 14px;
-      font-size: 13px;
-
-      svg {
-        font-size: 16px;
-      }
-    }
+    margin: 36px 0 24px;
+    padding: 20px 4px 0;
   }
 
-  @media (max-width: 640px) {
-    margin: 30px 0 20px;
+  @media (max-width: 480px) {
     font-size: 13px;
-    gap: 12px;
-    padding-top: 18px;
-    padding-bottom: 18px;
-    padding-left: 12px;
-    padding-right: 12px;
 
-    &-text,
-    >b {
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .copyright {
+    &__summary,
+    &__help,
+    &__action {
       font-size: 12px;
-      margin-top: 2px;
     }
 
-    &-menu {
-      margin-top: 12px;
-    }
-
-    .footer-bug-report {
-      padding: 8px 12px;
-      font-size: 12px;
-      letter-spacing: 0.6px;
-
-      svg {
-        font-size: 14px;
-      }
+    &__legal {
+      font-size: 11px;
     }
   }
 }
@@ -4121,6 +4080,272 @@ body {
   }
 }
 
+.replay-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+
+  &:active { cursor: grabbing; }
+
+  // 16:9 via an in-flow padding spacer, never aspect-ratio: on iOS Safari a
+  // definite height collapses this box to 0 because every child is absolute.
+  &::before {
+    content: "";
+    display: block;
+    padding-top: 56.25%;
+  }
+
+  &__layer {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  // The stage reads pan and zoom from pointer events on this wrapper, so any
+  // overlay pixel that swallows a pointer freezes dragging in that corner.
+  // The component also sets this inline; belt and braces, because the failure
+  // is silent.
+  .replay-overlay { pointer-events: none; }
+
+  &__fullscreen {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    pointer-events: auto;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+
+    &:hover { color: var(--text-strong); border-color: var(--accent); }
+  }
+
+}
+
+// HUD drawn over the map. Every panel is a translucent plate so the map stays
+// readable underneath, and nothing here takes pointer events.
+.replay-overlay {
+  position: absolute;
+  inset: 0;
+  font-size: 12px;
+
+  &__alive,
+  &__clock,
+  &__team {
+    position: absolute;
+    pointer-events: none;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    border: 1px solid var(--border);
+  }
+
+  &__alive { top: 8px; left: 8px; }
+  &__clock { top: 8px; right: 44px; text-align: right; }
+  &__team { bottom: 8px; left: 8px; min-width: 150px; max-width: 60%; }
+
+  // Block, not inline: JSX strips the newline between the two spans, so as
+  // inline elements they render as one run of text ("Alive: 62Teams: 16").
+  &__alive-players { display: block; color: var(--text-strong); font-weight: 600; }
+  &__alive-teams { display: block; color: var(--text-muted); }
+  &__time { display: block; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+  &__phase { display: block; color: var(--text-muted); }
+  &__team-title { color: var(--brand); font-weight: 700; margin-bottom: 4px; }
+
+  // One row per member, not a four-line block: on a 360px screen the squad
+  // card was taller than the map it sits on.
+  &__member {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 34px auto auto;
+    align-items: center;
+    gap: 2px 6px;
+    padding: 1px 0;
+
+    &.is-dead { opacity: 0.45; }
+  }
+  &__member-name {
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  &__kills { color: var(--text-muted); }
+  &__state { color: var(--text-faint); font-size: 10px; }
+  &__health {
+    display: block;
+    height: 3px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--rest) 45%, transparent);
+    overflow: hidden;
+  }
+  &__health-fill { display: block; height: 100%; background: var(--ok); }
+  // Same reason as the roster: a downed player's health reads 0, so the fill
+  // has no width to colour.
+  &__member.is-knocked &__health { background: var(--warn); }
+  &__member.is-dead &__health-fill { background: var(--rest); }
+}
+
+// The live kill feed, over the map. Sibling of .replay-overlay__* rather than
+// one of them because it is its own block with its own parts, the way
+// .kill-feed on the analysis tab is -- that one is a static scrollable log of
+// the whole match and this is the handful of lines that just happened, and
+// keeping the names apart is what stops them being edited into each other.
+.replay-feed {
+  position: absolute;
+  // Below the clock, which sits at top 8 and reserves right 44 for the
+  // fullscreen button. This clears both rather than tucking under either.
+  top: 52px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  // The line is unbreakable text, so the cap is what stops a long name pushing
+  // the feed across the map on a narrow screen.
+  max-width: min(340px, 70%);
+  pointer-events: none;
+  font-size: 12px;
+  line-height: 1.3;
+
+  &__line {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    padding: 3px 7px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    border: 1px solid var(--border);
+    // Names are user-supplied and can be long; the line stays one line and the
+    // name is what gives, not the layout.
+    overflow: hidden;
+
+    // A knock is the quieter half of the pair -- it is a step towards a kill,
+    // not the kill -- so it recedes rather than claiming the same weight.
+    &.is-knock { opacity: 0.8; }
+  }
+
+  &__side {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  &__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // The only pixels of this overlay that take a pointer. The feed as a whole is
+  // deliberately transparent to them -- a pixel that swallows a pointer freezes
+  // dragging in that corner of the map -- and a link cannot be clicked without
+  // taking one. So the trade is made here and nowhere else: the map drags
+  // everywhere except across a name.
+  &__link { pointer-events: auto; }
+
+  // A kill is the end of that player's match and the line says so. A knock is
+  // not, and leaves the name alone -- which is the only thing separating the
+  // two lines when the same pair appears twice in a row.
+  &__line.is-kill &__side.is-victim &__name { color: var(--danger); }
+
+  // The team number, boxed and filled with the colour the map paints that
+  // team. Background set inline from the same palette; this is the fallback
+  // for a team that has none, and .is-focal repaints below.
+  &__team {
+    flex: 0 0 auto;
+    min-width: 16px;
+    padding: 0 3px;
+    border-radius: 3px;
+    background: var(--text-muted);
+    // Team colours are picked to sit on a dark map raster, so they are light:
+    // between 55% and 71% lightness. White on them measures 1.35:1 at worst.
+    // The dark token measures 5.54:1, and teamBadgeContrast.test.js holds it
+    // there against every colour the palette can produce.
+    color: var(--bg);
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.45;
+    // Tabular figures so a column of badges does not jitter as the feed moves.
+    font-variant-numeric: tabular-nums;
+
+    &.is-focal { background: var(--ok); }
+  }
+
+  // Sized by height, never by width, so a pistol and a sniper rifle land on
+  // the same baseline at their own aspects. PUBG's icons are 32px tall and the
+  // drawn fallbacks are 16 units tall, and both come out right from this.
+  //
+  // The colour reaches the drawn silhouette only -- the shipped icons carry
+  // their own. Full --text rather than muted: at this size a dimmed silhouette
+  // stops being a shape and becomes a smudge, and the shape is the whole point.
+  &__weapon {
+    flex: 0 0 auto;
+    height: 13px;
+    width: auto;
+    color: var(--text);
+    // PUBG ships these muzzle-left; the feed reads left to right, killer then
+    // weapon then victim, so the gun points at who it hit. The drawn fallbacks
+    // are muzzle-left too, so one rule turns both and they stay consistent.
+    transform: scaleX(-1);
+  }
+
+  // What a weapon with no silhouette falls back to: the zone, a fall, a gun
+  // shipped after the classifier's table was written.
+  &__weapon-name {
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  &__headshot {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+
+    img { height: 13px; width: auto; }
+  }
+
+  &__knock {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    color: var(--warn);
+
+    img { height: 13px; width: auto; }
+  }
+
+  @media (max-width: 760px) {
+    top: 46px;
+    font-size: 11px;
+    max-width: 60%;
+  }
+}
+
+@media (max-width: 760px) {
+  .replay-stage::before { padding-top: 75%; }
+}
+
 .aggregate-heatmap {
   &__controls {
     display: flex;
@@ -4221,7 +4446,7 @@ body {
 }
 
 .match-replay {
-  max-width: 960px;
+  max-width: none;
   margin: 0 auto;
   padding: 16px;
 
@@ -4242,13 +4467,12 @@ body {
     justify-content: center;
     padding: 24px;
   }
-  &__field .match-replay__canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
+  &__hint {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--text-faint);
   }
+  &__speed-label { color: var(--text-muted); font-size: 12px; }
   &__controls {
     display: flex;
     align-items: center;
@@ -4282,39 +4506,163 @@ body {
     .ant-segmented-item:hover:not(.ant-segmented-item-selected) { color: var(--text-strong); }
   }
   &__time { color: var(--text); font-variant-numeric: tabular-nums; }
+  &__shortcuts {
+    margin: 4px 0 0;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  &__layers {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  &__layers-title { color: var(--text-muted); font-size: 12px; margin-right: 2px; }
+  &__legend {
+    display: flex;
+    align-items: center;
+    gap: 4px 14px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  &__legend-title { color: var(--text); }
+  &__legend-item { display: inline-flex; align-items: center; gap: 5px; }
+  &__swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+
+    // Each swatch mirrors what the canvas paints for that encoding.
+    &.is-focal { background: var(--ok); }
+    &.is-enemy { background: var(--text); }
+    &.is-knocked { background: none; border: 2px solid var(--warn); }
+    &.is-dead { background: var(--rest); }
+    // A ride is the same colour as the player in it; what tells it apart is
+    // that it is wide where a player is round.
+    &.is-vehicle { background: var(--text); border-radius: 2px; height: 5px; width: 14px; }
+    // A canopy: open at the bottom, which is the whole of what its glyph is.
+    &.is-parachute { background: none; border: 2px solid var(--text); border-bottom: 0; border-radius: 9px 9px 0 0; height: 6px; }
+    // The minus a damage number opens with, in the colour it is drawn in.
+    &.is-damage { background: var(--zone-red); border-radius: 1px; height: 3px; width: 10px; }
+    &.is-shot { background: var(--warn); border-radius: 1px; height: 3px; width: 14px; }
+    &.is-kill { background: var(--danger); border-radius: 1px; height: 3px; width: 14px; }
+    &.is-crate { background: var(--crate); border-radius: 1px; }
+    &.is-flight { background: var(--flight); border-radius: 1px; height: 3px; width: 14px; }
+    &.is-hazard { background: var(--zone-red); }
+  }
+  &__layer {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: none;
+    // An off toggle stays readable rather than disappearing: the viewer has to
+    // be able to find the layer they switched off.
+    color: var(--text-faint);
+    padding: 2px 10px;
+    font-size: 12px;
+    cursor: pointer;
+
+    &:hover { color: var(--text); }
+    &.is-on {
+      color: var(--text-strong);
+      border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+  }
 }
 
+// The roster used to sit here as a sidebar; it is a full-width panel below the
+// stage now, so this is a plain block wrapper.
 .match-replay__layout {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-
-  .match-replay__stage { flex: 1; min-width: 0; }
+  .match-replay__stage { min-width: 0; }
 }
 
 .replay-roster {
-  width: 200px;
-  flex: 0 0 200px;
+  width: 100%;
   box-sizing: border-box;
-  max-height: 600px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  margin-top: 12px;
+  max-height: none;
+  overflow: visible;
   background: var(--surface);
   border-radius: 10px;
   padding: 8px;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--accent) 40%, transparent) transparent;
-
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 3px; }
-
   &__title { color: var(--brand); font-weight: 700; margin-bottom: 6px; }
-  &__team { border-top: 1px solid var(--border); padding: 4px 0; }
-  &__row {
+  &__teams {
+    display: grid;
+    // A team card wants roughly 210px before its name starts truncating.
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 8px;
+  }
+  &__team {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px;
+    background: color-mix(in srgb, var(--text) 5%, transparent);
+
+    &.is-focal { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+    // A wiped team stays listed but stops competing for attention.
+    &.is-wiped { opacity: 0.55; }
+  }
+  &__team-head {
     display: flex;
     justify-content: space-between;
+    align-items: baseline;
     gap: 8px;
-    width: 100%;
+    margin-bottom: 4px;
+  }
+  &__team-name { color: var(--text-muted); font-size: 12px; }
+  &__team-alive { color: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; }
+  &__members { display: flex; flex-direction: column; gap: 2px; }
+  &__health {
+    display: block;
+    height: 3px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--rest) 45%, transparent);
+    overflow: hidden;
+    // The bar spans the row under the name, so it reads as one gauge per player.
+    grid-column: 1 / -1;
+  }
+  &__health-fill {
+    display: block;
+    height: 100%;
+    background: var(--ok);
+  }
+  &__state-mark { color: var(--warn); font-weight: 700; }
+  &__state { color: var(--text-faint); font-size: 11px; }
+  // The row button and the profile link side by side. The link cannot live
+  // inside the button -- a link nested in a button is neither -- so the wrap is
+  // what puts them on one line.
+  &__row-wrap {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  &__profile {
+    flex: 0 0 auto;
+    padding: 2px 4px;
+    border-radius: 4px;
+    color: var(--text-faint);
+    font-size: 12px;
+    line-height: 1;
+
+    &:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
+      text-decoration: none;
+    }
+  }
+  &__row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    align-items: center;
+    gap: 4px 8px;
+    // Was 100%: the row shares its line with the profile link now, so it takes
+    // what is left rather than the whole width.
+    flex: 1;
+    min-width: 0;
     box-sizing: border-box;
     background: none;
     border: 1px solid transparent;
@@ -4325,6 +4673,11 @@ body {
 
     &.is-focal .replay-roster__name { color: var(--ok); }
     &.is-dead { opacity: 0.4; }
+    // PUBG reports health 0 for the whole time a player is downed (measured:
+    // 121 of 121 DBNO samples), so the FILL is zero-width and colouring it
+    // would style nothing. The track carries the state instead.
+    &.is-knocked .replay-roster__health { background: var(--warn); }
+    &.is-dead .replay-roster__health-fill { background: var(--rest); }
     &.is-selected { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, transparent); }
   }
   &__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -4332,13 +4685,12 @@ body {
 }
 
 @media (max-width: 760px) {
-  .match-replay__layout { flex-direction: column; }
+  .replay-roster__teams { grid-template-columns: 1fr; }
   // In the column layout the stage no longer stretches (align-items:flex-start
   // is inherited), so without an explicit width it shrinks to its content —
   // and the map's children are all zero-width (absolute + padding spacer),
   // collapsing the stage and the map to 0. Force full width.
   .match-replay__stage { width: 100%; }
-  .replay-roster { width: 100%; flex-basis: auto; max-height: 240px; }
 }
 
 .match-replay__tabs {
@@ -5041,19 +5393,75 @@ body {
   }
 }
 
+// A pannable, zoomable map with a canvas over it. Two canvases, both absolute:
+// the raster underneath and whatever the caller paints on top.
+// A name that happens to be a link.
+//
+// antd's reset paints every <a> its own link colour, and these names are
+// already coloured by what they mean: the roster tints them by team, the feed
+// turns a victim red, a focal row goes green. A link colour on top would throw
+// all of that away, so the rule here is that the link takes the colour it
+// inherits and says it is a link by underlining on hover instead.
+.profile-link {
+  color: inherit;
+  text-decoration: none;
+
+  // Hover only. The focus ring is defined once for the whole app -- see the
+  // single :focus-visible rule tokens.test.js holds the stylesheet to -- and a
+  // second one here would be a second answer to the same question.
+  &:hover {
+    color: inherit;
+    text-decoration: underline;
+  }
+}
+
+.map-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #080e18;
+  cursor: grab;
+  user-select: none;
+  // Without this the browser claims the drag for scrolling and panning dies on
+  // touch. Same rule as .map-field and .replay-stage.
+  touch-action: none;
+
+  &:active { cursor: grabbing; }
+
+  // Square sizing via a padding-ratio spacer only (NO aspect-ratio). On iOS
+  // Safari, aspect-ratio makes the box height "definite" and -- because both
+  // canvases are absolutely positioned -- it collapses to 0 and the map
+  // vanishes. See .map-field, which learned this the hard way.
+  &::before {
+    content: "";
+    display: block;
+    padding-top: 100%;
+  }
+
+  &__bg,
+  &__fx {
+    position: absolute;
+    inset: 0;
+    // Pointers belong to the wrapper, which owns the gestures; a canvas that
+    // swallowed them would kill panning over its own pixels.
+    pointer-events: none;
+  }
+}
+
 .kill-map {
   max-width: 560px;
   margin-bottom: 14px;
 
-  &__stage {
-    position: relative;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
+  // The stage squares and rounds itself; this only adds the border the card
+  // around it expects.
+  &__stage { border: 1px solid var(--border); }
+
+  &__hint {
+    margin: 6px 0 0;
+    color: var(--text-faint);
+    font-size: 11px;
   }
-  // No aspect-ratio here — the .map-field padding-spacer squares the box
-  // (aspect-ratio collapses to 0 on iOS Safari; see .map-field).
-  &__canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   &__range {
     display: flex;
     align-items: center;

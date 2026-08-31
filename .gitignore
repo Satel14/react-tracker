@@ -6,3 +6,6 @@ docs/superpowers/
 
 # Local-only AI instructions
 CLAUDE.md
+
+# JetBrains IDE workspace
+.idea/

@@ -256,3 +256,57 @@ test("a late name-only reports response does not supersede the account-id result
   expect(screen.getByText("FromAccountId")).toBeInTheDocument();
   expect(screen.queryByText("FromNameOnly")).not.toBeInTheDocument();
 });
+
+test("links a squadmate with a real account and leaves a bot as text", async () => {
+  // The guard that matters everywhere names are listed: a PUBG lobby is mostly
+  // AI and a bot's name reads exactly like a person's.
+  const payload = rankPayload("PlayerA");
+  payload.data.data.matches.items = [{
+    id: "m1",
+    teammates: [
+      { accountId: "account.mate", name: "RealMate", kills: 2, damage: 300, placement: 3 },
+      { accountId: "ai.9001", name: "Bot_Frank", kills: 0, damage: 10, placement: 3 },
+    ],
+  }];
+  getPlayerData.mockResolvedValue(payload);
+  getPlayerReports.mockResolvedValue({ data: { summary: {}, encounters: [] } });
+
+  const { container } = renderAt();
+  // The tab label is the raw key: this suite renders PlayerPage without a
+  // dictionary behind the translate HOC, so t() is a passthrough.
+  const squadTab = await screen.findByRole("tab", { name: "pages.squad.tab" });
+  fireEvent.click(squadTab);
+
+  const links = [...container.querySelectorAll(".player-squad-item a")];
+  expect(links.map((a) => [a.textContent, a.getAttribute("href")]))
+    .toEqual([["RealMate", "/player/steam/RealMate"]]);
+  expect(container.textContent).toContain("Bot_Frank");
+  // The link keeps the colour the row gave the name rather than antd's.
+  expect(links[0].className).toContain("profile-link");
+});
+
+test("links both ends of a Twitch Reports encounter", async () => {
+  // pubg.report answers with names and no account ids, so this is the one list
+  // that cannot apply the bot guard -- and it links anyway, because a name with
+  // no profile is a rarer cost here than no link at all.
+  getPlayerData.mockResolvedValue(rankPayload("PlayerA"));
+  getPlayerReports.mockResolvedValue({
+    data: {
+      summary: { kills: 1, deaths: 0 },
+      encounters: [{
+        id: "e1", type: "kill", killer: "PlayerA", victim: "SomeVictim",
+        mode: "squad-fpp", map: "Erangel", distance: 120, timeDiff: "00:01:00",
+        timeEvent: "", dateLabel: "today", links: {},
+      }],
+    },
+  });
+
+  const { container } = renderAt();
+  await screen.findByRole("tab", { name: "Twitch Reports" });
+  openReportsTab();
+  await screen.findByText("SomeVictim");
+
+  const links = [...container.querySelectorAll(".player-report-item__line a")];
+  expect(links.map((a) => a.getAttribute("href")))
+    .toEqual(["/player/steam/PlayerA", "/player/steam/SomeVictim"]);
+});

@@ -17,6 +17,21 @@
   --danger: #ff9b9b;
   --rest: #6c7090;
 
+  // Map overlays. Same rule — drawn on a dark, blue-tinted raster, so each
+  // one claims a hue no other encoding uses.
+  // Amber between --ok and --danger; pushed off yellow so --brand/--win stay separate.
+  --warn: #ff8f3c;
+  // Hot saturated red: reads as bombardment, not as the pale --danger kill marker.
+  --zone-red: #ff3b30;
+  // Desaturated sand — a dust hazard should look dusty, unlike the two vivid zones.
+  --zone-storm: #c8a25a;
+  // Electric violet: the "unnatural" hazard, and nothing else on the map is purple.
+  --zone-emp: #8f6bff;
+  // Magenta is the last unclaimed high-chroma hue; a loot pin must not read as a zone.
+  --crate: #ff3ec8;
+  // Sky cyan, the brightest of the six, so a hairline path survives the gas overlay.
+  --flight: #4fd8ff;
+
   // One rung of the rank ladder; the other seven are literals in style.scss.
   --tier-gold: #fde82b;
 

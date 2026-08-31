@@ -21,14 +21,10 @@
     { "file": "component/charts/MatchCharts.jsx", "id": "#fde82b", "count": 4, "until": "PR D" },
     { "file": "component/charts/MatchCharts.jsx", "id": "#9fa3bf", "count": 2, "until": "PR D" },
     { "file": "component/charts/MatchCharts.jsx", "id": "#fff", "count": 1, "until": "PR D" },
-    { "file": "component/charts/replayDraw.js", "id": "#ffffff", "count": 1, "until": "PR D" },
-    { "file": "component/charts/replayDraw.js", "id": "#78f7a8", "count": 1, "until": "PR D" },
-    { "file": "component/charts/replayDraw.js", "id": "#fde82b", "count": 1, "until": "PR D" },
     { "file": "component/match/KillMap.jsx", "id": "#78f7a8", "count": 1, "until": "PR D" },
     { "file": "component/match/KillMap.jsx", "id": "#ff9b9b", "count": 1, "until": "PR D" },
     { "file": "pages/PlayerPage.jsx", "id": "#fde82b", "count": 2, "until": "PR D" },
     { "file": "pages/Player.jsx", "id": "#fff", "count": 1, "until": "PR D" },
-    { "file": "component/Footer.jsx", "id": "#fff", "count": 1, "until": "PR D" },
     { "file": "router/RouterLayout.jsx", "id": "#fde82b", "count": 1, "until": "PR D" }
   ]
 }

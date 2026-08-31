@@ -30,11 +30,13 @@ const WEAPON_LABELS = {
   Item_Weapon_M24_C: "M24",
   Item_Weapon_M9_C: "M9",
   Item_Weapon_MG3_C: "MG3",
+  Item_Weapon_RPD_C: "RPD",
   Item_Weapon_Mini14_C: "Mini-14",
   Item_Weapon_Mk12_C: "Mk12",
   Item_Weapon_Mk14_C: "Mk14 EBR",
   Item_Weapon_Mk47Mutant_C: "Mk47 Mutant",
   Item_Weapon_Molotov_C: "Molotov",
+  Item_Weapon_M79_C: "M79",
   Item_Weapon_Mortar_C: "Mortar",
   Item_Weapon_MP5K_C: "MP5K",
   Item_Weapon_MP9_C: "MP9",
@@ -110,6 +112,7 @@ const WEAPON_CATEGORY = {
   Item_Weapon_DP28_C: "lmg",
   Item_Weapon_M249_C: "lmg",
   Item_Weapon_MG3_C: "lmg",
+  Item_Weapon_RPD_C: "lmg",
 
   Item_Weapon_Berreta686_C: "shotgun",
   Item_Weapon_DP12_C: "shotgun",
@@ -129,6 +132,7 @@ const WEAPON_CATEGORY = {
   Item_Weapon_Crossbow_1_C: "special",
   Item_Weapon_PanzerFaust100M_C: "special",
   Item_Weapon_Mortar_C: "special",
+  Item_Weapon_M79_C: "special",
   Item_Weapon_C4_C: "special",
 
   Item_Weapon_Grenade_C: "throwable",
@@ -198,11 +202,57 @@ function prettifyCauser(name) {
     .trim() || "Unknown";
 }
 
+// Things that kill without being weapons. prettifyCauser turns an asset name
+// into title case, which is right for a gun and wrong for these: the red zone
+// came out "Red Zone Bombing Field Def" and the pawn behind fall damage as
+// "Ult AIPawn Base Male". Matched on a prefix because the pawn and the player
+// character each ship a male and a female variant.
+const CAUSER_LABELS = [
+  [/^RedZone/i, "Red Zone"],
+  [/^BlueZone/i, "Blue Zone"],
+  // The zone's OTHER name: the game mode object itself. All 355 appearances of
+  // it in a 25,565-event sample carry damageTypeCategory Damage_BlueZone,
+  // kills included, so this is what it means rather than a guess. Left raw it
+  // reached the kill feed as "Tsl Game Mode Base Battle Royale BP".
+  [/^TslGameMode/i, "Blue Zone"],
+  [/^UltAIPawn/i, "Falling"],
+  [/^Player(Male|Female)/i, "Fists"],
+  [/^ProjMolotov/i, "Molotov"],
+  [/^Drown/i, "Drowning"],
+];
+
+function causerLabel(name) {
+  for (const [pattern, label] of CAUSER_LABELS) if (pattern.test(name)) return label;
+  return null;
+}
+
+// UE4 serialises an unset name as the literal string "None", which is truthy
+// and so beat every real block in the kill chain that took the first non-empty
+// causer it found.
+const EMPTY_CAUSER = /^none$/i;
+// Longest a real name runs after prettifying. Every weapon and vehicle in a
+// real match lands on three words or fewer -- "Coupe RB", "Motorbike 04", "Uaz
+// C 01", "Frag Grenade" -- and every game-system object on four or more. The
+// point is that this catches the NEXT unknown asset without waiting for
+// somebody to report reading it in the feed.
+const MAX_NAME_WORDS = 3;
+
 function telemetryWeaponName(name) {
+  // An absent name and the engine's word for an absent name are different
+  // answers on purpose: callers that never had a causer have always been given
+  // "Unknown", while "None" arrives INSTEAD of a real causer and must read as
+  // nothing so the feed leaves the weapon out altogether.
   if (!name) return "Unknown";
+  if (typeof name === "string" && EMPTY_CAUSER.test(name.trim())) return null;
+  const plain = causerLabel(name);
+  if (plain) return plain;
   const key = canonicalWeaponKey(name);
   if (key && WEAPON_LABELS[key]) return WEAPON_LABELS[key];
-  return prettifyCauser(name);
+  const pretty = prettifyCauser(name);
+  // Not a name, an asset path with the underscores taken out. Better to say
+  // nothing than to print it.
+  if (pretty.split(" ").length > MAX_NAME_WORDS) return null;
+  return pretty;
 }
 
 function telemetryWeaponCategory(name) {
@@ -220,6 +270,7 @@ function canonicalWeaponKey(rawName) {
 }
 
 module.exports = {
+  CAUSER_LABELS,
   WEAPON_LABELS,
   WEAPON_CATEGORY,
   WEAPON_IMAGE_ALIAS,

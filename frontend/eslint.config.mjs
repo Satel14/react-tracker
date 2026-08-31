@@ -48,4 +48,13 @@ export default [
       globals: { ...globals.browser, ...globals.node, ...vitestGlobals },
     },
   },
+  {
+    // Build-time tools. They run under Node, never in a browser, and reach for
+    // Buffer, console and the filesystem as a matter of course.
+    files: ["scripts/**/*.{js,mjs}"],
+    languageOptions: {
+      sourceType: "module",
+      globals: { ...globals.node },
+    },
+  },
 ];
