@@ -110,3 +110,11 @@ function describe_icc() {
     assert.equal(estimateIcc(rows, "survivor"), 0);
   });
 }
+
+// The collector passes a per-match limit through; before this it was accepted
+// and silently ignored, which is the kind of dead argument that reads as live.
+test("honours a caller-supplied draw size", () => {
+  const ids = accountsFromMatch(match(40));
+  assert.equal(pickParticipants(ids, Math.random, 4).length, 4);
+  assert.equal(pickParticipants(ids, Math.random).length, PER_MATCH);
+});

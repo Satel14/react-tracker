@@ -22,9 +22,9 @@ const accountsFromMatch = (payload) =>
 // Partial Fisher-Yates: unbiased, and it stops after PER_MATCH swaps instead of
 // shuffling the whole lobby. Taking the head of the list would sample by
 // finishing position, since participants arrive in placement order.
-const pickParticipants = (ids, random = Math.random) => {
+const pickParticipants = (ids, random = Math.random, limit = PER_MATCH) => {
   const pool = [...ids];
-  const wanted = Math.min(PER_MATCH, pool.length);
+  const wanted = Math.min(Math.max(1, limit || PER_MATCH), pool.length);
   for (let i = 0; i < wanted; i += 1) {
     const j = i + Math.floor(random() * (pool.length - i));
     [pool[i], pool[j]] = [pool[j], pool[i]];
