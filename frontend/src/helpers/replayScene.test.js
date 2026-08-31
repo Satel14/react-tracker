@@ -7,9 +7,10 @@ import { fitCamera, clampCamera, worldToScreen } from "./replayCamera";
 
 const recordingCtx = () => {
   const calls = [];
-  const state = { lineWidth: 0, fillStyle: "", strokeStyle: "", font: "", globalAlpha: 1 };
+  const state = { lineWidth: 0, fillStyle: "", strokeStyle: "", font: "", globalAlpha: 1,
+    shadowColor: "", shadowBlur: 0 };
   const saved = [];
-  const rec = (name) => (...args) => calls.push({ name, args, lineWidth: state.lineWidth, fillStyle: state.fillStyle, strokeStyle: state.strokeStyle, globalAlpha: state.globalAlpha });
+  const rec = (name) => (...args) => calls.push({ name, args, lineWidth: state.lineWidth, fillStyle: state.fillStyle, strokeStyle: state.strokeStyle, globalAlpha: state.globalAlpha, shadowColor: state.shadowColor, shadowBlur: state.shadowBlur });
   return {
     calls,
     get lineWidth() { return state.lineWidth; },
@@ -22,6 +23,10 @@ const recordingCtx = () => {
     set font(v) { state.font = v; },
     get globalAlpha() { return state.globalAlpha; },
     set globalAlpha(v) { state.globalAlpha = v; },
+    get shadowColor() { return state.shadowColor; },
+    set shadowColor(v) { state.shadowColor = v; },
+    get shadowBlur() { return state.shadowBlur; },
+    set shadowBlur(v) { state.shadowBlur = v; },
     // globalAlpha is drawing state, so save/restore has to carry it.
     save: (...a) => { saved.push(state.globalAlpha); return rec("save")(...a); },
     restore: (...a) => { const r = rec("restore")(...a); if (saved.length) state.globalAlpha = saved.pop(); return r; },
@@ -30,7 +35,7 @@ const recordingCtx = () => {
     arc: rec("arc"), rect: rec("rect"),
     fill: rec("fill"), stroke: rec("stroke"),
     clearRect: rec("clearRect"), fillRect: rec("fillRect"),
-    drawImage: rec("drawImage"), fillText: rec("fillText"),
+    drawImage: rec("drawImage"), fillText: rec("fillText"), strokeText: rec("strokeText"),
     measureText: () => ({ width: 40 }),
     setLineDash: rec("setLineDash"),
   };
@@ -44,6 +49,7 @@ const COLORS = {
   // them compared undefined to undefined and a mutation collapsing the two
   // damage colours into one passed.
   danger: "rgb(11,11,11)", healthOk: "rgb(12,12,12)",
+  healthLow: "rgb(13,13,13)", outline: "rgb(14,14,14)",
 };
 
 const MAP = 8160;
@@ -1256,9 +1262,21 @@ describe("a flat glyph gets a bigger box so it reads at the same weight", () => 
 // off someone else's. Every source counts -- the zone and a car as much as a
 // bullet -- which is what the damage layer is for.
 describe("damage numbers", () => {
-  const numbersIn = (ctx) => ctx.calls
-    .filter((c) => c.name === "fillText" && /^-?\d+$/.test(c.args[0]))
-    .map((c) => ({ text: c.args[0], x: c.args[1], y: c.args[2], fill: c.fillStyle, alpha: c.globalAlpha }));
+  // One entry per NUMBER, not per fillText. Each is drawn twice over the same
+  // spot to deepen its shadow, which is a rendering detail these tests are not
+  // about -- the pass that pins the doubling looks at the raw calls itself.
+  const numbersIn = (ctx) => {
+    const seen = new Set();
+    const out = [];
+    for (const c of ctx.calls) {
+      if (c.name !== "fillText" || !/^-?\d+$/.test(c.args[0])) continue;
+      const key = `${c.args[0]}@${c.args[1]},${c.args[2]}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ text: c.args[0], x: c.args[1], y: c.args[2], fill: c.fillStyle, alpha: c.globalAlpha });
+    }
+    return out;
+  };
 
   // frameAt carries no playhead -- the tracks are pre-sampled at 5 and every
   // other layer in these fixtures reads them rather than the clock. This one
@@ -1271,16 +1289,48 @@ describe("damage numbers", () => {
 
   it("puts a red minus on whoever lost the health", () => {
     // Me is index 0 and Foe is index 1 in the players fixture.
+    // The SATURATED red, not the pale one the kill marker uses: this is text a
+    // few pixels tall over a map raster, where --danger washed out to nothing.
     const [n] = draw([{ t: 5, a: -1, v: 1, d: 19 }]);
     expect(n.text).toBe("-19");
-    expect(n.fill).toBe(COLORS.danger);
+    expect(n.fill).toBe(COLORS.healthLow);
+  });
+
+  it("lifts the number off the map with a shadow rather than an outline", () => {
+    // Red text on Miramar sand is red on red-brown ground, and on Erangel it
+    // is red on green. Every marker in the atlas is stroked with the outline
+    // colour for this reason, but a marker is a shape and this is 13px text:
+    // drawn on a real canvas, a stroke of 1.5 muddies the digits and one of
+    // 2.5 closes the counters of an 8 outright. A shadow darkens around the
+    // glyph without touching it.
+    const ctx = recordingCtx();
+    drawScene(ctx, { ...frameAt(1), t: 5, damage: [{ t: 5, a: -1, v: 1, d: 19 }] });
+    const fills = ctx.calls.filter((c) => c.name === "fillText" && c.args[0] === "-19");
+
+    // Twice over, which is what makes the shadow strong enough to read on
+    // grass -- the hardest ground for red.
+    expect(fills).toHaveLength(2);
+    expect(fills[0].args.slice(1)).toEqual(fills[1].args.slice(1));
+    for (const f of fills) {
+      expect(f.shadowColor).toBe(COLORS.outline);
+      expect(f.shadowBlur).toBeGreaterThan(0);
+    }
+    expect(ctx.calls.filter((c) => c.name === "strokeText")).toHaveLength(0);
+  });
+
+  it("leaves no shadow behind for whatever draws next", () => {
+    // Shadow is context state like globalAlpha. A label drawn after a number
+    // would otherwise come out with a dark glow nobody asked for.
+    const ctx = recordingCtx();
+    drawScene(ctx, { ...frameAt(1), t: 5, damage: [{ t: 5, a: -1, v: 1, d: 19 }] });
+    expect(ctx.shadowBlur).toBe(0);
   });
 
   it("says nothing on the player who dealt it", () => {
     // The tracer already runs from the shooter to whoever they hit. A number
     // on both ends states the same hit twice and doubles the text in a fight.
     const shown = draw([{ t: 5, a: 0, v: 1, d: 19 }]);
-    expect(shown.map((n) => [n.text, n.fill])).toEqual([["-19", COLORS.danger]]);
+    expect(shown.map((n) => [n.text, n.fill])).toEqual([["-19", COLORS.healthLow]]);
   });
 
   it("counts damage nobody dealt, from the zone or a fall", () => {

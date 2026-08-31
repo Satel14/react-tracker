@@ -30,7 +30,10 @@ export const SCREEN = {
   // Floating combat text. Bold and a shade larger than a name label: a
   // number is on screen for under two seconds and has to be read at a
   // glance, where a name can be studied.
-  damageFont: "700 12px system-ui, sans-serif",
+  damageFont: "800 13px system-ui, sans-serif",
+  // Shadow blur. Wide enough to separate the glyph from a bright raster,
+  // narrow enough that it does not smear into the marker below it.
+  damageHalo: 4,
   // Where a number starts above the marker, how far it climbs over its life,
   // and how far apart a burst stacks. It starts clear of the glyph rather than
   // on it -- a marker is up to 12px across and the first frame of a number
@@ -450,23 +453,37 @@ const paintDamage = (ctx, { cam, vw, vh, tracks, damage, t, colors }) => {
   ctx.save();
   ctx.font = SCREEN.damageFont;
   ctx.textAlign = "center";
-  ctx.fillStyle = colors.danger;
+  // The saturated red, not the pale one the kill marker uses: this is text a
+  // few pixels tall over a map raster, and --danger washed out against sand.
+  ctx.fillStyle = colors.healthLow;
+  // Lifted off the map with a shadow, not an outline. Every marker in the
+  // atlas is stroked with this colour and for this reason -- red on Miramar is
+  // red on red-brown ground, and on Erangel it is red on green -- but a marker
+  // is a shape and this is 13px text. On a real canvas a stroke of 1.5 muddies
+  // the digits and one of 2.5 closes the counters of an 8 outright. A shadow
+  // darkens around the glyph without touching it.
+  ctx.shadowColor = colors.outline;
+  ctx.shadowBlur = SCREEN.damageHalo;
   for (const n of numbers) {
     if (n.player >= tracks.count) continue;
     if (tracks.outState[n.player] === STATE.ABSENT) continue;
     const p = worldToScreen(cam, vw, vh, tracks.outX[n.player], tracks.outY[n.player]);
     if (p.x < -40 || p.y < -40 || p.x > vw + 40 || p.y > vh + 40) continue;
     ctx.globalAlpha = Math.max(0, 1 - n.age);
-    ctx.fillText(
-      `-${n.amount}`,
-      p.x,
-      p.y - SCREEN.damageLift - SCREEN.damageRise * n.age - n.stack * SCREEN.damageStack,
-    );
+    const text = `-${n.amount}`;
+    const y = p.y - SCREEN.damageLift - SCREEN.damageRise * n.age - n.stack * SCREEN.damageStack;
+    // Twice over the same spot: one pass is not dark enough to read on grass,
+    // which is the hardest ground for red, and a second is cheaper than a
+    // wider blur that would smear into the marker.
+    ctx.fillText(text, p.x, y);
+    ctx.fillText(text, p.x, y);
   }
   ctx.restore();
-  // save/restore carries globalAlpha, but not every canvas mock in the wild
-  // does; the next layer must never inherit a faded one.
+  // save/restore carries both of these, but not every canvas mock in the wild
+  // does; the next layer must never inherit a faded alpha or a dark glow.
   ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
 };
 
 export const drawScene = (ctx, frame) => {
