@@ -200,3 +200,93 @@ test("stops early rather than overrun the time it was given", async () => {
   assert.equal(result.aborted, true);
   assert.ok(result.observations.length < 200 * 15);
 });
+
+// --- incremental storage -------------------------------------------------
+//
+// The first scheduled run spent ~1900 metered calls and stored nothing: the
+// collector accumulated everything in memory and handed it over in one batch at
+// the very end, and the run never reached the end. Anything that survives the
+// run has to be written while it is still going.
+
+const { FLUSH_EVERY } = require("./collector");
+
+const competitive = (n) => Array(n).fill("competitive");
+
+test("writes while the run is going rather than once at the end", async () => {
+  // Seven lobbies at fifteen players each is 105 observations -- one full batch
+  // and a remainder. Storing at the end would be a single call of 105.
+  const api = fakeApi({ matchTypes: competitive(7) });
+  const batches = [];
+  await run(api, { onObservations: async (rows) => { batches.push(rows.length); return rows.length; } });
+
+  assert.equal(batches.length, 2, `expected a flush mid-run, got batches ${JSON.stringify(batches)}`);
+  assert.equal(batches[0], FLUSH_EVERY);
+  assert.equal(batches[1], 105 - FLUSH_EVERY);
+});
+
+test("every observation is handed to the store exactly once", async () => {
+  const api = fakeApi({ matchTypes: competitive(7) });
+  const seen = [];
+  const result = await run(api, { onObservations: async (rows) => { seen.push(...rows); return rows.length; } });
+
+  assert.equal(seen.length, result.observations.length);
+  assert.equal(new Set(seen.map((r) => r.accountId)).size, seen.length, "an account was flushed twice");
+});
+
+test("does not bother the store with an empty final batch", async () => {
+  // Six lobbies is exactly 90 -- under one batch, so there is a remainder to
+  // flush. Five would be 75. Either way the store must never see zero rows.
+  const api = fakeApi({ matchTypes: competitive(6) });
+  const batches = [];
+  await run(api, { onObservations: async (rows) => { batches.push(rows.length); return rows.length; } });
+
+  assert.ok(batches.length > 0, "nothing was flushed at all");
+  assert.ok(batches.every((n) => n > 0), `an empty batch was flushed: ${JSON.stringify(batches)}`);
+});
+
+test("reports how many rows the store actually kept", async () => {
+  const api = fakeApi({ matchTypes: competitive(7) });
+  // The store dedupes by account, so it keeps fewer rows than it is offered.
+  const result = await run(api, { onObservations: async (rows) => rows.length - 1 });
+
+  assert.equal(result.stored, 103, "stored should sum what the store reported, not what was offered");
+});
+
+// Neon drops idle connections and a batch can fail on its own. Losing one batch
+// is a dent in a sample; losing the run because of it is an hour of quota.
+test("a store that fails does not take the run down with it", async () => {
+  const api = fakeApi({ matchTypes: competitive(7) });
+  let call = 0;
+  const result = await run(api, {
+    onObservations: async (rows) => {
+      call += 1;
+      if (call === 1) throw new Error("connection terminated unexpectedly");
+      return rows.length;
+    },
+  });
+
+  assert.equal(call, 2, "the second batch must still be attempted");
+  assert.equal(result.stored, 5, "only the batch that landed counts");
+  assert.equal(result.observations.length, 105, "the run itself finished");
+});
+
+test("runs fine with no store attached", async () => {
+  const api = fakeApi({ matchTypes: competitive(2) });
+  const result = await run(api);
+  assert.equal(result.observations.length, 30);
+  assert.equal(result.stored, 0);
+});
+
+// The runner turns this into the status a poller reads. Without it a wedged run
+// and a working one look identical from outside.
+test("reports progress as it goes so a stuck run is visible", async () => {
+  const api = fakeApi({ matchTypes: competitive(3) });
+  const updates = [];
+  await run(api, { onProgress: (p) => updates.push({ ...p }) });
+
+  assert.ok(updates.length > 1, "progress should be reported more than once");
+  const last = updates[updates.length - 1];
+  assert.equal(last.matchesSeen, 3);
+  assert.equal(last.rankedMatches, 3);
+  assert.equal(last.observed, 45);
+});
