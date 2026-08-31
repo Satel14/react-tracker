@@ -57,4 +57,14 @@ export default [
       globals: { ...globals.node },
     },
   },
+  {
+    // Cloudflare Pages Functions. They run on workerd, so the globals are the
+    // service-worker set plus HTMLRewriter, which the platform provides and no
+    // globals package knows about.
+    files: ["functions/**/*.js"],
+    languageOptions: {
+      sourceType: "module",
+      globals: { ...globals.serviceworker, HTMLRewriter: "readonly" },
+    },
+  },
 ];
