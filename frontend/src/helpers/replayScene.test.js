@@ -1214,6 +1214,21 @@ describe("a flat glyph gets a bigger box so it reads at the same weight", () => 
     expect(chosen).toBeGreaterThan(focal);
   });
 
+  it("gives the bigger box to every ride that is wider than it is tall", () => {
+    // Testing the car alone let a mutation drop the bike out of the flat set
+    // without failing anything. The vehicle code rides in the flags above the
+    // in-vehicle bit: 0 car, 1 plane, 2 balloon, 3 bike, 4 truck, 5 boat.
+    const plain = blitFor(0, false).r;
+    for (const [code, kind] of [
+      [0, "vehicleEnemy"], [1, "planeEnemy"], [3, "bikeEnemy"],
+      [4, "truckEnemy"], [5, "boatEnemy"],
+    ]) {
+      const ride = blitFor(1 | (code << 2), false);
+      expect(ride.kind, `code ${code}`).toBe(kind);
+      expect(ride.r, kind).toBeCloseTo(plain * SCREEN.flatGlyphScale, 6);
+    }
+  });
+
   it("leaves a glyph that fills its box on both axes alone", () => {
     // On foot is a disc and the balloon is a circle: both already use the
     // whole box, and scaling them would just make two markers bigger than
