@@ -36,7 +36,7 @@ const REVIEWED = [
   {
     file: "component/Navbar.jsx",
     target: "path",
-    why: 'Built one line above as item.key === "main" ? "/" : `/${item.key}`, over a hard-coded menu array.',
+    why: 'Destructured from navItems/rightNavItems, module-scope arrays of hard-coded literal paths ("/", "/favorites", "/help", "/leaderboards"). Nothing user-supplied reaches them.',
   },
   {
     file: "pages/Main.jsx",
