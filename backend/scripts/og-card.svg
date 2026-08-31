@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="pan-plate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f2a900"/>
+      <stop offset="100%" stop-color="#e09600"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f2a900" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#f2a900" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Ground: the bg token from frontend/src/style/_tokens.scss -->
+  <rect width="1200" height="630" fill="#0d0918"/>
+  <circle cx="990" cy="315" r="300" fill="url(#glow)"/>
+
+  <!-- The play zone, shrinking: the one motif every PUBG player reads instantly. -->
+  <g fill="none" stroke="#f2a900">
+    <circle cx="990" cy="315" r="200" stroke-opacity="0.14" stroke-width="2"/>
+    <circle cx="1022" cy="292" r="150" stroke-opacity="0.22" stroke-width="2"/>
+    <circle cx="1048" cy="276" r="108" stroke-opacity="0.34" stroke-width="2"/>
+  </g>
+
+  <!-- The pan, from frontend/public/logo.svg, scaled 512 -> 256 -->
+  <g transform="translate(990 315) scale(0.5) translate(-256 -256)">
+    <circle cx="256" cy="256" r="256" fill="url(#pan-plate)"/>
+    <g transform="rotate(-45 256 256)">
+      <rect x="236" y="320" width="40" height="140" rx="8" fill="#151515"/>
+      <circle cx="256" cy="435" r="8" fill="#db9a00"/>
+      <circle cx="256" cy="230" r="130" fill="#1a1a1a"/>
+      <circle cx="256" cy="230" r="115" fill="#222222" stroke="#111111" stroke-width="2"/>
+      <path d="M200 180 Q 256 160 312 180" stroke="#333333" stroke-width="4" fill="none" opacity="0.5"/>
+    </g>
+  </g>
+
+  <!-- One left margin for every line: x=80. -->
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="80" y="200" fill="#7a7fa3" font-size="23" font-weight="700" letter-spacing="4.6">PLAYER STATS &#183; MATCH REPLAYS</text>
+
+    <text x="80" y="302" font-size="76" font-weight="900" letter-spacing="-1">
+      <tspan fill="#ffffff">PUBG</tspan><tspan fill="#f2a900">.TRACKER</tspan>
+    </text>
+
+    <rect x="80" y="344" width="96" height="5" fill="#f2a900"/>
+
+    <text x="80" y="420" fill="#d6d9ee" font-size="35" font-weight="400">Ranked RP, match history and a full</text>
+    <text x="80" y="464" fill="#d6d9ee" font-size="35" font-weight="400">replay of every drop.</text>
+
+    <text x="80" y="552" fill="#f2a900" font-size="27" font-weight="700" letter-spacing="0.6">pubgtracker.top</text>
+  </g>
+</svg>
