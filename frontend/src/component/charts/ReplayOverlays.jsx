@@ -1,7 +1,7 @@
 import React from "react";
-import { ArrowDownOutlined } from "@ant-design/icons";
 import { feedAt } from "../../helpers/replayFeed";
 import { teamColor, teamColorIndex } from "./replaySprites";
+import { WEAPON_GLYPHS, GLYPH_BOX } from "./weaponGlyphs";
 
 // The stage reads pan/zoom from pointer events on its own wrapper, so any
 // overlay pixel that swallows a pointer silently freezes dragging in that
@@ -40,29 +40,84 @@ export const formatElapsed = (seconds) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
+// The weapon, drawn rather than named. Labelled with the exact gun, so a
+// reader who cannot see the picture is told "AUG" and not "assault rifle" --
+// the class is what got drawn, never what got said.
+const WeaponGlyph = ({ kind, name }) => {
+  const d = WEAPON_GLYPHS[kind];
+  if (!d) return null;
+  return (
+    <svg
+      className="replay-feed__weapon"
+      role="img"
+      focusable="false"
+      viewBox={`0 0 ${GLYPH_BOX.w} ${GLYPH_BOX.h}`}
+    >
+      <title>{name || kind}</title>
+      <path d={d} fill="currentColor" />
+    </svg>
+  );
+};
+
+// A crosshair for a headshot and a downed figure for a knock: the two marks
+// the game puts between the weapon and the name. Both are decoration in the
+// tree and carry their meaning in a label beside them, so neither is read out
+// twice and neither is read out as nothing.
+const HeadshotMark = () => (
+  <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+    <circle cx="8" cy="8" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    <path
+      d="M8 0.5 L8 3.5 M8 12.5 L8 15.5 M0.5 8 L3.5 8 M12.5 8 L15.5 8"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const KnockMark = () => (
+  <svg viewBox="0 0 20 16" focusable="false" aria-hidden="true">
+    <circle cx="15.5" cy="5" r="2.8" fill="currentColor" />
+    <path d="M5 8 L14 6 L15 9.5 L6 11.5 Z" fill="currentColor" />
+    <path d="M13.5 7 L19.5 9.5 L18.5 12 L12.5 9.5 Z" fill="currentColor" />
+    <path d="M5 8 L8 8 L6 14.5 L2.5 14.5 Z" fill="currentColor" />
+    <path d="M7.5 9.5 L10.5 9.5 L9.5 14.5 L6.5 14.5 Z" fill="currentColor" />
+  </svg>
+);
+
 // One end of a feed line. The team number sits on the outside of each name --
 // number, killer, weapon, victim, number -- which is the order the game writes
 // and reads outward from the pair in the middle.
 //
-// The colour is the one the map paints that team, so a line and the marker it
-// is about can be matched by eye. The focal team has no palette colour by
-// design (teamColorIndex sends it to index 0, which is not a team colour), so
-// it is marked by class and the overlay's own styling takes it from there.
-const FeedSide = ({ side, focalTeamId, mirrored }) => {
+// The colour lives on the badge, not on the name: a long nickname painted in
+// team colour is a block of colour, and the number is what the eye is matching
+// against the map anyway. The focal team has no palette colour by design
+// (teamColorIndex sends it to index 0, which is not a team colour), so it is
+// marked by class and the overlay's own styling takes it from there.
+//
+// Which end this is has to be in the markup and not merely in the order: a
+// kill greys the victim out and a knock does not, and that is a rule about the
+// end, not about the position.
+const FeedSide = ({ side, focalTeamId, role }) => {
   const colour = teamColor(teamColorIndex(side.teamId, focalTeamId));
-  const number = side.teamId == null
+  const badge = side.teamId == null
     ? null
-    : <span className="replay-feed__team">{side.teamId}</span>;
+    : (
+      <span
+        className={`replay-feed__team${side.isFocal ? " is-focal" : ""}`}
+        style={colour ? { background: colour } : undefined}
+      >
+        {side.teamId}
+      </span>
+    );
   const name = <span className="replay-feed__name">{side.name}</span>;
+  const mirrored = role === "victim";
 
   return (
-    <span
-      className={`replay-feed__side${side.isFocal ? " is-focal" : ""}`}
-      style={colour ? { color: colour } : undefined}
-    >
-      {mirrored ? name : number}
-      {number && name ? " " : null}
-      {mirrored ? number : name}
+    <span className={`replay-feed__side is-${role}${side.isFocal ? " is-focal" : ""}`}>
+      {mirrored ? name : badge}
+      {badge && name ? " " : null}
+      {mirrored ? badge : name}
     </span>
   );
 };
@@ -100,18 +155,31 @@ const ReplayOverlays = ({ rows = [], phases = [], t, displayT = 0, focalTeamId =
           {shown.map((line) => (
             <div key={line.id} className={`replay-feed__line is-${line.kind}`}>
               {line.killer ? (
-                <FeedSide side={line.killer} focalTeamId={focalTeamId} mirrored={false} />
+                <FeedSide side={line.killer} focalTeamId={focalTeamId} role="killer" />
               ) : null}
               {line.killer ? " " : null}
-              {line.weapon ? <span className="replay-feed__weapon">{line.weapon}</span> : null}
+              {/* A silhouette when the class is known, the name when it is not:
+                  the zone and a fall have no picture, and neither does a gun
+                  shipped after the classifier's table was written. */}
+              {line.icon ? (
+                <WeaponGlyph kind={line.icon} name={line.weapon} />
+              ) : line.weapon ? (
+                <span className="replay-feed__weapon-name">{line.weapon}</span>
+              ) : null}
+              {line.headshot ? (
+                <span className="replay-feed__headshot">
+                  <HeadshotMark />
+                  <span className="sr-only">{t("pages.replay.headshotMark")}</span>
+                </span>
+              ) : null}
               {line.kind === "knock" ? (
                 <span className="replay-feed__knock">
-                  <ArrowDownOutlined aria-hidden="true" />
+                  <KnockMark />
                   <span className="sr-only">{t("pages.replay.knockMark")}</span>
                 </span>
               ) : null}
               {line.weapon ? " " : null}
-              <FeedSide side={line.victim} focalTeamId={focalTeamId} mirrored />
+              <FeedSide side={line.victim} focalTeamId={focalTeamId} role="victim" />
             </div>
           ))}
         </div>

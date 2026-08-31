@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import ReplayOverlays from "./ReplayOverlays";
 import { teamColor, teamColorIndex } from "./replaySprites";
+import { WEAPON_GLYPHS } from "./weaponGlyphs";
 
 const t = (key, vars) => (vars ? `${key}:${JSON.stringify(vars)}` : key);
 
@@ -232,21 +233,6 @@ test("gives a death nobody caused no killer side", () => {
   expect(line.querySelectorAll(".replay-feed__team")).toHaveLength(1);
 });
 
-test("paints a line in the colour the map paints that team", () => {
-  const { container } = renderOverlays({ feed: feedEvents, displayT: 95, focalTeamId: 1 });
-  const line = lines(container).find((el) => el.textContent.includes("AUG"));
-  const [killer, victim] = [...line.querySelectorAll(".replay-feed__side")];
-
-  // The focal team takes the overlay's own colour rather than a palette one --
-  // index 0 is not a team colour -- so it is marked by class instead.
-  expect(killer.className).toContain("is-focal");
-  expect(killer).not.toHaveAttribute("style");
-  // Exactly the colour the atlas bakes for that team, not merely some colour:
-  // the point of it is that a line and its marker can be matched by eye.
-  // toHaveStyle rather than the raw attribute -- jsdom rewrites hsl() to rgb().
-  expect(victim).toHaveStyle({ color: teamColor(teamColorIndex(22, 1)) });
-});
-
 test("ages a line out without being told the playhead moved backwards", () => {
   const { container, rerender } = render(
     <ReplayOverlays rows={rows} phases={phases} t={t} displayT={400} focalTeamId={1} feed={feedEvents} />
@@ -263,4 +249,92 @@ test("the feed swallows no pointer events either", () => {
   const { container } = renderOverlays({ feed: feedEvents, displayT: 95 });
   expect(container.querySelector(".replay-feed").style.pointerEvents).toBe("none");
   expect(container.querySelectorAll('[style*="pointer-events: auto"]')).toHaveLength(0);
+});
+
+// --- the feed line as the game draws it -----------------------------------
+
+const shotEvents = [
+  {
+    id: "kill:95:a.foe", t: 95, kind: "kill",
+    killer: { name: "Me", teamId: 1, isFocal: true },
+    victim: { name: "Foe", teamId: 22, isFocal: false },
+    weapon: "AUG", icon: "ar", headshot: true, dist: 87,
+  },
+  {
+    id: "knock:94:a.foe", t: 94, kind: "knock",
+    killer: { name: "Me", teamId: 1, isFocal: true },
+    victim: { name: "Foe", teamId: 22, isFocal: false },
+    weapon: "M416", icon: "ar", headshot: false, dist: 40,
+  },
+  {
+    id: "kill:93:a.mate", t: 93, kind: "kill",
+    killer: null,
+    victim: { name: "Mate", teamId: 1, isFocal: true },
+    weapon: "Blue Zone", icon: null, headshot: false, dist: null,
+  },
+];
+
+const lineWith = (container, text) =>
+  lines(container).find((el) => el.textContent.includes(text));
+
+test("draws the weapon as a silhouette and labels it with the gun", () => {
+  const { container } = renderOverlays({ feed: shotEvents, displayT: 95 });
+  const line = lineWith(container, "AUG");
+  const glyph = line.querySelector(".replay-feed__weapon");
+
+  // A picture of the class, named with the exact gun -- so a reader who cannot
+  // see it is told "AUG" and not "assault rifle".
+  expect(glyph.tagName.toLowerCase()).toBe("svg");
+  expect(glyph).toHaveAttribute("role", "img");
+  expect(glyph.querySelector("title").textContent).toBe("AUG");
+  expect(glyph.querySelector("path")).toHaveAttribute("d", WEAPON_GLYPHS.ar);
+});
+
+test("names what killed with no silhouette when nothing shot", () => {
+  const { container } = renderOverlays({ feed: shotEvents, displayT: 93 });
+  const line = lineWith(container, "Blue Zone");
+
+  // The game writes a bare line for a zone death; inventing a gun picture for
+  // it would report something that did not happen.
+  expect(line.querySelector("svg.replay-feed__weapon")).toBeNull();
+  expect(line.textContent).toContain("Blue Zone");
+});
+
+test("marks a headshot and leaves a body shot unmarked", () => {
+  const { container } = renderOverlays({ feed: shotEvents, displayT: 95 });
+
+  expect(lineWith(container, "AUG").querySelector(".replay-feed__headshot")).toBeInTheDocument();
+  expect(lineWith(container, "M416").querySelector(".replay-feed__headshot")).toBeNull();
+});
+
+test("names the headshot mark for a reader who cannot see it", () => {
+  const { container } = renderOverlays({ feed: shotEvents, displayT: 95 });
+  const mark = lineWith(container, "AUG").querySelector(".replay-feed__headshot");
+
+  expect(mark.textContent).toContain("pages.replay.headshotMark");
+  expect(mark.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+});
+
+test("puts the team number in a badge painted that team's colour", () => {
+  const { container } = renderOverlays({ feed: shotEvents, displayT: 95, focalTeamId: 1 });
+  const line = lineWith(container, "AUG");
+  const [killerBadge, victimBadge] = [...line.querySelectorAll(".replay-feed__team")];
+
+  // The colour moved off the name and onto the badge -- which is what the game
+  // does, and what stops a long nickname being a block of team colour.
+  expect(victimBadge.textContent).toBe("22");
+  expect(victimBadge).toHaveStyle({ backgroundColor: teamColor(teamColorIndex(22, 1)) });
+  // The focal team has no palette colour by design, so it is marked by class.
+  expect(killerBadge.className).toContain("is-focal");
+  expect(killerBadge).not.toHaveAttribute("style");
+});
+
+test("tells the killer's end of a line from the victim's", () => {
+  const { container } = renderOverlays({ feed: shotEvents, displayT: 95 });
+  const line = lineWith(container, "AUG");
+
+  // A kill greys out the victim and a knock does not, and that is a rule about
+  // which end of the line it is -- so which end has to be in the markup.
+  expect(line.querySelector(".replay-feed__side.is-killer").textContent).toContain("Me");
+  expect(line.querySelector(".replay-feed__side.is-victim").textContent).toContain("Foe");
 });

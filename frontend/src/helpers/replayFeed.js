@@ -25,6 +25,10 @@ export const FEED = Object.freeze({
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
+// Telemetry's own word for the hit region. Read here so the view never has
+// to know the vocabulary -- it is handed a boolean and draws a mark.
+const HEADSHOT = "HeadShot";
+
 // A kill record carries its own names; a knock carries account ids and nothing
 // else. Both are resolved through the roster, and whichever the record has
 // itself wins -- a player who left before LogMatchStart was recorded is in the
@@ -61,6 +65,8 @@ export const buildFeedEvents = (kills, knocks, players) => {
       killer: sideOf(roster, k.killerAccountId, k.killer, k.killerTeamId),
       victim,
       weapon: k.w ?? null,
+      icon: k.wi ?? null,
+      headshot: k.r === HEADSHOT,
       dist: Number.isFinite(k.dist) ? k.dist : null,
     });
   }
@@ -77,6 +83,8 @@ export const buildFeedEvents = (kills, knocks, players) => {
       killer: sideOf(roster, n.a, null, null),
       victim,
       weapon: n.w ?? null,
+      icon: n.wi ?? null,
+      headshot: n.r === HEADSHOT,
       dist: Number.isFinite(n.dist) ? n.dist : null,
     });
   }

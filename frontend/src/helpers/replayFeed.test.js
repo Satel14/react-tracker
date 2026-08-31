@@ -162,3 +162,39 @@ describe("feedAt", () => {
     expect(feedAt(events, 130, { window: 120 }).map((e) => e.t)).toEqual([130, 100, 90, 20]);
   });
 });
+
+describe("what a line hands the renderer", () => {
+  it("carries the silhouette class the backend picked, not the gun's name", () => {
+    // The renderer draws a picture and labels it with the name; it has no
+    // weapon table of its own to derive one from the other.
+    const [line] = buildFeedEvents([kill({ w: "AUG", wi: "ar" })], [], players);
+
+    expect(line.weapon).toBe("AUG");
+    expect(line.icon).toBe("ar");
+  });
+
+  it("carries a knock's silhouette too", () => {
+    const [line] = buildFeedEvents([], [knock({ w: "M416", wi: "ar" })], players);
+
+    expect(line.icon).toBe("ar");
+  });
+
+  it("marks a headshot, and reads the telemetry word here rather than in the view", () => {
+    expect(buildFeedEvents([kill({ r: "HeadShot" })], [], players)[0].headshot).toBe(true);
+    expect(buildFeedEvents([kill({ r: "TorsoShot" })], [], players)[0].headshot).toBe(false);
+    expect(buildFeedEvents([kill({ r: null })], [], players)[0].headshot).toBe(false);
+    expect(buildFeedEvents([], [knock({ r: "HeadShot" })], players)[0].headshot).toBe(true);
+  });
+
+  it("leaves a zone death with a name and no silhouette", () => {
+    const [line] = buildFeedEvents(
+      [kill({ killer: null, killerAccountId: null, w: "Blue Zone", wi: null, r: null })],
+      [],
+      players,
+    );
+
+    expect(line.weapon).toBe("Blue Zone");
+    expect(line.icon).toBeNull();
+    expect(line.headshot).toBe(false);
+  });
+});

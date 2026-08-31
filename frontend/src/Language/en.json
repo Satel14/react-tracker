@@ -236,6 +236,7 @@
       "phase": "Phase {phase}",
       "stateKnocked": "Knocked",
       "knockMark": "Knocked",
+      "headshotMark": "Headshot",
       "stateDead": "Dead",
       "healthLabel": "Health {value}%",
       "yourTeam": "Your Team",
