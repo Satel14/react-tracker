@@ -4,7 +4,8 @@
     "leaderboards": "Leaderboards",
     "favorites": "Favorites",
     "obs": "OBS overlay",
-    "help": "Help"
+    "help": "Help",
+    "ranks": "Ranks"
   },
   "pages": {
     "main": {
@@ -362,8 +363,6 @@
       "reload": "Reload page"
     },
     "ranks": {
-      "metaTitle": "PUBG Ranks Explained: Tiers, RP, Survivor (Season 42)",
-      "metaDescription": "The PUBG ranked ladder as it actually stands in Season 42: all eight tiers in order, how RP is earned and lost after Update 42.1, Survivor, and RP decay.",
       "title": "PUBG ranks explained: tiers, RP and Survivor",
       "intro": "Eight tiers, one RP number shared across party types and perspectives, and a top tier you can lose overnight — this is the ranked system as it stands on 31 August 2026, sourced to KRAFTON's patch notes and official posts, with every exception labelled.",
       "ladder": {
@@ -415,7 +414,18 @@
         "p3": "Gate two: you must place within your region's fixed number of Survivor slots.",
         "p4": "Slot counts published with Season 36. PC: AS 200, SEA 100, EU 50, KAKAO 50, RU 50, NA 5, SA 5. Console: NA 50, EU 20, APAC 5, SA 5.",
         "p5": "KRAFTON called those numbers \"subject to change based on matchmaking conditions\" and has not republished them since June 2025. They are the latest published figures, which is not the same as the current ones.",
-        "p6": "Demotion is immediate. Fall below 3,700 live RP and you drop to Master on the spot — Tier Protection does not cover Survivor. Climb back above 3,700 before the next leaderboard update and you are promoted straight back to Survivor."
+        "p6": "Demotion is immediate. Fall below 3,700 live RP and you drop to Master on the spot — Tier Protection does not cover Survivor. Climb back above 3,700 before the next leaderboard update and you are promoted straight back to Survivor.",
+        "slotsHeading": "Survivor slots by region",
+        "slotsTotal": "{total} seats across the PC regions listed, Kakao included — it runs on its own shard.",
+        "region": {
+          "as": "Asia",
+          "sea": "South-East Asia",
+          "eu": "Europe",
+          "kakao": "Kakao",
+          "ru": "Russia",
+          "na": "North America",
+          "sa": "South America"
+        }
       },
       "rpDecay": {
         "heading": "RP decay, and the part nobody outside KRAFTON can answer",

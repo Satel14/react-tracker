@@ -70,8 +70,15 @@ describe("body text", () => {
     expect(/<div id="root">(.+)<\/div>/s.exec(html)[1]).toContain("<h1>");
   });
 
-  it("leaves the mount point empty for a route that asks for no body", () => {
-    expect(renderHead(shell, route("/"))).toContain('<div id="root"></div>');
+  it("puts no prose in the file that doubles as the fallback", () => {
+    // Every shell now carries a nav, so "empty" is the wrong assertion --
+    // what must stay off the homepage is its heading and sentence.
+    // Scoped to the mount point: the description belongs in the head, and
+    // asserting against the whole document would fail on its own meta tag.
+    const html = renderHead(shell, route("/"));
+    const body = html.slice(html.indexOf('<div id="root">'), html.indexOf("</body>"));
+    expect(body).not.toContain("<h1>");
+    expect(body).not.toContain("<p>");
   });
 });
 
@@ -130,5 +137,75 @@ describe("what the share-card guard pins, re-checked on the output", () => {
       const wrong = [...html.matchAll(/<meta\s+property="(twitter:[^"]+)"/g)].map((m) => m[1]);
       expect(wrong, `${path}`).toEqual([]);
     }
+  });
+});
+
+// Nothing in the raw HTML links anywhere. The navbar's anchors are rendered by
+// React, so a crawler that does not run JS -- GPTBot, ClaudeBot, PerplexityBot,
+// and anything reading the shell directly -- can only find pages through the
+// sitemap. These put the same four indexable routes into every shell.
+describe("crawlable navigation", () => {
+  const navOf = (html) => {
+    const block = /<nav[^>]*>([\s\S]*?)<\/nav>/.exec(html);
+    if (!block) return null;
+    return [...block[1].matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+  };
+
+  it.each(ROUTE_META.map((r) => r.path))("puts the nav into %s", (path) => {
+    const html = renderHead(shell, ROUTE_META.find((r) => r.path === path));
+    expect(navOf(html)).toEqual(["/", "/leaderboards", "/ranks", "/help"]);
+  });
+
+  // The homepage is deliberately body:false -- its file is also what Pages
+  // serves for every unmatched URL, so its prose would land on every soft-404.
+  // A nav is site furniture rather than content, so it goes everywhere; the
+  // prose still does not.
+  it("gives the homepage the nav but still no prose", () => {
+    const html = renderHead(shell, ROUTE_META.find((r) => r.path === "/"));
+    expect(navOf(html)).toHaveLength(4);
+    expect(html).not.toContain("<h1>");
+  });
+
+  it("carries a real label on every link, not a bare path", () => {
+    const html = renderHead(shell, ROUTE_META.find((r) => r.path === "/help"));
+    const block = /<nav[^>]*>([\s\S]*?)<\/nav>/.exec(html)[1];
+    for (const text of [...block.matchAll(/>([^<]+)<\/a>/g)].map((m) => m[1])) {
+      expect(text.trim().length).toBeGreaterThan(3);
+      expect(text).not.toMatch(/^\//);
+    }
+  });
+
+  it("names the nav for a screen reader", () => {
+    expect(renderHead(shell, ROUTE_META.find((r) => r.path === "/ranks")))
+      .toMatch(/<nav[^>]+aria-label="[^"]+"/);
+  });
+
+  it("links only to routes it is willing to have indexed", () => {
+    const html = renderHead(shell, ROUTE_META.find((r) => r.path === "/ranks"));
+    for (const href of navOf(html)) {
+      const route = ROUTE_META.find((r) => r.path === href);
+      expect(route, `${href} is not a known route`).toBeTruthy();
+      expect(route.robots || "", href).not.toContain("noindex");
+      expect(route.sitemap, `${href} should be in the sitemap`).toBe(true);
+    }
+  });
+});
+
+// One WebApplication block ships in the shell. It named the site root on every
+// page, so each route's structured data disagreed with its own canonical.
+describe("structured data", () => {
+  const ldUrl = (html) =>
+    /"@type": "WebApplication"[\s\S]*?"url": "([^"]+)"/.exec(html)?.[1]
+      ?? /"url": "([^"]+)"/.exec(html)?.[1];
+
+  it.each(["/", "/ranks", "/help"])("points at %s, not the site root", (path) => {
+    const meta = ROUTE_META.find((r) => r.path === path);
+    expect(ldUrl(renderHead(shell, meta))).toBe(canonicalFor(path));
+  });
+
+  it("agrees with the canonical it ships beside", () => {
+    const html = renderHead(shell, route("/leaderboards"));
+    const canonical = /rel="canonical" href="([^"]+)"/.exec(html)[1];
+    expect(ldUrl(html)).toBe(canonical);
   });
 });

@@ -29,8 +29,8 @@ body {
   }
 }
 
-// The static shells scripts/prerender-head.mjs writes put a heading and a
-// sentence inside #root, so a route has real text in its raw HTML and a visitor
+// The static shells the prerenderHead plugin in vite.config.js writes put a
+// nav, a heading and a sentence inside #root, so a route has real text and real
 // sees something on the first paint instead of a blank page. React's createRoot
 // clears the container on mount, so this is only ever on screen until the bundle
 // runs -- and it sits OUTSIDE .app, which is where `color` is declared, so it
@@ -3341,6 +3341,22 @@ body {
 
 // The ranked-system explainer. Same measure and rhythm as .help-page -- it is
 // the other long-form page on the site and they should read as a pair.
+// Only on screen until createRoot wipes it. It exists for crawlers that do not
+// run JS, and for anyone with JS off -- so it has to be legible, not pretty.
+.prerender__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 20px;
+
+  a {
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
 .ranks-page {
   max-width: 900px;
   margin: 0 auto;
@@ -3398,6 +3414,44 @@ body {
     border-radius: 10px;
     background: color-mix(in srgb, var(--accent) 5%, transparent);
     border: 1px solid var(--border);
+  }
+
+  &__slots {
+    margin: 12px 0 16px;
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      color: var(--text-strong);
+    }
+
+    ul {
+      margin: 0 0 8px;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+  }
+
+  &__slot {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+
+    b {
+      color: var(--text-strong);
+      font-variant-numeric: tabular-nums;
+    }
   }
 
   &__tier-icon {
