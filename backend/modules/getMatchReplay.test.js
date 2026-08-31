@@ -169,11 +169,11 @@ test("assigns a phase index that changes only when the warning circle jumps", ()
   assert.deepEqual(r.zones.map((z) => z.phase), [0, 1, 1, 2, 2]);
 });
 
-// --- format 2 payload wiring ---------------------------------------------
+// --- format 3 payload wiring ---------------------------------------------
 
 test("stamps the wire format so a stale cached payload is detectable", () => {
   const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
-  assert.equal(r.format, 2);
+  assert.equal(r.format, 3);
 });
 
 test("ships every new layer as an array, never undefined", () => {
@@ -273,6 +273,9 @@ test("a kill carries the weapon it was made with and the range it was made at", 
   assert.equal(r.kills[0].w, "AUG");
   assert.equal(r.kills[0].dist, 87); // centimetres in the telemetry, metres here
   assert.equal(r.kills[0].r, "TorsoShot");
+  // The feed draws the weapon as a silhouette, so the record says which one.
+  // Classified here, not on the client, for the same reason the name is.
+  assert.equal(r.kills[0].wi, "ar");
 });
 
 // The blue zone, a fall and the red zone all kill with nobody credited. A feed
@@ -296,6 +299,8 @@ test("a kill nobody made names what did it and credits no killer", () => {
   assert.equal(r.kills[0].killer, null);
   assert.equal(r.kills[0].killerAccountId, null);
   assert.equal(r.kills[0].w, "Blue Zone");
+  // Nothing shot them, so there is no silhouette to draw either.
+  assert.equal(r.kills[0].wi, null);
 });
 
 // A vehicle is a legitimate killer and reads as one -- the feed says a car did
@@ -315,4 +320,5 @@ test("a roadkill names the vehicle", () => {
   const r = parseReplayTelemetry(roadkill, { matchAttributes, accountId: "account.me" });
 
   assert.equal(r.kills[0].w, "Coupe RB");
+  assert.equal(r.kills[0].wi, "vehicle");
 });

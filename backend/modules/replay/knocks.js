@@ -1,5 +1,6 @@
 const { readXY } = require("../telemetryUtils");
 const { telemetryWeaponName } = require("../weaponMeta");
+const { weaponIcon } = require("./weaponIcon");
 
 function accountOf(actor) {
   const id = actor?.accountId;
@@ -50,6 +51,7 @@ function extractKnocks(telemetry, clock) {
       // the kill line under it. A knock the zone or a fall made has no
       // attacker, and then this names what did it.
       w: ev.damageCauserName ? telemetryWeaponName(ev.damageCauserName) : null,
+      wi: weaponIcon(ev.damageCauserName),
       r: ev.damageReason || null,
       dist: distanceMetres(ev.distance),
       id: ev.dBNOId ?? null,

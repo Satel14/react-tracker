@@ -39,6 +39,7 @@ test("maps every field of a full knock, with dist in metres", () => {
       vx: 4186,
       vy: 2881,
       w: "M416",
+      wi: "ar",
       r: "TorsoShot",
       // 6289.604 cm rounds to 63 m -- NOT 6290, and NOT 62.
       dist: 63,
@@ -202,4 +203,18 @@ test("a knock nobody made still names what did it", () => {
   );
   assert.equal(knocks[0].a, null);
   assert.equal(knocks[0].w, "Blue Zone");
+});
+
+// The feed draws a silhouette, not the gun's name, so the record has to say
+// which silhouette. Resolved here for the same reason the name is: the
+// frontend has no copy of the weapon table.
+test("a knock says which silhouette its weapon draws as", () => {
+  const { knocks } = extractKnocks([knock({ damageCauserName: "WeapAUG_C" })], clock);
+  assert.equal(knocks[0].wi, "ar");
+});
+
+test("a knock nobody made draws no weapon silhouette", () => {
+  const { knocks } = extractKnocks([knock({ attacker: null, damageCauserName: "BlueZone" })], clock);
+  assert.equal(knocks[0].w, "Blue Zone");
+  assert.equal(knocks[0].wi, null);
 });

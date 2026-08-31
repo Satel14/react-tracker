@@ -7,13 +7,14 @@ const { extractFlight } = require("./replay/flight");
 const { extractLandings } = require("./replay/landings");
 const { extractKnocks } = require("./replay/knocks");
 const { telemetryWeaponName } = require("./weaponMeta");
+const { weaponIcon } = require("./replay/weaponIcon");
 const { extractShots } = require("./replay/shots");
 const { extractPackages } = require("./replay/packages");
 const { extractSpecialZones, extractPhases } = require("./replay/zones");
 
 // Bumped whenever the wire shape changes, so a stale cached payload is detected
 // rather than silently mis-decoded. 2 = delta-coded position columns.
-const REPLAY_FORMAT = 2;
+const REPLAY_FORMAT = 3;
 
 const replayCache = new Map();
 const REPLAY_CACHE_LIMIT = 30;
@@ -137,6 +138,9 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
       kills.push({
         t,
         w: causer ? telemetryWeaponName(causer) : null,
+        // Which silhouette the feed draws. Null for the zone and a fall,
+        // where the game draws none either.
+        wi: weaponIcon(causer),
         // Centimetres in the telemetry, metres everywhere this project shows a
         // distance. Absent rather than 0 when the event carries none: a kill at
         // an unknown range is not a kill at point-blank.
