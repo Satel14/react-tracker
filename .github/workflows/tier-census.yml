@@ -28,9 +28,11 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    # A full run is under an hour. The API aborts itself before this, so hitting
-    # the cap here means something is genuinely wrong rather than slow.
-    timeout-minutes: 90
+    # The API stops itself at 80 minutes and the poll gives up at 100. Reaching
+    # this cap means something is wrong rather than slow.
+    timeout-minutes: 120
+    env:
+      API: https://api.pubgtracker.top
     steps:
       - name: Ask the API to collect today's sample
         env:
@@ -40,28 +42,78 @@ jobs:
             echo "CENSUS_TOKEN is not set in repository secrets"
             exit 1
           fi
+          auth="Authorization: Bearer $CENSUS_TOKEN"
 
-          # The service is asleep. Waking it takes up to a minute, and curl's
-          # own timeout has to outlast the whole collection, not just the wake.
-          echo "Waking the API…"
-          curl -sS -o /dev/null -m 120 https://api.pubgtracker.top/api/player/live || true
+          # The service is asleep; waking it takes up to a minute.
+          echo "Waking the API..."
+          curl -sS -o /dev/null -m 120 "$API/api/player/live" || true
 
-          echo "Running the census…"
-          response=$(curl -sS -m 5400 -X POST \
-            -H "Authorization: Bearer $CENSUS_TOKEN" \
-            https://api.pubgtracker.top/api/census/run)
+          # The run outlives this request. It used to BE this request, and
+          # Render's proxy cut the connection at thirty minutes: the job saw a
+          # 502, and because rows were written in one closing batch, an hour of
+          # PUBG quota went with it.
+          echo "Starting the census..."
+          start=$(curl -sS -m 60 -X POST -H "$auth" "$API/api/census/run")
+          echo "$start"
 
-          echo "$response"
-
-          # The API answers 200 with a message on a caught error, so success is
-          # judged on the body rather than the status code.
-          echo "$response" | grep -q '"windowDate"' || {
-            echo "::error::the census did not report a window -- see the body above"
+          started=$(printf '%s' "$start" | jq -r '.data.started // false' 2>/dev/null || echo false)
+          reason=$(printf '%s' "$start" | jq -r '.data.reason // ""' 2>/dev/null || echo "")
+          if [ "$started" = "true" ]; then
+            echo "Started."
+          elif [ "$reason" != "" ]; then
+            echo "::warning::a run was already going ($reason); following that one instead"
+          else
+            echo "::error::the run did not start -- see the body above"
             exit 1
-          }
+          fi
 
-          echo "$response" | grep -q '"aborted":true' && {
-            echo "::warning::the run aborted early; the sample for today is partial"
-          }
+          # Polling is not only how the outcome comes back. A free Render
+          # instance spins down after 15 minutes without inbound traffic, and
+          # its own background work does not count as traffic, so this loop is
+          # also what keeps the census alive. Do not stretch the interval.
+          deadline=$(( $(date +%s) + 100 * 60 ))
+          state=running
+          status=""
+          while [ "$state" = "running" ]; do
+            sleep 60
+            status=$(curl -sS -m 60 -H "$auth" "$API/api/census/status" || echo '{}')
+            state=$(printf '%s' "$status" | jq -r '.data.state // "unreachable"' 2>/dev/null || echo unreachable)
+            progress=$(printf '%s' "$status" | jq -c '.data.progress // {}' 2>/dev/null || echo '{}')
+            echo "$(date -u +%H:%M:%S)  $state  $progress"
 
-          exit 0
+            # A blip while the instance is busy is not a failure; the next poll
+            # picks the thread back up.
+            if [ "$state" = "unreachable" ]; then
+              state=running
+            fi
+
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::still running after 100 minutes"
+              exit 1
+            fi
+          done
+
+          echo "$status" | jq . 2>/dev/null || echo "$status"
+
+          if [ "$state" != "done" ]; then
+            echo "::error::the run ended in state '$state' -- see the body above"
+            exit 1
+          fi
+
+          window=$(printf '%s' "$status" | jq -r '.data.result.windowDate // ""')
+          stored=$(printf '%s' "$status" | jq -r '.data.result.stored // 0')
+          aborted=$(printf '%s' "$status" | jq -r '.data.result.aborted // false')
+
+          if [ -z "$window" ] || [ "$window" = "null" ]; then
+            echo "::error::the census finished without reporting a window"
+            exit 1
+          fi
+          if [ "$stored" -eq 0 ]; then
+            echo "::error::the run stored no rows"
+            exit 1
+          fi
+          if [ "$aborted" = "true" ]; then
+            echo "::warning::the run aborted early; today's sample is partial"
+          fi
+
+          echo "Stored $stored rows for $window."
