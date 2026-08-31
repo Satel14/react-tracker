@@ -11,6 +11,7 @@ const EXPECTED_DEFAULTS = {
   packages: true,
   specialZones: true,
   healthArcs: true,
+  damage: true,
 };
 
 // The logic project runs in bare Node: no `window`, no `localStorage`. Tests
@@ -41,10 +42,10 @@ afterEach(() => {
 test("shot lines default off and every other layer defaults on", () => {
   expect(DEFAULT_LAYERS).toEqual(EXPECTED_DEFAULTS);
   expect(DEFAULT_LAYERS.shots).toBe(false);
-  expect(Object.keys(DEFAULT_LAYERS)).toHaveLength(6);
+  expect(Object.keys(DEFAULT_LAYERS)).toHaveLength(7);
 });
 
-test("LAYER_KEYS lists the six layers in a stable order", () => {
+test("LAYER_KEYS lists the seven layers in a stable order", () => {
   expect(LAYER_KEYS).toEqual([
     "shots",
     "landings",
@@ -52,10 +53,11 @@ test("LAYER_KEYS lists the six layers in a stable order", () => {
     "packages",
     "specialZones",
     "healthArcs",
+    "damage",
   ]);
 });
 
-test("an empty store reads back the defaults, all six keys", () => {
+test("an empty store reads back the defaults, all seven keys", () => {
   installStorage();
   const prefs = readLayerPrefs();
   expect(prefs).toEqual(EXPECTED_DEFAULTS);
@@ -73,6 +75,7 @@ test("write then read preserves every value", () => {
     packages: false,
     specialZones: false,
     healthArcs: true,
+  damage: true,
   };
   expect(writeLayerPrefs(wanted)).toEqual(wanted);
   expect(readLayerPrefs()).toEqual(wanted);

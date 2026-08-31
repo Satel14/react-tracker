@@ -1247,3 +1247,83 @@ describe("a flat glyph gets a bigger box so it reads at the same weight", () => 
     expect(SCREEN.flatGlyphScale).toBe(1.5);
   });
 });
+
+// Floating combat text: what came off a player's health, and what they took
+// off someone else's. Every source counts -- the zone and a car as much as a
+// bullet -- which is what the damage layer is for.
+describe("damage numbers", () => {
+  const numbersIn = (ctx) => ctx.calls
+    .filter((c) => c.name === "fillText" && /^-?\d+$/.test(c.args[0]))
+    .map((c) => ({ text: c.args[0], x: c.args[1], y: c.args[2], fill: c.fillStyle, alpha: c.globalAlpha }));
+
+  // frameAt carries no playhead -- the tracks are pre-sampled at 5 and every
+  // other layer in these fixtures reads them rather than the clock. This one
+  // is a function of the playhead, so it needs one.
+  const draw = (damage, over = {}) => {
+    const ctx = recordingCtx();
+    drawScene(ctx, { ...frameAt(1), t: 5, damage, ...over });
+    return numbersIn(ctx);
+  };
+
+  it("puts a red minus on whoever lost the health", () => {
+    // Me is index 0 and Foe is index 1 in the players fixture.
+    const [n] = draw([{ t: 5, a: -1, v: 1, d: 19 }]);
+    expect(n.text).toBe("-19");
+    expect(n.fill).toBe(COLORS.danger);
+  });
+
+  it("puts a green number on whoever dealt it, without the minus", () => {
+    // The minus means health went down, so it belongs to the player it went
+    // down on. On the dealer the same figure is a gain, and a green -19 there
+    // reads as if they were the one who lost it.
+    const shown = draw([{ t: 5, a: 0, v: 1, d: 19 }]);
+    expect(shown.map((n) => [n.text, n.fill])).toEqual([
+      ["-19", COLORS.danger],
+      ["19", COLORS.healthOk],
+    ]);
+  });
+
+  it("counts damage nobody dealt, from the zone or a fall", () => {
+    const shown = draw([{ t: 5, a: -1, v: 0, d: 4 }]);
+    expect(shown.map((n) => n.text)).toEqual(["-4"]);
+  });
+
+  it("floats the number up and fades it as it ages", () => {
+    const fresh = draw([{ t: 5, a: -1, v: 1, d: 19 }])[0];
+    const old = draw([{ t: 4.2, a: -1, v: 1, d: 19 }])[0];
+    expect(old.y).toBeLessThan(fresh.y);
+    expect(old.alpha).toBeLessThan(fresh.alpha);
+    expect(fresh.alpha).toBeCloseTo(1, 6);
+  });
+
+  it("stacks a burst so the numbers do not print on one another", () => {
+    const shown = draw([
+      { t: 4.9, a: -1, v: 1, d: 5 },
+      { t: 5, a: -1, v: 1, d: 6 },
+    ]);
+    expect(shown).toHaveLength(2);
+    expect(shown[0].y).not.toBeCloseTo(shown[1].y, 3);
+  });
+
+  it("says nothing for a player who is not on the map yet", () => {
+    // Index 2 is nobody in this fixture, and a number with no marker under it
+    // would float in empty space.
+    expect(draw([{ t: 5, a: -1, v: 2, d: 19 }])).toEqual([]);
+  });
+
+  it("draws none of it when the layer is switched off", () => {
+    expect(draw([{ t: 5, a: 0, v: 1, d: 19 }], { layers: { damage: false } })).toEqual([]);
+  });
+
+  it("leaves the canvas at full opacity for whatever draws next", () => {
+    const ctx = recordingCtx();
+    drawScene(ctx, { ...frameAt(1), t: 5, damage: [{ t: 5, a: 0, v: 1, d: 19 }] });
+    expect(ctx.globalAlpha).toBe(1);
+  });
+
+  it("survives a payload with no damage layer at all", () => {
+    for (const bad of [undefined, null, "x", []]) {
+      expect(draw(bad)).toEqual([]);
+    }
+  });
+});

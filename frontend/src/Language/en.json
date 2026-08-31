@@ -249,6 +249,7 @@
       "layerPackages": "Care packages",
       "layerZones": "Hazard zones",
       "layerHealth": "Health rings",
+      "layerDamage": "Damage numbers",
       "shortcuts": "Space play/pause, arrows seek 5 s (Shift 30 s), comma/period step 10 s, 0-4 speed, F fullscreen, R reset view",
       "stateAlive": "Alive",
       "teamless": "No team",

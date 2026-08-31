@@ -19,7 +19,7 @@ const gun = (over = {}) => ({
   ...over,
 });
 
-const lengths = (out) => [out.t, out.a, out.v, out.ax, out.ay, out.vx, out.vy, out.dmg].map((arr) => arr.length);
+const lengths = (out) => [out.t, out.a, out.v, out.ax, out.ay, out.vx, out.vy].map((arr) => arr.length);
 
 test("one attackId hitting two different victims yields two lines", () => {
   const out = extractShots(
@@ -46,7 +46,6 @@ test("the same (attackId, victim) pair twice yields one line", () => {
   );
   assert.equal(out.t.length, 1);
   // The FIRST occurrence wins, so the later damage/time must not leak through.
-  assert.deepEqual(out.dmg, [25]);
   assert.deepEqual(out.t, [10]);
 });
 
@@ -75,7 +74,7 @@ test("skips a gun hit whose attacker location is zeroed", () => {
     ],
     clock,
   );
-  assert.deepEqual(lengths(out), [0, 0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(lengths(out), [0, 0, 0, 0, 0, 0, 0]);
 });
 
 test("skips a gun hit whose victim location is zeroed or absent", () => {
@@ -132,7 +131,7 @@ test("converts world units to integer metres, the same scale as kills and positi
   assert.deepEqual(out.vy, [679]);
 });
 
-test("all eight arrays stay equal length and the output is sorted by t", () => {
+test("all seven arrays stay equal length and the output is sorted by t", () => {
   const out = extractShots(
     [
       gun({ attackId: 1, _t: 300 }),
@@ -142,7 +141,7 @@ test("all eight arrays stay equal length and the output is sorted by t", () => {
     ],
     clock,
   );
-  assert.deepEqual(lengths(out), [4, 4, 4, 4, 4, 4, 4, 4]);
+  assert.deepEqual(lengths(out), [4, 4, 4, 4, 4, 4, 4]);
   assert.deepEqual(out.t, [0, 5, 120, 300]);
 });
 
@@ -163,18 +162,8 @@ test("skips events missing either accountId", () => {
   assert.equal(out.t.length, 0);
 });
 
-test("rounds damage and falls back to 0 when it is not finite", () => {
-  const out = extractShots(
-    [
-      gun({ attackId: 1, _t: 1, damage: 25.4 }),
-      gun({ attackId: 2, _t: 2, damage: 25.5 }),
-      gun({ attackId: 3, _t: 3, damage: undefined }),
-      gun({ attackId: 4, _t: 4, damage: "not a number" }),
-    ],
-    clock,
-  );
-  assert.deepEqual(out.dmg, [25, 26, 0, 0]);
-});
+// The damage rounding test that stood here moved with the column it was
+// about: damage.js owns it now, and covers the zone and a fall besides.
 
 test("carries the attacker and victim accountIds through", () => {
   const out = extractShots(
@@ -188,7 +177,7 @@ test("carries the attacker and victim accountIds through", () => {
 test("does not throw on malformed input", () => {
   for (const bad of [null, undefined, [], {}, "telemetry", 7]) {
     const out = extractShots(bad, clock);
-    assert.deepEqual(lengths(out), [0, 0, 0, 0, 0, 0, 0, 0]);
+    assert.deepEqual(lengths(out), [0, 0, 0, 0, 0, 0, 0]);
   }
   assert.deepEqual(
     lengths(
@@ -205,13 +194,13 @@ test("does not throw on malformed input", () => {
         clock,
       ),
     ),
-    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0],
   );
 });
 
 test("does not throw when the clock is missing or unusable", () => {
   for (const bad of [null, undefined, {}, { timeOf: null }]) {
-    assert.deepEqual(lengths(extractShots([gun()], bad)), [0, 0, 0, 0, 0, 0, 0, 0]);
+    assert.deepEqual(lengths(extractShots([gun()], bad)), [0, 0, 0, 0, 0, 0, 0]);
   }
 });
 

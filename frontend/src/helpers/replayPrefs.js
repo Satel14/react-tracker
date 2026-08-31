@@ -22,10 +22,13 @@ export const LAYER_KEYS = Object.freeze([
   "packages",
   "specialZones",
   "healthArcs",
+  "damage",
 ]);
 
 // Shot lines are the densest layer (443-737 per match) and read as clutter on a
-// first view, so they start hidden. The rest are sparse point marks.
+// first view, so they start hidden. The rest are sparse point marks -- damage
+// numbers included: there are around 900 in a match, but each is on screen for
+// under two seconds and no more than a couple of dozen can show at once.
 export const DEFAULT_LAYERS = Object.freeze({
   shots: false,
   landings: true,
@@ -33,6 +36,7 @@ export const DEFAULT_LAYERS = Object.freeze({
   packages: true,
   specialZones: true,
   healthArcs: true,
+  damage: true,
 });
 
 // Bare and unprefixed, matching the existing keys ("history", "favorites",

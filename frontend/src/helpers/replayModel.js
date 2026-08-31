@@ -12,7 +12,8 @@
 // It must never throw: a stale cached payload from before the compaction has to
 // render, not blank the page.
 
-const SHOT_KEYS = ["t", "a", "v", "ax", "ay", "vx", "vy", "dmg"];
+const SHOT_KEYS = ["t", "a", "v", "ax", "ay", "vx", "vy"];
+const DAMAGE_KEYS = ["t", "a", "v", "d"];
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -83,20 +84,23 @@ const decodePlayers = (players) =>
     return { ...player, positions: decodePositions(player.positions) };
   });
 
-const decodeShots = (shots) => {
+// The row count is the SHORTEST column, so a key listed here that the backend
+// no longer ships is not a missing field -- it is zero rows, silently. That is
+// why shots[].dmg leaving had to take its key with it.
+const decodeColumns = (layer, keys) => {
   // A payload old enough to predate the compaction may already hold objects.
-  if (Array.isArray(shots)) return shots;
-  if (!shots || typeof shots !== "object") return [];
+  if (Array.isArray(layer)) return layer;
+  if (!layer || typeof layer !== "object") return [];
 
-  const columns = SHOT_KEYS.map((key) => asArray(shots[key]));
+  const columns = keys.map((key) => asArray(layer[key]));
   const n = columns.reduce((min, col) => Math.min(min, col.length), Infinity);
   const count = Number.isFinite(n) ? n : 0;
 
   const out = [];
   for (let i = 0; i < count; i += 1) {
-    const shot = {};
-    for (let k = 0; k < SHOT_KEYS.length; k += 1) shot[SHOT_KEYS[k]] = columns[k][i];
-    out.push(shot);
+    const row = {};
+    for (let k = 0; k < keys.length; k += 1) row[keys[k]] = columns[k][i];
+    out.push(row);
   }
   return out;
 };
@@ -106,7 +110,8 @@ export const decodeReplay = (payload) => {
   return {
     ...src,
     players: decodePlayers(src.players),
-    shots: decodeShots(src.shots),
+    shots: decodeColumns(src.shots, SHOT_KEYS),
+    damage: decodeColumns(src.damage, DAMAGE_KEYS),
     kills: asArray(src.kills),
     zones: asArray(src.zones),
     landings: asArray(src.landings),

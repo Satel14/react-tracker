@@ -38,6 +38,7 @@ const LEGEND = [
 const LAYER_LABEL = {
   shots: "layerShots", landings: "layerLandings", flight: "layerFlight",
   packages: "layerPackages", specialZones: "layerZones", healthArcs: "layerHealth",
+  damage: "layerDamage",
 };
 const INITIAL = { loading: false, error: null, data: null };
 

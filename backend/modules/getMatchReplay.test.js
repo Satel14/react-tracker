@@ -169,11 +169,11 @@ test("assigns a phase index that changes only when the warning circle jumps", ()
   assert.deepEqual(r.zones.map((z) => z.phase), [0, 1, 1, 2, 2]);
 });
 
-// --- format 4 payload wiring ---------------------------------------------
+// --- format 5 payload wiring ---------------------------------------------
 
 test("stamps the wire format so a stale cached payload is detectable", () => {
   const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
-  assert.equal(r.format, 4);
+  assert.equal(r.format, 5);
 });
 
 test("ships every new layer as an array, never undefined", () => {
@@ -181,9 +181,13 @@ test("ships every new layer as an array, never undefined", () => {
   for (const key of ["landings", "knocks", "revives", "packages", "specialZones", "phases"]) {
     assert.ok(Array.isArray(r[key]), `${key} must be an array`);
   }
-  // shots is column-oriented: eight parallel arrays, all the same length.
-  const lengths = ["t", "a", "v", "ax", "ay", "vx", "vy", "dmg"].map((k) => r.shots[k].length);
-  assert.equal(new Set(lengths).size, 1);
+  // shots and damage are column-oriented: parallel arrays, each set all the
+  // same length as the others in its own layer.
+  for (const [layer, keys] of [[r.shots, ["t", "a", "v", "ax", "ay", "vx", "vy"]],
+    [r.damage, ["t", "a", "v", "d"]]]) {
+    const lengths = keys.map((k) => layer[k].length);
+    assert.equal(new Set(lengths).size, 1);
+  }
 });
 
 test("reports the in-game end time, which is not the wall-clock duration", () => {
@@ -366,4 +370,36 @@ test("names the things that kill without being weapons", () => {
   assert.equal(telemetryWeaponName("ProjMolotov_DamageField_C"), "Molotov");
   // Guns are untouched by any of this.
   assert.equal(telemetryWeaponName("WeapAUG_C"), "AUG");
+});
+
+// --- format 5: the damage layer ------------------------------------------
+
+test("ships every point of health that came off a player", () => {
+  const withDamage = [
+    ...telemetry,
+    { _T: "LogPlayerTakeDamage", elapsedTime: 12, damage: 21.6, damageTypeCategory: "Damage_Gun",
+      attacker: { accountId: "account.me" }, victim: { accountId: "account.foe" } },
+    { _T: "LogPlayerTakeDamage", elapsedTime: 18, damage: 4, damageTypeCategory: "Damage_BlueZone",
+      attacker: null, victim: { accountId: "account.mate" } },
+  ];
+  const r = parseReplayTelemetry(withDamage, { matchAttributes, accountId: "account.me" });
+  const at = (i) => ({ t: r.damage.t[i], a: r.damage.a[i], v: r.damage.v[i], d: r.damage.d[i] });
+
+  assert.equal(r.damage.t.length, 2);
+  // Indices into r.players, not account ids.
+  const me = r.players.findIndex((p) => p.accountId === "account.me");
+  const foe = r.players.findIndex((p) => p.accountId === "account.foe");
+  const mate = r.players.findIndex((p) => p.accountId === "account.mate");
+  assert.deepEqual(at(0), { t: 12, a: me, v: foe, d: 22 });
+  // The zone has nobody to credit, and that is a -1 rather than a missing row:
+  // the number still comes off the victim's health.
+  assert.deepEqual(at(1), { t: 18, a: -1, v: mate, d: 4 });
+});
+
+test("stops shipping a per-shot damage column now that damage has its own layer", () => {
+  // Nothing ever read shots[].dmg -- it was decoded on the client and dropped.
+  // Two sources for one number is how they drift, and the damage layer is the
+  // one that covers the zone and a fall as well as a bullet.
+  const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
+  assert.equal(r.shots.dmg, undefined);
 });

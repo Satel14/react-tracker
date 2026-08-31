@@ -1,4 +1,5 @@
 import { worldToScreen, scaleOf } from "./replayCamera";
+import { damageAt } from "./replayDamage";
 import { STATE } from "./replayTracks";
 import { healthArc, planeAt } from "./replayLayers";
 import { vehicleGlyph, teamColorIndex, isFlatGlyph } from "../component/charts/replaySprites";
@@ -26,6 +27,16 @@ export const SCREEN = {
   // plain one; the canopy takes a flat value and loses that hierarchy, which
   // matters less for something on screen for ten seconds.
   flatGlyphScale: 1.5,
+  // Floating combat text. Bold and a shade larger than a name label: a
+  // number is on screen for under two seconds and has to be read at a
+  // glance, where a name can be studied.
+  damageFont: "700 12px system-ui, sans-serif",
+  // How far a number climbs over its life, and how far apart a burst
+  // stacks. Sideways too: what a player took goes to one side and what
+  // they dealt to the other, so a trade does not print both on one pixel.
+  damageRise: 22,
+  damageStack: 13,
+  damageOffset: 10,
   flashLifetimeMs: 1200,
   // P2 layers. Every one of these is CSS pixels and must never be multiplied
   // by the camera scale -- only zone radii, the map blit and the flight line's
@@ -421,12 +432,50 @@ const radiusFor = (meta, selected) => {
   return meta.isFocal ? SCREEN.focalRadius : SCREEN.dotRadius;
 };
 
+// What came off a player's health, and what they took off someone else's.
+//
+// Read off the tracks the frame already sampled, so a number rides the marker
+// it belongs to rather than standing where the hit landed -- a player shot
+// while running would otherwise leave it behind. Positions come from the same
+// sample the marker was drawn from, so the two cannot disagree.
+//
+// The minus belongs to the player whose health went down. On the dealer the
+// same figure is a gain, and a green "-19" there reads as if they were the one
+// who lost it.
+const paintDamage = (ctx, { cam, vw, vh, tracks, damage, t, colors }) => {
+  const numbers = damageAt(damage, t);
+  if (!numbers.length) return;
+
+  ctx.save();
+  ctx.font = SCREEN.damageFont;
+  ctx.textAlign = "center";
+  for (const n of numbers) {
+    if (n.player >= tracks.count) continue;
+    if (tracks.outState[n.player] === STATE.ABSENT) continue;
+    const p = worldToScreen(cam, vw, vh, tracks.outX[n.player], tracks.outY[n.player]);
+    if (p.x < -40 || p.y < -40 || p.x > vw + 40 || p.y > vh + 40) continue;
+    const taken = n.kind === "taken";
+    ctx.globalAlpha = Math.max(0, 1 - n.age);
+    ctx.fillStyle = taken ? colors.danger : colors.healthOk;
+    ctx.fillText(
+      taken ? `-${n.amount}` : `${n.amount}`,
+      p.x + (taken ? SCREEN.damageOffset : -SCREEN.damageOffset),
+      p.y - SCREEN.damageRise * n.age - n.stack * SCREEN.damageStack,
+    );
+  }
+  ctx.restore();
+  // save/restore carries globalAlpha, but not every canvas mock in the wild
+  // does; the next layer must never inherit a faded one.
+  ctx.globalAlpha = 1;
+};
+
 export const drawScene = (ctx, frame) => {
   if (!ctx) return;
   const {
     cam, vw, vh, tracks, zone, flashes, nowMs, focusedAccountId, hoveredIndex,
     colors, atlas, labelCap = 24, focalTeamId = null,
     shots, specialZones, packages, landings, landingsT, flightSeg, flight, knocks, revives, crateArt,
+    damage,
     t: frameT,
     flightAlpha: fAlpha = 1, landingsAlpha: lAlpha = 1, focalIds,
     layers = {},
@@ -541,6 +590,8 @@ export const drawScene = (ctx, frame) => {
     const l = shown[i];
     ctx.fillText(l.name, l.x + SCREEN.labelOffset, l.y - SCREEN.labelOffset);
   }
+
+  if (on("damage")) paintDamage(ctx, { cam, vw, vh, tracks, damage, t: frameT, colors });
 };
 
 export const pickIndex = (tracks, cam, vw, vh, sx, sy, radius = 12) => {

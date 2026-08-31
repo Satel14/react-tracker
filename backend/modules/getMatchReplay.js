@@ -9,12 +9,13 @@ const { extractKnocks } = require("./replay/knocks");
 const { telemetryWeaponName } = require("./weaponMeta");
 const { weaponIcon, weaponIconKey } = require("./replay/weaponIcon");
 const { extractShots } = require("./replay/shots");
+const { extractDamage } = require("./replay/damage");
 const { extractPackages } = require("./replay/packages");
 const { extractSpecialZones, extractPhases } = require("./replay/zones");
 
 // Bumped whenever the wire shape changes, so a stale cached payload is detected
 // rather than silently mis-decoded. 2 = delta-coded position columns.
-const REPLAY_FORMAT = 4;
+const REPLAY_FORMAT = 5;
 
 const replayCache = new Map();
 const REPLAY_CACHE_LIMIT = 30;
@@ -247,6 +248,11 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
   const landTime = new Map();
   for (const l of landings) if (!landTime.has(l.a)) landTime.set(l.a, l.t);
   const shots = extractShots(telemetry, clock);
+  // Keyed by position in `players`, so the layer costs indices rather than
+  // two forty-character account ids a row, and the client can read the
+  // marker it has to fly the number off straight out of the same array.
+  const playerIndex = new Map(players.map((p, i) => [p.accountId, i]));
+  const damage = extractDamage(telemetry, clock, playerIndex);
   const packages = extractPackages(telemetry, clock);
   const specialZones = extractSpecialZones(telemetry, clock);
   const phases = extractPhases(telemetry, clock);
@@ -287,6 +293,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     knocks,
     revives,
     shots,
+    damage,
     packages,
     specialZones,
     phases,

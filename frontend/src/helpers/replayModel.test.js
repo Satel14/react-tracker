@@ -49,7 +49,6 @@ const wire = () => ({
     ay: [20, 50],
     vx: [30, 60],
     vy: [40, 70],
-    dmg: [26, 91],
   },
   kills: [{ t: 30, killer: "B", victim: "A" }],
   zones: [{ t: 100, bx: 1, by: 2, br: 3 }],
@@ -149,8 +148,8 @@ test("carries absolute health through untouched by the delta pass", () => {
 test("decodes the parallel shot arrays into objects", () => {
   const { shots } = decodeReplay(wire());
   expect(shots).toEqual([
-    { t: 5, a: "account.aaa", v: "account.bbb", ax: 10, ay: 20, vx: 30, vy: 40, dmg: 26 },
-    { t: 9, a: "account.bbb", v: "account.aaa", ax: 40, ay: 50, vx: 60, vy: 70, dmg: 91 },
+    { t: 5, a: "account.aaa", v: "account.bbb", ax: 10, ay: 20, vx: 30, vy: 40 },
+    { t: 9, a: "account.bbb", v: "account.aaa", ax: 40, ay: 50, vx: 60, vy: 70 },
   ]);
 });
 
@@ -165,21 +164,25 @@ test("truncates mismatched shot arrays to the shortest with no undefined fields"
       ay: [1, 2, 3],
       vx: [1, 2],
       vy: [1, 2, 3],
-      dmg: [10, 20, 30],
     },
   });
   expect(shots).toHaveLength(2);
   for (const shot of shots) {
-    for (const key of ["t", "a", "v", "ax", "ay", "vx", "vy", "dmg"]) {
+    for (const key of ["t", "a", "v", "ax", "ay", "vx", "vy"]) {
       expect(shot[key]).toBeDefined();
     }
   }
 });
 
 test("yields no shots when one of the parallel arrays is missing entirely", () => {
+  // The row count is the shortest column, so an absent one is zero rows rather
+  // than rows with an undefined field. Its fixture used to prove this by
+  // omitting dmg; dmg is gone from the layer, so it omits vy instead -- the
+  // property is the same one, and it is what makes removing a column from the
+  // backend without removing its key here a silent way to lose every shot.
   const { shots } = decodeReplay({
     format: 2,
-    shots: { t: [1], a: ["x"], v: ["p"], ax: [1], ay: [1], vx: [1], vy: [1] },
+    shots: { t: [1], a: ["x"], v: ["p"], ax: [1], ay: [1], vx: [1] },
   });
   expect(shots).toEqual([]);
 });
@@ -290,4 +293,36 @@ test("decoded players plug straight into buildTracks", () => {
   expect(Array.from(tracks.T[0])).toEqual([12, 20, 30]);
   expect(tracks.meta[0].accountId).toBe("account.aaa");
   expect(tracks.X[1][0]).toBe(-200);
+});
+
+describe("the damage layer", () => {
+  it("keeps decoding shots after the damage column left them", () => {
+    // decodeShots takes the SHORTEST column as the row count, so a key listed
+    // here that the backend no longer ships is not a missing field -- it is
+    // zero shots. This is the regression that removing shots[].dmg could have
+    // caused silently.
+    const shots = { t: [1, 2], a: ["x", "x"], v: ["y", "y"], ax: [1, 1], ay: [1, 1], vx: [2, 2], vy: [2, 2] };
+    expect(decodeReplay({ shots }).shots).toHaveLength(2);
+  });
+
+  it("decodes damage into rows the scene can read", () => {
+    const damage = { t: [10, 20], a: [3, -1], v: [7, 7], d: [19, 4] };
+    expect(decodeReplay({ damage }).damage).toEqual([
+      { t: 10, a: 3, v: 7, d: 19 },
+      { t: 20, a: -1, v: 7, d: 4 },
+    ]);
+  });
+
+  it("gives a payload from before the layer existed an empty one", () => {
+    // Every cached replay predates it, and a missing layer must render as no
+    // numbers rather than as a blank page.
+    for (const payload of [{}, { damage: null }, { damage: "x" }, { damage: {} }]) {
+      expect(decodeReplay(payload).damage).toEqual([]);
+    }
+  });
+
+  it("takes a payload that already holds objects as it is", () => {
+    const rows = [{ t: 1, a: 0, v: 1, d: 5 }];
+    expect(decodeReplay({ damage: rows }).damage).toEqual(rows);
+  });
 });

@@ -1,7 +1,10 @@
 const { readXY } = require("../telemetryUtils");
 
 // Gunfire shot lines, packed column-wise so the replay payload stays small:
-// eight parallel arrays where index i is one attacker->victim tracer.
+// seven parallel arrays where index i is one attacker->victim tracer.
+//
+// No damage column. It was here and nothing ever read it; damage is its own
+// layer now, and that one covers the zone and a fall as well as a bullet.
 
 // Coordinates are integer metres, the same scale readXY gives kills[].vx/vy and
 // player positions, so the frontend can draw a shot line in the map space it
@@ -23,8 +26,7 @@ function extractShots(telemetry, clock) {
   const ay = [];
   const vx = [];
   const vy = [];
-  const dmg = [];
-  const out = { t, a, v, ax, ay, vx, vy, dmg };
+  const out = { t, a, v, ax, ay, vx, vy };
 
   const timeOf = typeof clock?.timeOf === "function" ? clock.timeOf.bind(clock) : null;
   if (!timeOf) return out;
@@ -61,7 +63,6 @@ function extractShots(telemetry, clock) {
       seen.add(key);
     }
 
-    const amount = Number(ev.damage);
     rows.push({
       t: time,
       a: attackerId,
@@ -70,7 +71,6 @@ function extractShots(telemetry, clock) {
       ay: from.y,
       vx: to.x,
       vy: to.y,
-      dmg: Number.isFinite(amount) ? Math.round(amount) : 0,
     });
   }
 
@@ -84,7 +84,6 @@ function extractShots(telemetry, clock) {
     ay.push(row.ay);
     vx.push(row.vx);
     vy.push(row.vy);
-    dmg.push(row.dmg);
   }
 
   return out;

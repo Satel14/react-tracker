@@ -376,6 +376,10 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
             focalTeamId: data.focalTeamId ?? null,
             crateArt: v.crateArt,
             shots: shotWindow.activeAt(t, v.shotBuf),
+            // Whole layer, not a window: damageAt walks it from the newest end
+            // and stops at the first number too old, so a per-frame slice would
+            // buy nothing and cost a cursor that scrubbing has to reset.
+            damage: data.damage,
             specialZones: specialZonesAt(data.specialZones, t, v.zoneBuf),
             packages: packagesAt(data.packages, t, v.pkgBuf),
             landings: data.landings,
@@ -397,7 +401,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     raf = requestAnimationFrame(frame);
     return () => { if (raf !== null) cancelAnimationFrame(raf); };
   }, [clockRef, data.zones, data.specialZones, data.packages, data.landings,
-      data.knocks, data.revives, data.flight, data.focalTeamId,
+      data.knocks, data.revives, data.flight, data.focalTeamId, data.damage,
       sweep, tracks, publish, shotWindow, flightSeg, focalIds]);
 
   const localPoint = (e) => {
