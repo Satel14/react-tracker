@@ -1848,6 +1848,7 @@ body {
 
     &__logo {
       color: color-mix(in srgb, var(--text-strong) 85.098%, transparent);
+      text-decoration: none;
       line-height: 1;
       font-size: 32px;
       text-align: center;
@@ -1960,6 +1961,12 @@ body {
     }
 
     &__mobile-overlay {
+      // The drawer is always in the DOM for the crawler's sake, so "closed" is a
+      // paint state now, not an unmounted one.
+      &--closed {
+        display: none;
+      }
+
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.6);
@@ -1988,6 +1995,7 @@ body {
     }
 
     &__mobile-item {
+      text-decoration: none;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -2104,8 +2112,9 @@ body {
       }
 
       a {
-        color: #4f5058;
-        font-weight: 500;
+        color: inherit;
+        font-weight: inherit;
+        text-decoration: none;
       }
     }
 

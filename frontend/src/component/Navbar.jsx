@@ -10,13 +10,36 @@ import {
   MenuOutlined,
   CloseOutlined,
 } from "@ant-design/icons";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import SetLanguage from "../Language/SetLanguage";
 import SetTheme from './SetTheme';
 import { FAVORITES_UPDATED_EVENT, getFavoritesCount } from "../cookie/store";
 
-const componentRoutes = ["/", "/leaderboards", "/favorites", "/help"];
+// One descriptor per destination. The desktop menus, the phone drawer and the
+// selected-key effect all read from these, so a path cannot drift between the
+// three places that used to spell it out separately.
+const navItems = [
+  { key: "main", path: "/", icon: <HomeOutlined /> },
+  { key: "favorites", path: "/favorites", icon: <HeartOutlined /> },
+  { key: "help", path: "/help", icon: <QuestionCircleOutlined /> },
+];
+
+const rightNavItems = [
+  { key: "leaderboards", path: "/leaderboards", icon: <TrophyOutlined /> },
+];
+
+const allNavItems = [...navItems, ...rightNavItems];
+
 const MOBILE_BREAKPOINT = 960;
+
+// Links activate on Enter alone. These rows were divs with a Space handler, so
+// without this Space silently stops working for keyboard users.
+const activateOnSpace = (e) => {
+  if (e.key === " ") {
+    e.preventDefault();
+    e.currentTarget.click();
+  }
+};
 
 const Navbar = ({ t }) => {
   const [current, setCurrent] = useState("home");
@@ -26,16 +49,9 @@ const Navbar = ({ t }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const selectMenuItem = (e) => {
-    setCurrent(e.key);
-  };
-
   useEffect(() => {
-    const url = location.pathname;
-    const nextCurrent = componentRoutes.includes(url)
-      ? (url === "/" ? "main" : url.replace("/", ""))
-      : "";
-    setCurrent(nextCurrent);
+    const match = allNavItems.find((item) => item.path === location.pathname);
+    setCurrent(match ? match.key : "");
     setMobileOpen(false);
   }, [location]);
 
@@ -87,84 +103,62 @@ const Navbar = ({ t }) => {
     };
   }, [mobileOpen]);
 
-  const items = [
-    {
-      key: "main",
-      icon: <HomeOutlined />,
-      label: t("menu.main"),
-      onClick: () => navigate("/"),
-    },
-    {
-      key: "favorites",
-      icon: <HeartOutlined />,
-      label: (
-        <Badge
-          count={favoritesCount}
-          size="small"
-          showZero={false}
-          overflowCount={99}
-          className="navbar__favorites-badge"
-        >
-          {t("menu.favorites")}
-        </Badge>
-      ),
-      onClick: () => navigate("/favorites"),
-    },
-    {
-      key: "help",
-      icon: <QuestionCircleOutlined />,
-      label: t("menu.help"),
-      onClick: () => navigate("/help"),
-    },
-  ];
-
-  const rightItems = [
-    {
-      key: "leaderboards",
-      icon: <TrophyOutlined />,
-      label: t("menu.leaderboards"),
-      onClick: () => navigate("/leaderboards"),
-    },
-  ];
-
-  const mobileItems = [...items, ...rightItems];
-
-  const handleMobileNav = (path, key) => {
-    setCurrent(key);
-    navigate(path);
-    setMobileOpen(false);
+  // The badge wraps the link rather than the other way round: its count sits
+  // outside the anchor, so it stays out of the link's accessible name.
+  const menuLabel = (item) => {
+    const link = <Link to={item.path}>{t(`menu.${item.key}`)}</Link>;
+    if (item.key !== "favorites") return link;
+    return (
+      <Badge
+        count={favoritesCount}
+        size="small"
+        showZero={false}
+        overflowCount={99}
+        className="navbar__favorites-badge"
+      >
+        {link}
+      </Badge>
+    );
   };
+
+  const toMenuItem = (item) => ({
+    key: item.key,
+    icon: item.icon,
+    label: menuLabel(item),
+    // The anchor handles clicks on the label itself. Ant Design renders the icon
+    // as a sibling of the label span and pads the item, and the anchor's overlay
+    // is trapped inside that span -- so this catches the icon and the padding,
+    // which would otherwise look clickable and do nothing.
+    onClick: ({ domEvent }) => {
+      if (domEvent?.target?.closest?.("a")) return;
+      navigate(item.path);
+    },
+  });
+
+  const items = navItems.map(toMenuItem);
+  const rightItems = rightNavItems.map(toMenuItem);
 
   return (
     <div className="navbar">
       {!isMobile && (
         <>
           <Menu
-            onClick={selectMenuItem}
             selectedKeys={[current]}
             mode="horizontal"
             items={items}
           />
 
-          <div
+          <Link
             className="navbar__logo"
-            onClick={() => navigate("/")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                navigate("/");
-              }
-            }}
-            role="button"
-            tabIndex={0}
+            to="/"
+            onKeyDown={activateOnSpace}
             aria-label={t("menu.main")}
           >
             <span className="navbar__logo-main">PUBG</span>
             <span className="navbar__logo-tracker">.TRACKER</span>
-          </div>
+          </Link>
 
           <Menu
-            onClick={selectMenuItem}
             selectedKeys={[current]}
             mode="horizontal"
             className="right-menu"
@@ -181,22 +175,15 @@ const Navbar = ({ t }) => {
 
       {isMobile && (
         <>
-          <div
+          <Link
             className="navbar__logo"
-            onClick={() => navigate("/")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                navigate("/");
-              }
-            }}
-            role="button"
-            tabIndex={0}
+            to="/"
+            onKeyDown={activateOnSpace}
             aria-label={t("menu.main")}
           >
             <span className="navbar__logo-main">PUBG</span>
             <span className="navbar__logo-tracker">.TRACKER</span>
-          </div>
+          </Link>
 
           <button
             className="navbar__burger"
@@ -206,50 +193,45 @@ const Navbar = ({ t }) => {
             {mobileOpen ? <CloseOutlined /> : <MenuOutlined />}
           </button>
 
-          {mobileOpen && (
-            <div
-              className="navbar__mobile-overlay"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) setMobileOpen(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setMobileOpen(false);
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label={t("menu.main")}
-            >
-              <div className="navbar__mobile-drawer">
-                <div className="navbar__mobile-items">
-                  {mobileItems.map((item) => {
-                    const path = item.key === "main" ? "/" : `/${item.key}`;
-                    return (
-                      <div
-                        key={item.key}
-                        className={`navbar__mobile-item ${current === item.key ? "active" : ""}`}
-                        onClick={() => handleMobileNav(path, item.key)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            handleMobileNav(path, item.key);
-                          }
-                        }}
-                        role="menuitem"
-                        tabIndex={0}
-                      >
-                        {item.icon}
-                        <span>{typeof item.label === "string" ? item.label : t(`menu.${item.key}`)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="navbar__mobile-controls">
-                  <SetTheme />
-                  <SetLanguage />
-                </div>
+          {/* Mounted whether or not the drawer is open: Google crawls at a phone
+              viewport, where these are the only nav anchors on the page. Behind
+              `mobileOpen` they would exist for nobody but a tap. */}
+          <div
+            className={`navbar__mobile-overlay ${mobileOpen ? "" : "navbar__mobile-overlay--closed"}`}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setMobileOpen(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setMobileOpen(false);
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={t("menu.main")}
+          >
+            <div className="navbar__mobile-drawer">
+              <div className="navbar__mobile-items">
+                {allNavItems.map((item) => (
+                  <Link
+                    key={item.key}
+                    to={item.path}
+                    className={`navbar__mobile-item ${current === item.key ? "active" : ""}`}
+                    // Navigating closes the drawer through the location effect,
+                    // but tapping the route you are already on changes no
+                    // location -- so close it here too.
+                    onClick={() => setMobileOpen(false)}
+                    onKeyDown={activateOnSpace}
+                  >
+                    {item.icon}
+                    <span>{t(`menu.${item.key}`)}</span>
+                  </Link>
+                ))}
+              </div>
+              <div className="navbar__mobile-controls">
+                <SetTheme />
+                <SetLanguage />
               </div>
             </div>
-          )}
+          </div>
         </>
       )}
     </div>
