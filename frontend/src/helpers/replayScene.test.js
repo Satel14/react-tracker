@@ -40,6 +40,10 @@ const COLORS = {
   focal: "rgb(1,1,1)", enemy: "rgb(2,2,2)", dead: "rgb(3,3,3)", tracer: "rgb(4,4,4)",
   zoneCurrent: "rgb(5,5,5)", zoneNext: "rgb(6,6,6)", outside: "rgba(7,7,7,0.4)",
   ring: "rgb(8,8,8)", label: "rgb(9,9,9)", band: "rgb(10,10,10)",
+  // Distinct, and present at all: both were missing, so every assertion about
+  // them compared undefined to undefined and a mutation collapsing the two
+  // damage colours into one passed.
+  danger: "rgb(11,11,11)", healthOk: "rgb(12,12,12)",
 };
 
 const MAP = 8160;
@@ -1297,18 +1301,53 @@ describe("damage numbers", () => {
   });
 
   it("stacks a burst so the numbers do not print on one another", () => {
+    // Both at the SAME instant, so they have the same age and the rise cannot
+    // be what separates them. With two different times the test passed even
+    // with the stacking removed.
     const shown = draw([
-      { t: 4.9, a: -1, v: 1, d: 5 },
+      { t: 5, a: -1, v: 1, d: 5 },
       { t: 5, a: -1, v: 1, d: 6 },
     ]);
     expect(shown).toHaveLength(2);
-    expect(shown[0].y).not.toBeCloseTo(shown[1].y, 3);
+    expect(Math.abs(shown[0].y - shown[1].y)).toBeCloseTo(SCREEN.damageStack, 6);
   });
 
-  it("says nothing for a player who is not on the map yet", () => {
-    // Index 2 is nobody in this fixture, and a number with no marker under it
-    // would float in empty space.
+  it("stacks what a player dealt separately from what they took", () => {
+    // Player 0 takes 10 and deals 20 in the same instant. One counter for both
+    // would push one of the two numbers a row up for no reason -- and it is
+    // only visible when the same player is on both sides at once, which is why
+    // the first version of this test missed it.
+    const shown = draw([
+      { t: 5, a: 1, v: 0, d: 10 },
+      { t: 5, a: 0, v: 1, d: 20 },
+    ]);
+    const ownTaken = shown.find((n) => n.text === "-10");
+    const ownDealt = shown.find((n) => n.text === "20");
+    expect(ownTaken.y).toBeCloseTo(ownDealt.y, 6);
+  });
+
+  it("says nothing for an index no player has", () => {
+    // A payload whose damage layer outran its roster. There is no marker to
+    // read a position from at all.
     expect(draw([{ t: 5, a: -1, v: 2, d: 19 }])).toEqual([]);
+    expect(draw([{ t: 5, a: -1, v: -1, d: 19 }])).toEqual([]);
+  });
+
+  it("says nothing for a player who has not dropped in yet", () => {
+    // Tracked, but absent from the map at this instant: their marker is not
+    // drawn, so a number over it would float in empty space. This is a
+    // different guard from the index check above, and testing only that one
+    // left this one unpinned.
+    const later = [...players, {
+      name: "Late", accountId: "a.late", teamId: 9, isFocal: false, dropTime: 40, deathTime: null,
+      positions: [{ t: 40, x: 4000, y: 4000 }, { t: 50, x: 4000, y: 4000 }],
+    }];
+    const ctx = recordingCtx();
+    drawScene(ctx, {
+      ...frameAt(1), t: 5, tracks: sampleTracks(buildTracks(later), 5),
+      damage: [{ t: 5, a: -1, v: 2, d: 19 }],
+    });
+    expect(numbersIn(ctx)).toEqual([]);
   });
 
   it("draws none of it when the layer is switched off", () => {
