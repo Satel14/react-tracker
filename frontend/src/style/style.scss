@@ -3424,6 +3424,19 @@ body {
   &__outro {
     margin: 24px 0 0;
     font-weight: 600;
+
+    // Without this the anchor takes the browser's own link colours -- a
+    // visited-purple that belongs to no theme on this site.
+    a {
+      color: var(--text);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: var(--accent);
+      }
+    }
   }
 
   @media (max-width: 680px) {
@@ -3436,6 +3449,17 @@ body {
 .leaderboard-page__explainer {
   margin: 6px 0 0;
   font-size: 14px;
+
+  a {
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: var(--accent);
+    }
+  }
 }
 
 .help-page {
