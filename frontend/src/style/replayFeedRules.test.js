@@ -39,6 +39,20 @@ describe("the kill feed's stylesheet", () => {
     expect(ruleFor("weapon")).toMatch(/transform:\s*scaleX\(-1\)/);
   });
 
+  it("lets a name take the pointer, and nothing else in the overlay", () => {
+    // The feed is transparent to pointers on purpose: any pixel of it that
+    // swallows one freezes dragging in that corner of the map. A link cannot be
+    // clicked without taking one, so the trade is made on the link alone --
+    // and nowhere else in the block, or the map stops dragging over the badges
+    // and the weapon too.
+    expect(ruleFor("link")).toMatch(/pointer-events:\s*auto/);
+    const block = feedBlock();
+    const autos = block.match(/pointer-events:\s*auto/g) || [];
+    expect(autos).toHaveLength(1);
+    // And the container itself still refuses them.
+    expect(block).toMatch(/pointer-events:\s*none/);
+  });
+
   it("sizes the weapon by height so every gun shares a baseline", () => {
     // Width auto, height fixed: a pistol and a sniper rifle have very
     // different aspects and sizing by width would make one of them tiny.
