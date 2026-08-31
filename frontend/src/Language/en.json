@@ -77,7 +77,8 @@
       "compareLimit": "You can compare up to {max} players",
       "empty": "No leaderboard data for this season and mode.",
       "error": "Could not load the leaderboard. Please try again.",
-      "loading": "Loading leaderboard…"
+      "loading": "Loading leaderboard…",
+      "ranksLink": "What do these tiers actually mean?"
     },
     "compare": {
       "title": "Player Comparison",
@@ -229,7 +230,6 @@
       "back": "← Back to profile",
       "roster": "Roster",
       "openProfile": "Open {name}’s profile",
-      "openProfile": "Open {name}’s profile",
       "killsShort": "{count} K",
       "resetView": "Reset view",
       "hint": "Scroll to zoom, drag to pan, double-click to fit",
@@ -360,6 +360,103 @@
       "title": "This page failed to load",
       "description": "Part of the app could not be downloaded. This usually happens right after a new release - reloading picks up the current version.",
       "reload": "Reload page"
+    },
+    "ranks": {
+      "metaTitle": "PUBG Ranks Explained: Tiers, RP, Survivor (Season 42)",
+      "metaDescription": "The PUBG ranked ladder as it actually stands in Season 42: all eight tiers in order, how RP is earned and lost after Update 42.1, Survivor, and RP decay.",
+      "title": "PUBG ranks explained: tiers, RP and Survivor",
+      "intro": "Eight tiers, one RP number shared across party types and perspectives, and a top tier you can lose overnight — this is the ranked system as it stands on 31 August 2026, sourced to KRAFTON's patch notes and official posts, with every exception labelled.",
+      "ladder": {
+        "heading": "The eight tiers, in order",
+        "p1": "PUBG: BATTLEGROUNDS has eight ranked tiers. From lowest to highest: Bronze, Silver, Gold, Platinum, Crystal, Diamond, Master, Survivor.",
+        "p2": "Crystal sits between Platinum and Diamond — not above Diamond. It arrived in Season 36 together with Survivor, which replaced the old Top 500 badge.",
+        "p3": "Divisions run IV (lowest) to I (highest). Season 36 cut them from five to four, so there has been no division V in any tier since 11 June 2025 on PC, or 19 June 2025 on console.",
+        "p4": "Master and Survivor are conventionally shown as single ranks, and PUBG's own reward tables never name a Master or Survivor division. But those tables list one row per tier for every tier, including ones that clearly have four divisions, so they prove nothing either way. KRAFTON has never published a per-tier division table.",
+        "tier": {
+          "bronze": "Bronze — the entry tier.",
+          "silver": "Silver — the first tier where you are granted Tier Protection charges.",
+          "gold": "Gold — the lowest tier that earns the Ranked weapon skin and parachute skin.",
+          "platinum": "Platinum — the lowest tier with an animated emblem and a medal.",
+          "crystal": "Crystal — added in Season 36, between Platinum and Diamond.",
+          "diamond": "Diamond — the tier where RP decay starts if you stop playing Ranked (per the 2021 rules; see below).",
+          "master": "Master — a single rank, no divisions published.",
+          "survivor": "Survivor — the top tier. RP alone will not get you in; see below."
+        },
+        "divisionsSingle": "Single rank, no divisions",
+        "divisionsPlural": "{count} divisions, IV up to I"
+      },
+      "grandmaster": {
+        "heading": "There is no Grandmaster tier",
+        "p1": "Grandmaster is not a PUBG rank, and it has not been one for the entire life of Ranked Mode, which launched in Update 7.2.",
+        "p2": "It existed once, in PUBG's 2018 ranked beta — a different ladder (…Diamond, Elite, Master, Grandmaster) that was replaced by the Survival Title System in December 2018, which was itself retired when Ranked Mode launched in Update 7.2. KRAFTON's news archive no longer carries the 2018 notes, so that history is reconstructed from contemporaneous coverage rather than a first-party source.",
+        "p3": "Guides that call Grandmaster \"the top 500 players\" are describing Top 500, which was awarded on top of Master rank — the emblem and nameplate went only to players at Master or above — not earned by crossing an RP threshold. Season 36 removed it and introduced Survivor in its place."
+      },
+      "howRpMoves": {
+        "heading": "How RP is earned and lost",
+        "p1": "One RP number covers party types and perspectives. Since Season 36, tiers and RP are unified across party types (Duo/Squad) and perspectives (FPP/TPP) — no separate FPP rank to grind. Solo is not named in that sentence: it had just been removed from AS when it was written, and when AS Ranked Solo returned in Update 42.1 KRAFTON did not restate how it interacts with unified RP.",
+        "p2": "Placement matters more than it used to. Update 42.1 made final placement carry greater weight in the RP calculation — it does not say how much, and the formula has never been published.",
+        "p3": "Season 36 capped the per-match swing at −44 to +44 RP. Update 42.1 then stacked bonuses on top without restating the cap, so whether −44/+44 still bounds the final total is not something KRAFTON has said.",
+        "p4": "Team kills and suicides deduct RP directly since Season 36. Before that, they only reduced your kill count.",
+        "p5": "Your season opens with placement matches. Since Season 37 they seed from your final RP in the previous season. The full wipe to 1,500 RP in Season 36 was explicitly one-off and has not been repeated."
+      },
+      "tierProtection": {
+        "heading": "Tier Protection: why you sometimes do not demote",
+        "p1": "If a Ranked match drops your RP below your tier's minimum, Tier Protection can trigger and lock your RP at that minimum instead of demoting you.",
+        "p2": "You are granted three charges each time you are promoted to Silver or higher, and you can hold at most three at a time.",
+        "p3": "They also fire when RP is lost to an intentional leave, a crash or an abnormal termination — but not during placement matches, and not when you are demoted by RP decay.",
+        "p4": "And they are a loan, not a gift: demote after burning all three and you lose an extra 50% of the RP they had protected, on top of the normal loss.",
+        "p5": "This is the real anti-demotion mechanic. Guides describing \"soft RP floors\" or per-tier deduction curves are describing something PUBG has never published.",
+        "p6": "Tier Protection does not apply to Survivor."
+      },
+      "survivorTier": {
+        "heading": "Survivor: two gates, not one",
+        "p1": "Survivor is the only tier on the current ladder KRAFTON has published an RP number for, and that number alone still will not get you in.",
+        "p2": "Gate one: your live RP and your RP on the leaderboard must both be 3,700 or higher.",
+        "p3": "Gate two: you must place within your region's fixed number of Survivor slots.",
+        "p4": "Slot counts published with Season 36. PC: AS 200, SEA 100, EU 50, KAKAO 50, RU 50, NA 5, SA 5. Console: NA 50, EU 20, APAC 5, SA 5.",
+        "p5": "KRAFTON called those numbers \"subject to change based on matchmaking conditions\" and has not republished them since June 2025. They are the latest published figures, which is not the same as the current ones.",
+        "p6": "Demotion is immediate. Fall below 3,700 live RP and you drop to Master on the spot — Tier Protection does not cover Survivor. Climb back above 3,700 before the next leaderboard update and you are promoted straight back to Survivor."
+      },
+      "rpDecay": {
+        "heading": "RP decay, and the part nobody outside KRAFTON can answer",
+        "p1": "At Diamond or above you must play at least one Ranked match a week. Miss it and you lose 100 RP per day until you play. That rule is from Update 13.1 (July 2021), and it was still live three years later: Update 30.1 states that Tier Protection will not activate if you are demoted due to Rank decay.",
+        "p2": "The same patch said decay stops once RP drops below 3,000 — \"when you reach Platinum I\". Whether that mapping still holds is unknowable from outside. Crystal was inserted between Platinum and Diamond in Season 36 and KRAFTON has never republished either the decay floor or any tier's RP range, so 3,000 may or may not still be the Platinum I boundary.",
+        "p3": "The last published rate is 100 RP a day. Where the floor sits now is genuinely unknown, and anyone quoting a tier for it is guessing."
+      },
+      "update421": {
+        "heading": "What Update 42.1 changed",
+        "p1": "Update 42.1 landed on 16 June 2026 and went live on PC the next day. It is the current RP ruleset.",
+        "p2": "Final placement now carries greater weight in RP calculations.",
+        "p3": "RP losses at higher RP have been reduced, even in matches where you played well.",
+        "p4": "New consecutive-placement bonus: +5 RP for a Top 4 in two matches in a row, +10 RP for a Top 1 in two matches in a row. Only the highest bonus applies.",
+        "p5": "That streak resets at the start of a new season, and whenever a leaver penalty is applied.",
+        "p6": "Secret Rooms came to Ranked, and AS Ranked Solo returned after being removed in Season 36.",
+        "p7": "These are still the live rules. Updates 42.2 and 42.3 touched nothing about RP, tiers or divisions."
+      },
+      "queuesAndMaps": {
+        "heading": "Some Ranked queues now have opening hours",
+        "p1": "Some region and mode queues now run on published UTC operating hours instead of all day. AS Solo (TPP) came back at 12:00–16:00 UTC in Update 42.1; EU Squad (TPP) was set to 13:00–24:00 UTC in Update 42.2.",
+        "p2": "KRAFTON says the schedule \"may continue to be adjusted\", so check the newest patch notes before assuming your queue is live.",
+        "p3": "Season 42 Ranked map pool: Erangel, Miramar, Rondo and Taego.",
+        "p4": "The Red Zone came back to Ranked in Season 36 — then Update 36.2 stopped it appearing from Phase 3 onwards on Erangel, Deston and Taego, in Ranked as well as Normal Match, so on two of the four Ranked maps the late game is Red-Zone-free. Any guide still saying the Red Zone was removed from Ranked outright is out of date — including KRAFTON's own support FAQ, which was last revised in March 2023 and still describes a six-tier ladder.",
+        "p5": "For entry to Ranked, that FAQ names a mastery requirement: Survival Mastery level 80. It is the most recent first-party figure, but it comes from the same stale article, so treat it as the best available number rather than a certainty."
+      },
+      "seasonSchedule": {
+        "heading": "Season 42, and when it ends",
+        "p1": "Season 42 went live on PC on 17 June 2026 and is deliberately long. KRAFTON set it to run three months, from Update 42.1 through Update 42.3, while it redesigns the overall Ranked season structure.",
+        "p2": "Update 42.3 was published on 11 August 2026 and went live on PC the next day, with no end date attached to the season.",
+        "p3": "We will not print one. KRAFTON has never published a calendar end date for Season 42 and the PUBG API does not expose one, so every \"season ends on…\" date in circulation is a third-party guess being copied forward.",
+        "p4": "A larger Ranked overhaul is officially in flight — announced in the 2026 roadmap, repeated in Update 42.1, no date given. Expect tiers, rewards and season length to move again."
+      },
+      "whatWeDoNotClaim": {
+        "heading": "What we deliberately do not claim",
+        "p1": "No per-tier RP table. Survivor's 3,700 is the only tier-to-RP number KRAFTON has published for the current ladder; the one other figure that exists — the 3,000 / Platinum I anchor in the 2021 decay rules — predates Crystal and has never been restated. The \"Gold: 2000–2499\" style tables you find are not from any patch note. KRAFTON has never published per-tier RP bands — not in Update 7.2 when Ranked launched, not since. Every such table is third-party reconstruction copied forward.",
+        "p2": "No tier distribution. The only data we could build one from is the players people happened to look up, plus a top-500 leaderboard that spans two or three tiers. That is not a distribution, so we do not publish one.",
+        "p3": "No division count for Master or Survivor. Both are conventionally shown as single ranks, but KRAFTON has never published a per-tier division table, so we do not put a number on it.",
+        "p4": "No decay floor for the current ladder, for the reason above.",
+        "p5": "Everything on this page is sourced to KRAFTON patch notes and official posts, and where a claim rests on anything weaker we say so on the spot. It was checked on 31 August 2026; when the rules change, this page changes."
+      },
+      "seeLeaderboards": "See who is at the top of each region right now"
     }
   },
   "footer": {

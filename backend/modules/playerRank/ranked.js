@@ -41,13 +41,17 @@ function toTierScore(tier, subTier) {
     silver: 20,
     gold: 30,
     platinum: 40,
-    // Crystal sits between Platinum and Diamond, not above it: RP decay stops
-    // below 3,000 -- "when you reach Platinum I" (Update 13.1) -- and Crystal
-    // tops out under that floor. Scored at 55 it beat Diamond outright, and the
-    // division bonus below carried Crystal I to 64, past Master's 60.
+    // "A new tier called Crystal will be added between Platinum and Diamond"
+    // -- Dev Letter: Ranked Revamp, Season 36. Between, not above: scored at 55
+    // it beat Diamond outright, and the division bonus below carried Crystal I
+    // to 64, past Master's 60.
     crystal: 45,
     diamond: 50,
     master: 60,
+    // Neither of these can come out of the PUBG API. Grandmaster was a tier in
+    // the 2018 ranked beta and in nothing since; Top 500 was a reward layered on
+    // Master and was removed in Season 36, when Survivor replaced it as the top
+    // tier. Kept scored so an old cached payload still sorts sanely.
     grandmaster: 70,
     survivor: 75,
     top500: 80,

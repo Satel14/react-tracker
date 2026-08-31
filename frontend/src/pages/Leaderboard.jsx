@@ -212,6 +212,9 @@ const Leaderboard = ({ t }) => {
       <div className="leaderboard-page__head">
         <h2>{t("pages.leaderboards.title")}</h2>
         <p>{t("pages.leaderboards.subtitle")}</p>
+        <p className="leaderboard-page__explainer">
+          <Link to="/ranks">{t("pages.leaderboards.ranksLink")}</Link>
+        </p>
       </div>
 
       <div className="leaderboard-page__filters">

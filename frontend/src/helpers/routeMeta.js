@@ -1,7 +1,7 @@
-// Per-route <head> copy for the static shells `scripts/prerender-head.mjs`
-// writes after a build. Pure and dependency-free on purpose: the build script
-// imports it today, and the Pages Function that will cover /player/... is meant
-// to import the same table rather than grow a second copy of it.
+// Per-route <head> copy for the static shells the prerenderHead plugin in
+// vite.config.js writes after a build. Pure and dependency-free on purpose: the
+// build imports it, and so does the Pages Function that heads /player/... --
+// one table rather than two copies drifting apart.
 //
 // `file` is flat -- build/help.html, not build/help/index.html. Cloudflare Pages
 // serves a flat file at its extension-less path with a 200, while a directory
@@ -54,6 +54,16 @@ export const ROUTE_META = [
     h1: "How to look up PUBG stats",
     intro:
       "Short answers to the questions we get most: finding a player, reading the numbers, and what to do when a profile will not load.",
+    sitemap: true,
+    body: true,
+  },
+  {
+    path: "/ranks",
+    file: "ranks.html",
+    title: "PUBG Ranks Explained: Tiers, RP, Survivor (Season 42)",
+    description: "The PUBG ranked ladder as it actually stands in Season 42: all eight tiers in order, how RP is earned and lost after Update 42.1, Survivor, and RP decay.",
+    h1: "PUBG ranks explained: tiers, RP and Survivor",
+    intro: "Eight tiers, one RP number shared across party types and perspectives, and a top tier you can lose overnight \u2014 this is the ranked system as it stands on 31 August 2026, sourced to KRAFTON's patch notes and official posts, with every exception labelled.",
     sitemap: true,
     body: true,
   },

@@ -11,6 +11,7 @@ const Compare = lazy(() => import("../pages/Compare"));
 const Overlay = lazy(() => import("../pages/Overlay"));
 const MatchReplayPage = lazy(() => import("../pages/MatchReplayPage"));
 const Leaderboard = lazy(() => import("../pages/Leaderboard"));
+const Ranks = lazy(() => import("../pages/Ranks"));
 
 const routes = [
   {
@@ -46,6 +47,11 @@ const routes = [
   {
     path: "/leaderboards",
     component: Leaderboard,
+    exact: true,
+  },
+  {
+    path: "/ranks",
+    component: Ranks,
     exact: true,
   },
   {
