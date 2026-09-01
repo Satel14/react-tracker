@@ -94,9 +94,22 @@ test("says nothing when the census cannot be reached", async () => {
   expect(line()).toBeNull();
 });
 
-// The sample size belongs next to the claim, the same as on the ranks page.
-test("says how many accounts the standing is measured against", async () => {
+// The visible line answers the one question the reader came with. How the
+// number was arrived at is real and has to be reachable, but in the same
+// sentence it buried the answer -- so it moves to the hover and to the page
+// the link already points at.
+test("keeps the methodology out of the visible line", async () => {
+  show();
+  const link = await screen.findByRole("link");
+
+  expect(line().textContent).not.toContain("4,430");
+  expect(line().textContent).not.toMatch(/7 days|sampled/i);
+  expect(link.getAttribute("title")).toContain("4,430");
+  expect(link.getAttribute("title")).toContain("7");
+});
+
+test("keeps the visible line to one short sentence", async () => {
   show();
   await screen.findByRole("link");
-  expect(line().textContent).toContain("4,430");
+  expect(line().textContent.length).toBeLessThan(45);
 });

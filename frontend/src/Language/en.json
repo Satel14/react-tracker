@@ -15,8 +15,9 @@
     },
     "player": {
       "percentile": {
-        "top": "Top {percent}% of active ranked players, measured from {accounts} sampled accounts",
-        "ahead": "Ahead of {percent}% of active ranked players, measured from {accounts} sampled accounts"
+        "top": "Top {percent}% of ranked players",
+        "ahead": "Ahead of {percent}% of ranked players",
+        "detail": "Measured from {accounts} accounts sampled from ranked matches over the last {days} days"
       },
       "seasonRewardLevel": "Season Reward Level",
       "mini": {
