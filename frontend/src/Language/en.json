@@ -14,6 +14,10 @@
       "searchingHistory": "Searching History"
     },
     "player": {
+      "percentile": {
+        "top": "Top {percent}% of active ranked players, measured from {accounts} sampled accounts",
+        "ahead": "Ahead of {percent}% of active ranked players, measured from {accounts} sampled accounts"
+      },
       "seasonRewardLevel": "Season Reward Level",
       "mini": {
         "wins": "Wins",

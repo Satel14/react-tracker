@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { designEffect, effectiveN, wilson, tierShare } = require("./stats");
+const { designEffect, effectiveN, wilson, tierShare, rpThresholds } = require("./stats");
 
 // Observations arrive in lobbies of ~60 with tier-banded matchmaking, so two
 // players from the same match are not two independent draws. Treating them as
@@ -101,4 +101,63 @@ test("publishing needs enough sightings of the tier itself", () => {
   const many = tierShare({ successes: 40, n: 3000, clusterSize: 1, icc: 0 });
   assert.equal(four.publishable, false);
   assert.equal(many.publishable, true);
+});
+
+// --- the RP threshold table ---
+//
+// The player page needs to answer "where does this RP sit" without a database
+// query per visitor, so the endpoint ships one table: the RP at each whole
+// percentile. 101 integers, cacheable, and a step of one percentage point is
+// as fine as this sample can honestly be cut -- with a design effect of 3 to 6
+// anything narrower is invented precision.
+
+test("gives a threshold for every whole percentile", () => {
+  const table = rpThresholds(Array.from({ length: 500 }, (_, i) => 1000 + i));
+  assert.equal(table.length, 101);
+});
+
+// Index 0 is the top of the ladder and index 100 the bottom, so a reader can
+// say "top 5%" by looking at index 5 without inverting anything.
+test("runs from the highest RP down to the lowest", () => {
+  const table = rpThresholds(Array.from({ length: 200 }, (_, i) => 1000 + i));
+  assert.equal(table[0], 1199);
+  assert.equal(table[100], 1000);
+  for (let i = 1; i < table.length; i += 1) {
+    assert.ok(table[i] <= table[i - 1], `table rises at ${i}: ${table[i - 1]} -> ${table[i]}`);
+  }
+});
+
+test("puts the median in the middle", () => {
+  // 1..101, so the median is 51 and the table's midpoint must land on it.
+  const table = rpThresholds(Array.from({ length: 101 }, (_, i) => i + 1));
+  assert.equal(table[50], 51);
+});
+
+// A player who has not queued ranked answers 200 with no rank point, and the
+// collector keeps the row with a null rather than dropping the player.
+test("ignores readings with no rank point", () => {
+  const readings = [
+    ...Array.from({ length: 30 }, (_, i) => 2000 + i),
+    null,
+    undefined,
+    NaN,
+    "",
+  ];
+  const table = rpThresholds(readings);
+  assert.equal(table[0], 2029);
+  assert.equal(table[100], 2000);
+});
+
+test("says nothing at all when there is nothing to say", () => {
+  assert.equal(rpThresholds([]), null);
+  assert.equal(rpThresholds(null), null);
+  assert.equal(rpThresholds([null, undefined]), null);
+});
+
+// One reading is not a distribution. Publishing it would let a single player's
+// RP become the entire ladder.
+test("refuses a sample too thin to cut into percentiles", () => {
+  assert.equal(rpThresholds([2500]), null);
+  assert.equal(rpThresholds(Array.from({ length: 29 }, () => 2500)), null);
+  assert.ok(rpThresholds(Array.from({ length: 30 }, (_, i) => 2000 + i)));
 });

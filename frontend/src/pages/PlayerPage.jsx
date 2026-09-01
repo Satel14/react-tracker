@@ -32,6 +32,7 @@ import { resolveHistoryCandidate } from "../helpers/playerHistory";
 import { statNumber, statDisplay } from "../helpers/playerStats";
 import openNotification from "../component/Notification";
 import Skeleton from "../component/Skeleton";
+import RankPercentile from "../component/ranks/RankPercentile";
 import MapsTab from "./MapsTab";
 
 const MapPerformanceChart = lazy(() =>
@@ -1480,6 +1481,13 @@ const PlayerPage = ({ t }) => {
               {rankProgress.pointsLabel ? <strong>{rankProgress.pointsLabel}</strong> : null}
               <span>{rankProgress.remainingLabel || rankProgress.detail}</span>
             </div>
+            {/* Renders nothing unless the census has a sample for the season
+                on screen and this player has a ranked reading in it. */}
+            <RankPercentile
+              t={t}
+              rankPoint={headerRankedInfo?.currentRankPoint}
+              seasonId={activeSeasonId}
+            />
           </div>
         </div>
 

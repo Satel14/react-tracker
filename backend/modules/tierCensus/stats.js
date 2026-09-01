@@ -87,4 +87,41 @@ const tierShare = ({ successes, n, clusterSize, icc }) => {
   };
 };
 
-module.exports = { designEffect, effectiveN, wilson, tierShare, MIN_EFFECTIVE, MIN_SIGHTINGS, Z };
+// One table, 101 integers: the RP standing at each whole percentile, index 0
+// being the top of the ladder. The player page inverts it locally, so a
+// visitor's standing costs no query of its own.
+//
+// A step of one percentage point is as fine as this sample can honestly be cut.
+// With a design effect of three to six, a tenth of a percent would be invented
+// precision.
+const PERCENTILE_STEPS = 100;
+
+// Below this a "distribution" is a handful of people, and one reading could
+// stand in for a whole percentile band.
+const MIN_READINGS = 30;
+
+const rpThresholds = (values) => {
+  // Emptiness is filtered before Number(), not after: Number(null) and
+  // Number("") are both 0, so a player with no rank point would otherwise
+  // enter the table as zero RP and drag its floor down -- inflating every
+  // standing measured against it.
+  const points = (values ?? [])
+    .filter((value) => value !== null && value !== undefined && value !== "")
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => b - a);
+
+  if (points.length < MIN_READINGS) return null;
+
+  const table = [];
+  for (let step = 0; step <= PERCENTILE_STEPS; step += 1) {
+    const at = Math.min(points.length - 1, Math.round((step / PERCENTILE_STEPS) * (points.length - 1)));
+    table.push(points[at]);
+  }
+  return table;
+};
+
+module.exports = {
+  designEffect, effectiveN, wilson, tierShare, rpThresholds,
+  MIN_EFFECTIVE, MIN_SIGHTINGS, MIN_READINGS, PERCENTILE_STEPS, Z,
+};
