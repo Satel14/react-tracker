@@ -53,13 +53,19 @@ const RankPercentile = ({ t, rankPoint, seasonId, load = getRankDistribution, da
   const key = at <= FLIP_AT ? "top" : "ahead";
   const percent = at <= FLIP_AT ? at : 100 - at;
 
+  // The visible line answers the one question the reader arrived with. How
+  // the number was arrived at is real and has to be reachable -- but in the
+  // same sentence it buried the answer, so it lives on the hover and on the
+  // page the link already points at.
+  const detail = t("pages.player.percentile.detail", {
+    accounts: groupDigits(data.accounts),
+    days: data.days ?? days,
+  });
+
   return (
     <p className="player-rank-percentile">
-      <Link to="/ranks#distribution">
-        {t(`pages.player.percentile.${key}`, {
-          percent,
-          accounts: groupDigits(data.accounts),
-        })}
+      <Link to="/ranks#distribution" title={detail}>
+        {t(`pages.player.percentile.${key}`, { percent })}
       </Link>
     </p>
   );
