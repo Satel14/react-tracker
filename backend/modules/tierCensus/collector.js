@@ -31,9 +31,13 @@ const header = (headers, name) => {
   return Number.isFinite(value) ? value : undefined;
 };
 
-// PUBG's sample is a rolling 24h window and the filter must sit at least a day
-// back, so the run is always measuring yesterday.
-const sampleWindowStart = (at) => new Date(at - 26 * 3600 * 1000).toISOString().replace(/\.\d+Z$/, "Z");
+// PUBG buckets its sample by calendar day and answers 400 for a filter under a
+// day old, so the window is a DATE, not an offset. It used to be "now minus 26
+// hours", which meant the day it landed on depended on the hour the job fired:
+// GitHub's scheduler came 4h54m late once and the run collected a different day
+// than the cron intended. Two days back at midday is the same answer whenever
+// the run fires, and PUBG still serves buckets four days old.
+const sampleWindowStart = (at) => `${new Date(at - 48 * 3600 * 1000).toISOString().slice(0, 10)}T12:00:00Z`;
 
 const collect = async ({
   shard,
