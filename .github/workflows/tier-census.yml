@@ -104,10 +104,18 @@ jobs:
           window=$(printf '%s' "$status" | jq -r '.data.result.windowDate // ""')
           stored=$(printf '%s' "$status" | jq -r '.data.result.stored // 0')
           aborted=$(printf '%s' "$status" | jq -r '.data.result.aborted // false')
+          skipped=$(printf '%s' "$status" | jq -r '.data.result.skipped // false')
 
           if [ -z "$window" ] || [ "$window" = "null" ]; then
             echo "::error::the census finished without reporting a window"
             exit 1
+          fi
+
+          # Nothing stored and nothing wrong: the API found the day already in
+          # the table and stopped before spending a single player read.
+          if [ "$skipped" = "true" ]; then
+            echo "::notice::$window is already collected; the run stopped without spending quota"
+            exit 0
           fi
           if [ "$stored" -eq 0 ]; then
             echo "::error::the run stored no rows"

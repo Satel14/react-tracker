@@ -329,3 +329,58 @@ test("the window steps back across a month boundary", () => {
   assert.equal(sampleWindowStart(at("2026-09-01T12:00:00Z")), "2026-08-30T12:00:00Z");
   assert.equal(sampleWindowStart(at("2026-03-01T12:00:00Z")), "2026-02-27T12:00:00Z");
 });
+
+
+// --- the guard against re-reading a day ---
+//
+// The store keeps one row per account per window, so a second run over a day
+// already collected can only add players from lobbies we already sampled. That
+// costs a full hour of quota and buys almost nothing: the extra rows sit inside
+// the same clusters, so the design effect rises about as fast as the count.
+// Better to spend the run on a day we do not have.
+
+test("skips a window that is already collected, before spending anything", async () => {
+  const api = fakeApi({ matchTypes: competitive(4) });
+  const result = await run(api, { windowCollected: async () => true });
+
+  assert.equal(result.skipped, true);
+  assert.equal(result.windowDate, "2026-08-30", "the window still has to be reported");
+  assert.equal(result.observations.length, 0);
+  assert.equal(api.asked.filter((u) => u.includes("/matches/")).length, 0, "no match was classified");
+  assert.equal(api.asked.filter((u) => u.includes("/ranked")).length, 0, "no player was read");
+});
+
+test("asks about the window PUBG returned, not the one we asked for", async () => {
+  const api = fakeApi({ matchTypes: competitive(1) });
+  const seen = [];
+  await run(api, { windowCollected: async (windowDate) => { seen.push(windowDate); return false; } });
+
+  assert.deepEqual(seen, ["2026-08-30"]);
+});
+
+test("collects as usual when the window is new", async () => {
+  const api = fakeApi({ matchTypes: competitive(2) });
+  const result = await run(api, { windowCollected: async () => false });
+
+  assert.equal(result.skipped, false);
+  assert.equal(result.observations.length, 30);
+});
+
+test("collects as usual when no guard is attached", async () => {
+  const api = fakeApi({ matchTypes: competitive(2) });
+  const result = await run(api);
+
+  assert.equal(result.skipped, false);
+  assert.equal(result.observations.length, 30);
+});
+
+// Losing a day because the database blinked is worse than reading it twice.
+test("a guard that throws lets the run go ahead", async () => {
+  const api = fakeApi({ matchTypes: competitive(2) });
+  const result = await run(api, {
+    windowCollected: async () => { throw new Error("connection terminated unexpectedly"); },
+  });
+
+  assert.equal(result.skipped, false);
+  assert.equal(result.observations.length, 30);
+});

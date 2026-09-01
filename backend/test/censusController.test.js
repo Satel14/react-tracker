@@ -169,3 +169,52 @@ test("a thin sample is not published as if it were a measurement", async () => {
 
   assert.equal(res.body.data.tiers[0].publishable, false);
 });
+
+// --- not spending an hour on a day we already have ---
+
+test("the run hands the collector a way to check the window against the store", async () => {
+  let options = null;
+  const asked = [];
+  const controller = build({
+    collect: async (o) => { options = o; return collected(); },
+    windowCollected: async (q) => { asked.push(q); return true; },
+  });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.equal(typeof options.windowCollected, "function", "no guard was passed down");
+  assert.equal(await options.windowCollected("2026-08-30"), true);
+  assert.deepEqual(asked, [{
+    shard: "steam",
+    seasonId: "division.bro.official.pc-2018-42",
+    windowDate: "2026-08-30",
+  }], "the guard has to name the shard and season it is asking about");
+});
+
+test("a skipped run says so instead of looking like an empty one", async () => {
+  const controller = build({
+    collect: async () => collected({
+      matchesSeen: 0, rankedMatches: 0, observations: [], stored: 0, calls: 1, skipped: true,
+    }),
+  });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  const res = makeRes();
+  await controller.getStatus(authed, res);
+  assert.equal(res.body.data.state, "done");
+  assert.equal(res.body.data.result.skipped, true);
+  assert.equal(res.body.data.result.stored, 0);
+});
+
+test("an ordinary run is not reported as skipped", async () => {
+  const controller = build();
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  const res = makeRes();
+  await controller.getStatus(authed, res);
+  assert.equal(res.body.data.result.skipped, false);
+});
