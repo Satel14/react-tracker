@@ -535,6 +535,16 @@ body {
         gap: 8px;
       }
 
+      // The session total is the answer the card exists to give when no row can
+      // carry its own number, so it reads at full strength rather than as a caption.
+      .player-rp-summary {
+        margin: 10px 0 0;
+        font-size: 13px;
+        line-height: 1.45;
+        letter-spacing: 0.2px;
+        color: var(--text-strong);
+      }
+
       .player-meta-badge {
         border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
         border-radius: 10px;

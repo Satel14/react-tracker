@@ -12,6 +12,19 @@ function parseTime(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+// PUBG can only count a match once it has ended, and a match runs 20-30 minutes.
+// Placing a match by when it started credits a reading taken mid-match with a
+// result it cannot hold yet: it hides the first match of a session behind the
+// baseline, and hands the oldest visible row a delta earned by an older match
+// that never made the list. Older cached payloads carry no duration, so fall
+// back to the start time and keep their behaviour unchanged.
+function endTime(item) {
+  const started = parseTime(item?.createdAt);
+  if (started === null) return null;
+  const duration = Number(item?.duration);
+  return Number.isFinite(duration) && duration > 0 ? started + duration * 1000 : started;
+}
+
 function buildIntervals(series) {
   const intervals = [];
   for (let k = 1; k < series.length; k += 1) {
@@ -29,7 +42,8 @@ function buildIntervals(series) {
   return intervals;
 }
 
-// A match belongs to the first reading that could have absorbed it.
+// A match belongs to the first reading that could have absorbed it, measured
+// from when the match ended rather than when it began.
 function assignCandidates(series, intervals, items, deltas) {
   const first = series[0];
   const last = series[series.length - 1];
@@ -38,7 +52,7 @@ function assignCandidates(series, intervals, items, deltas) {
       deltas[index] = null;
       return;
     }
-    const t = parseTime(item.createdAt);
+    const t = endTime(item);
     if (t === null) {
       deltas[index] = { kind: "unattributed" };
       return;

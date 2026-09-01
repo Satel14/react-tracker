@@ -154,3 +154,18 @@ test("warm is a no-op without a pool and runs the DDL with one", async () => {
   await warm();
   assert.equal(pool.calls.filter((c) => c.text.includes("CREATE TABLE")).length, 1);
 });
+
+test("a late touch never drags last_seen_at backwards", async () => {
+  // Two writers observe the same values: a live page view and, later, a batched
+  // write that captured its reading earlier. Whichever lands second, the row has
+  // to keep the newest sighting, because attribution measures each interval from
+  // it and a rewound value can invert the interval.
+  const pool = createFakePool(async () => ({ rows: [] }));
+  __setPool(pool);
+
+  await recordReading(KEY, READING, { latest: { id: 7, ...READING }, now: 1000 });
+
+  const touch = pool.calls.find((call) => call.text.includes("UPDATE rank_point_snapshots"));
+  assert.ok(touch, "the unchanged reading is recorded as a touch");
+  assert.match(touch.text, /GREATEST/, "the touch keeps the later of the two timestamps");
+});

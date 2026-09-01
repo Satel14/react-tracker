@@ -264,3 +264,49 @@ test("the decay guard fires on the lowercase tier the ranked mapper actually pro
   const result = run(series, [match("m", T0 + 2 * DAY)]);
   assert.deepEqual(deltaOf(result, "m"), { kind: "unattributed" });
 });
+
+// PUBG counts a match only once it has ended, and a match lasts 20-30 minutes.
+// Attribution therefore has to place a match by when it ended, not by when it
+// started, or a reading taken mid-match is credited with a result it cannot
+// yet contain.
+const MIN = 60 * 1000;
+const playedMatch = (id, createdAt, durationMin = 25) => ({
+  id,
+  createdAt: new Date(createdAt).toISOString(),
+  matchType: "competitive",
+  duration: durationMin * 60,
+});
+
+test("a match still running when the first reading was taken is not inside that baseline", () => {
+  // M1 starts 15:43 and ends 16:08; the first reading is taken 16:00, while it runs.
+  // Its RP lands in the 16:30 reading, so every later match must stay attributable.
+  const base = Date.parse("2026-09-01T16:00:00Z");
+  const result = run(
+    [
+      snap(3000, 100, base),
+      snap(2980, 101, base + 30 * MIN),
+      snap(3005, 102, base + 75 * MIN),
+      snap(2990, 103, base + 120 * MIN),
+    ],
+    [
+      playedMatch("m1", base - 17 * MIN),
+      playedMatch("m2", base + 33 * MIN),
+      playedMatch("m3", base + 80 * MIN),
+    ]
+  );
+  assert.deepEqual(deltaOf(result, "m1"), { kind: "exact", value: -20 });
+  assert.deepEqual(deltaOf(result, "m2"), { kind: "exact", value: 25 });
+  assert.deepEqual(deltaOf(result, "m3"), { kind: "exact", value: -15 });
+});
+
+test("a match that had not ended yet cannot own the change seen while it ran", () => {
+  // X1 starts 13:58 and ends 14:23. The 14:10 reading is 13 minutes too early to
+  // hold its result, so the -15 it recorded belongs to an older match that never
+  // made the visible list. X1 is still waiting for its own result, not owed one.
+  const day = Date.parse("2026-09-01T13:00:00Z");
+  const result = run(
+    [snap(3000, 100, day, day + 65 * MIN), snap(2985, 101, day + 70 * MIN)],
+    [playedMatch("x1", day + 58 * MIN)]
+  );
+  assert.deepEqual(deltaOf(result, "x1"), { kind: "pending" });
+});
