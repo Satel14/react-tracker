@@ -40,6 +40,14 @@ afterEach(() => {
 });
 
 const line = () => document.querySelector(".player-rank-percentile");
+const badge = () => document.querySelector(".player-rank-percentile__top");
+
+// The sentence without the badge, which is what has to stay short and plain.
+const sentence = () => {
+  const copy = line().cloneNode(true);
+  copy.querySelector(".player-rank-percentile__top")?.remove();
+  return copy.textContent.replace(/\s+/g, " ").trim();
+};
 
 // Counted out of a hundred rather than as a percentile. "Top 6%" makes the
 // reader invert it themselves to see that it is good -- and most do not.
@@ -48,9 +56,27 @@ test("tells the player how many out of a hundred they are above", async () => {
   const note = await screen.findByRole("link");
 
   expect(note).toHaveAttribute("href", "/ranks#distribution");
-  // 16th percentile from the top means 84 of every 100 are below.
-  expect(line().textContent).toMatch(/\b84\b/);
-  expect(line().textContent).not.toMatch(/\b16\b/);
+  // 16th percentile from the top means 84 of every 100 are below. The plain
+  // sentence carries that; the percentile sits beside it as a badge, for
+  // readers who already think in "top n%".
+  expect(sentence()).toMatch(/\b84\b/);
+  expect(sentence()).not.toMatch(/\b16\b/);
+  expect(badge().textContent).toMatch(/16\s*%/);
+});
+
+// The two numbers are the same measurement from opposite ends, so they must
+// always add up. A badge drifting from the sentence beside it would be worse
+// than having no badge.
+test("the badge and the sentence never disagree", async () => {
+  for (const at of [1, 16, 50]) {
+    document.body.innerHTML = "";
+    show({ rankPoint: thresholds[at] });
+    await screen.findByRole("link");
+
+    const above = Number(sentence().match(/\d+/)[0]);
+    const percentile = Number(badge().textContent.match(/\d+/)[0]);
+    expect(above + percentile, `percentile ${at}`).toBe(100);
+  }
 });
 
 // One direction at every level. The number rises with skill, so it never has
@@ -121,8 +147,24 @@ test("keeps the methodology out of the visible line", async () => {
   expect(link.getAttribute("title")).toContain("7");
 });
 
-test("keeps the visible line to one short sentence", async () => {
+test("keeps the plain sentence short", async () => {
   show();
   await screen.findByRole("link");
-  expect(line().textContent.length).toBeLessThan(45);
+  expect(sentence().length).toBeLessThan(45);
+});
+
+// "Top 97%" is not a phrase anybody uses -- the idiom only works for small
+// numbers. Past halfway the badge stops meaning anything and would land
+// hardest on the players it reads worst for, so it goes away and the plain
+// sentence stands alone.
+test("drops the badge once top-n%% stops being a phrase", async () => {
+  for (const [at, expected] of [[50, true], [51, false], [78, false], [97, false]]) {
+    document.body.innerHTML = "";
+    show({ rankPoint: thresholds[at] });
+    await screen.findByRole("link");
+
+    expect(Boolean(badge()), `percentile ${at}`).toBe(expected);
+    // The sentence itself never goes away, at any level.
+    expect(sentence(), `percentile ${at}`).toMatch(/\d+/);
+  }
 });

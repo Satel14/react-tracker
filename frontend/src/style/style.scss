@@ -766,6 +766,18 @@ body {
         a:hover {
           color: var(--text);
         }
+
+        // Quieter than the sentence it follows, and never wrapping away
+        // from it: it is the same number said the harder way.
+        .player-rank-percentile__top {
+          margin-left: 6px;
+          padding: 1px 6px;
+          border-radius: 999px;
+          white-space: nowrap;
+          font-size: 11px;
+          background: color-mix(in srgb, var(--accent) 10%, transparent);
+          color: var(--text-muted);
+        }
       }
 
       .player-rank-progress__path {
