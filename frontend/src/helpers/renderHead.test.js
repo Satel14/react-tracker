@@ -209,3 +209,49 @@ describe("structured data", () => {
     expect(ldUrl(html)).toBe(canonical);
   });
 });
+
+describe("a route that ships its whole article", () => {
+  const ARTICLE = '<div class="content ranks-page"><h1>Ranks</h1><p>Eight tiers.</p></div>';
+  const ranks = () => renderHead(shell, route("/ranks"), ARTICLE);
+
+  it("puts the rendered article into the mount point", () => {
+    expect(ranks()).toContain(ARTICLE);
+  });
+
+  // The stub is a heading and a sentence written into routeMeta by hand. Once
+  // the real page is rendered, keeping it would print the h1 twice.
+  it("drops the hand-written stub in favour of it", () => {
+    const html = ranks();
+    expect(html).not.toContain(`<h1>${route("/ranks").h1}</h1><p>`);
+    expect((html.match(/<h1>/g) || []).length).toBe(1);
+  });
+
+  // .prerender is a 40rem centred column with 96px of padding, sized for two
+  // lines of text. An article inside it would render down a narrow strip.
+  it("does not wrap it in the centred stub layout", () => {
+    expect(ranks()).not.toContain('<div class="prerender">');
+  });
+
+  it("still puts the nav above it", () => {
+    const html = ranks();
+    expect(html).toContain('class="prerender__nav"');
+    expect(html.indexOf("prerender__nav")).toBeLessThan(html.indexOf(ARTICLE));
+  });
+
+  it("still rewrites the head for the route", () => {
+    const html = ranks();
+    expect(html).toContain(`<link rel="canonical" href="${canonicalFor("/ranks")}" />`);
+    expect(/<title>([^<]*)<\/title>/.exec(html)[1]).toBe(route("/ranks").title);
+  });
+
+  // The article is markup we generated from our own components, not copy from
+  // routeMeta -- escaping it would ship the tags as visible text.
+  it("does not escape the markup it was handed", () => {
+    expect(ranks()).not.toContain("&lt;div");
+  });
+
+  it("leaves a route without one exactly as it was", () => {
+    expect(help()).toContain('<div class="prerender">');
+    expect(help()).toContain(`<h1>${route("/help").h1}</h1>`);
+  });
+});
