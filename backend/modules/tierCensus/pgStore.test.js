@@ -5,6 +5,7 @@ const {
   recordObservations,
   readWindow,
   readCoverage,
+  isWindowCollected,
   __resetTierCensusStore,
 } = require("./pgStore");
 
@@ -163,4 +164,47 @@ test("coverage uses the same window rule as the data it describes", async () => 
   const select = pool.calls.find((c) => /COUNT\(DISTINCT match_id\)/.test(c.text));
   assert.doesNotMatch(select.text, /CURRENT_DATE/);
   assert.match(select.text, /SELECT MAX\(window_date\)/);
+});
+
+// --- has this day already been collected? ---
+//
+// A run over a day already in the table can only add players from lobbies it
+// already drew. The guard is what turns that hour of quota into a fresh day.
+
+test("reports a window that already has rows as collected", async () => {
+  const pool = fakePool(() => ({ rows: [{ collected: true }] }));
+  __setPool(pool);
+
+  assert.equal(
+    await isWindowCollected({ shard: "steam", seasonId: "s", windowDate: "2026-08-30" }),
+    true,
+  );
+  const asked = pool.calls.find((c) => /tier_census_observations/.test(c.text) && !/CREATE/.test(c.text));
+  assert.ok(asked, "no question was asked");
+  assert.deepEqual(asked.params, ["steam", "s", "2026-08-30"]);
+});
+
+test("reports an untouched window as not collected", async () => {
+  __setPool(fakePool(() => ({ rows: [{ collected: false }] })));
+  assert.equal(
+    await isWindowCollected({ shard: "steam", seasonId: "s", windowDate: "2026-09-01" }),
+    false,
+  );
+});
+
+// Every path here fails towards collecting. Reading a day twice costs quota;
+// skipping a day we do not have loses it until the window rolls past.
+test("reports nothing collected when there is no database", async () => {
+  assert.equal(
+    await isWindowCollected({ shard: "steam", seasonId: "s", windowDate: "2026-08-30" }),
+    false,
+  );
+});
+
+test("reports nothing collected when the query fails", async () => {
+  __setPool(fakePool(() => { throw new Error("connection terminated unexpectedly"); }));
+  assert.equal(
+    await isWindowCollected({ shard: "steam", seasonId: "s", windowDate: "2026-08-30" }),
+    false,
+  );
 });

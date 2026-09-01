@@ -1,7 +1,9 @@
 const { isAuthorised } = require("../modules/tierCensus/auth");
 const { collect } = require("../modules/tierCensus/collector");
 const { createRunner } = require("../modules/tierCensus/runner");
-const { recordObservations, readWindow, readCoverage } = require("../modules/tierCensus/pgStore");
+const {
+  recordObservations, readWindow, readCoverage, isWindowCollected,
+} = require("../modules/tierCensus/pgStore");
 const { estimateIcc, PER_MATCH } = require("../modules/tierCensus/sampling");
 const { tierShare } = require("../modules/tierCensus/stats");
 
@@ -29,6 +31,7 @@ const summarise = (result) => ({
   meteredCalls: result.calls,
   rateLimited: result.rateLimited,
   aborted: result.aborted,
+  skipped: Boolean(result.skipped),
 });
 
 const createCensusController = ({
@@ -36,6 +39,7 @@ const createCensusController = ({
   store = recordObservations,
   readWindow: doReadWindow = readWindow,
   readCoverage: doReadCoverage = readCoverage,
+  windowCollected = isWindowCollected,
   token = () => process.env.CENSUS_TOKEN,
   seasonId = () => process.env.PUBG_CENSUS_SEASON || "division.bro.official.pc-2018-42",
 } = {}) => {
@@ -57,14 +61,16 @@ const createCensusController = ({
   const runCensus = async (req, res) => {
     if (!isAuthorised(req.headers, token())) return notFound(res);
 
+    const season = seasonId();
     const started = runner.start({
       shard: SHARD,
-      seasonId: seasonId(),
+      seasonId: season,
       apiKey: process.env.PUBG_API_KEY,
       fetch: globalThis.fetch,
       sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
       deadlineMs: RUN_DEADLINE_MS,
       onObservations: store,
+      windowCollected: (windowDate) => windowCollected({ shard: SHARD, seasonId: season, windowDate }),
     });
 
     if (started.done) inFlight = started.done;

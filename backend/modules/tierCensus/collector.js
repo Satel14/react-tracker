@@ -50,6 +50,7 @@ const collect = async ({
   perMatch,
   onObservations,
   onProgress,
+  windowCollected,
 }) => {
   const pacer = createPacer({ now });
   const startedAt = now();
@@ -113,10 +114,28 @@ const collect = async ({
   const sampleResponse = await metered(sampleUrl);
   if (!sampleResponse || sampleResponse.status !== 200) {
     return { windowDate: null, matchesSeen: 0, rankedMatches: 0, matchesFailed: 1, playersFailed: 0,
-      observations: [], stored: 0, aborted: false, ...pacer.stats() };
+      observations: [], stored: 0, aborted: false, skipped: false, ...pacer.stats() };
   }
   const sample = await sampleResponse.json();
   const windowDate = (sample?.data?.attributes?.createdAt ?? "").slice(0, 10) || null;
+
+  // A day already in the store can only give back players from lobbies we drew
+  // last time: the extra rows sit in the same clusters, so the design effect
+  // climbs about as fast as the count and the hour of quota buys nothing. A
+  // store that cannot answer is not worth losing a day over, so a guard that
+  // throws collects.
+  let collected = false;
+  if (windowCollected && windowDate) {
+    try {
+      collected = Boolean(await windowCollected(windowDate));
+    } catch (error) {
+      console.log(`[census] could not check whether ${windowDate} is collected: ${error.message}`);
+    }
+  }
+  if (collected) {
+    return { windowDate, matchesSeen: 0, rankedMatches: 0, matchesFailed: 0, playersFailed: 0,
+      observations: [], stored: 0, aborted: false, skipped: true, ...pacer.stats() };
+  }
   const matchIds = (sample?.data?.relationships?.matches?.data ?? []).map((m) => m.id);
 
   // 2. Classify every match. Free, so no pacing and no sampling.
@@ -186,6 +205,7 @@ const collect = async ({
     observations,
     stored,
     aborted,
+    skipped: false,
     ...pacer.stats(),
   };
 };

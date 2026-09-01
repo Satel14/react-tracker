@@ -53,6 +53,15 @@ const INSERT_SQL = `
 // PUBG's sample lags a day and a run can be missed, so counting back from
 // CURRENT_DATE would quietly return six days of data when asked for seven --
 // and the page prints that number as part of its methodology.
+// Cheap enough to run before every collection: EXISTS stops at the first row
+// and the window index already leads with (shard, season_id, window_date).
+const SELECT_COLLECTED_SQL = `
+  SELECT EXISTS (
+    SELECT 1 FROM tier_census_observations
+    WHERE shard = $1 AND season_id = $2 AND window_date = $3
+  ) AS collected
+`;
+
 const SELECT_WINDOW_SQL = `
   SELECT DISTINCT ON (account_id) match_id, tier
   FROM tier_census_observations
@@ -140,6 +149,20 @@ async function readWindow({ shard, seasonId, days }) {
   }
 }
 
+async function isWindowCollected({ shard, seasonId, windowDate }) {
+  if (!isConfigured() || !windowDate) return false;
+  try {
+    await ensureTable();
+    const result = await getPool().query(SELECT_COLLECTED_SQL, [shard, seasonId, windowDate]);
+    return Boolean(result?.rows?.[0]?.collected);
+  } catch (error) {
+    // Fail towards collecting. Reading a day twice costs quota; skipping one we
+    // do not have loses it until the window rolls past.
+    console.log(`[census] could not check whether ${windowDate} is collected: ${error.message}`);
+    return false;
+  }
+}
+
 async function readCoverage({ shard, seasonId, days }) {
   if (!isConfigured()) return { ...EMPTY_COVERAGE };
   try {
@@ -168,5 +191,6 @@ module.exports = {
   recordObservations,
   readWindow,
   readCoverage,
+  isWindowCollected,
   __resetTierCensusStore,
 };
