@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { collect } = require("./collector");
+const { collect, sampleWindowStart } = require("./collector");
 
 const SEASON = "division.bro.official.pc-2018-42";
 const account = (i) => `account.${String(i).padStart(32, "0")}`;
@@ -289,4 +289,43 @@ test("reports progress as it goes so a stuck run is visible", async () => {
   assert.equal(last.matchesSeen, 3);
   assert.equal(last.rankedMatches, 3);
   assert.equal(last.observed, 45);
+});
+
+// --- the sample window ---
+//
+// PUBG buckets its sample by calendar day, so the filter picks a DAY, not a
+// moment. The first version subtracted 26 hours from "now", which meant the day
+// it landed on depended on the hour the job happened to fire. GitHub's
+// scheduler once fired 4h54m late and the run silently collected a different
+// day than the one before it.
+
+const at = (iso) => Date.parse(iso);
+
+test("the window is a fixed calendar day, not an offset from now", () => {
+  assert.equal(sampleWindowStart(at("2026-09-01T05:04:00Z")), "2026-08-30T12:00:00Z");
+});
+
+test("the hour the run fires does not move the window", () => {
+  const early = sampleWindowStart(at("2026-09-01T00:10:00Z"));
+  const late = sampleWindowStart(at("2026-09-01T05:04:00Z"));
+  const latest = sampleWindowStart(at("2026-09-01T23:50:00Z"));
+
+  assert.equal(early, late, "a run delayed by five hours must ask for the same day");
+  assert.equal(late, latest, "even a run delayed most of a day must ask for the same day");
+});
+
+test("the window never sits inside PUBG's 24-hour cutoff", () => {
+  // Asking for anything under a day old answers HTTP 400. The earliest a run
+  // can fire is midnight, and that is the case with the least margin.
+  for (const hour of ["00:00:00", "06:00:00", "12:00:00", "23:59:59"]) {
+    const fired = at(`2026-09-01T${hour}Z`);
+    const hoursBack = (fired - Date.parse(sampleWindowStart(fired))) / 3600e3;
+    assert.ok(hoursBack >= 36, `fired at ${hour}, window only ${hoursBack}h back`);
+    assert.ok(hoursBack <= 60, `fired at ${hour}, window ${hoursBack}h back is needlessly stale`);
+  }
+});
+
+test("the window steps back across a month boundary", () => {
+  assert.equal(sampleWindowStart(at("2026-09-01T12:00:00Z")), "2026-08-30T12:00:00Z");
+  assert.equal(sampleWindowStart(at("2026-03-01T12:00:00Z")), "2026-02-27T12:00:00Z");
 });
