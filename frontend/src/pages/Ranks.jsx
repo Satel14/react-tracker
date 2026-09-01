@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { RANK_LADDER, SURVIVOR_SLOTS, DIVISION_PIPS } from "../helpers/rankLadder";
+import TierDistribution from "../component/ranks/TierDistribution";
 
 // Section key -> how many paragraphs it has. Spelled out rather than derived so
 // a translation that loses a paragraph fails the i18n parity guard instead of
@@ -12,6 +13,7 @@ import { RANK_LADDER, SURVIVOR_SLOTS, DIVISION_PIPS } from "../helpers/rankLadde
 // as a correction instead of as the third fact in a row.
 const SECTIONS = [
   { key: "ladder", paragraphs: 4, ladder: true },
+  { key: "distribution", paragraphs: 4, distribution: true },
   { key: "grandmaster", paragraphs: 3, tone: "myth" },
   { key: "howRpMoves", paragraphs: 5 },
   { key: "tierProtection", paragraphs: 6 },
@@ -153,6 +155,11 @@ const Ranks = ({ t }) => (
               <h2>{t(`pages.ranks.${section.key}.heading`)}</h2>
             </div>
             {section.ladder && <LadderTable t={t} />}
+            {/* Before the prose, like the ladder table above it: the heading
+                asks where players sit and the bars are the answer. The four
+                paragraphs under them are the caveats, which nobody reads
+                first. */}
+            {section.distribution && <TierDistribution t={t} />}
             {paragraphKeys(section.paragraphs).map((paragraph) => (
               <p key={paragraph}>{t(`pages.ranks.${section.key}.${paragraph}`)}</p>
             ))}

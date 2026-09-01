@@ -3747,6 +3747,101 @@ body {
     }
   }
 
+  // The one live block on an otherwise static page. Rows sit in ladder order,
+  // so the hump at Gold and the cliff after Diamond read as the shape of the
+  // ladder rather than as a leaderboard.
+  &__shares {
+    margin: 0 0 24px;
+  }
+
+  &__share-list {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+    display: grid;
+    gap: 7px;
+  }
+
+  &__share {
+    display: grid;
+    grid-template-columns: 28px 100px minmax(0, 1fr) 54px 42px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__share-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  &__share-name {
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  // Scaled off the widest tier, not off 100%: at absolute scale two thirds of
+  // the track is permanently empty and everything under Crystal is a stub. The
+  // number beside the bar is the one that gets read.
+  &__share-bar {
+    position: relative;
+    height: 10px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+
+  // Behind the bar rather than beside it. The share and the range it could
+  // actually be are one measurement, and splitting them into two marks invites
+  // reading the solid bar as exact.
+  &__share-range {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tier-hue, var(--accent)) 24%, transparent);
+  }
+
+  &__share-fill {
+    position: relative;
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--tier-hue, var(--accent));
+  }
+
+  // Values wear text tokens, never the tier colour. The icon and the bar
+  // already carry identity twice over, and a coloured number reads as a status
+  // rather than as a measurement.
+  &__share-value {
+    color: var(--text-strong);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__share-margin {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Spans the track as well as the numbers. A row with no measurement gets no
+  // bar at all -- an empty track beside it would read as a measured zero.
+  &__share-thin {
+    grid-column: 3 / -1;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  &__share-note {
+    margin: 0;
+    max-width: 68ch;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
   &__outro {
     margin: 30px 0 0;
     font-weight: 600;
@@ -3824,6 +3919,26 @@ body {
 
     &__tier-pips {
       display: none;
+    }
+
+    &__share {
+      grid-template-columns: 22px 78px minmax(0, 1fr) 50px;
+      gap: 9px;
+    }
+
+    &__share-icon {
+      width: 22px;
+      height: 22px;
+    }
+
+    // The margin drops before the value does: at this width the interval is
+    // still drawn on the bar, and the prose above says what it means.
+    &__share-margin {
+      display: none;
+    }
+
+    &__share-thin {
+      grid-column: 3 / -1;
     }
 
     &__slot {

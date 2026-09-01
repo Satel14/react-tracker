@@ -403,6 +403,19 @@
         "divisionsSingle": "Single rank, no divisions",
         "divisionsPlural": "{count} divisions, IV up to I"
       },
+      "distribution": {
+        "heading": "Where players actually sit",
+        "p1": "Everything above this section is what KRAFTON publishes. This part is the one thing on the page we measure ourselves: a daily random sample of ranked matches, and the current tier of fifteen players drawn from each of them.",
+        "p2": "The interval beside each tier is not decoration. Players drawn from the same lobby are more alike than players drawn at random — matchmaking put them there by rating — so four thousand accounts carry about as much information as eight hundred independent ones would. The intervals already account for that, which is why they are wider than the raw count suggests.",
+        "p3": "A tier gets a number only when its own sample is thick enough to hold one up. Survivor is the tier this bites: a few hundred seats worldwide means a random sample of ranked lobbies may contain none at all, and a single sighting is not a measurement.",
+        "p4": "Ranked resets every season, so this describes the season named below and no other. The window pools the last seven days of samples and counts each account once, at its most recent reading.",
+        "sample": "Measured from {accounts} accounts across {matches} ranked matches, {from} to {to}.",
+        "tooFew": "too few observations",
+        "unranked": "Unranked",
+        "loading": "Reading the latest sample…",
+        "unavailable": "The sample is not reachable right now. The rest of this page is unaffected.",
+        "gathering": "Collection for Season {season} has only just started, so no tier has enough observations to publish yet."
+      },
       "grandmaster": {
         "heading": "There is no Grandmaster tier",
         "p1": "Grandmaster is not a PUBG rank, and it has not been one for the entire life of Ranked Mode, which launched in Update 7.2.",

@@ -8,6 +8,14 @@ import { RANK_LADDER, SURVIVOR_SLOTS, DIVISION_PIPS } from "../helpers/rankLadde
 import en from "../Language/en.json";
 import ua from "../Language/ua.json";
 
+// The distribution section is the one part of this page that reaches for the
+// network. Held unresolved here so the article renders offline and the page
+// tests stay about the article; the numbers are covered in the component's
+// own spec.
+vi.mock("../api/census", () => ({
+  getRankDistribution: () => new Promise(() => {}),
+}));
+
 const renderPage = () => {
   setTranslations({ en, ua });
   setDefaultLanguage("en");
@@ -28,6 +36,7 @@ test("renders every section, in the order the copy is written", () => {
   const headings = Array.from(container.querySelectorAll("h2")).map((h) => h.textContent);
   expect(headings).toEqual([
     en.pages.ranks.ladder.heading,
+    en.pages.ranks.distribution.heading,
     en.pages.ranks.grandmaster.heading,
     en.pages.ranks.howRpMoves.heading,
     en.pages.ranks.tierProtection.heading,
@@ -201,4 +210,17 @@ test("draws one division pip per division, and none for a single rank", () => {
     expect(pips.querySelectorAll("li")).toHaveLength(divisions);
     expect(pips.textContent).toBe(DIVISION_PIPS.slice(-divisions).join(""));
   });
+});
+
+// The article is static; this one section is not. It has to hold its place in
+// the page -- heading, anchor and prose -- while the census is still being
+// read, so a slow or missing sample never leaves a hole in the contents rail.
+test("keeps the distribution section in place while the sample is still loading", () => {
+  const { container } = renderPage();
+  const section = container.querySelector("#distribution");
+
+  expect(section).not.toBeNull();
+  expect(section.querySelector("h2")).toHaveTextContent(en.pages.ranks.distribution.heading);
+  expect(section.textContent).toContain(en.pages.ranks.distribution.loading);
+  expect(section.textContent).toContain(en.pages.ranks.distribution.p2);
 });
