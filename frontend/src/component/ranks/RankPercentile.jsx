@@ -15,9 +15,11 @@ import { getLanguage } from "react-switch-lang";
 import { getRankDistribution } from "../../api/census";
 import { rpPercentile } from "../../helpers/rankPercentile";
 
-// Below halfway the same measurement reads better from the other end. "Top
-// 78%" is a strange thing to tell somebody, and "ahead of 22%" is no less true.
-const FLIP_AT = 50;
+// Counted out of a hundred, and always upwards. "Top 6%" asks the reader to
+// invert it before they can tell whether it is good, and most do not -- so the
+// number rises with skill instead, and there is no level at which the sentence
+// changes direction.
+const OUT_OF = 100;
 
 const groupDigits = (value) =>
   new Intl.NumberFormat(getLanguage() === "ua" ? "uk-UA" : "en-US").format(Number(value) || 0);
@@ -50,8 +52,7 @@ const RankPercentile = ({ t, rankPoint, seasonId, load = getRankDistribution, da
   const at = rpPercentile(rankPoint, data.rpPercentiles);
   if (at === null) return null;
 
-  const key = at <= FLIP_AT ? "top" : "ahead";
-  const percent = at <= FLIP_AT ? at : 100 - at;
+  const below = OUT_OF - at;
 
   // The visible line answers the one question the reader arrived with. How
   // the number was arrived at is real and has to be reachable -- but in the
@@ -65,7 +66,7 @@ const RankPercentile = ({ t, rankPoint, seasonId, load = getRankDistribution, da
   return (
     <p className="player-rank-percentile">
       <Link to="/ranks#distribution" title={detail}>
-        {t(`pages.player.percentile.${key}`, { percent })}
+        {t("pages.player.percentile.line", { n: below })}
       </Link>
     </p>
   );

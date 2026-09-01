@@ -15,8 +15,7 @@
     },
     "player": {
       "percentile": {
-        "top": "Top {percent}% of ranked players",
-        "ahead": "Ahead of {percent}% of ranked players",
+        "line": "Better than {n} out of 100 players",
         "detail": "Measured from {accounts} accounts sampled from ranked matches over the last {days} days"
       },
       "seasonRewardLevel": "Season Reward Level",

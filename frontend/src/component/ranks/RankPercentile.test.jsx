@@ -41,22 +41,35 @@ afterEach(() => {
 
 const line = () => document.querySelector(".player-rank-percentile");
 
-test("places the player and points at the numbers behind it", async () => {
+// Counted out of a hundred rather than as a percentile. "Top 6%" makes the
+// reader invert it themselves to see that it is good -- and most do not.
+test("tells the player how many out of a hundred they are above", async () => {
   show();
   const note = await screen.findByRole("link");
 
   expect(note).toHaveAttribute("href", "/ranks#distribution");
-  expect(line().textContent).toMatch(/16%/);
+  // 16th percentile from the top means 84 of every 100 are below.
+  expect(line().textContent).toMatch(/\b84\b/);
+  expect(line().textContent).not.toMatch(/\b16\b/);
 });
 
-// "Top 78%" is a strange thing to tell somebody. Below halfway the same
-// measurement reads better from the other end, and is no less true.
-test("reads from the other end below halfway", async () => {
-  show({ rankPoint: thresholds[78] });
-  await screen.findByRole("link");
+// One direction at every level. The number rises with skill, so it never has
+// to be read backwards and there is no threshold where the sentence flips.
+test("counts the same way at the top and at the bottom", async () => {
+  const readings = [
+    [thresholds[1], 99],
+    [thresholds[16], 84],
+    [thresholds[50], 50],
+    [thresholds[78], 22],
+    [thresholds[97], 3],
+  ];
 
-  expect(line().textContent).toMatch(/22%/);
-  expect(line().textContent).not.toMatch(/78%/);
+  for (const [rankPoint, expected] of readings) {
+    document.body.innerHTML = "";
+    show({ rankPoint });
+    await screen.findByRole("link");
+    expect(line().textContent, `${rankPoint} RP`).toMatch(new RegExp(`\\b${expected}\\b`));
+  }
 });
 
 test("says nothing until the sample has arrived", () => {
