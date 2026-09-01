@@ -21,6 +21,12 @@ import { rpPercentile } from "../../helpers/rankPercentile";
 // changes direction.
 const OUT_OF = 100;
 
+// Past this the badge is dropped. "Top 97%" is not a phrase anybody uses --
+// the idiom only carries for small numbers -- and it would read worst for the
+// players it reads worst for. This governs a decoration only: the sentence
+// says the same thing at every level.
+const BADGE_UP_TO = 50;
+
 const groupDigits = (value) =>
   new Intl.NumberFormat(getLanguage() === "ua" ? "uk-UA" : "en-US").format(Number(value) || 0);
 
@@ -67,6 +73,14 @@ const RankPercentile = ({ t, rankPoint, seasonId, load = getRankDistribution, da
     <p className="player-rank-percentile">
       <Link to="/ranks#distribution" title={detail}>
         {t("pages.player.percentile.line", { n: below })}
+        {/* The same measurement from the other end, for readers who already
+            think in "top n%". Second, and quieter: it is the framing that
+            needs inverting before it means anything. */}
+        {at <= BADGE_UP_TO && (
+          <span className="player-rank-percentile__top">
+            {t("pages.player.percentile.top", { percent: at })}
+          </span>
+        )}
       </Link>
     </p>
   );
