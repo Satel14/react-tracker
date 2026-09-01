@@ -1,4 +1,11 @@
 # Static files (must be before SPA fallback handled by CF Pages by default)
-/google4fb6a85272b47cc5.html  /google4fb6a85272b47cc5.html  200
+
+# Google asks for this file at the .html path it issued. Pages serves static
+# assets before it reads this file and strips .html from any asset that has
+# it, so a real google....html here answered 308 to the extension-less path --
+# the self-rewrite below it never got a look in. Named .txt, there is no asset
+# at the .html path for Pages to normalise, so the rewrite runs and the file is
+# served at the URL Google actually requests.
+/google4fb6a85272b47cc5.html  /google4fb6a85272b47cc5.txt  200
 /sitemap.xml  /sitemap.xml  200
 /robots.txt  /robots.txt  200
