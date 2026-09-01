@@ -1,4 +1,15 @@
 # Static files (must be before SPA fallback handled by CF Pages by default)
-/google4fb6a85272b47cc5.html  /google4fb6a85272b47cc5.html  200
+
+# Google asks for its verification file at the .html path it issued.
+#
+# Pages serves static assets before it reads this file, and it strips .html
+# from any asset that has it -- so while a real google....html sat here, the
+# .html path answered 308 to the extension-less one and the self-rewrite that
+# was meant to force a 200 never got a look in.
+#
+# With the file named .htm there is no asset at the .html path for Pages to
+# normalise, so the rewrite runs. .htm rather than .txt so Google still
+# receives the content type the file was issued as.
+/google4fb6a85272b47cc5.html  /google4fb6a85272b47cc5.htm  200
 /sitemap.xml  /sitemap.xml  200
 /robots.txt  /robots.txt  200
