@@ -3834,6 +3834,21 @@ body {
     text-align: right;
   }
 
+  // Shown only while the page is standing on a finished season. Reads as a
+  // caveat rather than a warning: the numbers under it are sound, they just
+  // belong to the season before this one.
+  &__share-stale {
+    margin: 0 0 8px;
+    padding: 8px 12px;
+    max-width: 68ch;
+    border-left: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
   &__share-note {
     margin: 0;
     max-width: 68ch;

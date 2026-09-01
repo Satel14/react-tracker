@@ -414,6 +414,7 @@
         "unranked": "Unranked",
         "loading": "Reading the latest sample…",
         "unavailable": "The sample is not reachable right now. The rest of this page is unaffected.",
+        "finished": "Season {season} has ended. These are its final numbers — collection for the new season is under way, and the page switches over once it has enough days behind it.",
         "gathering": "Collection for Season {season} has only just started, so no tier has enough observations to publish yet."
       },
       "grandmaster": {
