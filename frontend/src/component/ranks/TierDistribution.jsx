@@ -137,6 +137,12 @@ const TierDistribution = ({ t, load = getRankDistribution, days = 7 }) => {
         })}
       </ol>
 
+      {data.current === false && (
+        <p className="ranks-page__share-stale">
+          {t("pages.ranks.distribution.finished", { season: seasonNumber(data.seasonId) })}
+        </p>
+      )}
+
       <p className="ranks-page__share-note">
         {t("pages.ranks.distribution.sample", {
           accounts: groupDigits(data.accounts),

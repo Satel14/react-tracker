@@ -6,6 +6,7 @@ const {
   readWindow,
   readCoverage,
   isWindowCollected,
+  readLatestSeason,
   __resetTierCensusStore,
 } = require("./pgStore");
 
@@ -207,4 +208,40 @@ test("reports nothing collected when the query fails", async () => {
     await isWindowCollected({ shard: "steam", seasonId: "s", windowDate: "2026-08-30" }),
     false,
   );
+});
+
+// --- which season the table actually holds ---
+//
+// Ranked resets every three months or so. For the first days of a new season
+// the current season's rows are a measurement of everybody being unplaced, so
+// the page falls back to the last season that has something to say -- and this
+// is how it finds it.
+
+test("names the season the newest window belongs to", async () => {
+  const pool = fakePool(() => ({ rows: [{ season_id: "division.bro.official.pc-2018-42" }] }));
+  __setPool(pool);
+
+  assert.equal(await readLatestSeason({ shard: "steam" }), "division.bro.official.pc-2018-42");
+  const asked = pool.calls.find(
+    (call) => /tier_census_observations/.test(call.text) && !/CREATE/.test(call.text)
+  );
+  assert.ok(asked, "no question was asked");
+  assert.deepEqual(asked.params, ["steam"]);
+  assert.match(asked.text, /ORDER BY window_date DESC/);
+});
+
+test("names no season when the table is empty", async () => {
+  __setPool(fakePool(() => ({ rows: [] })));
+  assert.equal(await readLatestSeason({ shard: "steam" }), null);
+});
+
+test("names no season when there is no database", async () => {
+  assert.equal(await readLatestSeason({ shard: "steam" }), null);
+});
+
+// Serving the current season with a thin sample is a worse failure than
+// serving it with a full one, but both beat a 500 on an article.
+test("names no season when the query fails", async () => {
+  __setPool(fakePool(() => { throw new Error("connection terminated unexpectedly"); }));
+  assert.equal(await readLatestSeason({ shard: "steam" }), null);
 });

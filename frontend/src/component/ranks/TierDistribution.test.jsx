@@ -190,3 +190,38 @@ test("asks for nothing at all when there is no sample yet", async () => {
   await screen.findByText(/just started/i);
   expect(rows(container)).toHaveLength(0);
 });
+
+// --- across a season boundary ---
+//
+// Ranked resets every three months. For the first days of a new season the API
+// keeps serving the finished one, because "almost nobody has placed yet" is a
+// true measurement and a misleading answer. The page has to say which season it
+// is looking at rather than pass the old one off as current.
+
+test("says so when it is showing a season that has ended", async () => {
+  const { container } = show({ ...SAMPLE, current: false });
+  await waitFor(() => expect(rows(container).length).toBeGreaterThan(0));
+
+  const note = container.querySelector(".ranks-page__share-stale");
+  expect(note).not.toBeNull();
+  expect(note.textContent).toContain("42");
+  // The numbers are still shown -- a finished season's distribution is the
+  // more meaningful one, it just is not the current one.
+  expect(container.textContent).toContain("31.1%");
+});
+
+test("does not caveat the season being played right now", async () => {
+  const { container } = show({ ...SAMPLE, current: true });
+  await waitFor(() => expect(rows(container).length).toBeGreaterThan(0));
+
+  expect(container.querySelector(".ranks-page__share-stale")).toBeNull();
+});
+
+// An older deploy of the API does not send the flag at all. Silence must not
+// be read as "this season is over".
+test("treats a missing flag as the current season", async () => {
+  const { container } = show(SAMPLE);
+  await waitFor(() => expect(rows(container).length).toBeGreaterThan(0));
+
+  expect(container.querySelector(".ranks-page__share-stale")).toBeNull();
+});

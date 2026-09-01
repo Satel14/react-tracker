@@ -27,10 +27,18 @@ const collected = (over = {}) => ({
   rateLimited: 0, aborted: false, ...over,
 });
 
+const SEASON = "division.bro.official.pc-2018-42";
+
+const coverage = (over = {}) => ({
+  matches: 0, accounts: 0, windows: 0, firstDate: null, lastDate: null, ...over,
+});
+
 const build = (over = {}) => createCensusController({
   collect: async () => collected(),
   readWindow: async () => [],
-  readCoverage: async () => ({ matches: 0, accounts: 0, windows: 0, firstDate: null, lastDate: null }),
+  readCoverage: async () => coverage(),
+  readLatestSeason: async () => null,
+  currentSeason: async () => SEASON,
   token: () => TOKEN,
   ...over,
 });
@@ -217,4 +225,145 @@ test("an ordinary run is not reported as skipped", async () => {
   const res = makeRes();
   await controller.getStatus(authed, res);
   assert.equal(res.body.data.result.skipped, false);
+});
+
+// --- which season the census is about ---
+//
+// It was a hardcoded id with an env override. Ranked resets roughly every
+// three months, and the first reset would have had the collector writing the
+// new season's tiers into the old season's bucket while the page went on
+// serving the old one for ever.
+
+test("collects into the season PUBG says is current", async () => {
+  let options = null;
+  const controller = build({
+    collect: async (o) => { options = o; return collected(); },
+    currentSeason: async () => "division.bro.official.pc-2018-43",
+  });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.equal(options.seasonId, "division.bro.official.pc-2018-43");
+});
+
+// The escape hatch. If PUBG's own catalog is ever wrong about which season is
+// current, this is what fixes it without a deploy.
+test("an explicit override beats the catalog", async () => {
+  const previous = process.env.PUBG_CENSUS_SEASON;
+  process.env.PUBG_CENSUS_SEASON = "division.bro.official.pc-2018-41";
+  try {
+    let options = null;
+    const controller = build({
+      collect: async (o) => { options = o; return collected(); },
+      currentSeason: async () => "division.bro.official.pc-2018-43",
+    });
+
+    await controller.runCensus(authed, makeRes());
+    await controller.__idle();
+
+    assert.equal(options.seasonId, "division.bro.official.pc-2018-41");
+  } finally {
+    if (previous === undefined) delete process.env.PUBG_CENSUS_SEASON;
+    else process.env.PUBG_CENSUS_SEASON = previous;
+  }
+});
+
+// A catalog lookup that fails is not worth an hour of quota. The last known
+// season is wrong for at most one run, and a run is what fixes it.
+test("a catalog that cannot answer does not stop the run", async () => {
+  let options = null;
+  const controller = build({
+    collect: async (o) => { options = o; return collected(); },
+    currentSeason: async () => { throw new Error("PUBG API error: 503"); },
+  });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.ok(options, "the run should still have started");
+  assert.match(options.seasonId, /^division\.bro\.official\.pc-\d{4}-\d+$/);
+});
+
+test("asks the catalog once for the run, not once per player", async () => {
+  let asked = 0;
+  const controller = build({
+    currentSeason: async () => { asked += 1; return SEASON; },
+  });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.equal(asked, 1);
+});
+
+// --- what the page reads across a season boundary ---
+
+test("serves the current season once it has enough days behind it", async () => {
+  const controller = build({
+    currentSeason: async () => "division.bro.official.pc-2018-43",
+    readCoverage: async () => coverage({ windows: 4, matches: 500, firstDate: "2026-09-10", lastDate: "2026-09-13" }),
+    readLatestSeason: async () => "division.bro.official.pc-2018-42",
+  });
+
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+
+  assert.equal(res.body.data.seasonId, "division.bro.official.pc-2018-43");
+  assert.equal(res.body.data.current, true);
+});
+
+// The first days of a season are a real measurement of a transient state:
+// almost nobody has placed. As an answer to "where do players sit" it misleads,
+// so the finished season stands until the new one has three days behind it.
+test("a season too new to mean anything falls back to the last one with data", async () => {
+  const asked = [];
+  const controller = build({
+    currentSeason: async () => "division.bro.official.pc-2018-43",
+    readCoverage: async ({ seasonId }) => {
+      asked.push(seasonId);
+      return seasonId === "division.bro.official.pc-2018-43"
+        ? coverage({ windows: 1, matches: 90 })
+        : coverage({ windows: 7, matches: 900, firstDate: "2026-09-02", lastDate: "2026-09-08" });
+    },
+    readLatestSeason: async () => "division.bro.official.pc-2018-42",
+    readWindow: async () => [{ matchId: "m1", tier: "gold" }],
+  });
+
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+
+  assert.equal(res.body.data.seasonId, "division.bro.official.pc-2018-42");
+  assert.equal(res.body.data.current, false, "the page has to be able to say so");
+  assert.deepEqual(asked, ["division.bro.official.pc-2018-43", "division.bro.official.pc-2018-42"]);
+});
+
+test("does not fall back when there is nothing older to fall back to", async () => {
+  const controller = build({
+    currentSeason: async () => "division.bro.official.pc-2018-43",
+    readCoverage: async () => coverage({ windows: 1 }),
+    readLatestSeason: async () => null,
+  });
+
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+
+  assert.equal(res.body.data.seasonId, "division.bro.official.pc-2018-43");
+  assert.equal(res.body.data.current, true);
+});
+
+test("does not fall back onto the season it is already serving", async () => {
+  let coverageCalls = 0;
+  const controller = build({
+    currentSeason: async () => SEASON,
+    readCoverage: async () => { coverageCalls += 1; return coverage({ windows: 2 }); },
+    readLatestSeason: async () => SEASON,
+  });
+
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+
+  assert.equal(res.body.data.seasonId, SEASON);
+  assert.equal(res.body.data.current, true);
+  assert.equal(coverageCalls, 1, "the same season must not be read twice");
 });

@@ -53,6 +53,17 @@ const INSERT_SQL = `
 // PUBG's sample lags a day and a run can be missed, so counting back from
 // CURRENT_DATE would quietly return six days of data when asked for seven --
 // and the page prints that number as part of its methodology.
+// Which season the table has most recently heard from. For the first days of a
+// new season its own rows only say that nobody has placed yet, so the page
+// falls back to the last season that has something to report.
+const SELECT_LATEST_SEASON_SQL = `
+  SELECT season_id
+  FROM tier_census_observations
+  WHERE shard = $1
+  ORDER BY window_date DESC
+  LIMIT 1
+`;
+
 // Cheap enough to run before every collection: EXISTS stops at the first row
 // and the window index already leads with (shard, season_id, window_date).
 const SELECT_COLLECTED_SQL = `
@@ -163,6 +174,18 @@ async function isWindowCollected({ shard, seasonId, windowDate }) {
   }
 }
 
+async function readLatestSeason({ shard }) {
+  if (!isConfigured()) return null;
+  try {
+    await ensureTable();
+    const result = await getPool().query(SELECT_LATEST_SEASON_SQL, [shard]);
+    return result?.rows?.[0]?.season_id ?? null;
+  } catch (error) {
+    console.log(`[census] could not read the latest season: ${error.message}`);
+    return null;
+  }
+}
+
 async function readCoverage({ shard, seasonId, days }) {
   if (!isConfigured()) return { ...EMPTY_COVERAGE };
   try {
@@ -192,5 +215,6 @@ module.exports = {
   readWindow,
   readCoverage,
   isWindowCollected,
+  readLatestSeason,
   __resetTierCensusStore,
 };
