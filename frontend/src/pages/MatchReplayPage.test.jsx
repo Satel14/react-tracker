@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import { MemoryRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import MatchReplayPage from "./MatchReplayPage";
 import { getMatchAnalysis, getMatchReplay } from "../api/player";
 
@@ -32,6 +32,22 @@ vi.mock("../api/player", () => ({
 const renderAt = (path) =>
   render(
     <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/match/:platform/:matchId/replay" element={<MatchReplayPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+// The tab lives in the URL, so the URL is what several of these tests assert on.
+const UrlProbe = () => {
+  const { pathname, search } = useLocation();
+  return <span data-testid="url">{pathname + search}</span>;
+};
+
+const renderAtWithUrl = (path) =>
+  render(
+    <MemoryRouter initialEntries={[path]}>
+      <UrlProbe />
       <Routes>
         <Route path="/match/:platform/:matchId/replay" element={<MatchReplayPage />} />
       </Routes>
@@ -120,6 +136,72 @@ test("switching to the Scoreboard tab loads and renders analysis", async () => {
   expect(await screen.findByText("ScoreboardGuy")).toBeInTheDocument();
 });
 
+test("opens the scoreboard straight from the URL, so a lobby link can be shared", async () => {
+  renderAt("/match/steam/m1/replay?accountId=account.me&tab=scoreboard");
+  expect(await screen.findByText("ScoreboardGuy")).toBeInTheDocument();
+});
+
+test("falls back to the replay tab when the URL names a tab that does not exist", async () => {
+  renderAt("/match/steam/m1/replay?tab=nope");
+  // The map only renders while the replay tab is the active one.
+  expect(await screen.findByRole("img", { name: /erangel/i })).toBeInTheDocument();
+});
+
+test("mirrors the active tab in the URL so the view can be shared", async () => {
+  renderAtWithUrl("/match/steam/m1/replay?accountId=account.me");
+  await screen.findByRole("img", { name: /erangel/i });
+  const url = () => screen.getByTestId("url").textContent;
+
+  fireEvent.click(screen.getByRole("tab", { name: "pages.match.tabScoreboard" }));
+  await screen.findByText("ScoreboardGuy");
+  expect(url()).toContain("tab=scoreboard");
+  // The params the page was opened with have to survive the rewrite.
+  expect(url()).toContain("accountId=account.me");
+
+  fireEvent.click(screen.getByRole("tab", { name: "pages.match.tabReplay" }));
+  expect(url()).toContain("tab=replay");
+});
+
+test("shows the scoreboard from a deep link even when the replay leg fails", async () => {
+  // The scoreboard is built from the match record, the replay from telemetry:
+  // two independent legs. A lobby link that dies because the replay died would
+  // be reporting a failure that has nothing to do with what it asked for.
+  getMatchReplay.mockResolvedValueOnce({ data: null });
+  renderAt("/match/steam/m1/replay?accountId=account.me&tab=scoreboard");
+
+  expect(await screen.findByText("ScoreboardGuy")).toBeInTheDocument();
+});
+
+test("keeps the replay's own failure inside the replay tab", async () => {
+  getMatchReplay.mockResolvedValueOnce({ data: null });
+  renderAt("/match/steam/m1/replay?accountId=account.me");
+
+  expect(await screen.findByText("pages.replay.errorUnavailable")).toBeInTheDocument();
+  // Still navigable: the other tabs do not need the replay payload.
+  expect(screen.getByRole("tab", { name: "pages.match.tabScoreboard" })).toBeInTheDocument();
+});
+
+test("every tab the page offers can be deep-linked", async () => {
+  // The URL only knows the tab keys it was told about, so a tab added to the
+  // page but not registered would silently refuse to open from a link.
+  renderAtWithUrl("/match/steam/m1/replay?accountId=account.me");
+  await screen.findByRole("img", { name: /erangel/i });
+  const keys = [...document.querySelectorAll(".ant-tabs-tab")].map((n) => n.getAttribute("data-node-key"));
+  expect(keys.length).toBeGreaterThan(1);
+
+  // Clicking the tab that is already active fires no change, so the one the
+  // page opened on is visited last, once something else has taken over.
+  const opened = document.querySelector(".ant-tabs-tab-active")?.getAttribute("data-node-key");
+  for (const key of [...keys.filter((k) => k !== opened), opened]) {
+    fireEvent.click(document.querySelector(`.ant-tabs-tab[data-node-key="${key}"]`));
+    expect(screen.getByTestId("url").textContent).toContain(`tab=${key}`);
+    // Writing the key is the easy half and happens for any key at all. What
+    // makes it a deep link is that the page reads it back and honours it, so
+    // this is the assertion that catches a pane missing from TAB_KEYS.
+    expect(document.querySelector(".ant-tabs-tab-active")?.getAttribute("data-node-key")).toBe(key);
+  }
+});
+
 test("re-fetches analysis when the match identity changes while a non-replay tab is active", async () => {
   getMatchAnalysis.mockImplementation((id) =>
     Promise.resolve({
@@ -137,7 +219,10 @@ test("re-fetches analysis when the match identity changes while a non-replay tab
     const navigate = useNavigate();
     return (
       <>
-        <button onClick={() => navigate("/match/steam/m2/replay?accountId=account.me")}>go-m2</button>
+        {/* Carries the tab because the URL is what decides it: a link without
+            one opens the replay, which is the right default for a bare link
+            but would take this test off the tab it is about. */}
+        <button onClick={() => navigate("/match/steam/m2/replay?accountId=account.me&tab=scoreboard")}>go-m2</button>
         <Routes>
           <Route path="/match/:platform/:matchId/replay" element={<MatchReplayPage />} />
         </Routes>

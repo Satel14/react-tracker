@@ -45,6 +45,11 @@ const LAYER_LABEL = {
 };
 const INITIAL = { loading: false, error: null, data: null };
 
+// The active tab lives in the query string so a link can point at one -- the
+// Recent Matches card links straight to the scoreboard. Anything not on this
+// list opens the replay rather than handing Tabs a key it has no pane for.
+const TAB_KEYS = ["replay", "scoreboard", "kills", "damage", "timeline"];
+
 function reducer(state, action) {
   switch (action.type) {
     case "start": return { ...state, loading: true, error: null };
@@ -56,7 +61,7 @@ function reducer(state, action) {
 
 const MatchReplayPage = ({ t }) => {
   const { platform, matchId } = useParams();
-  const [search] = useSearchParams();
+  const [search, setSearch] = useSearchParams();
   const accountId = search.get("accountId");
   const playerName = search.get("playerName");
   const backTo =
@@ -71,7 +76,15 @@ const MatchReplayPage = ({ t }) => {
   const tRef = useRef(t);
   tRef.current = t;
   const [focusedAccountId, setFocusedAccountId] = useState(null);
-  const [tab, setTab] = useState("replay");
+  const urlTab = search.get("tab");
+  const tab = TAB_KEYS.includes(urlTab) ? urlTab : "replay";
+  // Replaces rather than pushes: five tabs would otherwise bury the profile the
+  // viewer came from under a stack of tab switches.
+  const setTab = (next) => {
+    const params = new URLSearchParams(search);
+    params.set("tab", next);
+    setSearch(params, { replace: true });
+  };
   const [analysis, setAnalysis] = useState({ loading: false, error: null, data: null });
   const [wantAnalysis, setWantAnalysis] = useState(false);
   const stageRef = useRef(null);
@@ -328,9 +341,23 @@ const MatchReplayPage = ({ t }) => {
     return child(analysis.data);
   };
 
-  const tabItems = data
-    ? [
-        { key: "replay", label: t("pages.match.tabReplay"), children: tab === "replay" ? renderReplay() : null },
+  // The replay's loading and error states belong to the replay pane, not to the
+  // page: the scoreboard and the kill feed are built from the match record while
+  // the replay is decoded from telemetry, so they are separate legs that fail
+  // separately. Gating the whole page on the replay made a link straight to the
+  // scoreboard wait for a telemetry decode it never displays -- and report the
+  // replay's failure as if the scoreboard were the thing that broke.
+  const renderReplayPane = () => {
+    if (loading && !data) {
+      return <Skeleton variant="block" label={t("pages.replay.loading")} className="match-replay__loading" />;
+    }
+    if (error) return <Alert type="error" message={error} showIcon />;
+    if (!data) return null;
+    return renderReplay();
+  };
+
+  const tabItems = [
+        { key: "replay", label: t("pages.match.tabReplay"), children: tab === "replay" ? renderReplayPane() : null },
         {
           key: "scoreboard",
           label: t("pages.match.tabScoreboard"),
@@ -362,8 +389,7 @@ const MatchReplayPage = ({ t }) => {
             <CombatTimeline timeline={a.timeline} focalPresent={!!a.focalAccountId} t={t} />
           )),
         },
-      ]
-    : [];
+  ];
 
   return (
     <div className="match-replay">
@@ -371,13 +397,7 @@ const MatchReplayPage = ({ t }) => {
       <h2 className="match-replay__title">
         {t("pages.match.title")}{data ? ` — ${data.mapName}` : ""}
       </h2>
-      {loading && !data ? (
-        <Skeleton variant="block" label={t("pages.replay.loading")} className="match-replay__loading" />
-      ) : error ? (
-        <Alert type="error" message={error} showIcon />
-      ) : data ? (
-        <Tabs activeKey={tab} onChange={setTab} items={tabItems} className="match-replay__tabs" />
-      ) : null}
+      <Tabs activeKey={tab} onChange={setTab} items={tabItems} className="match-replay__tabs" />
     </div>
   );
 };

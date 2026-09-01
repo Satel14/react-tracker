@@ -23,7 +23,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { getPlayerData, getPlayerReports, getPlayerExtras, prefetchMatchReplay } from "../api/player";
 import { resolveAbsoluteApiUrl } from "../api/config";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
-import { resolvePreferredPlayerName } from "../helpers/playerIdentity";
+import { isAccountIdentifier, resolvePreferredPlayerName } from "../helpers/playerIdentity";
 import { profilePath, profilePathByName } from "../helpers/profileLink";
 import { mergeProfileExtras } from "../helpers/playerExtras";
 import { getCurrentLocale } from "../helpers/locale";
@@ -694,6 +694,16 @@ const PlayerPage = ({ t }) => {
     });
     return Array.from(map.values()).sort((a, b) => b.shared - a.shared || b.totalKills - a.totalKills);
   })();
+  // PUBG never says who queued together: the roster is the in-game squad, fill
+  // included, and neither the match record nor its telemetry carries a party
+  // id. A squad-mate seen in more than one of these matches queued with the
+  // player; a one-off is fill. A bot can't be in a lobby party, whatever its id
+  // does across matches.
+  const partyIds = new Set(
+    squadAggregates
+      .filter((mate) => mate.shared > 1 && isAccountIdentifier(mate.accountId))
+      .map((mate) => mate.accountId)
+  );
   const banLabel = getBanLabel(profile?.banType);
   const hasBanWarning = profile?.banType && profile.banType !== "Innocent";
 
@@ -1143,6 +1153,13 @@ const PlayerPage = ({ t }) => {
       return renderEmptyCard("Recent Matches", "No recent match history returned for this player.");
     }
 
+    // Written once per card rather than per link: both match links carry the
+    // same identity, and only the "/match/..." root has to stay a literal in
+    // the source for navigationTargets.test.js to read it.
+    const matchQuery =
+      `?accountId=${encodeURIComponent(data?.platformInfo?.platformUserId || "")}` +
+      `&playerName=${encodeURIComponent(data?.platformInfo?.platformUserHandle || gameId || "")}`;
+
     return (
       <section className="player-card">
         <div className="player-card__head">
@@ -1175,6 +1192,7 @@ const PlayerPage = ({ t }) => {
           {matchItems.map((match) => {
             const placeMeta = getPlacementMeta(match.placement);
             const isRanked = match.matchType === "competitive";
+            const mates = (Array.isArray(match.teammates) ? match.teammates : []).filter((tm) => partyIds.has(tm.accountId));
             return (
             <article className={`player-match-item ${match.isWin ? "player-match-item--win" : ""}`} key={match.id}>
               <div className="player-match-item__main">
@@ -1204,16 +1222,66 @@ const PlayerPage = ({ t }) => {
                 {isRanked ? renderRpCell(match) : null}
               </div>
 
-              <Link
-                className="player-match-item__replay"
-                to={`/match/${platform}/${encodeURIComponent(match.id)}/replay?accountId=${encodeURIComponent(data?.platformInfo?.platformUserId || "")}&playerName=${encodeURIComponent(data?.platformInfo?.platformUserHandle || gameId || "")}`}
-                onMouseEnter={() => scheduleReplayWarmup(match.id)}
-                onMouseLeave={cancelReplayWarmup}
-                onFocus={() => warmReplay(match.id)}
-                onTouchStart={() => warmReplay(match.id)}
-              >
-                {t("pages.replay.open")}
-              </Link>
+              {mates.length ? (
+                <div className="player-match-teammates">
+                  <span className="player-match-teammates__label">
+                    {t("pages.player.matches.party")}
+                    <Tooltip title={t("pages.player.matches.partyHint")} mouseEnterDelay={0} trigger={["hover", "focus"]}>
+                      <QuestionCircleOutlined
+                        className="player-match-teammates__hint"
+                        aria-label={t("pages.player.matches.partyHintLabel")}
+                        tabIndex={0}
+                      />
+                    </Tooltip>
+                  </span>
+                  <span className="player-match-teammates__names">
+                    {mates.map((tm) => {
+                      // Hoisted rather than called inline so that
+                      // navigationTargets.test.js can vouch for it by name,
+                      // exactly as the squad card does.
+                      const to = profilePath(platform, tm.name, tm.accountId);
+                      const hint = t("pages.player.matches.partyMateHint", {
+                        name: tm.name,
+                        kills: tm.kills,
+                        damage: tm.damage,
+                      });
+                      return (
+                        <span
+                          className={`player-match-teammates__mate${to ? "" : " player-match-teammates__mate--plain"}`}
+                          key={tm.accountId || tm.name}
+                        >
+                          {/* Ids are available here, so the bot guard applies:
+                              a squad filled by AI has no profiles to open. */}
+                          {to ? (
+                            <Link className="profile-link" to={to} title={hint}>{tm.name}</Link>
+                          ) : (
+                            <span title={hint}>{tm.name}</span>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </span>
+                </div>
+              ) : null}
+
+              <div className="player-match-item__links">
+                <Link
+                  className="player-match-item__lobby"
+                  to={`/match/${platform}/${encodeURIComponent(match.id)}/replay${matchQuery}&tab=scoreboard`}
+                >
+                  {t("pages.player.matches.lobby")}
+                </Link>
+                <Link
+                  className="player-match-item__replay"
+                  to={`/match/${platform}/${encodeURIComponent(match.id)}/replay${matchQuery}`}
+                  onMouseEnter={() => scheduleReplayWarmup(match.id)}
+                  onMouseLeave={cancelReplayWarmup}
+                  onFocus={() => warmReplay(match.id)}
+                  onTouchStart={() => warmReplay(match.id)}
+                >
+                  {t("pages.replay.open")}
+                </Link>
+              </div>
             </article>
             );
           })}

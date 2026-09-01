@@ -1533,6 +1533,78 @@ body {
         }
       }
 
+      // A sibling of .player-match-stats, never a cell inside it: that grid's
+      // column count is hard-wired here and in three media queries, so a
+      // seventh child would land in the wrong place at every width.
+      .player-match-teammates {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 8px;
+        min-width: 0;
+
+        &__label {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          color: var(--text-muted);
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.55px;
+        }
+
+        &__hint {
+          font-size: 11px;
+          color: var(--text-muted);
+          cursor: help;
+        }
+
+        &__names {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 2px 6px;
+          min-width: 0;
+        }
+
+        &__mate {
+          font-size: 12px;
+          color: var(--text-strong);
+
+          // Separator in CSS, so a name is one text node and stays greppable
+          // by tests and by the browser's own find.
+          + .player-match-teammates__mate::before {
+            content: "·";
+            margin-right: 6px;
+            color: var(--text-muted);
+          }
+
+          // .profile-link inherits its colour and underlines on hover only,
+          // which is right where names are already tinted by team -- but here
+          // every mate is the same colour, so a bot in a squad-fill lobby would
+          // be indistinguishable from the one name that opens a profile.
+          .profile-link {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-underline-offset: 2px;
+          }
+        }
+
+        // No profile behind it: a bot, or a name PUBG never resolved.
+        &__mate--plain {
+          color: var(--text-muted);
+        }
+      }
+
+      .player-match-item__links {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+
       @media (max-width: 1100px) {
         .player-card--header {
           flex-direction: column;
@@ -3158,7 +3230,8 @@ body {
   &--na { background: #3a3e58; }
 }
 
-.player-match-item__replay {
+.player-match-item__replay,
+.player-match-item__lobby {
   margin-top: 8px;
   display: inline-flex;
   align-items: center;

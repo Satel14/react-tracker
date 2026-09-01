@@ -7,7 +7,7 @@ import EmptyState from "../EmptyState";
 
 const MatchScoreboard = ({ scoreboard, platform, t }) => {
   const teams = scoreboard?.teams || [];
-  if (!teams.length) return <EmptyState className="match-scoreboard__empty">{t("pages.match.error")}</EmptyState>;
+  if (!teams.length) return <EmptyState className="match-scoreboard__empty">{t("pages.match.emptyScoreboard")}</EmptyState>;
 
   return (
     <div className="match-scoreboard">
