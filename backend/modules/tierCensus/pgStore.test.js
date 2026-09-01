@@ -7,6 +7,7 @@ const {
   readCoverage,
   isWindowCollected,
   readLatestSeason,
+  readRankPoints,
   __resetTierCensusStore,
 } = require("./pgStore");
 
@@ -244,4 +245,54 @@ test("names no season when there is no database", async () => {
 test("names no season when the query fails", async () => {
   __setPool(fakePool(() => { throw new Error("connection terminated unexpectedly"); }));
   assert.equal(await readLatestSeason({ shard: "steam" }), null);
+});
+
+// --- the rank points behind a standing ---
+//
+// rank_point has been collected since the first run and read by nothing. The
+// player page needs it to say where a visitor sits, so this is the one query
+// that looks at it.
+
+test("reads one rank point per account over the window", async () => {
+  const pool = fakePool(() => ({ rows: [{ rank_point: 2400 }, { rank_point: 1850 }] }));
+  __setPool(pool);
+
+  assert.deepEqual(
+    await readRankPoints({ shard: "steam", seasonId: "s", days: 7 }),
+    [2400, 1850],
+  );
+
+  const asked = pool.calls.find(
+    (call) => /rank_point/.test(call.text) && !/CREATE|INSERT/.test(call.text)
+  );
+  assert.ok(asked, "no question was asked");
+  assert.deepEqual(asked.params, ["steam", "s", 7]);
+  // Same shape as the tier window: one row per account, its most recent
+  // reading, counted back from the newest sample held rather than from today.
+  assert.match(asked.text, /DISTINCT ON \(account_id\)/);
+  assert.match(asked.text, /MAX\(window_date\)/);
+});
+
+// A player who has not queued ranked is kept as a row with a null tier, and
+// carries no rank point. Those rows must not reach the table -- the caller
+// filters too, but a query that hands back nulls invites the mistake.
+test("leaves out accounts with no rank point", async () => {
+  __setPool(fakePool(() => ({ rows: [{ rank_point: 2400 }] })));
+  const pool = fakePool(() => ({ rows: [] }));
+  __setPool(pool);
+
+  await readRankPoints({ shard: "steam", seasonId: "s", days: 7 });
+  const asked = pool.calls.find(
+    (call) => /rank_point/.test(call.text) && !/CREATE|INSERT/.test(call.text)
+  );
+  assert.match(asked.text, /rank_point IS NOT NULL/);
+});
+
+test("reads nothing when there is no database", async () => {
+  assert.deepEqual(await readRankPoints({ shard: "steam", seasonId: "s", days: 7 }), []);
+});
+
+test("reads nothing when the query fails", async () => {
+  __setPool(fakePool(() => { throw new Error("connection terminated unexpectedly"); }));
+  assert.deepEqual(await readRankPoints({ shard: "steam", seasonId: "s", days: 7 }), []);
 });

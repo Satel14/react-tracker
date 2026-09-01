@@ -38,6 +38,7 @@ const build = (over = {}) => createCensusController({
   readWindow: async () => [],
   readCoverage: async () => coverage(),
   readLatestSeason: async () => null,
+  readRankPoints: async () => [],
   currentSeason: async () => SEASON,
   token: () => TOKEN,
   ...over,
@@ -366,4 +367,67 @@ test("does not fall back onto the season it is already serving", async () => {
   assert.equal(res.body.data.seasonId, SEASON);
   assert.equal(res.body.data.current, true);
   assert.equal(coverageCalls, 1, "the same season must not be read twice");
+});
+
+// --- the RP table the player page reads ---
+
+const ladder = (n = 400) => Array.from({ length: n }, (_, i) => 1000 + i * 6);
+
+test("ships the RP standing at each whole percentile", async () => {
+  const controller = build({
+    readCoverage: async () => coverage({ windows: 7, matches: 300 }),
+    readRankPoints: async () => ladder(),
+  });
+
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+
+  const table = res.body.data.rpPercentiles;
+  assert.equal(table.length, 101);
+  assert.ok(table[0] > table[100], "index 0 must be the top of the ladder");
+});
+
+test("asks for the rank points of the season it is serving", async () => {
+  const asked = [];
+  const controller = build({
+    currentSeason: async () => "division.bro.official.pc-2018-43",
+    readCoverage: async ({ seasonId }) =>
+      seasonId.endsWith("43") ? coverage({ windows: 1 }) : coverage({ windows: 7 }),
+    readLatestSeason: async () => "division.bro.official.pc-2018-42",
+    readRankPoints: async (query) => { asked.push(query); return ladder(); },
+  });
+
+  await controller.getDistribution({ query: { days: 7 } }, makeRes());
+
+  // The fallback season, not the current one: a standing has to be measured
+  // against the same ladder the page is showing.
+  assert.deepEqual(asked, [{ shard: "steam", seasonId: "division.bro.official.pc-2018-42", days: 7 }]);
+});
+
+// A sample too thin to cut into percentiles ships no table at all rather than
+// one built from a handful of people.
+test("ships no table when there is not enough to cut", async () => {
+  const controller = build({
+    readCoverage: async () => coverage({ windows: 7 }),
+    readRankPoints: async () => [2400, 2500, 2600],
+  });
+
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+  assert.equal(res.body.data.rpPercentiles, null);
+});
+
+test("survives a store that cannot answer for the rank points", async () => {
+  const controller = build({
+    readCoverage: async () => coverage({ windows: 7 }),
+    readRankPoints: async () => { throw new Error("connection terminated unexpectedly"); },
+  });
+
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+
+  // The tier bars are the point of this endpoint; the RP table is an extra.
+  assert.equal(res.body.status, 200);
+  assert.equal(res.body.data.rpPercentiles, null);
+  assert.ok(Array.isArray(res.body.data.tiers));
 });

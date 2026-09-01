@@ -3,10 +3,11 @@ const { collect } = require("../modules/tierCensus/collector");
 const { createRunner } = require("../modules/tierCensus/runner");
 const {
   recordObservations, readWindow, readCoverage, isWindowCollected, readLatestSeason,
+  readRankPoints,
 } = require("../modules/tierCensus/pgStore");
 const { getCurrentSeasonId } = require("../modules/getSeasonCatalog");
 const { estimateIcc, PER_MATCH } = require("../modules/tierCensus/sampling");
-const { tierShare } = require("../modules/tierCensus/stats");
+const { tierShare, rpThresholds } = require("../modules/tierCensus/stats");
 
 const SHARD = "steam";
 
@@ -53,6 +54,7 @@ const createCensusController = ({
   readWindow: doReadWindow = readWindow,
   readCoverage: doReadCoverage = readCoverage,
   readLatestSeason: doReadLatestSeason = readLatestSeason,
+  readRankPoints: doReadRankPoints = readRankPoints,
   windowCollected = isWindowCollected,
   currentSeason = () => getCurrentSeasonId(SHARD),
   token = () => process.env.CENSUS_TOKEN,
@@ -149,6 +151,15 @@ const createCensusController = ({
 
       const rows = await doReadWindow({ shard: SHARD, seasonId: season, days });
 
+      // An extra, not the point of this endpoint: the tier bars must still ship
+      // if the rank points cannot be read.
+      let rpPercentiles = null;
+      try {
+        rpPercentiles = rpThresholds(await doReadRankPoints({ shard: SHARD, seasonId: season, days }));
+      } catch (error) {
+        console.log(`[census] could not build the RP table: ${error.message}`);
+      }
+
       // Tiers come from what was measured, including the untiered bucket -- a
       // player who has not queued ranked this season is a real part of the
       // denominator, not a gap to be quietly dropped.
@@ -183,6 +194,10 @@ const createCensusController = ({
           firstDate: coverage.firstDate,
           lastDate: coverage.lastDate,
           perMatch: PER_MATCH,
+          // The RP standing at each whole percentile, index 0 the top of the
+          // ladder. Lets a player page place a visitor without a query of its
+          // own. Null when the sample is too thin to cut.
+          rpPercentiles,
           tiers,
         },
       });

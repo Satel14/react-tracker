@@ -73,6 +73,22 @@ const SELECT_COLLECTED_SQL = `
   ) AS collected
 `;
 
+// The rank points behind a standing. Same shape as the tier window -- one row
+// per account, its most recent reading, counted back from the newest sample
+// held -- but it drops the accounts that have no rank point rather than hand
+// back nulls for the caller to remember to filter.
+const SELECT_RANK_POINTS_SQL = `
+  SELECT DISTINCT ON (account_id) rank_point
+  FROM tier_census_observations
+  WHERE shard = $1 AND season_id = $2
+    AND rank_point IS NOT NULL
+    AND window_date > (
+      SELECT MAX(window_date) FROM tier_census_observations
+      WHERE shard = $1 AND season_id = $2
+    ) - $3::int
+  ORDER BY account_id, window_date DESC
+`;
+
 const SELECT_WINDOW_SQL = `
   SELECT DISTINCT ON (account_id) match_id, tier
   FROM tier_census_observations
@@ -186,6 +202,18 @@ async function readLatestSeason({ shard }) {
   }
 }
 
+async function readRankPoints({ shard, seasonId, days }) {
+  if (!isConfigured()) return [];
+  try {
+    await ensureTable();
+    const result = await getPool().query(SELECT_RANK_POINTS_SQL, [shard, seasonId, days]);
+    return (result?.rows ?? []).map((row) => row.rank_point);
+  } catch (error) {
+    console.log(`[census] could not read the rank points: ${error.message}`);
+    return [];
+  }
+}
+
 async function readCoverage({ shard, seasonId, days }) {
   if (!isConfigured()) return { ...EMPTY_COVERAGE };
   try {
@@ -216,5 +244,6 @@ module.exports = {
   readCoverage,
   isWindowCollected,
   readLatestSeason,
+  readRankPoints,
   __resetTierCensusStore,
 };

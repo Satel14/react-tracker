@@ -749,6 +749,25 @@ body {
         gap: 8px;
       }
 
+      // A footnote on the RP figure above, not a second headline, so it is
+      // muted and underlined rather than given a colour of its own.
+      .player-rank-percentile {
+        margin: 6px 0 0;
+        font-size: 12px;
+        line-height: 1.5;
+        text-align: center;
+
+        a {
+          color: var(--text-muted);
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
+
+        a:hover {
+          color: var(--text);
+        }
+      }
+
       .player-rank-progress__path {
         color: #a8a7a0;
         font-size: 11px;
