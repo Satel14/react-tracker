@@ -37,8 +37,11 @@ const INSERT_SQL = `
   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
 `;
 
+// GREATEST, not assignment: a reading captured earlier can be written later,
+// and attribution measures every interval from last_seen_at, so a rewound value
+// makes an interval end before it starts.
 const TOUCH_SQL = `
-  UPDATE rank_point_snapshots SET last_seen_at = $2 WHERE id = $1
+  UPDATE rank_point_snapshots SET last_seen_at = GREATEST(last_seen_at, $2) WHERE id = $1
 `;
 
 const TRIM_SQL = `

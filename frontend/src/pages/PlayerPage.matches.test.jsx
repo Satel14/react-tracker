@@ -173,7 +173,7 @@ test("starts loading replay data when the user shows intent to open it", async (
   expect(prefetchMatchReplay).toHaveBeenCalledWith("m-1", "steam", "account.PlayerA", "PlayerA");
 });
 
-test("keeps grouped RP at a dash instead of presenting it as a per-match value", async () => {
+test("states a grouped gain in words, and keeps the rows themselves at a dash", async () => {
   const since = Date.parse("2026-08-26T18:00:00Z");
   const group = { kind: "group", value: 37, matches: 3 };
   const card = await renderMatchesCard(
@@ -181,17 +181,64 @@ test("keeps grouped RP at a dash instead of presenting it as a per-match value",
     { rankPoints: { ...group, since } }
   );
 
-  expect(card.querySelector(".player-rp-summary")).toBeNull();
+  expect(card.querySelector(".player-rp-summary")).toHaveTextContent(
+    "Gained 37 RP over these 3 ranked matches"
+  );
   expect(within(card).getAllByText("—")).toHaveLength(3);
 
   const tooltip = await hoverHint(rowsOf(card)[0]);
   expect(tooltip).toHaveTextContent("Part of +37 RP across 3 ranked matches.");
 });
 
-test("does not present an unattributed RP adjustment as a per-match value", async () => {
+test("says lost, not minus, when the session went down", async () => {
+  const group = { kind: "group", value: -182, matches: 8 };
+  const card = await renderMatchesCard(
+    Array.from({ length: 8 }, (_, i) => matchItem({ id: `m${i}`, rpDelta: group })),
+    { rankPoints: { ...group, since: Date.parse("2026-09-01T13:52:46Z") } }
+  );
+
+  const line = card.querySelector(".player-rp-summary");
+  expect(line).toHaveTextContent("Lost 182 RP over these 8 ranked matches");
+  expect(line.textContent).not.toContain("-182");
+});
+
+test("names the full denominator when the card shows only part of the group", async () => {
+  // PUBG counted 12 ranked matches in the window; the card only ever lists 8.
+  const group = { kind: "group", value: -60, matches: 12 };
+  const card = await renderMatchesCard(
+    Array.from({ length: 8 }, (_, i) => matchItem({ id: `m${i}`, rpDelta: group })),
+    { rankPoints: { ...group, since: Date.parse("2026-09-01T13:52:46Z") } }
+  );
+
+  expect(card.querySelector(".player-rp-summary")).toHaveTextContent(
+    "Lost 60 RP over 12 ranked matches, 8 of them shown here"
+  );
+});
+
+test("a session that ended level says so rather than showing a zero", async () => {
+  const group = { kind: "group", value: 0, matches: 2 };
+  const card = await renderMatchesCard(
+    [matchItem({ id: "a", rpDelta: group }), matchItem({ id: "b", rpDelta: group })],
+    { rankPoints: { ...group, since: Date.parse("2026-09-01T13:52:46Z") } }
+  );
+
+  expect(card.querySelector(".player-rp-summary")).toHaveTextContent(
+    "No RP change over these 2 ranked matches"
+  );
+});
+
+test("explains RP lost without a ranked match as decay, and puts it on no row", async () => {
   const card = await renderMatchesCard([matchItem({ id: "n", matchType: "official" })], {
     rankPoints: { kind: "adjustment", value: -100, matches: 0, since: Date.parse("2026-08-20T18:00:00Z") },
   });
+  const line = card.querySelector(".player-rp-summary");
+  expect(line).toHaveTextContent("Lost 100 RP without playing a ranked match");
+  expect(line).toHaveTextContent("rank decay");
+  expect(card.querySelectorAll(".player-rp-delta")).toHaveLength(0);
+});
+
+test("carries no summary line when every ranked row already shows its own number", async () => {
+  const card = await renderMatchesCard([matchItem({ id: "e", rpDelta: { kind: "exact", value: 23 } })]);
   expect(card.querySelector(".player-rp-summary")).toBeNull();
 });
 

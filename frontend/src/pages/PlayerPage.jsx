@@ -30,6 +30,7 @@ import { getCurrentLocale } from "../helpers/locale";
 import { classifyPlayerError } from "../helpers/playerError";
 import { resolveHistoryCandidate } from "../helpers/playerHistory";
 import { statNumber, statDisplay } from "../helpers/playerStats";
+import { pluralUa } from "../helpers/pluralUa";
 import openNotification from "../component/Notification";
 import Skeleton from "../component/Skeleton";
 import RankPercentile from "../component/ranks/RankPercentile";
@@ -223,6 +224,43 @@ const RP_TOOLTIP_KEYS = {
   group: "pages.player.matches.rpTooltipGroup",
   unattributed: "pages.player.matches.rpTooltipUnattributed",
   pending: "pages.player.matches.rpTooltipPending",
+};
+
+// The group total is the only number this feature can produce for a normal
+// session, so it has to be readable on its own: a verb rather than a sign, an
+// unsigned number, and the denominator named in the sentence. Method stays on
+// the per-row hint.
+const RP_MATCH_FORMS = ["рейтинговий матч", "рейтингові матчі", "рейтингових матчів"];
+
+const rpSummaryLine = (rankPoints, shown, t) => {
+  if (!rankPoints) return null;
+  const { kind, value, matches, since } = rankPoints;
+  const amount = Math.abs(Number(value) || 0);
+  const direction = Number(value) > 0 ? "Gained" : Number(value) < 0 ? "Lost" : "Flat";
+
+  if (kind === "adjustment") {
+    if (!amount) return null;
+    return {
+      kind,
+      text: t(`pages.player.matches.rpSummaryDecay${direction === "Flat" ? "Lost" : direction}`, {
+        value: amount,
+        since: formatMatchDate(since),
+      }),
+    };
+  }
+
+  if (kind !== "group") return null;
+  const counted = Number(matches) || 0;
+  const partial = shown > 0 && counted > shown;
+  return {
+    kind,
+    text: t(`pages.player.matches.rpSummary${direction}${partial ? "Partial" : ""}`, {
+      value: amount,
+      count: counted,
+      shown,
+      matches: pluralUa(counted, RP_MATCH_FORMS),
+    }),
+  };
 };
 
 const formatSignedRp = (value) => {
@@ -1156,6 +1194,9 @@ const PlayerPage = ({ t }) => {
     // Written once per card rather than per link: both match links carry the
     // same identity, and only the "/match/..." root has to stay a literal in
     // the source for navigationTargets.test.js to read it.
+    const groupedRows = matchItems.filter((m) => m.rpDelta?.kind === "group").length;
+    const rpSummary = rpSummaryLine(matchSummary.rankPoints, groupedRows, t);
+
     const matchQuery =
       `?accountId=${encodeURIComponent(data?.platformInfo?.platformUserId || "")}` +
       `&playerName=${encodeURIComponent(data?.platformInfo?.platformUserHandle || gameId || "")}`;
@@ -1185,6 +1226,10 @@ const PlayerPage = ({ t }) => {
             <strong>{Math.round(Number(matchSummary.avgDamage || 0))}</strong>
           </div>
         </div>
+
+        {rpSummary ? (
+          <p className={`player-rp-summary player-rp-summary--${rpSummary.kind}`}>{rpSummary.text}</p>
+        ) : null}
 
         <div className="player-card__divider" />
 
