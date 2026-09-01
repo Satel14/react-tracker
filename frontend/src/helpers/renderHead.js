@@ -41,7 +41,11 @@ const NAV_LABEL = "Site";
 
 const required = ["path", "file", "title", "description"];
 
-export const renderHead = (shell, route) => {
+// `article` is markup rendered from the page's own components by
+// prerenderBody. When a route has one it replaces the hand-written stub
+// entirely: the stub exists to give a crawler something to read, and the
+// article is that, in full.
+export const renderHead = (shell, route, article = null) => {
   if (!route) throw new Error("renderHead: no route meta given");
   for (const field of required) {
     if (!route[field]) throw new Error(`renderHead: route meta is missing ${field}`);
@@ -120,6 +124,21 @@ export const renderHead = (shell, route) => {
     ...NAV_ROUTES.map((item) => `<a href="${item.path}">${escape(item.nav)}</a>`),
     "</nav>",
   ].join("");
+
+  // Not escaped, unlike everything above: this is markup we generated from our
+  // own components, and escaping it would ship the tags as visible text.
+  //
+  // Outside the .prerender wrapper too. That wrapper is a 40rem centred column
+  // with 96px of padding, sized for a heading and a sentence; an article inside
+  // it renders down a narrow strip. The nav's own class stands on its own.
+  if (article) {
+    return replaceOnce(
+      html,
+      /<div id="root"><\/div>/g,
+      `<div id="root">${nav}${article}</div>`,
+      'empty <div id="root">',
+    );
+  }
 
   const prose = route.body
     ? `<h1>${escape(route.h1)}</h1><p>${escape(route.intro)}</p>`

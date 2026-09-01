@@ -4,6 +4,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { ROUTE_META, canonicalFor } from './src/helpers/routeMeta';
 import { renderHead } from './src/helpers/renderHead';
+import { prerenderBody } from './src/helpers/prerenderBody.jsx';
 
 // Writes one static shell per fixed route beside the built index.html, so a
 // crawler asking for /leaderboards gets that route's title, description and
@@ -40,7 +41,10 @@ const prerenderHead = () => ({
         // and stops falling back to the shell, which 404s every deep link.
         throw new Error('prerender-head: refusing to write a top-level 404.html');
       }
-      return { route, html: renderHead(shell, route) };
+      // /ranks ships its whole article rather than a heading and a
+      // sentence; every other route gets the stub, which is the right amount
+      // of static text for an application.
+      return { route, html: renderHead(shell, route, prerenderBody(route.path)) };
     });
 
     for (const { route, html } of written) {
