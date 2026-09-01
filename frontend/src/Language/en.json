@@ -292,6 +292,7 @@
       "colPlayer": "Player",
       "colKills": "K",
       "colDamage": "DMG",
+      "emptyScoreboard": "No scoreboard for this match.",
       "colAssists": "A",
       "colDbno": "DBNO",
       "colHs": "HS",

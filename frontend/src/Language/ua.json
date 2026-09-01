@@ -292,6 +292,7 @@
             "colPlayer": "Гравець",
             "colKills": "В",
             "colDamage": "ШКД",
+            "emptyScoreboard": "Для цього матчу немає скорборду.",
             "colAssists": "А",
             "colDbno": "Нокдаун",
             "colHs": "ХС",

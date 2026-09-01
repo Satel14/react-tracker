@@ -47,6 +47,17 @@ test("renders survival time with zero-padded minutes", () => {
   expect(screen.getByText("05:03")).toBeInTheDocument();
 });
 
+test("says the scoreboard is empty instead of claiming the load failed", () => {
+  // Reachable now that a lobby link can deep-link straight to this tab: an
+  // analysis that came back without teams is not the same thing as one that
+  // could not be fetched, and the error copy read as a broken page.
+  render(
+    <MemoryRouter><MatchScoreboard scoreboard={{ teams: [] }} platform="steam" t={t} /></MemoryRouter>
+  );
+  expect(screen.getByText("pages.match.emptyScoreboard")).toBeInTheDocument();
+  expect(screen.queryByText("pages.match.error")).toBeNull();
+});
+
 test("leaves a bot's row as plain text while a real player still links", () => {
   // It linked every name, and most of a PUBG lobby is AI: in the match this
   // was measured on, 92 of the 100 entrants were bots, so 92 of the rows
