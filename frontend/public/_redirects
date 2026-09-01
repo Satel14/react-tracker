@@ -4,8 +4,9 @@
 # assets before it reads this file and strips .html from any asset that has
 # it, so a real google....html here answered 308 to the extension-less path --
 # the self-rewrite below it never got a look in. Named .txt, there is no asset
-# at the .html path for Pages to normalise, so the rewrite runs and the file is
+# at the .html path for Pages to normalise, so the rewrite runs. .htm rather than
+# .txt so Google still receives the content type it issued the file as.
 # served at the URL Google actually requests.
-/google4fb6a85272b47cc5.html  /google4fb6a85272b47cc5.txt  200
+/google4fb6a85272b47cc5.html  /google4fb6a85272b47cc5.htm  200
 /sitemap.xml  /sitemap.xml  200
 /robots.txt  /robots.txt  200
