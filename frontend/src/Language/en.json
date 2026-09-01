@@ -53,7 +53,12 @@
         "rpTooltipNoBaseline": "No earlier RP reading for this player yet — values appear for ranked matches played after the first visit.",
         "rpTooltipGroup": "Part of {value} RP across {count} ranked matches. A single match can only be attributed when it is the only one between two readings.",
         "rpTooltipUnattributed": "Couldn't attribute RP for this stretch — the rank reading and the match list disagreed.",
-        "rpTooltipPending": "The rank reading hasn't updated since this match yet. Check back later."
+        "rpTooltipPending": "The rank reading hasn't updated since this match yet. Check back later.",
+        "party": "Party",
+        "partyHintLabel": "How is the party decided?",
+        "partyHint": "Squad-mates who were with this player in more than one of the matches listed here. PUBG doesn't record who queued together, so a one-off squad-mate counts as fill and isn't shown.",
+        "partyMateHint": "{name}: {kills} kills, {damage} damage",
+        "lobby": "Lobby"
       }
     },
     "leaderboards": {
@@ -287,12 +292,12 @@
       "tabTimeline": "Timeline",
       "loading": "Loading match…",
       "error": "Could not load match analysis.",
+      "emptyScoreboard": "No scoreboard for this match.",
       "placement": "#{rank}",
       "team": "Team {teamId}",
       "colPlayer": "Player",
       "colKills": "K",
       "colDamage": "DMG",
-      "emptyScoreboard": "No scoreboard for this match.",
       "colAssists": "A",
       "colDbno": "DBNO",
       "colHs": "HS",

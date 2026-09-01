@@ -98,6 +98,17 @@ const renderMatchesCard = async (items, summary) => {
 
 const rowsOf = (card) => card.querySelectorAll(".player-match-item");
 
+const partyOf = (row) => row.querySelector(".player-match-teammates");
+
+const mate = (overrides = {}) => ({
+  accountId: "account.mateA",
+  name: "MateA",
+  kills: 3,
+  damage: 480,
+  placement: 3,
+  ...overrides,
+});
+
 const hoverHint = async (row) => {
   fireEvent.mouseEnter(within(row).getByLabelText(en.pages.player.matches.rpHint));
   return screen.findByRole("tooltip");
@@ -182,6 +193,156 @@ test("does not present an unattributed RP adjustment as a per-match value", asyn
     rankPoints: { kind: "adjustment", value: -100, matches: 0, since: Date.parse("2026-08-20T18:00:00Z") },
   });
   expect(card.querySelector(".player-rp-summary")).toBeNull();
+});
+
+// PUBG records the in-game squad, fill included, and nothing about who queued
+// together. The party is therefore inferred: a squad-mate who was with the
+// player in more than one of the listed matches queued with them; a one-off is
+// fill. Verified against live data on 2026-09-01 -- the match record's roster,
+// its telemetry and the official docs all carry no party marker.
+const mateB = () => mate({ accountId: "account.mateB", name: "MateB", kills: 1, damage: 210 });
+
+test("names the party of a match: the squad-mates who recur across the listed matches", async () => {
+  const card = await renderMatchesCard([
+    matchItem({ id: "m-1", teammates: [mate(), mateB()] }),
+    matchItem({ id: "m-2", teammates: [mate(), mateB()] }),
+  ]);
+  const party = partyOf(rowsOf(card)[0]);
+
+  expect(within(party).getByText(en.pages.player.matches.party)).toBeInTheDocument();
+  expect(within(party).getByRole("link", { name: "MateA" })).toHaveAttribute("href", "/player/steam/MateA");
+  expect(within(party).getByRole("link", { name: "MateB" })).toHaveAttribute("href", "/player/steam/MateB");
+});
+
+test("leaves a one-off squad-mate out of the party, because a fill is not a party", async () => {
+  const fill = mate({ accountId: "account.fill", name: "Bozzidar", kills: 4, damage: 390 });
+  const card = await renderMatchesCard([
+    matchItem({ id: "m-1", teammates: [mate(), mateB(), fill] }),
+    matchItem({ id: "m-2", teammates: [mate(), mateB()] }),
+  ]);
+  const rows = rowsOf(card);
+
+  const party = partyOf(rows[0]);
+  expect(within(party).getByRole("link", { name: "MateA" })).toBeInTheDocument();
+  expect(within(party).getByRole("link", { name: "MateB" })).toBeInTheDocument();
+  expect(within(card).queryByText("Bozzidar")).toBeNull();
+});
+
+const partyNames = (party) =>
+  party ? [...party.querySelectorAll(".player-match-teammates__mate")].map((el) => el.textContent) : null;
+
+test("decides the party over the whole list but shows each row only the party mates who were in that match", async () => {
+  // MateA: 3 of 4; MateB: two non-adjacent matches; MateC: once. A row whose
+  // whole roster is fill gets no strip even though a party exists elsewhere.
+  const c = mate({ accountId: "account.mateC", name: "MateC" });
+  const card = await renderMatchesCard([
+    matchItem({ id: "m-1", teammates: [mate(), mateB()] }),
+    matchItem({ id: "m-2", teammates: [c] }),
+    matchItem({ id: "m-3", teammates: [mate(), mateB()] }),
+    matchItem({ id: "m-4", teammates: [mate()] }),
+  ]);
+  const rows = rowsOf(card);
+
+  expect(rows.length).toBe(4);
+  expect(partyNames(partyOf(rows[0]))).toEqual(["MateA", "MateB"]);
+  expect(partyOf(rows[1])).toBeNull();
+  expect(partyNames(partyOf(rows[2]))).toEqual(["MateA", "MateB"]);
+  expect(partyNames(partyOf(rows[3]))).toEqual(["MateA"]);
+  expect(within(card).queryByText("MateC")).toBeNull();
+});
+
+test("shows no party strip when every squad-mate is a one-off", async () => {
+  const card = await renderMatchesCard([
+    matchItem({ id: "m-1", teammates: [mate(), mateB()] }),
+    matchItem({ id: "m-2", teammates: [mate({ accountId: "account.x", name: "X" })] }),
+  ]);
+
+  expect(partyOf(rowsOf(card)[0])).toBeNull();
+  expect(partyOf(rowsOf(card)[1])).toBeNull();
+});
+
+test("never counts a bot as party, even when the same bot id recurs", async () => {
+  const bot = mate({ accountId: "ai.1234", name: "BotBuddy", kills: 0, damage: 0 });
+  const card = await renderMatchesCard([
+    matchItem({ id: "m-1", teammates: [mate(), bot] }),
+    matchItem({ id: "m-2", teammates: [mate(), bot] }),
+  ]);
+  const party = partyOf(rowsOf(card)[0]);
+
+  expect(within(party).getByRole("link", { name: "MateA" })).toBeInTheDocument();
+  expect(within(party).queryByText("BotBuddy")).toBeNull();
+});
+
+test("leaves a party mate PUBG never named as plain text because it has no profile to open", async () => {
+  const ghost = mate({ accountId: "account.ghost", name: "Unknown" });
+  const card = await renderMatchesCard([
+    matchItem({ id: "m-1", teammates: [ghost] }),
+    matchItem({ id: "m-2", teammates: [ghost] }),
+  ]);
+  const party = partyOf(rowsOf(card)[0]);
+
+  expect(within(party).getByText("Unknown")).toBeInTheDocument();
+  expect(within(party).queryByRole("link")).toBeNull();
+  // Marked as well as unlinked: .profile-link inherits its colour and drops its
+  // underline by design, so without a hook of its own an unlinked name reads
+  // exactly like one that does open a profile.
+  expect(within(party).getByText("Unknown").closest(".player-match-teammates__mate"))
+    .toHaveClass("player-match-teammates__mate--plain");
+});
+
+test("carries each party mate's kills and damage on hover", async () => {
+  const card = await renderMatchesCard([
+    matchItem({ id: "m-1", teammates: [mate()] }),
+    matchItem({ id: "m-2", teammates: [mate({ kills: 9, damage: 1020 })] }),
+  ]);
+
+  const rows = rowsOf(card);
+  expect(within(partyOf(rows[0])).getByRole("link", { name: "MateA" })).toHaveAttribute(
+    "title",
+    "MateA: 3 kills, 480 damage"
+  );
+  expect(within(partyOf(rows[1])).getByRole("link", { name: "MateA" })).toHaveAttribute(
+    "title",
+    "MateA: 9 kills, 1020 damage"
+  );
+});
+
+test("explains on hover and on keyboard focus how the party is told apart from fill", async () => {
+  const card = await renderMatchesCard([
+    matchItem({ id: "m-1", teammates: [mate()] }),
+    matchItem({ id: "m-2", teammates: [mate()] }),
+  ]);
+  const texts = en.pages.player.matches;
+  // Pinned as strings first: a missing key would make t() echo the key path and
+  // the matchers below would happily accept it.
+  expect(texts.partyHintLabel).toEqual(expect.any(String));
+  expect(texts.partyHint).toEqual(expect.any(String));
+
+  const hint = within(partyOf(rowsOf(card)[0])).getByLabelText(texts.partyHintLabel);
+  expect(hint).toHaveAttribute("tabindex", "0");
+  fireEvent.focus(hint);
+  const tooltip = await screen.findByRole("tooltip");
+  expect(tooltip).toHaveTextContent(texts.partyHint);
+});
+
+test("shows no party strip at all for a solo match", async () => {
+  const card = await renderMatchesCard([matchItem({ teammates: [] })]);
+
+  expect(partyOf(rowsOf(card)[0])).toBeNull();
+});
+
+test("offers a lobby link onto the scoreboard tab beside an unchanged replay link", async () => {
+  const card = await renderMatchesCard([matchItem()]);
+  const row = rowsOf(card)[0];
+
+  expect(within(row).getByRole("link", { name: en.pages.player.matches.lobby })).toHaveAttribute(
+    "href",
+    "/match/steam/m-1/replay?accountId=account.PlayerA&playerName=PlayerA&tab=scoreboard"
+  );
+  expect(within(row).getByRole("link", { name: en.pages.replay.open })).toHaveAttribute(
+    "href",
+    "/match/steam/m-1/replay?accountId=account.PlayerA&playerName=PlayerA"
+  );
 });
 
 test("explains noBaseline, pending and unattributed rows on hover", async () => {
