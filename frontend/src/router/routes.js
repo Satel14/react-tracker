@@ -54,6 +54,13 @@ const routes = [
     component: Ranks,
     exact: true,
   },
+  // Same component, read from the ua dictionary. The language comes from the
+  // URL rather than from localStorage -- see languageForPath in routeMeta.
+  {
+    path: "/ua/ranks",
+    component: Ranks,
+    exact: true,
+  },
   {
     path: "/bugreport",
     component: BugReportPage,

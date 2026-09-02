@@ -10,7 +10,7 @@
 
 // Extension spelled out, unlike the rest of src/: vite.config.js imports this
 // under Node's resolver, where extensionless ESM specifiers do not resolve.
-import { canonicalFor, NAV_ROUTES } from "./routeMeta.js";
+import { alternatesFor, canonicalFor, NAV_ROUTES } from "./routeMeta.js";
 
 const escape = (value) =>
   String(value)
@@ -59,7 +59,14 @@ export const renderHead = (shell, route, article = null) => {
   const description = escape(route.description);
   const robots = escape(route.robots || "index, follow");
 
+  // Emitted beside the canonical rather than as a rewrite of their own: the
+  // shell has no alternates to replace, and a page with no twin gets none.
+  const alternates = alternatesFor(route.path)
+    .map((alt) => `<link rel="alternate" hreflang="${alt.hreflang}" href="${alt.href}" />`)
+    .join("");
+
   const rewrites = [
+    [/<html lang="[^"]*">/g, `<html lang="${escape(route.lang || "en")}">`, "<html lang>"],
     [/<title>[^<]*<\/title>/g, `<title>${title}</title>`, "<title>"],
     [
       metaPattern("name", "description"),
@@ -73,7 +80,7 @@ export const renderHead = (shell, route, article = null) => {
     ],
     [
       /<link rel="canonical"[^>]*>/g,
-      `<link rel="canonical" href="${url}" />`,
+      `<link rel="canonical" href="${url}" />${alternates}`,
       'link rel="canonical"',
     ],
     [metaPattern("property", "og:url"), `<meta property="og:url" content="${url}" />`, "og:url"],

@@ -9,8 +9,8 @@ describe("which routes ship their article", () => {
   // sentence is the right amount of static text for a leaderboard, and the
   // homepage's file is also what Pages serves for every unmatched URL, so
   // prose in it would become duplicate copy across an unbounded set of them.
-  it("renders the ranks article and nothing else", () => {
-    expect(PRERENDERED_ROUTES).toEqual(["/ranks"]);
+  it("renders the ranks article in each language and nothing else", () => {
+    expect(PRERENDERED_ROUTES).toEqual(["/ranks", "/ua/ranks"]);
   });
 
   it("says nothing for a route that is not prerendered", () => {
@@ -83,6 +83,42 @@ describe("the ranks article as a crawler receives it", () => {
   // shipping half a page.
   it("renders without a live app around it", () => {
     expect(() => ranks()).not.toThrow();
+  });
+});
+
+// The same component, read from the ua dictionary. Asserted on sentences from
+// the dictionaries themselves, so a translation that silently fell back to
+// English fails here rather than shipping.
+describe("the Ukrainian twin", () => {
+  it("renders from the Ukrainian dictionary", () => {
+    const html = prerenderBody("/ua/ranks");
+    expect(html).toContain("Усі вісім тірів за порядком");
+    expect(html).toContain("На цій сторінці");
+  });
+
+  it("leaves no English copy on it", () => {
+    const html = prerenderBody("/ua/ranks");
+    expect(html).not.toContain("On this page");
+    expect(html).not.toContain("The eight tiers, in order");
+  });
+
+  // The language is set per call, so a page rendered after the Ukrainian one
+  // would inherit it if the build did not say which language it wants.
+  it("leaves the English page in English", () => {
+    expect(ranks()).toContain("The eight tiers, in order");
+    expect(ranks()).not.toContain("Усі вісім тірів за порядком");
+  });
+
+  // The only path between the two versions a crawler that runs no JavaScript
+  // has -- and the only one a reader who landed on the wrong language has.
+  it("links each language at the other", () => {
+    expect(ranks()).toContain('href="/ua/ranks"');
+    expect(prerenderBody("/ua/ranks")).toContain('href="/ranks"');
+  });
+
+  it("is a whole article too, not a stub", () => {
+    const words = prerenderBody("/ua/ranks").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean);
+    expect(words.length).toBeGreaterThan(1500);
   });
 });
 
