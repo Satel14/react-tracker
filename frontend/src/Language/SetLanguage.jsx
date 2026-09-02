@@ -8,29 +8,37 @@ import {
   setLanguage,
   translate,
 } from 'react-switch-lang';
+import { useLocation, useNavigate } from "react-router-dom";
 import en from "./en.json"
 import ua from "./ua.json"
-
-const languages = ["en", "ua"];
+import { chooseLanguage, DEFAULT_LANGUAGE } from "./chooseLanguage";
+import { translationFor } from "../helpers/routeMeta";
 
 setTranslations({ en, ua });
-setDefaultLanguage("en");
+setDefaultLanguage(DEFAULT_LANGUAGE);
 
 const SetLanguage = () => {
-  const [currentLang, setCurrentLang] = useState("en");
+  const [currentLang, setCurrentLang] = useState(DEFAULT_LANGUAGE);
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
 
+  // Runs on every navigation, not once: walking from /ranks to /ua/ranks has to
+  // change the language the same way arriving on it does.
   useEffect(() => {
-    const localLanguage = localStorage.getItem("lang");
-    if (localLanguage && languages.includes(localLanguage)) {
-      setLanguage(localLanguage);
-      setCurrentLang(localLanguage);
-    }
-  }, []);
+    const chosen = chooseLanguage({ pathname, stored: localStorage.getItem("lang") });
+    setLanguage(chosen);
+    setCurrentLang(chosen);
+  }, [pathname]);
 
   const handleSetLanguage = (key) => () => {
     setLanguage(key);
     localStorage.setItem("lang", key);
     setCurrentLang(key);
+    // On a page that exists in both languages the URL carries the language, so
+    // switching in place would leave the address and the text disagreeing --
+    // and the address is what gets shared.
+    const target = translationFor(pathname, key);
+    if (target) navigate(target);
   };
 
   const items = [

@@ -66,6 +66,16 @@ describe("prose links state their own colour", () => {
     );
   });
 
+  // An anchor that carries a class of its own is not reached by its block's
+  // `a` rule -- .ranks-page's anchor colour lives inside __toc. The language
+  // link rendered in the browser's visited purple on a live page until this
+  // pinned it, which is exactly the failure the block guard above missed.
+  it.each(["&__lang"])("%s states a resting colour of its own", (selector) => {
+    expect(ownDeclarations(blockBody(selector)), `${selector} sets no colour`).toMatch(
+      /color:\s*var\(--/,
+    );
+  });
+
   it("finds the blocks it is meant to be guarding", () => {
     // A selector renamed out from under this list would make every assertion
     // above throw rather than pass, but a list that shrank to nothing would

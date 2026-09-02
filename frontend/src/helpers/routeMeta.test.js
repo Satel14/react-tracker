@@ -45,9 +45,15 @@ describe("emitted filenames", () => {
 
   // build/help.html answers /help with a 200. build/help/index.html would 308 to
   // /help/, which makes the self-referencing canonical point at a redirect.
-  it("is flat, not a directory index", () => {
-    const nested = ROUTE_META.filter((r) => r.path !== "/" && r.file.includes("/"));
-    expect(nested.map((r) => r.file)).toEqual([]);
+  //
+  // A file inside a directory is not the same thing and is fine:
+  // build/ua/ranks.html answers /ua/ranks with a 200 exactly as the flat files
+  // do. What must never appear is that directory's index.
+  it("is never a directory index", () => {
+    const indexes = ROUTE_META.filter(
+      (r) => r.path !== "/" && r.file.endsWith("/index.html"),
+    );
+    expect(indexes.map((r) => r.file)).toEqual([]);
   });
 
   it("names each file after its route", () => {

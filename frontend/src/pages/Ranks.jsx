@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { RANK_LADDER, SURVIVOR_SLOTS, DIVISION_PIPS } from "../helpers/rankLadder";
 import TierDistribution from "../component/ranks/TierDistribution";
@@ -126,6 +126,23 @@ const SurvivorSlots = ({ t }) => {
   );
 };
 
+// Labelled in the language it leads to, and not translated: someone who cannot
+// read this page still recognises the name of their own language. It renders
+// into the static shell too, which is the only path a crawler that runs no
+// JavaScript has between the two versions.
+const OtherLanguage = () => {
+  const { pathname } = useLocation();
+  return pathname === "/ua/ranks" ? (
+    <Link className="ranks-page__lang" to="/ranks" lang="en">
+      Read in English
+    </Link>
+  ) : (
+    <Link className="ranks-page__lang" to="/ua/ranks" lang="uk">
+      Читати українською
+    </Link>
+  );
+};
+
 const Ranks = ({ t }) => (
   <div className="content ranks-page">
     <div className="ranks-page__hero">
@@ -133,6 +150,7 @@ const Ranks = ({ t }) => (
           crawler reads and the text React renders are the same sentence. */}
       <h1>{t("pages.ranks.title")}</h1>
       <p>{t("pages.ranks.intro")}</p>
+      <OtherLanguage />
       <KeyFacts t={t} />
     </div>
 

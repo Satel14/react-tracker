@@ -71,6 +71,27 @@ export const ROUTE_META = [
     sitemap: true,
     body: true,
   },
+  // The same article, rendered from the ua dictionary. `translationOf` is what
+  // pairs the two: it drives the hreflang set, the language switch and the
+  // sitemap entry, so a twin cannot exist half-wired.
+  //
+  // The path segment is /ua/ because that is the form people recognise; `lang`
+  // is uk because that is the ISO code, and hreflang accepts no other spelling.
+  {
+    path: "/ua/ranks",
+    file: "ua/ranks.html",
+    lang: "uk",
+    translations: "ua",
+    translationOf: "/ranks",
+    title: "Ранги PUBG: тіри, RP і Survivor (сезон 42)",
+    description:
+      "Рейтингова система PUBG у сезоні 42: усі вісім тірів за порядком, як RP нараховується й списується після оновлення 42.1, Survivor і затухання RP.",
+    h1: "Ранги PUBG: як влаштовані тіри, RP і Survivor",
+    intro:
+      "Вісім тірів, одне спільне RP і найвищий тір, який можна втратити за одну ніч — як рейтингова система працює зараз.",
+    sitemap: true,
+    body: true,
+  },
   // The three below render an empty state for anyone who is not the visitor who
   // filled them in, so they are given a head to stop them being read as copies
   // of the homepage -- and told not to be indexed, because there is nothing on
@@ -142,3 +163,54 @@ export const NAV_ROUTES = NAV_ORDER.map((path) => {
 });
 
 export const routeMetaFor = (path) => ROUTE_META.find((route) => route.path === path);
+
+// The pages that are the same article in different languages, or null when a
+// path has no twin. The English row is the group's default: it is the one a
+// reader with no matching language should land on.
+const languageGroupFor = (path) => {
+  const route = routeMetaFor(path);
+  if (!route) return null;
+  const defaultPath = route.translationOf || path;
+  const members = ROUTE_META.filter(
+    (item) => item.path === defaultPath || item.translationOf === defaultPath,
+  );
+  return members.length > 1 ? { defaultPath, members } : null;
+};
+
+// Google reads an hreflang set as a claim about a group of pages and ignores
+// the whole group unless every page in it names every other -- including
+// itself. So the set is built once and emitted verbatim on each member.
+export const alternatesFor = (path) => {
+  const group = languageGroupFor(path);
+  if (!group) return [];
+  return [
+    ...group.members.map((item) => ({
+      hreflang: item.lang || "en",
+      href: canonicalFor(item.path),
+    })),
+    { hreflang: "x-default", href: canonicalFor(group.defaultPath) },
+  ];
+};
+
+// Where the language switch should go from `path`, or null when this page has
+// no version in that language -- or is already the one asked for.
+export const translationFor = (path, language) => {
+  const group = languageGroupFor(path);
+  if (!group) return null;
+  const wanted = group.members.find((item) => (item.translations || "en") === language);
+  return wanted && wanted.path !== path ? wanted.path : null;
+};
+
+// The language a URL commits to, or null when it leaves the choice to the
+// visitor. Read from the table rather than parsed out of the path: a /ua/
+// prefix means nothing unless there is a page behind it.
+//
+// Both halves of a pair commit. /ranks is the English page, not the page with
+// no opinion -- read the other way, a reader who had once picked Ukrainian in
+// the dropdown clicked "Read in English" and was handed Ukrainian anyway.
+export const languageForPath = (path) => {
+  const route = routeMetaFor(path);
+  if (!route) return null;
+  if (route.translations) return route.translations;
+  return languageGroupFor(path) ? "en" : null;
+};

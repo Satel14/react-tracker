@@ -3534,6 +3534,21 @@ body {
     }
   }
 
+  // The link to the other language. Its own line under the intro rather than
+  // beside the heading: it is for the reader who opened the wrong version, not
+  // a site-wide control, and the navbar already carries that.
+  // Colour stated here, not inherited: this anchor carries a class, so the
+  // block's own `a` rule (which lives inside __toc) never reaches it, and
+  // without this it renders in the browser's visited purple.
+  &__lang {
+    display: inline-block;
+    margin: 14px 0 0;
+    font-size: 14px;
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
   &__facts {
     list-style: none;
     margin: 26px 0 0;

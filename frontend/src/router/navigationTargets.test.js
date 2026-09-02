@@ -39,6 +39,11 @@ const REVIEWED = [
     why: 'Destructured from navItems/rightNavItems, module-scope arrays of hard-coded literal paths ("/", "/favorites", "/help", "/leaderboards"). Nothing user-supplied reaches them.',
   },
   {
+    file: "Language/SetLanguage.jsx",
+    target: "target",
+    why: 'Held from translationFor(pathname, key), which returns either null or a `path` string read straight out of the ROUTE_META table in helpers/routeMeta.js -- every one of them a literal written in that file. The call site navigates only when it is not null, and nothing user-supplied reaches it.',
+  },
+  {
     file: "pages/Main.jsx",
     target: "url",
     why: 'Both branches are "/player/" + platform + "/" + name; the search box only ever fills the last segment.',

@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -48,7 +49,11 @@ const prerenderHead = () => ({
     });
 
     for (const { route, html } of written) {
-      writeFileSync(fileURLToPath(new URL(route.file, buildDir)), html);
+      // A localised route lives one directory down (build/ua/ranks.html), and
+      // Rollup has written nothing there for us.
+      const target = fileURLToPath(new URL(route.file, buildDir));
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, html);
     }
 
     // Check the output rather than trusting it: a wrong canonical is invisible
