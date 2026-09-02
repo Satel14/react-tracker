@@ -56,6 +56,16 @@ const renderPage = () =>
     </MemoryRouter>
   );
 
+// The static file a crawler receives is HomeIntro rendered on its own, so the
+// page has to render that same component -- otherwise the document Google
+// reads and the document a visitor sees drift apart, which is the whole
+// reason the body is a component instead of copy injected into the shell.
+test("renders the same body component the static shell carries", () => {
+  const { container } = renderPage();
+  expect(container.querySelector(".home-intro")).not.toBeNull();
+  expect(container.querySelectorAll("h1")).toHaveLength(1);
+});
+
 test("shows a notification and does not navigate when Steam resolution returns no account", async () => {
   getPlayerSteamName.mockResolvedValue({ status: 200, message: "not found" });
   renderPage();

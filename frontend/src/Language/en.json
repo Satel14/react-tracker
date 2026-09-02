@@ -11,7 +11,38 @@
     "main": {
       "title": "PUBG",
       "subtitle": "Track detailed PUBG: BATTLEGROUNDS stats and leaderboards",
-      "searchingHistory": "Searching History"
+      "searchingHistory": "Searching History",
+      "about": {
+        "h1": "PUBG stats tracker for Steam, Xbox and PlayStation",
+        "lead": "Type a nickname into the box above and you get that player's current season: ranked RP and tier, kills and damage, win rate, and the last matches they played — each one openable as a replay. Everything comes from the official PUBG API, and nothing here needs an account.",
+        "lookup": {
+          "heading": "Three ways to find a player",
+          "p1": "The quickest is the in-game nickname. It is case-sensitive and it is the name as it is written today, so a player who renamed since you last saw them will not come up under the old one — PUBG keeps no alias history and neither can we.",
+          "p2": "You can also paste a Steam profile URL, in either the vanity form or the numeric one, and we resolve it to the PUBG account behind it. And if you already have an account ID, the kind that starts with account. and a long string of hex, that works too and skips the lookup entirely."
+        },
+        "platforms": {
+          "heading": "Steam, Xbox, PlayStation, Kakao and Stadia",
+          "p1": "Pick the platform before you search. PUBG keeps a separate account and separate statistics per platform, so the same nickname can belong to two different people on Steam and Xbox, and a console player will not be found on the Steam shard no matter how the name is spelled.",
+          "p2": "Kakao is its own region rather than a platform in the usual sense: it runs on a separate shard with its own ranked ladder and its own Survivor slots. Stadia is still addressable in the API even though the service is gone, which is why the option remains."
+        },
+        "playerPage": {
+          "heading": "What a player page shows",
+          "p1": "The season view carries K/D, win rate, average damage, longest kill, headshot percentage, top 10 finishes and time played, split by game mode. Beside it sits the ranked picture: current RP, the tier that RP puts the player in, and where that stands against everyone else on the ladder.",
+          "p2": "Under it are the recent matches, and each one opens as a replay: where every squad dropped, how the blue zone closed, the kill feed in order, and the point on the map where each player was eliminated. Survival and weapon mastery, the clan and the Steam avatar load beside all of it."
+        },
+        "ranked": {
+          "heading": "Ranked, RP and where you stand",
+          "p1": "Since Season 36 there is a single RP number rather than one per party type and perspective, so the tier on a profile is the tier for everything the player queues. Eight tiers run from Bronze to Survivor, and the top one needs both an RP threshold and a slot in its region.",
+          "p2": "RP alone does not tell you much without knowing what the ladder looks like, which is what the two pages below are for."
+        },
+        "data": {
+          "heading": "Where the numbers come from",
+          "p1": "Everything on this site is read from KRAFTON's official PUBG API. Matches stay available there for about fourteen days, so match history is a recent window rather than a career archive, and older matches simply stop being fetchable.",
+          "p2": "An empty profile is usually one of three things: the player has not played the current season, the platform is wrong, or the API is rate-limiting us and we are serving the last good copy while the limit clears. When that happens the page says so rather than showing zeroes as if they were real."
+        },
+        "ranksLink": "How PUBG ranks work: tiers, RP and Survivor",
+        "leaderboardsLink": "Leaderboards for every region"
+      }
     },
     "player": {
       "percentile": {

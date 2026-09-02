@@ -10,6 +10,7 @@ import { translate } from "react-switch-lang";
 import { m } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import HistoryChecking from "../component/HistoryChecking";
+import HomeIntro from "../component/home/HomeIntro";
 import { getLiveSnapshot, getPlayerSteamName } from '../api/player'
 import openNotification from '../component/Notification';
 import SteamIcon from '../component/icons/SteamIcon';
@@ -255,6 +256,15 @@ const Main = ({ t }) => {
               <HistoryChecking />
             </div>
           </div>
+        </Col>
+      </Row>
+      {/* The same component the build renders into index.html. Below the
+          search rather than above it: the box is what people came for, and
+          this is what the page has to say to someone who arrived from a
+          search result and has never seen the site. */}
+      <Row style={{ justifyContent: "center" }}>
+        <Col xs={24} sm={22} md={18} lg={15}>
+          <HomeIntro />
         </Col>
       </Row>
     </div>

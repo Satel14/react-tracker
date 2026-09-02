@@ -18,6 +18,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { StaticRouter } from "react-router-dom/server.mjs";
 import { setTranslations, setDefaultLanguage, setLanguage } from "react-switch-lang";
 import Ranks from "../pages/Ranks.jsx";
+import HomeIntro from "../component/home/HomeIntro.jsx";
 import en from "../Language/en.json";
 import ua from "../Language/ua.json";
 
@@ -25,9 +26,14 @@ import ua from "../Language/ua.json";
 // article read from different dictionaries, and the URL is what decides which.
 // Everything else in the shell is still English -- language stays a
 // client-side choice on every route that does not carry one in its path.
+// The homepage renders its body component, not the whole page: the hero
+// around it reaches for the live snapshot and for framer-motion's feature
+// context, neither of which exists in a build. HomeIntro is the part with the
+// words in it, and the page renders the very same component.
 const PAGES = {
   "/ranks": { Page: Ranks, language: "en" },
   "/ua/ranks": { Page: Ranks, language: "ua" },
+  "/": { Page: HomeIntro, language: "en" },
 };
 
 export const PRERENDERED_ROUTES = Object.keys(PAGES);
