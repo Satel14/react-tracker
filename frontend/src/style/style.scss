@@ -3553,9 +3553,11 @@ body {
   &__section {
     margin: 0;
     padding: 18px 20px 8px;
+    // The same treatment the recent-players cards under the search already
+    // use, rather than a tint invented for this block.
     border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
     border-radius: 12px;
-    background: color-mix(in srgb, var(--accent) 3%, transparent);
+    background: rgba(0, 0, 0, 0.25);
 
     // Five sections in two columns leaves the last one alone; it takes the
     // whole row instead of sitting in a half-empty one.
