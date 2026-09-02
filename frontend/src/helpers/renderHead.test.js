@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { renderHead } from "./renderHead";
+import { pageHeadMeta } from "./pageHeadMeta";
 import { ROUTE_META, canonicalFor } from "./routeMeta";
 
 const shell = readFileSync(
@@ -70,11 +71,21 @@ describe("body text", () => {
     expect(/<div id="root">(.+)<\/div>/s.exec(html)[1]).toContain("<h1>");
   });
 
-  it("puts no prose in the file that doubles as the fallback", () => {
-    // Every shell now carries a nav, so "empty" is the wrong assertion --
-    // what must stay off the homepage is its heading and sentence.
-    // Scoped to the mount point: the description belongs in the head, and
-    // asserting against the whole document would fail on its own meta tag.
+  // The homepage's file is also what Pages serves for every unmatched URL, so
+  // whatever body it carries rides along to all of them. That is why it stayed
+  // empty for a long time. What makes a body safe now is that those URLs are
+  // marked noindex at the edge -- the two facts are asserted together, so
+  // deleting one side cannot quietly leave the other standing alone.
+  it("ships the homepage's body only because unmatched urls are noindex", () => {
+    const article = '<section class="home-intro"><h1>Body</h1><p>Words.</p></section>';
+    expect(renderHead(shell, route("/"), article)).toContain(article);
+    expect(pageHeadMeta("/zzz-not-a-page").robots).toContain("noindex");
+  });
+
+  // Its prose comes from its own component, rendered by the build. There is no
+  // hand-written stub for the homepage in routeMeta, and there must not be:
+  // that copy would exist in the shell and nowhere else on the live page.
+  it("writes no hand-written stub for the homepage", () => {
     const html = renderHead(shell, route("/"));
     const body = html.slice(html.indexOf('<div id="root">'), html.indexOf("</body>"));
     expect(body).not.toContain("<h1>");
@@ -156,14 +167,12 @@ describe("crawlable navigation", () => {
     expect(navOf(html)).toEqual(["/", "/leaderboards", "/ranks", "/help"]);
   });
 
-  // The homepage is deliberately body:false -- its file is also what Pages
-  // serves for every unmatched URL, so its prose would land on every soft-404.
-  // A nav is site furniture rather than content, so it goes everywhere; the
-  // prose still does not.
-  it("gives the homepage the nav but still no prose", () => {
+  // A nav is site furniture rather than content, so it goes into every shell,
+  // including the homepage's -- which is also the file every unmatched URL
+  // gets, and the only crawlable link list this site has without JavaScript.
+  it("gives the homepage the nav", () => {
     const html = renderHead(shell, ROUTE_META.find((r) => r.path === "/"));
     expect(navOf(html)).toHaveLength(4);
-    expect(html).not.toContain("<h1>");
   });
 
   it("carries a real label on every link, not a bare path", () => {

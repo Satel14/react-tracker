@@ -53,6 +53,7 @@ const BLOCKS_WITH_PROSE_LINKS = [
   ".ranks-page",
   ".leaderboard-page__explainer",
   ".prerender__nav",
+  ".home-intro",
 ];
 
 describe("prose links state their own colour", () => {

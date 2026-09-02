@@ -1,4 +1,4 @@
-// Gives the parameterised routes a head of their own.
+// Gives every URL that is not a file the build wrote a head of its own.
 //
 // The fixed routes get theirs at build time (see the prerenderHead plugin in
 // vite.config.js), but /player/:platform/:gameId, /match/... and /overlay/...
@@ -7,14 +7,19 @@
 // homepage's title, description and canonical -- which is what kept them out of
 // the index in the first place.
 //
-// _routes.json narrows this to those three prefixes. Without it every request,
-// including each of the ~19 hashed assets a page load pulls, would be a billable
-// Function invocation against the 100k/day free allowance.
+// The same fallback answers every unmatched path, so a typo used to declare
+// "index, follow" and a canonical pointing at the homepage. Harmless while the
+// homepage file held no prose; not harmless once it carries a body, because
+// the body rides along to all of them. pageHeadMeta marks those noindex.
+//
+// _routes.json therefore includes every path and excludes the built assets:
+// without that exclusion each of the ~19 hashed files a page load pulls would
+// be a billable Function invocation against the 100k/day free allowance.
 //
 // It reads the URL and nothing else. Calling the PUBG API from here would put
 // Googlebot on a ten-requests-a-minute budget shared with the live site.
 
-import { playerHeadMeta } from "../src/helpers/playerHeadMeta.js";
+import { pageHeadMeta } from "../src/helpers/pageHeadMeta.js";
 
 const META_BY_KEY = {
   description: ["name", "description"],
@@ -40,9 +45,10 @@ const setContent = (rewriter, kind, key, value) =>
 
 export const onRequest = async (context) => {
   const url = new URL(context.request.url);
-  const meta = playerHeadMeta(url.pathname);
+  const meta = pageHeadMeta(url.pathname);
 
-  // Not one of ours: hand it straight back untouched.
+  // A fixed route: the build already wrote and verified that file's head, so
+  // hand it straight back untouched.
   if (!meta) return context.next();
 
   // A revalidation would 304 with no body to rewrite, and the browser would

@@ -9,13 +9,35 @@ describe("which routes ship their article", () => {
   // sentence is the right amount of static text for a leaderboard, and the
   // homepage's file is also what Pages serves for every unmatched URL, so
   // prose in it would become duplicate copy across an unbounded set of them.
-  it("renders the ranks article in each language and nothing else", () => {
-    expect(PRERENDERED_ROUTES).toEqual(["/ranks", "/ua/ranks"]);
+  it("renders the ranks article in each language, and the homepage's body", () => {
+    expect(PRERENDERED_ROUTES).toEqual(["/ranks", "/ua/ranks", "/"]);
   });
 
   it("says nothing for a route that is not prerendered", () => {
     expect(prerenderBody("/leaderboards")).toBeNull();
-    expect(prerenderBody("/")).toBeNull();
+    expect(prerenderBody("/help")).toBeNull();
+  });
+});
+
+// The file this lands in is also what Pages serves for every unmatched URL.
+// That is why it carried no prose for so long -- and why pageHeadMeta now
+// marks those URLs noindex, which is what made this safe to ship.
+describe("the homepage body", () => {
+  const home = () => prerenderBody("/");
+
+  it("gives the homepage the h1 it never had", () => {
+    // `<h1[ >]`, not `<h1>`: this one carries a class.
+    expect((home().match(/<h1[ >]/g) || []).length).toBe(1);
+  });
+
+  it("is a body rather than a slogan", () => {
+    const words = home().replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean);
+    expect(words.length).toBeGreaterThan(400);
+  });
+
+  it("links the two pages we want crawled from the one page that ranks", () => {
+    expect(home()).toContain('href="/ranks"');
+    expect(home()).toContain('href="/leaderboards"');
   });
 });
 

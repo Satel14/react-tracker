@@ -3503,6 +3503,114 @@ body {
   }
 }
 
+// The homepage's body. The build renders this same component into index.html
+// on its own, with no page around it, so the block has to stand up unwrapped:
+// it carries its own measure and its own top margin rather than inheriting a
+// layout from the hero above it.
+// The search box used to be the whole page: .content gives it 75vh and the
+// hero sat in the middle of it. Prose directly underneath took that room away
+// and the two read as one crowded block, so the hero keeps a screen of its own
+// and the body starts below the fold, behind a line of its own.
+.mainpage__hero {
+  width: 100%;
+  min-height: 72vh;
+  align-items: flex-start;
+}
+
+.mainpage__body {
+  width: 100%;
+  border-top: 1px solid var(--border);
+}
+
+.home-intro {
+  margin: 44px 0 0;
+  padding: 0 4px 28px;
+  color: var(--text);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+
+  &__title {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.2;
+    color: var(--text-strong);
+  }
+
+  &__lead {
+    grid-column: 1 / -1;
+    margin: 0 0 10px;
+    max-width: 82ch;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text-muted);
+  }
+
+  // A panel per section rather than one column of prose: the page is wide and
+  // dark, and the cards below the search already read this way.
+  &__section {
+    margin: 0;
+    padding: 18px 20px 8px;
+    // The same treatment the recent-players cards under the search already
+    // use, rather than a tint invented for this block.
+    border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.25);
+
+    // Five sections in two columns leaves the last one alone; it takes the
+    // whole row instead of sitting in a half-empty one.
+    &:last-of-type {
+      grid-column: 1 / -1;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 17px;
+      color: var(--text-strong);
+    }
+
+    p {
+      margin: 0 0 10px;
+      line-height: 1.7;
+      color: var(--text-muted);
+    }
+  }
+
+  &__links {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    margin-top: 14px;
+  }
+
+  // Stated, not inherited: an anchor with no colour of its own falls to the
+  // browser's link and visited-link defaults, which belong to no theme here.
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+@media (max-width: 900px) {
+  .home-intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .home-intro {
+    margin-top: 32px;
+
+    &__title {
+      font-size: 21px;
+    }
+  }
+}
+
 .ranks-page {
   // 68ch of prose, a 44px gutter and a 248px rail. Wider than the 900px it
   // used to be, but every pixel of the gain went to the nav that now fills the

@@ -1,5 +1,19 @@
 {
   "version": 1,
-  "include": ["/player/*", "/match/*", "/overlay/*"],
-  "exclude": []
+  "include": ["/*"],
+  "exclude": [
+    "/assets/*",
+    "/images/*",
+    "/map-icons/*",
+    "/map-hi/*",
+    "/google4fb6a85272b47cc5.htm",
+    "/favicon.ico",
+    "/logo.svg",
+    "/logo192.png",
+    "/logo512.png",
+    "/og.png",
+    "/manifest.json",
+    "/robots.txt",
+    "/sitemap.xml"
+  ]
 }

@@ -108,10 +108,11 @@ describe("copy", () => {
     }
   });
 
-  // index.html is what Pages serves for /player/..., /match/... and every
-  // mistyped URL. Homepage prose there would be duplicate body copy across an
-  // unbounded set of URLs, on the pages that actually get traffic.
-  it("injects no body text into the file that doubles as the fallback", () => {
+  // The homepage does have a body now -- but it comes from its own component,
+  // rendered by the build (see prerenderBody), not from a stub written here.
+  // A stub would be copy that exists in the static file and nowhere on the
+  // live page, which is the drift the rendered body exists to prevent.
+  it("writes no hand-written stub for the homepage", () => {
     expect(ROUTE_META.find((r) => r.path === "/").body).toBe(false);
   });
 });

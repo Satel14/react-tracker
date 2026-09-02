@@ -10,6 +10,7 @@ import { translate } from "react-switch-lang";
 import { m } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import HistoryChecking from "../component/HistoryChecking";
+import HomeIntro from "../component/home/HomeIntro";
 import { getLiveSnapshot, getPlayerSteamName } from '../api/player'
 import openNotification from '../component/Notification';
 import SteamIcon from '../component/icons/SteamIcon';
@@ -145,7 +146,7 @@ const Main = ({ t }) => {
 
   return (
     <div className={exit ? "content mainpage exit" : "content mainpage"}>
-      <Row style={{ justifyContent: "center" }}>
+      <Row className="mainpage__hero" style={{ justifyContent: "center" }}>
         <Col xs={24} sm={22} md={18} lg={15}>
           <div className="mainpage_left">
             <div className="mainpage_left__text">
@@ -255,6 +256,16 @@ const Main = ({ t }) => {
               <HistoryChecking />
             </div>
           </div>
+        </Col>
+      </Row>
+      {/* The same component the build renders into index.html. Under the
+          search and the history rather than above them: the box is what
+          people came for, and this is what the page has to say to someone who
+          arrived from a search result and has never seen the site. The hero
+          above keeps a screen of its own, so this starts below the fold. */}
+      <Row className="mainpage__body" style={{ justifyContent: "center" }}>
+        <Col xs={24} sm={22} md={20} lg={19}>
+          <HomeIntro />
         </Col>
       </Row>
     </div>
