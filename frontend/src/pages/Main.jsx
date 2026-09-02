@@ -264,7 +264,7 @@ const Main = ({ t }) => {
           arrived from a search result and has never seen the site. The hero
           above keeps a screen of its own, so this starts below the fold. */}
       <Row className="mainpage__body" style={{ justifyContent: "center" }}>
-        <Col xs={24} sm={22} md={18} lg={15}>
+        <Col xs={24} sm={22} md={20} lg={19}>
           <HomeIntro />
         </Col>
       </Row>

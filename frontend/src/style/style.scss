@@ -3523,30 +3523,49 @@ body {
 }
 
 .home-intro {
-  max-width: 68ch;
-  margin: 44px auto 0;
+  margin: 44px 0 0;
   padding: 0 4px 28px;
   color: var(--text);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
 
   &__title {
-    margin: 0 0 12px;
-    font-size: 26px;
-    line-height: 1.25;
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.2;
     color: var(--text-strong);
   }
 
   &__lead {
-    margin: 0;
+    grid-column: 1 / -1;
+    margin: 0 0 10px;
+    max-width: 82ch;
+    font-size: 16px;
     line-height: 1.7;
     color: var(--text-muted);
   }
 
+  // A panel per section rather than one column of prose: the page is wide and
+  // dark, and the cards below the search already read this way.
   &__section {
-    margin-top: 28px;
+    margin: 0;
+    padding: 18px 20px 8px;
+    border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent) 3%, transparent);
+
+    // Five sections in two columns leaves the last one alone; it takes the
+    // whole row instead of sitting in a half-empty one.
+    &:last-of-type {
+      grid-column: 1 / -1;
+    }
 
     h2 {
       margin: 0 0 10px;
-      font-size: 18px;
+      font-size: 17px;
       color: var(--text-strong);
     }
 
@@ -3558,10 +3577,11 @@ body {
   }
 
   &__links {
+    grid-column: 1 / -1;
     display: flex;
     flex-wrap: wrap;
     gap: 10px 24px;
-    margin-top: 30px;
+    margin-top: 14px;
   }
 
   // Stated, not inherited: an anchor with no colour of its own falls to the
@@ -3570,6 +3590,12 @@ body {
     color: var(--accent);
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+}
+
+@media (max-width: 900px) {
+  .home-intro {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
