@@ -3507,6 +3507,21 @@ body {
 // on its own, with no page around it, so the block has to stand up unwrapped:
 // it carries its own measure and its own top margin rather than inheriting a
 // layout from the hero above it.
+// The search box used to be the whole page: .content gives it 75vh and the
+// hero sat in the middle of it. Prose directly underneath took that room away
+// and the two read as one crowded block, so the hero keeps a screen of its own
+// and the body starts below the fold, behind a line of its own.
+.mainpage__hero {
+  width: 100%;
+  min-height: 72vh;
+  align-items: flex-start;
+}
+
+.mainpage__body {
+  width: 100%;
+  border-top: 1px solid var(--border);
+}
+
 .home-intro {
   max-width: 68ch;
   margin: 44px auto 0;
