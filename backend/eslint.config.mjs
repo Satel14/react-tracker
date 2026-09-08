@@ -7,7 +7,10 @@ export default [
   },
   js.configs.recommended,
   {
-    files: ["**/*.js"],
+    // .cjs too: test/fixtures/*.cjs are CommonJS Node scripts like the rest.
+    // The extension is what keeps them out of requireResolution.test.js's scan,
+    // which reads a probe's require() literals as broken requires.
+    files: ["**/*.{js,cjs}"],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: "commonjs",
