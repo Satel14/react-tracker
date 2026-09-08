@@ -36,8 +36,3 @@ app.listen(config.port, () => {
   warmRecentSearches();
   warmRankPointHistory();
 });
-
-if (process.env.CI) {
-  console.log(`Tested success`);
-  process.exit(0);
-}
