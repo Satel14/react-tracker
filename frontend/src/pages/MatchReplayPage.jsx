@@ -3,7 +3,9 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Alert, Button, Slider, Segmented, Tabs } from "antd";
 import { translate } from "react-switch-lang";
 import ReplayStage from "../component/charts/ReplayStage";
-import Skeleton from "../component/Skeleton";
+import ReplayPaneSkeleton from "../component/skeletons/ReplayPaneSkeleton";
+import MatchScoreboardSkeleton from "../component/skeletons/MatchScoreboardSkeleton";
+import MatchAnalysisSkeleton from "../component/skeletons/MatchAnalysisSkeleton";
 import ReplayRoster from "../component/charts/ReplayRoster";
 import MatchScoreboard from "../component/match/MatchScoreboard";
 import KillFeed from "../component/match/KillFeed";
@@ -332,10 +334,11 @@ const MatchReplayPage = ({ t }) => {
     </>
   );
 
-  const renderAnalysisPane = (child) => {
-    if (analysis.loading) {
-      return <Skeleton variant="text" count={6} label={t("pages.match.loading")} />;
-    }
+  // The skeleton is per pane, not per page: the four analysis tabs differ by a
+  // square kill map and a seven-column table, so one shared placeholder could
+  // only ever match the shape of one of them.
+  const renderAnalysisPane = (skeleton, child) => {
+    if (analysis.loading) return skeleton;
     if (analysis.error) return <Alert type="error" message={analysis.error} showIcon />;
     if (!analysis.data) return null;
     return child(analysis.data);
@@ -349,7 +352,7 @@ const MatchReplayPage = ({ t }) => {
   // replay's failure as if the scoreboard were the thing that broke.
   const renderReplayPane = () => {
     if (loading && !data) {
-      return <Skeleton variant="block" label={t("pages.replay.loading")} className="match-replay__loading" />;
+      return <ReplayPaneSkeleton label={t("pages.replay.loading")} />;
     }
     if (error) return <Alert type="error" message={error} showIcon />;
     if (!data) return null;
@@ -361,33 +364,39 @@ const MatchReplayPage = ({ t }) => {
         {
           key: "scoreboard",
           label: t("pages.match.tabScoreboard"),
-          children: renderAnalysisPane((a) => (
-            <MatchScoreboard scoreboard={a.scoreboard} platform={platform} t={t} />
-          )),
+          children: renderAnalysisPane(
+            <MatchScoreboardSkeleton label={t("pages.match.loading")} />,
+            (a) => <MatchScoreboard scoreboard={a.scoreboard} platform={platform} t={t} />
+          ),
         },
         {
           key: "kills",
           label: t("pages.match.tabKills"),
-          children: renderAnalysisPane((a) => (
-            <>
-              <KillMap kills={a.killFeed} rawMapName={a.rawMapName} duration={a.duration} t={t} />
-              <KillFeed kills={a.killFeed} platform={platform} t={t} />
-            </>
-          )),
+          children: renderAnalysisPane(
+            <MatchAnalysisSkeleton tab="kills" label={t("pages.match.loading")} />,
+            (a) => (
+              <>
+                <KillMap kills={a.killFeed} rawMapName={a.rawMapName} duration={a.duration} t={t} />
+                <KillFeed kills={a.killFeed} platform={platform} t={t} />
+              </>
+            )
+          ),
         },
         {
           key: "damage",
           label: t("pages.match.tabDamage"),
-          children: renderAnalysisPane((a) => (
-            <DamageBreakdown damage={a.damage} focalPresent={!!a.focalAccountId} t={t} />
-          )),
+          children: renderAnalysisPane(
+            <MatchAnalysisSkeleton tab="damage" label={t("pages.match.loading")} />,
+            (a) => <DamageBreakdown damage={a.damage} focalPresent={!!a.focalAccountId} t={t} />
+          ),
         },
         {
           key: "timeline",
           label: t("pages.match.tabTimeline"),
-          children: renderAnalysisPane((a) => (
-            <CombatTimeline timeline={a.timeline} focalPresent={!!a.focalAccountId} t={t} />
-          )),
+          children: renderAnalysisPane(
+            <MatchAnalysisSkeleton tab="timeline" label={t("pages.match.loading")} />,
+            (a) => <CombatTimeline timeline={a.timeline} focalPresent={!!a.focalAccountId} t={t} />
+          ),
         },
   ];
 

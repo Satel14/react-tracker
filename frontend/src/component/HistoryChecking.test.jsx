@@ -66,6 +66,11 @@ test("shows a skeleton instead of the N/A placeholder while the request is in fl
     expect(container.querySelector(".historycheck_block--loading")).not.toBeNull();
   });
   expect(container.querySelector(".historycheck_block--empty")).toBeNull();
+  // A short dash, not a line: skeleton--text is full-width now that page-level
+  // skeletons use it for table and feed rows, and it would stretch across the
+  // flex row here.
+  expect(container.querySelector(".historycheck_block-left .skeleton--label")).not.toBeNull();
+  expect(container.querySelector(".skeleton--text")).toBeNull();
 });
 
 test("paints the cached list on the very first render, before the request resolves", () => {

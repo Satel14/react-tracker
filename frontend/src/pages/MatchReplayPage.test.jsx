@@ -437,3 +437,37 @@ test("a reload of the same match keeps the map on screen", async () => {
   fireEvent.keyDown(window, { key: "ArrowRight", code: "ArrowRight" });
   expect(screen.getByRole("img", { name: /erangel/i })).toBe(canvas);
 });
+
+test("the replay tab reserves the 16:9 stage while telemetry decodes", async () => {
+  // The loader was a 120px bar where a full-width 16:9 stage plus controls plus
+  // the roster were about to appear, so the tab jumped by most of a screen.
+  getMatchReplay.mockReturnValueOnce(new Promise(() => {}));
+  const { container } = renderAt("/match/steam/m1/replay");
+
+  const status = await screen.findByRole("status");
+  expect(status).toHaveTextContent("pages.replay.loading");
+  expect(container.querySelector(".replay-stage .skeleton.replay-stage__layer")).not.toBeNull();
+  expect(container.querySelector(".match-replay__controls")).not.toBeNull();
+  expect(container.querySelector(".replay-roster__teams")).not.toBeNull();
+});
+
+test("the scoreboard tab reserves the team table while the analysis loads", async () => {
+  getMatchAnalysis.mockReturnValueOnce(new Promise(() => {}));
+  const { container } = renderAt("/match/steam/m1/replay?accountId=account.me&tab=scoreboard");
+
+  await screen.findByRole("status");
+  const rows = container.querySelectorAll(".match-scoreboard__team .match-scoreboard__row");
+  expect(rows.length).toBeGreaterThan(0);
+  // Seven columns, same as the real row grid.
+  rows.forEach((row) => expect(row.children).toHaveLength(7));
+});
+
+test("each analysis tab gets a placeholder shaped like its own content", async () => {
+  // One shared six-dash stack could only ever match one of four tabs; the kills
+  // tab in particular opens with a square map.
+  getMatchAnalysis.mockReturnValue(new Promise(() => {}));
+  const { container } = renderAt("/match/steam/m1/replay?accountId=account.me&tab=kills");
+  await screen.findByRole("status");
+  expect(container.querySelector(".kill-map .map-stage")).not.toBeNull();
+  getMatchAnalysis.mockReset();
+});

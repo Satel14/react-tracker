@@ -32,7 +32,7 @@ import { resolveHistoryCandidate } from "../helpers/playerHistory";
 import { statNumber, statDisplay } from "../helpers/playerStats";
 import { pluralUa } from "../helpers/pluralUa";
 import openNotification from "../component/Notification";
-import Skeleton from "../component/Skeleton";
+import PlayerPageSkeleton from "../component/skeletons/PlayerPageSkeleton";
 import RankPercentile from "../component/ranks/RankPercentile";
 import MapsTab from "./MapsTab";
 
@@ -609,12 +609,11 @@ const PlayerPage = ({ t }) => {
 
   if (loading || routeChanged) {
     return (
-      <div
-        className="playerpage"
-        style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}
-      >
-        <Skeleton variant="block" label={t("pages.player.loading")} className="playerpage__loading" />
-      </div>
+      <PlayerPageSkeleton
+        label={t("pages.player.loading")}
+        overviewTiles={OVERVIEW_ITEMS.length}
+        advancedTiles={ADVANCED_ITEMS.length}
+      />
     );
   }
 

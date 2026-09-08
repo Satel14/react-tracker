@@ -310,3 +310,19 @@ test("links both ends of a Twitch Reports encounter", async () => {
   expect(links.map((a) => a.getAttribute("href")))
     .toEqual(["/player/steam/PlayerA", "/player/steam/SomeVictim"]);
 });
+
+test("the loading state stands where the profile will be, not centred in an empty box", async () => {
+  // The loader used to be one 120px bar centred in a height:50vh flex box, so
+  // it sat well below the hero card it stood in for and the whole page jumped
+  // up once the data landed.
+  getPlayerData.mockReturnValue(new Promise(() => {}));
+  getPlayerReports.mockReturnValue(new Promise(() => {}));
+
+  const { container } = renderAt();
+
+  const status = await screen.findByRole("status");
+  expect(status).toHaveClass("playerpage--compact");
+  expect(status.getAttribute("style")).toBeNull();
+  expect(container.querySelector(".player-card--header")).not.toBeNull();
+  expect(container.querySelector(".player-stat-grid")).not.toBeNull();
+});

@@ -76,7 +76,7 @@ const HistorySkeleton = () =>
     <div className="historycheck_block historycheck_block--loading" key={row}>
       <div className="historycheck_block-left">
         <span className="skeleton skeleton--avatar" aria-hidden="true" />
-        <span className="skeleton skeleton--text" aria-hidden="true" />
+        <span className="skeleton skeleton--label" aria-hidden="true" />
       </div>
       <span className="skeleton skeleton--badge" aria-hidden="true" />
     </div>

@@ -6,7 +6,7 @@ import { translate } from "react-switch-lang";
 import { getLeaderboard, getSeasons } from "../api/leaderboard";
 import { shardForRegion } from "../helpers/leaderboardShard";
 import { LeaderboardHeading, LeaderboardIntro } from "../component/leaderboard/LeaderboardIntro";
-import Skeleton from "../component/Skeleton";
+import LeaderboardSkeleton from "../component/skeletons/LeaderboardSkeleton";
 
 const REGIONS = [
   { value: "pc-na", label: "PC · NA" },
@@ -279,7 +279,7 @@ const Leaderboard = ({ t }) => {
       {error ? <Alert type="error" message={error} showIcon /> : null}
 
       {loading ? (
-        <Skeleton variant="text" count={10} label={t("pages.leaderboards.loading")} className="leaderboard-page__loading" />
+        <LeaderboardSkeleton label={t("pages.leaderboards.loading")} columns={columns} />
       ) : (
         <Table
           className="leaderboard-page__table"
