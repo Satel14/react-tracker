@@ -4,15 +4,20 @@ import { SearchOutlined } from "@ant-design/icons";
 import { translate } from "react-switch-lang";
 import EmptyState from "../component/EmptyState";
 
+// Reading order, and it is the dictionary's order too -- the questions a player
+// arrives with come first (how do I find someone, which platform, which
+// season), and the ones about this site come last.
 const FAQ_KEYS = [
   "search",
+  "platforms",
   "season",
+  "history",
   "missingStats",
+  "rankedRp",
+  "limits",
   "avatar",
   "reports",
   "favorites",
-  "limits",
-  "platforms",
 ];
 
 const Help = ({ t }) => {
@@ -32,6 +37,13 @@ const Help = ({ t }) => {
         key: String(index + 1),
         label: question,
         children: <p>{answer}</p>,
+        // rc-collapse renders a closed panel's content as null, so every
+        // answer on this page existed only after someone clicked it: not in
+        // the DOM, not findable with Ctrl+F, and not readable by anything that
+        // renders the page and reads what it finds. Per item rather than
+        // defaultActiveKey, because `accordion` would then hold exactly one
+        // panel open and the rest would go back to being nothing.
+        forceRender: true,
       }];
     });
   }, [query, t]);

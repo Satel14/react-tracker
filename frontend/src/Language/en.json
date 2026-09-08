@@ -102,7 +102,7 @@
       }
     },
     "leaderboards": {
-      "title": "Leaderboards",
+      "title": "PUBG ranked leaderboards",
       "subtitle": "Top 500 ranked players by season and mode",
       "platform": "Platform",
       "mode": "Mode",
@@ -367,43 +367,51 @@
       "weapon": "Weapon"
     },
     "help": {
-      "title": "Help & FAQ",
-      "subtitle": "Quick answers about search, seasons, favorites, and PUBG Report integration.",
-      "searchPlaceholder": "Search FAQ...",
-      "empty": "No matching questions. Try a different keyword.",
-      "contact": "If your issue is not listed, open Bug Report and describe what happened.",
+      "title": "How to look up PUBG stats",
+      "subtitle": "Short answers to the questions we get most: finding a player, reading the numbers, and what to do when a profile will not load.",
+      "searchPlaceholder": "Search these answers…",
+      "empty": "Nothing here matches that. Try a different word, or open Bug Report and ask.",
+      "contact": "If your question is not answered here, open Bug Report and describe what you saw.",
       "faq": {
         "search": {
-          "q": "How do I search for a player?",
-          "a": "Use the search field on the main page, choose platform (Steam/Xbox/PSN/Stadia/Kakao), and enter nickname, account ID, or profile URL."
+          "q": "How do I look up a PUBG player?",
+          "a": "Pick the platform first, then type the in-game nickname into the box on the home page. The name is case-sensitive and it has to be the name the player uses today: PUBG keeps no record of previous nicknames, so an account that was renamed will not come up under the old one. A Steam profile URL works too, in either the vanity or the numeric form, and so does an account ID beginning with “account.”, which skips the lookup entirely."
+        },
+        "platforms": {
+          "q": "Which platforms can I search?",
+          "a": "Steam, Xbox, PlayStation, Kakao and Stadia. PUBG keeps a separate account and separate statistics per platform, so the same nickname can belong to two different people on Steam and Xbox, and a console player will never be found on the Steam shard however the name is spelled. Kakao is its own region rather than a platform in the usual sense: separate shard, separate ranked ladder, separate Survivor slots. Stadia is still addressable in the API even though the service is gone, which is why the option remains."
         },
         "season": {
-          "q": "How do season stats work?",
-          "a": "Current season is selected by default. You can switch to previous seasons from the season dropdown on the player page."
+          "q": "Which season am I looking at?",
+          "a": "The current one, unless you change it. Ranked resets every season, so a tier and an RP number only mean something next to the season they were earned in — the dropdown on a player page switches between the seasons the API still holds."
+        },
+        "history": {
+          "q": "Why can I not see my older matches?",
+          "a": "PUBG’s API keeps a match available for about fourteen days and then stops serving it. Match history here is that recent window rather than a career archive, and it is also why an old match cannot be opened as a replay: the data behind it is no longer there to fetch."
         },
         "missingStats": {
-          "q": "Why are season stats empty or too low?",
-          "a": "PUBG API can return limited or delayed data for some accounts/seasons. Also, requesting a wrong platform may show no stats."
+          "q": "Why is a profile empty?",
+          "a": "Usually one of three things. The player has not played the current season, so there is nothing in it yet; the platform is wrong, and the account exists on another shard; or PUBG is rate-limiting us and we are serving the last good copy while that clears. The page says which of the three it is rather than showing zeroes as if they were real."
+        },
+        "rankedRp": {
+          "q": "What is RP, and why is there only one number?",
+          "a": "RP is the rating the ranked ladder is ordered by. Since Season 36 there is a single RP number per account rather than one per party type and perspective, so the tier on a profile is the tier for everything that player queues. The ranks page covers the eight tiers in order, how RP is earned and lost, and what Survivor actually requires."
+        },
+        "limits": {
+          "q": "What does “Rate Limit Reached” mean?",
+          "a": "PUBG allows a fixed number of requests a minute, and everyone using this site shares it. When we reach it, a lookup serves the last good copy of that profile instead of failing, and the limit clears in about twenty seconds. Nothing is wrong with the account — waiting a moment and asking again is enough."
         },
         "avatar": {
-          "q": "Why is avatar not shown?",
-          "a": "Steam avatar requires a valid Steam API key on backend. If avatar cannot be resolved, fallback avatar is used."
+          "q": "Why is there no avatar on a profile?",
+          "a": "Avatars come from Steam rather than from PUBG, so they exist only for Steam accounts whose profile is public. When Steam cannot be reached or the profile is private, the page falls back to a placeholder. It says nothing about the account or its statistics."
         },
         "reports": {
           "q": "What is the PUBG Report tab?",
-          "a": "This tab shows encounters found via PUBG Report where kills/deaths were captured on Twitch streams."
+          "a": "It looks up kills and deaths that were captured on Twitch streams, through the third-party pubg.report service. When a kill in a match happened to be on someone’s stream, that tab is where the clip is. It is separate from the official API, so a match can be complete here and have nothing in that tab."
         },
         "favorites": {
-          "q": "How do Favorites and History work?",
-          "a": "Favorites and local history are stored in your browser. Recent searched list is served from backend recent searches."
-        },
-        "limits": {
-          "q": "What does Rate Limit Reached mean?",
-          "a": "PUBG API has request limits. When limit is reached, tracker can temporarily serve cached data until cooldown passes."
-        },
-        "platforms": {
-          "q": "Which platforms are supported?",
-          "a": "Steam, Xbox, PlayStation, Stadia, and Kakao shards are supported. Make sure you pick the same platform where the player actually plays."
+          "q": "Where are my favourites kept?",
+          "a": "On your device, in this browser — there are no accounts here to keep them in. Clearing site data clears them, and they will not follow you to another browser or phone. The “recently searched” list is a different thing: that one is site-wide and shows what other people have been looking up."
         }
       }
     },
