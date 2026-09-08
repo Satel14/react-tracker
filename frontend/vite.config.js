@@ -6,6 +6,33 @@ import react from '@vitejs/plugin-react';
 import { ROUTE_META, canonicalFor } from './src/helpers/routeMeta';
 import { renderHead } from './src/helpers/renderHead';
 import { prerenderBody } from './src/helpers/prerenderBody.jsx';
+import { CENSUS_DATA_FILES } from './src/helpers/censusDataFiles.js';
+
+// Writes the published tier census beside the built site, so the numbers on
+// /ranks have a URL a forum post or a wiki page can cite instead of a
+// screenshot. Rendered from the same committed snapshot the page itself
+// renders, which is what stops the file and the article disagreeing.
+//
+// A skip rather than a thrown build: an unusable snapshot degrades the section
+// to its live read, and that is not worth taking the whole site down for.
+// censusSnapshot.test.js is what fails in CI when the committed reading goes
+// bad, and the page links these files only when the build wrote them.
+const publishCensusData = () => ({
+  name: 'publish-census-data',
+  apply: 'build',
+  closeBundle() {
+    if (!CENSUS_DATA_FILES.length) {
+      this.warn('publish-census-data: no usable census snapshot, publishing nothing');
+      return;
+    }
+    for (const file of CENSUS_DATA_FILES) {
+      const target = fileURLToPath(new URL(`./build/${file.path}`, import.meta.url));
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, file.body);
+    }
+    this.info(`published ${CENSUS_DATA_FILES.length} census data files`);
+  },
+});
 
 // Writes one static shell per fixed route beside the built index.html, so a
 // crawler asking for /leaderboards gets that route's title, description and
@@ -74,7 +101,7 @@ const prerenderHead = () => ({
 });
 
 export default defineConfig({
-  plugins: [react(), prerenderHead()],
+  plugins: [react(), prerenderHead(), publishCensusData()],
   server: {
     port: 3000,
     open: false,

@@ -51,6 +51,10 @@ const ownDeclarations = (rule) => {
 // This list is the blocks that hold one. It grows when a new prose link ships.
 const BLOCKS_WITH_PROSE_LINKS = [
   ".ranks-page",
+  // Listed separately from .ranks-page on purpose: that block's `a` rule lives
+  // inside __toc-list, so the entry above is satisfied without saying anything
+  // about the census note's two data-file links.
+  "&__share-note",
   ".leaderboard-page__explainer",
   ".prerender__nav",
   ".home-intro",

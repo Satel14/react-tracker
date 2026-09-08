@@ -106,6 +106,31 @@ describe("the ranks article as a crawler receives it", () => {
   it("renders without a live app around it", () => {
     expect(() => ranks()).not.toThrow();
   });
+
+  // The section nobody else on the web publishes, and the one this file used to
+  // deliver as the words "Reading the latest sample…" -- the numbers arrived in
+  // an effect, and a build runs no effects. They come from the committed
+  // snapshot now, so they are in the file a crawler and every answer engine
+  // read.
+  it("carries the measured tier shares, not the loading line", () => {
+    const html = decode(ranks());
+    expect(html).not.toContain(en.pages.ranks.distribution.loading);
+    expect(html).toContain('class="ranks-page__share-list"');
+    // Every tier the census could publish, as a percentage with a margin.
+    expect((html.match(/class="ranks-page__share-value">\d+\.\d%/g) || []).length)
+      .toBeGreaterThan(5);
+    expect(html).toMatch(/Measured from [\d,]+ accounts across [\d,]+ ranked matches on PC \(Steam\)/);
+  });
+
+  it("says which window the shares were measured over", () => {
+    expect(decode(ranks())).toMatch(/\d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}/);
+  });
+
+  // A URL to cite rather than a screenshot to argue with.
+  it("links the data files", () => {
+    expect(ranks()).toContain('href="/data/tier-census.json"');
+    expect(ranks()).toContain('href="/data/tier-census.csv"');
+  });
 });
 
 // The same component, read from the ua dictionary. Asserted on sentences from

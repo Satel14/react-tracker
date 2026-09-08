@@ -13,7 +13,7 @@ import TierDistribution from "../component/ranks/TierDistribution";
 // as a correction instead of as the third fact in a row.
 const SECTIONS = [
   { key: "ladder", paragraphs: 4, ladder: true },
-  { key: "distribution", paragraphs: 4, distribution: true },
+  { key: "distribution", paragraphs: 5, distribution: true },
   { key: "grandmaster", paragraphs: 3, tone: "myth" },
   { key: "howRpMoves", paragraphs: 5 },
   { key: "tierProtection", paragraphs: 6 },

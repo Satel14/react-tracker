@@ -212,15 +212,23 @@ test("draws one division pip per division, and none for a single rank", () => {
   });
 });
 
-// The article is static; this one section is not. It has to hold its place in
-// the page -- heading, anchor and prose -- while the census is still being
-// read, so a slow or missing sample never leaves a hole in the contents rail.
-test("keeps the distribution section in place while the sample is still loading", () => {
+// The article is static; this one section is not. It used to hold its place
+// with a loading line while the census was read over the network, which is
+// what a build-time render baked into the static file and what a visitor saw
+// while the free API instance cold-started. The daily job now commits its
+// reading, so the section renders numbers at first paint and the live read only
+// refreshes them -- the census request is still held unresolved by the mock at
+// the top of this file, so what is asserted here is the committed reading.
+test("renders the committed census reading rather than a loading line", () => {
   const { container } = renderPage();
   const section = container.querySelector("#distribution");
 
   expect(section).not.toBeNull();
   expect(section.querySelector("h2")).toHaveTextContent(en.pages.ranks.distribution.heading);
-  expect(section.textContent).toContain(en.pages.ranks.distribution.loading);
+  expect(section.querySelector(".ranks-page__share-list")).not.toBeNull();
+  expect(section.textContent).not.toContain(en.pages.ranks.distribution.loading);
   expect(section.textContent).toContain(en.pages.ranks.distribution.p2);
+  // A share from the committed snapshot. A snapshot that stopped being usable
+  // would fail here rather than quietly shipping the loading line again.
+  expect(section.textContent).toMatch(/\d+\.\d%/);
 });

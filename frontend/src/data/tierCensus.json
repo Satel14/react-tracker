@@ -1,0 +1,114 @@
+{
+  "capturedAt": "2026-09-08T06:29:27Z",
+  "seasonId": "division.bro.official.pc-2018-42",
+  "current": true,
+  "shard": "steam",
+  "days": 7,
+  "accounts": 11029,
+  "matches": 745,
+  "windows": 7,
+  "firstDate": "2026-08-31",
+  "lastDate": "2026-09-06",
+  "perMatch": 15,
+  "tiers": [
+    {
+      "tier": "gold",
+      "count": 3230,
+      "share": 0.2928642669326322,
+      "low": 0.2743374670624764,
+      "high": 0.3121041133193563,
+      "n": 11029,
+      "effectiveN": 2228,
+      "designEffect": 4.948479607639668,
+      "publishable": true
+    },
+    {
+      "tier": "platinum",
+      "count": 2349,
+      "share": 0.2129839514008523,
+      "low": 0.19672728839259784,
+      "high": 0.23019901189220593,
+      "n": 11029,
+      "effectiveN": 2297,
+      "designEffect": 4.801130780528219,
+      "publishable": true
+    },
+    {
+      "tier": "silver",
+      "count": 1857,
+      "share": 0.168374285973343,
+      "low": 0.15296443263397394,
+      "high": 0.1849974942724071,
+      "n": 11029,
+      "effectiveN": 2096,
+      "designEffect": 5.260442793963266,
+      "publishable": true
+    },
+    {
+      "tier": "crystal",
+      "count": 1395,
+      "share": 0.1264847220962916,
+      "low": 0.1132572856638706,
+      "high": 0.14101134055306064,
+      "n": 11029,
+      "effectiveN": 2205,
+      "designEffect": 5.0014332108200446,
+      "publishable": true
+    },
+    {
+      "tier": "diamond",
+      "count": 991,
+      "share": 0.08985402121679209,
+      "low": 0.07701305015631335,
+      "high": 0.10459343731200132,
+      "n": 11029,
+      "effectiveN": 1656,
+      "designEffect": 6.658400676966529,
+      "publishable": true
+    },
+    {
+      "tier": "bronze",
+      "count": 988,
+      "share": 0.0895820110617463,
+      "low": 0.07696044213437009,
+      "high": 0.10404021294748711,
+      "n": 11029,
+      "effectiveN": 1713,
+      "designEffect": 6.435701170499106,
+      "publishable": true
+    },
+    {
+      "tier": "master",
+      "count": 160,
+      "share": 0.014507208269108713,
+      "low": 0.01094165676904526,
+      "high": 0.019212094456350248,
+      "n": 11029,
+      "effectiveN": 3270,
+      "designEffect": 3.372614755789839,
+      "publishable": true
+    },
+    {
+      "tier": "unranked",
+      "count": 57,
+      "share": 0.005168192945869979,
+      "low": 0.0039380204753340356,
+      "high": 0.006780035181520956,
+      "n": 11029,
+      "effectiveN": 9957,
+      "designEffect": 1.107621140528286,
+      "publishable": true
+    },
+    {
+      "tier": "survivor",
+      "count": 2,
+      "share": 0.00018134010336385892,
+      "low": 0.00004973140578767339,
+      "high": 0.0006610065169824326,
+      "n": 11029,
+      "effectiveN": 11029,
+      "designEffect": 1,
+      "publishable": false
+    }
+  ]
+}

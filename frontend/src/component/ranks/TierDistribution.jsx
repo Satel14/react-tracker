@@ -2,6 +2,12 @@ import React, { useEffect, useState } from "react";
 import { getLanguage } from "react-switch-lang";
 import { getRankDistribution } from "../../api/census";
 import { RANK_LADDER } from "../../helpers/rankLadder";
+import { CENSUS_SNAPSHOT, effectiveReadings, usableSnapshot } from "../../helpers/censusSnapshot";
+import {
+  CENSUS_DATA_URL,
+  CENSUS_CSV_URL,
+  CENSUS_DATA_PUBLISHED,
+} from "../../helpers/censusDataFiles";
 
 // Players with no ranked record who turned up in a ranked lobby. Kept as its
 // own row rather than dropped: removing them would quietly shrink the
@@ -29,23 +35,56 @@ const percent = (share) => `${(share * 100).toFixed(1)}%`;
 // reader expects, rather than two bounds they have to subtract themselves.
 const margin = ({ low, high }) => (((high - low) / 2) * 100).toFixed(1);
 
-const TierDistribution = ({ t, load = getRankDistribution, days = 7 }) => {
-  const [state, setState] = useState({ status: "loading" });
+// Only the shard the census is drawn from has a label. A second one would be
+// copy for a measurement that does not exist -- the collector pins
+// shard = "steam" -- so an unexpected shard prints its own name rather than a
+// translation nobody wrote.
+const platformLabel = (t, shard) =>
+  shard === "steam" ? t("pages.ranks.distribution.platform") : shard || "";
+
+// `snapshot` is the reading committed to the repo by the daily census job, and
+// it is the initial state rather than a fallback. Two readers get numbers
+// because of it: a build-time render, which is all a crawler or an answer
+// engine ever sees, and a visitor who arrives while the free API instance is
+// still cold-starting. The live fetch then overwrites it.
+const TierDistribution = ({
+  t,
+  load = getRankDistribution,
+  days = 7,
+  snapshot = CENSUS_SNAPSHOT,
+}) => {
+  const [state, setState] = useState(
+    snapshot ? { status: "ready", data: snapshot } : { status: "loading" },
+  );
 
   useEffect(() => {
     let alive = true;
     Promise.resolve()
       .then(() => load(days))
       .then((response) => {
-        if (alive) setState({ status: "ready", data: response?.data ?? null });
+        if (!alive) return;
+        const fresh = response?.data ?? null;
+        // Two shapes a successful request can carry that are worse than what is
+        // already on the page: the controller answers its own errors with a 200
+        // and a message instead of data, and the first days of a season come
+        // back with no tier thick enough to publish. Neither may overwrite a
+        // good table -- unless it names a different season, in which case the
+        // committed reading is the stale one and has to give way.
+        const movedOn = Boolean(fresh?.seasonId) && fresh.seasonId !== snapshot?.seasonId;
+        if (snapshot && !usableSnapshot(fresh) && !movedOn) return;
+        setState({ status: "ready", data: fresh });
       })
       .catch(() => {
-        if (alive) setState({ status: "error" });
+        // A failed read with a snapshot in hand is not a failure the reader
+        // needs to hear about: last week's shares are a better answer than a
+        // line saying the sample is unreachable, and the window printed under
+        // them says how old they are.
+        if (alive && !snapshot) setState({ status: "error" });
       });
     return () => {
       alive = false;
     };
-  }, [load, days]);
+  }, [load, days, snapshot]);
 
   if (state.status === "loading") {
     return <p className="ranks-page__share-note">{t("pages.ranks.distribution.loading")}</p>;
@@ -73,6 +112,7 @@ const TierDistribution = ({ t, load = getRankDistribution, days = 7 }) => {
   // the top tier's bar fills the track and its interval is clipped away by the
   // end of it -- drawing the least certain tier as the most certain one.
   const widest = Math.max(...publishable.map((row) => row.high));
+  const effective = effectiveReadings(data);
 
   return (
     <div className="ranks-page__shares">
@@ -147,10 +187,27 @@ const TierDistribution = ({ t, load = getRankDistribution, days = 7 }) => {
         {t("pages.ranks.distribution.sample", {
           accounts: groupDigits(data.accounts),
           matches: groupDigits(data.matches),
+          platform: platformLabel(t, data.shard),
           from: data.firstDate,
           to: data.lastDate,
-        })}
+        })}{" "}
+        {effective
+          ? t("pages.ranks.distribution.clustering", { effective: groupDigits(effective) })
+          : null}
       </p>
+
+      {/* The one asset here nobody else publishes, as something a post or a
+          wiki page can point at rather than screenshot. Written by the build
+          from the same snapshot this table renders, so the file and the page
+          cannot disagree. */}
+      {CENSUS_DATA_PUBLISHED && (
+        <p className="ranks-page__share-note">
+          {t("pages.ranks.distribution.download")}{" "}
+          <a href={CENSUS_DATA_URL}>JSON</a>
+          {" · "}
+          <a href={CENSUS_CSV_URL}>CSV</a>
+        </p>
+      )}
     </div>
   );
 };

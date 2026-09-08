@@ -12,6 +12,12 @@ name: Tier census
 # matters less than it sounds: the pacer holds a reserve the census never
 # touches, so a live lookup keeps its quota either way.
 
+# It also commits the reading it just collected, which is what puts the numbers
+# in the static HTML: a Pages build runs no effects, so before this the one
+# section nobody else publishes shipped as the words "Reading the latest
+# sample…". The commit is what triggers the deploy that refreshes them, so this
+# job is the page's update cadence.
+
 on:
   schedule:
     # 03:10 Kyiv (UTC+3 in summer), and a preference rather than a requirement:
@@ -32,9 +38,15 @@ jobs:
     # The API stops itself at 80 minutes and the poll gives up at 100. Reaching
     # this cap means something is wrong rather than slow.
     timeout-minutes: 120
+    # The snapshot step pushes one commit back to the branch.
+    permissions:
+      contents: write
     env:
       API: https://api.pubgtracker.top
+      SNAPSHOT: frontend/src/data/tierCensus.json
     steps:
+      - uses: actions/checkout@v4
+
       - name: Ask the API to collect today's sample
         env:
           CENSUS_TOKEN: ${{ secrets.CENSUS_TOKEN }}
@@ -126,3 +138,80 @@ jobs:
           fi
 
           echo "Stored $stored rows for $window."
+
+      # Only after a healthy collection, which is also what the "already
+      # collected" early exit above counts as: while the pipeline is broken the
+      # page should keep the last good reading, and the window printed beside
+      # the table is what tells a reader how old it is.
+      - name: Commit the reading the page renders
+        run: |
+          # Read the endpoint /ranks itself reads, not the database: the file
+          # and the live fetch then cannot differ in shape, only in age.
+          body=$(curl -sS -m 120 "$API/api/census/distribution?days=7")
+
+          usable=$(printf '%s' "$body" | jq -r \
+            '(.status == 200) and ((.data.tiers // []) | map(select(.publishable)) | length > 0)' \
+            2>/dev/null || echo false)
+          if [ "$usable" != "true" ]; then
+            echo "::warning::the distribution came back unusable; keeping the committed reading"
+            printf '%s' "$body" | head -c 400
+            exit 0
+          fi
+
+          # Everything the page renders and nothing it does not: the hundred-row
+          # RP percentile table belongs to the player pages and would only be
+          # noise in a file about tier shares.
+          #
+          # In a file rather than a shell variable so no layer has to quote a
+          # multi-line jq program correctly. This is also exactly what was run
+          # against a live payload before shipping it.
+          cat > "$RUNNER_TEMP/reading.jq" <<'JQ'
+          {
+            seasonId: .data.seasonId,
+            current: .data.current,
+            shard: .data.shard,
+            days: .data.days,
+            accounts: .data.accounts,
+            matches: .data.matches,
+            windows: .data.windows,
+            firstDate: .data.firstDate,
+            lastDate: .data.lastDate,
+            perMatch: .data.perMatch,
+            tiers: [.data.tiers[] | {tier, count, share, low, high, n, effectiveN, designEffect, publishable}]
+          }
+          JQ
+          { printf '{capturedAt: (now | todate)} + (\n'; cat "$RUNNER_TEMP/reading.jq"; printf ')\n'; } > "$RUNNER_TEMP/snapshot.jq"
+
+          # capturedAt moves every run, so it is excluded from the comparison:
+          # a commit a day that says nothing new is a deploy a day for nothing.
+          # -S on both sides, so key order cannot make two equal readings differ.
+          fresh=$(printf '%s' "$body" | jq -S -f "$RUNNER_TEMP/reading.jq")
+          held=$(jq -S 'del(.capturedAt)' "$SNAPSHOT" 2>/dev/null || echo null)
+          if [ "$fresh" = "$held" ]; then
+            echo "::notice::the reading has not changed; nothing to commit"
+            exit 0
+          fi
+
+          was=$(jq -r '.seasonId // ""' "$SNAPSHOT" 2>/dev/null || echo "")
+          now_season=$(printf '%s' "$body" | jq -r '.data.seasonId // ""')
+          if [ -n "$was" ] && [ "$was" != "$now_season" ]; then
+            # articleSeason.test.js fails on the next CI run and says what to do.
+            # Committing anyway is deliberate: the numbers and their window stay
+            # true, and it is the prose around them that a person has to rewrite.
+            echo "::warning::the season moved from $was to $now_season -- the ranks copy needs rewriting"
+          fi
+
+          printf '%s' "$body" | jq -f "$RUNNER_TEMP/snapshot.jq" > "$SNAPSHOT"
+
+          git config user.name "tier-census"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$SNAPSHOT"
+          git commit -m "chore(census): refresh the published tier distribution"
+
+          # Explicit refspec, and a rebase first: the checkout is minutes old by
+          # the time the collection finishes, so a merge landing meanwhile would
+          # otherwise reject the push and fail a job that did nothing wrong.
+          # Only one generated file is in flight, so there is nothing to conflict.
+          git pull --rebase --autostash origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+          echo "Committed $(jq -r '"\(.accounts) accounts, \(.firstDate) to \(.lastDate)"' "$SNAPSHOT")."

@@ -456,10 +456,14 @@
       "distribution": {
         "heading": "Where players actually sit",
         "p1": "Everything above this section is what KRAFTON publishes. This part is the one thing on the page we measure ourselves: a daily random sample of ranked matches, and the current tier of fifteen players drawn from each of them.",
-        "p2": "The interval beside each tier is not decoration. Players drawn from the same lobby are more alike than players drawn at random — matchmaking put them there by rating — so four thousand accounts carry about as much information as eight hundred independent ones would. The intervals already account for that, which is why they are wider than the raw count suggests.",
+        "p2": "The interval beside each tier is not decoration. Players drawn from the same lobby are more alike than players drawn at random — matchmaking put them there by rating — so the sample carries less information than its raw size suggests. The intervals already account for that, which is why they are wider than the count would imply; the line under the table says how much less.",
         "p3": "A tier gets a number only when its own sample is thick enough to hold one up. Survivor is the tier this bites: a few hundred seats worldwide means a random sample of ranked lobbies may contain none at all, and a single sighting is not a measurement.",
         "p4": "Ranked resets every season, so this describes the season named below and no other. The window pools the last seven days of samples and counts each account once, at its most recent reading.",
-        "sample": "Measured from {accounts} accounts across {matches} ranked matches, {from} to {to}.",
+        "p5": "One thing these shares are not: a headcount of everyone who plays. The sample is drawn from matches rather than from a list of accounts, so a player who queues twenty times a week is likelier to appear in it than one who queues twice. Read a tier's share as where a random ranked lobby seat sits, not as a census of who owns the game.",
+        "sample": "Measured from {accounts} accounts across {matches} ranked matches on {platform}, {from} to {to}.",
+        "clustering": "Because players in one lobby are alike, that is worth about {effective} independent readings at its tightest — which is what each interval above already allows for.",
+        "platform": "PC (Steam)",
+        "download": "Citing these numbers? Take them as a file:",
         "tooFew": "too few observations",
         "unranked": "Unranked",
         "loading": "Reading the latest sample…",
@@ -544,7 +548,7 @@
       "whatWeDoNotClaim": {
         "heading": "What we deliberately do not claim",
         "p1": "No per-tier RP table. Survivor's 3,700 is the only tier-to-RP number KRAFTON has published for the current ladder; the one other figure that exists — the 3,000 / Platinum I anchor in the 2021 decay rules — predates Crystal and has never been restated. The \"Gold: 2000–2499\" style tables you find are not from any patch note. KRAFTON has never published per-tier RP bands — not in Update 7.2 when Ranked launched, not since. Every such table is third-party reconstruction copied forward.",
-        "p2": "No tier distribution. The only data we could build one from is the players people happened to look up, plus a top-500 leaderboard that spans two or three tiers. That is not a distribution, so we do not publish one.",
+        "p2": "No distribution outside PC, and no RP boundary for any tier. The shares above are the Steam shard only, because that is where the sample is drawn from — console and Kakao run their own ladders and we measure neither. And a share says how many players sit in a tier, never where that tier starts in RP. What we cannot measure is left saying so in the table rather than filled in: Survivor's few hundred seats worldwide mean a week of random ranked lobbies may hold none at all.",
         "p3": "No division count for Master or Survivor. Both are conventionally shown as single ranks, but KRAFTON has never published a per-tier division table, so we do not put a number on it.",
         "p4": "No decay floor for the current ladder, for the reason above.",
         "p5": "Everything on this page is sourced to KRAFTON patch notes and official posts, and where a claim rests on anything weaker we say so on the spot. It was checked on 31 August 2026; when the rules change, this page changes."
