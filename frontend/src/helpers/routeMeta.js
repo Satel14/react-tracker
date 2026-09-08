@@ -30,10 +30,13 @@ export const ROUTE_META = [
     description:
       "Track PUBG player statistics, view match history, and check leaderboards. Fast and easy PUBG stats tracker for steam.",
     sitemap: true,
-    // Head only. This file is also what Pages serves for /player/..., /match/...
-    // and every mistyped URL, so injected homepage prose would become duplicate
-    // body copy across an unbounded set of URLs -- on the pages that get the
-    // traffic. Those routes get their own text from the Pages Function later.
+    // No hand-written stub -- and no longer "no body at all", which is what
+    // this comment used to say. The homepage does ship prose: prerenderBody
+    // renders its HomeIntro component into this file, and because the file is
+    // also what Pages serves for /player/..., /match/... and every mistyped
+    // URL, that prose rides along to all of them. What made it safe was
+    // pageHeadMeta marking every unmatched path noindex with no canonical.
+    // The flag only decides the stub, and an article supersedes it.
     body: false,
   },
   {

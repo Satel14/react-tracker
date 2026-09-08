@@ -203,6 +203,9 @@ describe("crawlable navigation", () => {
 // One WebApplication block ships in the shell. It named the site root on every
 // page, so each route's structured data disagreed with its own canonical.
 describe("structured data", () => {
+  const ldBlock = (html) =>
+    /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)[1];
+
   const ldUrl = (html) =>
     /"@type": "WebApplication"[\s\S]*?"url": "([^"]+)"/.exec(html)?.[1]
       ?? /"url": "([^"]+)"/.exec(html)?.[1];
@@ -216,6 +219,30 @@ describe("structured data", () => {
     const html = renderHead(shell, route("/leaderboards"));
     const canonical = /rel="canonical" href="([^"]+)"/.exec(html)[1];
     expect(ldUrl(html)).toBe(canonical);
+  });
+
+  // The other half of the node that was wrong on every page: it carried the
+  // homepage's description everywhere, including on a two-thousand-word
+  // article about the ranked ladder.
+  it.each(["/ranks", "/help", "/leaderboards"])("describes %s, not the homepage", (path) => {
+    const meta = ROUTE_META.find((r) => r.path === path);
+    const node = JSON.parse(ldBlock(renderHead(shell, meta)));
+    expect(node.description).toBe(meta.description);
+    expect(node.description).not.toBe(ROUTE_META.find((r) => r.path === "/").description);
+  });
+
+  it("emits exactly one node, and one that parses", () => {
+    const html = renderHead(shell, route("/ranks"));
+    expect((html.match(/application\/ld\+json/g) || []).length).toBe(1);
+    expect(() => JSON.parse(ldBlock(html))).not.toThrow();
+  });
+
+  // Rebuilding the block rather than patching its url is what lets the Pages
+  // Function share the builder. If the shell ever stopped carrying a node to
+  // replace, every route would silently ship none.
+  it("throws rather than shipping a route with no structured data", () => {
+    const withoutNode = shell.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, "");
+    expect(() => renderHead(withoutNode, route("/ranks"))).toThrow(/structured-data/);
   });
 });
 
