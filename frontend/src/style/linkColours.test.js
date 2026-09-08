@@ -56,6 +56,7 @@ const BLOCKS_WITH_PROSE_LINKS = [
   // about the census note's two data-file links.
   "&__share-note",
   ".leaderboard-page__explainer",
+  ".leaderboard-intro",
   ".prerender__nav",
   ".home-intro",
 ];

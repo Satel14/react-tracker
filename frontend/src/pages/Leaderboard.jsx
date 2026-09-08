@@ -5,6 +5,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { translate } from "react-switch-lang";
 import { getLeaderboard, getSeasons } from "../api/leaderboard";
 import { shardForRegion } from "../helpers/leaderboardShard";
+import { LeaderboardHeading, LeaderboardIntro } from "../component/leaderboard/LeaderboardIntro";
 import Skeleton from "../component/Skeleton";
 
 const REGIONS = [
@@ -209,17 +210,9 @@ const Leaderboard = ({ t }) => {
 
   return (
     <div className="content leaderboard-page">
-      <div className="leaderboard-page__head">
-        {/* An h1, and the same sentence routeMeta puts in the static shell.
-            This was an h2 saying "Leaderboards", so after React replaced the
-            prerendered markup the page had no h1 at all -- and the heading a
-            crawler read in the file was not the heading a visitor saw. */}
-        <h1>{t("pages.leaderboards.title")}</h1>
-        <p>{t("pages.leaderboards.subtitle")}</p>
-        <p className="leaderboard-page__explainer">
-          <Link to="/ranks">{t("pages.leaderboards.ranksLink")}</Link>
-        </p>
-      </div>
+      {/* Shared with the static shell rather than written twice: the build
+          renders this very component into leaderboards.html. */}
+      <LeaderboardHeading />
 
       <div className="leaderboard-page__filters">
         <Select
@@ -300,6 +293,11 @@ const Leaderboard = ({ t }) => {
           size="middle"
         />
       )}
+
+      {/* Below the standings, and the same component the build writes into the
+          static file. Until it existed this page carried 43 crawlable words and
+          Google fell back to putting the site footer in its search snippet. */}
+      <LeaderboardIntro />
     </div>
   );
 };
