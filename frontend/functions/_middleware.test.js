@@ -47,6 +47,46 @@ describe("the production Pages alias", () => {
   });
 });
 
+// Pages answers a path with no file behind it using the single-page-app
+// fallback -- index.html, at 200. For a page that is what makes deep links
+// work; under /data/ it means a mistyped citation URL hands back a web page
+// where a data file was promised, and says nothing is wrong.
+describe("a data file that does not exist", () => {
+  const json = () =>
+    new Response('{"accounts":11029}', {
+      status: 200,
+      headers: { "content-type": "application/json", "cache-control": "public, max-age=3600" },
+    });
+
+  it("is a 404, not the homepage", async () => {
+    const response = await call("https://www.pubgtracker.top/data/tier-censuss.json", html);
+    expect(response.status).toBe(404);
+    expect(await response.text()).not.toContain("<html");
+  });
+
+  it("is not cached, so fixing the file fixes the URL", async () => {
+    const response = await call("https://www.pubgtracker.top/data/nope.csv", html);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("content-type")).toMatch(/^text\/plain/);
+  });
+
+  it("leaves a data file that does exist exactly as the edge served it", async () => {
+    const response = await call("https://www.pubgtracker.top/data/tier-census.json", json);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
+    expect(await response.text()).toContain("11029");
+  });
+
+  // Not asserted here: that a path outside /data/ still gets the fallback with
+  // a rewritten head. Anything that is not a data file and not a fixed route
+  // continues into the head-rewriting branch, which needs HTMLRewriter, so the
+  // only place that behaviour can be checked is a real deployment.
+  //
+  // The same fallback covers /assets/* and /images/*, and those stay excluded
+  // from this Function on purpose: nineteen hashed files a page load is a
+  // different order of traffic to a data file nobody requests.
+});
+
 describe("every other host", () => {
   // Branch previews are how a change is checked against a real Pages
   // deployment before it merges, and Cloudflare already marks them noindex.

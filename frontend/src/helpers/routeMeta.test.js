@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { ROUTE_META, SITE_ORIGIN, canonicalFor } from "./routeMeta";
+import { renderSitemap } from "./sitemap";
 
 const read = (relative) =>
   readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
@@ -118,10 +119,19 @@ describe("copy", () => {
 });
 
 describe("robots and sitemap agree", () => {
-  const sitemap = read("../../public/sitemap.xml");
+  // Rendered rather than read off disk: the hand-written public/sitemap.xml is
+  // gone, because a static file cannot carry a <lastmod>. The invariant this
+  // block guards is unchanged -- it is now asserted against what the build
+  // writes. The XML's own shape is covered in sitemap.test.js.
+  const sitemap = renderSitemap();
   const listed = (path) =>
     sitemap.includes(`<loc>${canonicalFor(path)}</loc>`);
 
+  // What this still guards, now that the file is generated from this table, is
+  // narrower than it was: that the generator honours the `sitemap` flag rather
+  // than some other field. It can no longer catch a flag being flipped, because
+  // both sides of the comparison would move together -- the written-out list of
+  // URLs in sitemap.test.js is what catches that.
   it("submits exactly the routes marked for the sitemap", () => {
     for (const { path, sitemap: wanted } of ROUTE_META) {
       expect(listed(path), `${path} in sitemap.xml`).toBe(Boolean(wanted));

@@ -7,6 +7,36 @@ import { ROUTE_META, canonicalFor } from './src/helpers/routeMeta';
 import { renderHead } from './src/helpers/renderHead';
 import { prerenderBody } from './src/helpers/prerenderBody.jsx';
 import { CENSUS_DATA_FILES } from './src/helpers/censusDataFiles.js';
+import { renderSitemap, SITEMAP_FILE } from './src/helpers/sitemap.js';
+
+// Writes the sitemap from the route table instead of keeping a hand-written
+// copy in public/. The point is <lastmod>: a static file cannot carry a date,
+// and the two census pages have one worth carrying -- the daily job commits a
+// new reading, so the date maintains itself.
+//
+// This one throws where the census files only warn. A build that quietly ships
+// no sitemap loses the only file Google reads to find pages, and there is no
+// degraded version of that to fall back to.
+const emitSitemap = () => ({
+  name: 'emit-sitemap',
+  apply: 'build',
+  closeBundle() {
+    const xml = renderSitemap();
+    const locs = (xml.match(/<loc>/g) || []).length;
+    if (locs < 2) {
+      throw new Error(`emit-sitemap: refusing to write a sitemap with ${locs} urls`);
+    }
+
+    const target = fileURLToPath(new URL(`./build/${SITEMAP_FILE}`, import.meta.url));
+    writeFileSync(target, xml);
+
+    // Read it back: this file is served straight off the asset edge, so a
+    // truncated write would be invisible until Search Console complained.
+    const emitted = readFileSync(target, 'utf8');
+    if (emitted !== xml) throw new Error('emit-sitemap: what landed on disk is not what was rendered');
+    this.info(`wrote ${SITEMAP_FILE} with ${locs} urls`);
+  },
+});
 
 // Writes the published tier census beside the built site, so the numbers on
 // /ranks have a URL a forum post or a wiki page can cite instead of a
@@ -101,7 +131,7 @@ const prerenderHead = () => ({
 });
 
 export default defineConfig({
-  plugins: [react(), prerenderHead(), publishCensusData()],
+  plugins: [react(), prerenderHead(), publishCensusData(), emitSitemap()],
   server: {
     port: 3000,
     open: false,
