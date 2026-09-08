@@ -72,6 +72,31 @@ test("renders the same h1 the prerendered shell injects", () => {
   }
 });
 
+// The other half of the shared copy. The build renders this same component
+// into leaderboards.html, so asserting the page shows it is what pins the file
+// and the page to one source: the page had 43 crawlable words before it, and
+// Google was putting the site footer in its search snippet instead.
+test("renders the explainer the static file also carries", () => {
+  setTranslations({ en });
+  setDefaultLanguage("en");
+  try {
+    const { container } = render(
+      <MemoryRouter initialEntries={["/leaderboards"]}>
+        <Leaderboard />
+      </MemoryRouter>
+    );
+    const about = en.pages.leaderboards.about;
+    expect(container.textContent).toContain(about.lead);
+    for (const section of Object.values(about).filter((v) => v && typeof v === "object")) {
+      expect(container.textContent, section.heading).toContain(section.heading);
+      expect(container.textContent, section.p1.slice(0, 30)).toContain(section.p1);
+    }
+    expect(container.querySelector(".leaderboard-intro")).not.toBeNull();
+  } finally {
+    setTranslations({});
+  }
+});
+
 test("renders leaderboard rows from the API", async () => {
   renderPage();
   expect(await screen.findByText("Alpha")).toBeInTheDocument();

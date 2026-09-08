@@ -20,6 +20,7 @@ import { setTranslations, setDefaultLanguage, setLanguage } from "react-switch-l
 import Ranks from "../pages/Ranks.jsx";
 import HomeIntro from "../component/home/HomeIntro.jsx";
 import Help from "../pages/Help.jsx";
+import LeaderboardStatic from "../component/leaderboard/LeaderboardIntro.jsx";
 import en from "../Language/en.json";
 import ua from "../Language/ua.json";
 
@@ -39,15 +40,17 @@ import ua from "../Language/ua.json";
 // snippeting the site footer for the URL. With forceRender on each panel it is
 // six hundred words of answers, which is worth putting in the file.
 //
-// /leaderboards is still absent, for a reason that has not changed: it is a
-// table of live data, so prerendering it would need a build-time call to an API
-// that sleeps, and would hand a crawler standings that stopped matching the
-// page the moment they were written.
+// /leaderboards renders its two halves that are words rather than data: the
+// heading and the explainer the page puts either side of its table. The table
+// is still absent, for the reason it always was -- live standings would need a
+// build-time call to an API that sleeps, and would hand a crawler numbers that
+// stopped matching the page the moment they were written.
 const PAGES = {
   "/ranks": { Page: Ranks, language: "en" },
   "/ua/ranks": { Page: Ranks, language: "ua" },
   "/": { Page: HomeIntro, language: "en" },
   "/help": { Page: Help, language: "en" },
+  "/leaderboards": { Page: LeaderboardStatic, language: "en" },
 };
 
 export const PRERENDERED_ROUTES = Object.keys(PAGES);

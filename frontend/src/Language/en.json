@@ -128,7 +128,32 @@
       "empty": "No leaderboard data for this season and mode.",
       "error": "Could not load the leaderboard. Please try again.",
       "loading": "Loading leaderboard…",
-      "ranksLink": "What do these tiers actually mean?"
+      "ranksLink": "What do these tiers actually mean?",
+      "about": {
+        "h1": "PUBG ranked leaderboards",
+        "lead": "This is the top 500 by rank points for one region and one game mode, read from the official PUBG API for the season selected above. Change either selector and you get a different 500.",
+        "ladders": {
+          "heading": "Each region and mode is its own board",
+          "p1": "RP is a single number per account, but the board is cut per region and per mode. A player near the top of one list can be absent from another entirely, because that is simply not the queue they play.",
+          "p2": "Survivor, the tier above Master, is capped per region rather than by RP alone: it needs 3,700 RP and a seat, and the seats are finite. So the very top of two regions' boards need not sit at the same RP."
+        },
+        "rpNotWins": {
+          "heading": "Ordered by RP, not by win rate",
+          "p1": "Rank points reward placement and consistency as much as kills. A player can sit high here with a win rate that looks ordinary, and a player who wins spectacularly in short bursts can be missing from the board altogether.",
+          "p2": "So read the columns beside RP as description rather than as the ranking: they are that player's season, not the reason they hold this position."
+        },
+        "scope": {
+          "heading": "What the top 500 does not tell you",
+          "p1": "This is the top of the ladder and nothing else — five hundred names out of a ranked population that starts at Bronze. Nothing on this page says where a typical player sits, and a leaderboard never can.",
+          "p2": "That question has an answer of its own: the ranks page carries a measured tier distribution, sampled from ranked matches rather than read off this board."
+        },
+        "data": {
+          "heading": "Where these numbers come from",
+          "p1": "Everything here is read from KRAFTON's official PUBG API. The time beside the table is when this copy of the board was fetched, not when PUBG last recalculated it.",
+          "p2": "Ranked resets every season, so a board from a finished season is a record of that season and not a statement about the ladder now."
+        },
+        "distributionLink": "Where players actually sit: the measured tier distribution"
+      }
     },
     "compare": {
       "title": "Player Comparison",

@@ -9,16 +9,15 @@ describe("which routes ship their article", () => {
   // sentence is the right amount of static text for a leaderboard, and the
   // homepage's file is also what Pages serves for every unmatched URL, so
   // prose in it would become duplicate copy across an unbounded set of them.
-  it("renders the ranks article in each language, the homepage's body and the FAQ", () => {
-    expect(PRERENDERED_ROUTES).toEqual(["/ranks", "/ua/ranks", "/", "/help"]);
+  it("renders the article, the homepage body, the FAQ and the leaderboard prose", () => {
+    expect(PRERENDERED_ROUTES).toEqual(["/ranks", "/ua/ranks", "/", "/help", "/leaderboards"]);
   });
 
   it("says nothing for a route that is not prerendered", () => {
-    // /leaderboards is a table of live data. Prerendering it would need a
-    // build-time call to an API that sleeps, and would ship a crawler a set of
-    // standings that stopped matching the page the moment they were written.
-    expect(prerenderBody("/leaderboards")).toBeNull();
+    // Both render an empty state for anyone who is not the visitor who filled
+    // them in, so there is nothing to put in a file.
     expect(prerenderBody("/favorites")).toBeNull();
+    expect(prerenderBody("/compare")).toBeNull();
   });
 });
 
@@ -164,6 +163,55 @@ describe("the FAQ as a crawler receives it", () => {
 
   it("opens with the page's own h1", () => {
     expect(decode(help())).toContain(`<h1>${en.pages.help.title}</h1>`);
+  });
+});
+
+// The page carried 43 crawlable words, and Google fell back to putting the site
+// footer in its search snippet -- the same failure /help had. What is prerendered
+// is the two halves that are words: the heading above the table and the prose
+// below it. The standings are not, and must not be.
+describe("the leaderboard prose as a crawler receives it", () => {
+  const board = () => prerenderBody("/leaderboards");
+
+  it("carries the page's own h1, the one routeMeta writes into the shell", () => {
+    expect(decode(board())).toContain(`<h1>${en.pages.leaderboards.title}</h1>`);
+  });
+
+  it("carries the lead and every section the copy defines", () => {
+    const html = decode(board());
+    const about = en.pages.leaderboards.about;
+    expect(html).toContain(about.lead);
+    const sections = Object.values(about).filter((value) => value && typeof value === "object");
+    expect(sections).toHaveLength(4);
+    for (const section of sections) {
+      expect(html, section.heading).toContain(section.heading);
+      for (const [key, text] of Object.entries(section)) {
+        if (/^p\d+$/.test(key)) expect(html, text.slice(0, 40)).toContain(text);
+      }
+    }
+  });
+
+  it("is prose rather than a stub", () => {
+    const words = board().replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean);
+    // The stub it replaces was 43.
+    expect(words.length).toBeGreaterThan(300);
+  });
+
+  // The whole reason the table is left out. A build cannot reach the API, and a
+  // set of standings frozen at build time would disagree with the page.
+  it("ships no standings", () => {
+    const html = board();
+    expect(html).not.toContain("ant-table");
+    // The "Updated {time}" line only exists once a board has been fetched, so
+    // its absence is what says no build-time copy of the standings shipped.
+    expect(html).not.toContain(en.pages.leaderboards.updated.replace("{time}", "").trim());
+    for (const column of [en.pages.leaderboards.avgDamage, en.pages.leaderboards.avgRank]) {
+      expect(html, column).not.toContain(column);
+    }
+  });
+
+  it("links the page that answers what a leaderboard cannot", () => {
+    expect(board()).toContain('href="/ranks"');
   });
 });
 
