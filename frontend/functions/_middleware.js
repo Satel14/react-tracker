@@ -83,7 +83,23 @@ export const onRequest = async (context) => {
   // Only a real HTML document is ours to touch. An asset that slipped past
   // _routes.json, a redirect, an error: all pass through unread.
   const type = response.headers.get("content-type") || "";
-  if (response.status !== 200 || !type.includes("text/html")) return response;
+  const isHtml = response.status === 200 && type.includes("text/html");
+
+  // A path under /data/ that comes back as HTML is a file that is not there:
+  // Pages answered it with the single-page-app fallback. For a page that
+  // fallback is the whole reason deep links work; here it would hand a web
+  // document to someone who asked for a data file, under a 200, which is the
+  // one place on this site we are actively asking people to cite. So it says
+  // no instead -- and says it uncached, so publishing the missing file fixes
+  // the URL rather than leaving a stale answer in front of it.
+  if (url.pathname.startsWith("/data/") && isHtml) {
+    return new Response("Not found\n", {
+      status: 404,
+      headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+    });
+  }
+
+  if (!isHtml) return response;
 
   let rewriter = new HTMLRewriter().on("title", {
     element(element) {
