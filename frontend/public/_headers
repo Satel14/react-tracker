@@ -1,3 +1,14 @@
+# Every response. A typed pubgtracker.top goes out over plain HTTP and is
+# rescued by two redirects; this is what stops the second visit doing that
+# again, and it is a prerequisite for ever being HSTS-preloaded.
+#
+# Deliberately without includeSubDomains: api.pubgtracker.top is a different
+# service on a different host and this file says nothing about it, so claiming
+# the whole domain from here would be asserting something untested. No preload
+# directive either -- that submission is irreversible in practice.
+/*
+  Strict-Transport-Security: max-age=31536000
+
 # Cloudflare Pages defaults every asset to max-age=14400 + must-revalidate, so
 # even content-hashed bundles pay a 304 round trip every few hours.
 

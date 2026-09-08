@@ -109,6 +109,10 @@ export default defineConfig({
           include: [
             "src/helpers/**/*.test.js",
             "src/api/**/*.test.js",
+            // The Pages Function. Node, not jsdom: it is a request handler, and
+            // the paths it can be tested on are the ones that return before
+            // HTMLRewriter -- a global that exists only in the Workers runtime.
+            "functions/**/*.test.js",
             "src/Language/**/*.test.js",
             "src/component/charts/replayEngine.test.js",
             "src/testProjects.logic.test.js",
@@ -129,6 +133,7 @@ export default defineConfig({
           exclude: [
             "node_modules/**",
             "build/**",
+            "functions/**",
             "src/helpers/**/*.test.js",
             "src/api/**/*.test.js",
             "src/Language/**/*.test.js",
