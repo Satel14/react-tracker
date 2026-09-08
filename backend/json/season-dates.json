@@ -1,15 +1,22 @@
 {
-  "updatedAt": "2026-06-29",
+  "updatedAt": "2026-09-08",
   "defaults": {
-    "cycleDays": 56
+    "cycleDays": 85
   },
   "seasons": {
     "division.bro.official.pc-2018-42": {
       "startDate": "2026-06-17T00:00:00Z",
-      "endDate": "2026-09-09T00:00:00Z",
+      "endDate": "2026-09-10T00:00:00Z",
+      "isEstimated": false,
+      "source": "pubg-maintenance-announcement",
+      "note": "Season 42 ran Update 42.1 through 42.3. End is when PC servers go down for the 43.1 maintenance (2026-09-10 00:00 UTC) -- the last moment it can be played. Servers return ~8.5 h later, at 08:30 UTC, and Update 43.1 opens Season 43."
+    },
+    "division.bro.official.pc-2018-43": {
+      "startDate": "2026-09-10T08:30:00Z",
+      "endDate": "2026-12-04T00:00:00Z",
       "isEstimated": true,
-      "source": "esportstales",
-      "note": "Season 42 runs ~3 months (Update 42.1 through 42.3). End date from Esports Tales ranked season tracker."
+      "source": "pubg-maintenance-announcement",
+      "note": "Start is official: Update 43.1 becomes available when the maintenance completes. End is a guess -- KRAFTON has not announced one -- carried over from Season 42's measured 85 days, so the homepage prints it with a tilde. Replace it when 43.3's schedule is published."
     }
   }
 }
