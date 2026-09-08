@@ -20,6 +20,20 @@
 // Googlebot on a ten-requests-a-minute budget shared with the live site.
 
 import { pageHeadMeta } from "../src/helpers/pageHeadMeta.js";
+import { SITE_ORIGIN } from "../src/helpers/routeMeta.js";
+
+// Cloudflare gives every Pages project a permanent alias, and it serves this
+// build byte for byte: the whole site, twice, at two addresses. Preview aliases
+// are safe -- Cloudflare answers those with x-robots-tag: noindex -- but the
+// production one carries no such header, so the only thing that had ever kept
+// it out of the index was the cross-domain canonical in each page's head. That
+// is one tag standing between a complete duplicate and the search results, and
+// it only works on a crawler that reads it. A 301 does not need to be read.
+//
+// The exact host rather than "anything that is not the site": every branch
+// preview lives at <branch>.react-tracker.pages.dev, and that is how a change
+// is checked against a real Pages deployment before it merges.
+const PAGES_ALIAS = "react-tracker.pages.dev";
 
 const META_BY_KEY = {
   description: ["name", "description"],
@@ -45,6 +59,12 @@ const setContent = (rewriter, kind, key, value) =>
 
 export const onRequest = async (context) => {
   const url = new URL(context.request.url);
+
+  // Before anything else, so no aliased request is ever answered with a body.
+  if (url.hostname === PAGES_ALIAS) {
+    return Response.redirect(`${SITE_ORIGIN}${url.pathname}${url.search}`, 301);
+  }
+
   const meta = pageHeadMeta(url.pathname);
 
   // A fixed route: the build already wrote and verified that file's head, so
