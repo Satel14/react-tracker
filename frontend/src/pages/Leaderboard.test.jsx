@@ -2,6 +2,9 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Leaderboard from "./Leaderboard";
+import { ROUTE_META } from "../helpers/routeMeta";
+import en from "../Language/en.json";
+import { setTranslations, setDefaultLanguage } from "react-switch-lang";
 
 const getLeaderboard = vi.fn();
 const getSeasons = vi.fn();
@@ -43,6 +46,31 @@ const renderPage = () =>
       <Leaderboard t={t} />
     </MemoryRouter>
   );
+
+// The shell puts routeMeta's h1 inside #root and React then replaces the whole
+// mount point. This page rendered its title as an h2, so after that swap it had
+// no h1 at all -- and the heading in the file was not the heading on screen.
+//
+// Real translations, unlike every other case here: the `t` prop above echoes
+// its key back, and so does react-switch-lang's own translator while no
+// dictionary is registered, so nothing that returns a key can show that the
+// words match. Registered inside the test and cleared after it, so the cases
+// that do assert on keys keep working.
+test("renders the same h1 the prerendered shell injects", () => {
+  setTranslations({ en });
+  setDefaultLanguage("en");
+  try {
+    const meta = ROUTE_META.find((route) => route.path === "/leaderboards");
+    render(
+      <MemoryRouter initialEntries={["/leaderboards"]}>
+        <Leaderboard />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(meta.h1);
+  } finally {
+    setTranslations({});
+  }
+});
 
 test("renders leaderboard rows from the API", async () => {
   renderPage();

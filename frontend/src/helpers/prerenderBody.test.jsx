@@ -9,13 +9,16 @@ describe("which routes ship their article", () => {
   // sentence is the right amount of static text for a leaderboard, and the
   // homepage's file is also what Pages serves for every unmatched URL, so
   // prose in it would become duplicate copy across an unbounded set of them.
-  it("renders the ranks article in each language, and the homepage's body", () => {
-    expect(PRERENDERED_ROUTES).toEqual(["/ranks", "/ua/ranks", "/"]);
+  it("renders the ranks article in each language, the homepage's body and the FAQ", () => {
+    expect(PRERENDERED_ROUTES).toEqual(["/ranks", "/ua/ranks", "/", "/help"]);
   });
 
   it("says nothing for a route that is not prerendered", () => {
+    // /leaderboards is a table of live data. Prerendering it would need a
+    // build-time call to an API that sleeps, and would ship a crawler a set of
+    // standings that stopped matching the page the moment they were written.
     expect(prerenderBody("/leaderboards")).toBeNull();
-    expect(prerenderBody("/help")).toBeNull();
+    expect(prerenderBody("/favorites")).toBeNull();
   });
 });
 
@@ -136,6 +139,34 @@ describe("the ranks article as a crawler receives it", () => {
 // The same component, read from the ua dictionary. Asserted on sentences from
 // the dictionaries themselves, so a translation that silently fell back to
 // English fails here rather than shipping.
+// It joined the prerendered set only once the answers were in the DOM at all.
+// While antd's collapse was rendering closed panels as null, a static render of
+// this page produced ten questions and no answers -- which is exactly what a
+// crawler was already getting from the client render.
+describe("the FAQ as a crawler receives it", () => {
+  const help = () => prerenderBody("/help");
+
+  it("carries every answer, not just the questions", () => {
+    const html = decode(help());
+    const faq = Object.values(en.pages.help.faq);
+    expect(faq.length).toBeGreaterThan(8);
+    for (const { q, a } of faq) {
+      expect(html, q).toContain(q);
+      expect(html, a.slice(0, 40)).toContain(a);
+    }
+  });
+
+  it("is a page with answers on it rather than a heading and a sentence", () => {
+    const words = help().replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean);
+    // The stub it replaces was 43.
+    expect(words.length).toBeGreaterThan(600);
+  });
+
+  it("opens with the page's own h1", () => {
+    expect(decode(help())).toContain(`<h1>${en.pages.help.title}</h1>`);
+  });
+});
+
 describe("the Ukrainian twin", () => {
   it("renders from the Ukrainian dictionary", () => {
     const html = prerenderBody("/ua/ranks");

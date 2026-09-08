@@ -210,7 +210,11 @@ const Leaderboard = ({ t }) => {
   return (
     <div className="content leaderboard-page">
       <div className="leaderboard-page__head">
-        <h2>{t("pages.leaderboards.title")}</h2>
+        {/* An h1, and the same sentence routeMeta puts in the static shell.
+            This was an h2 saying "Leaderboards", so after React replaced the
+            prerendered markup the page had no h1 at all -- and the heading a
+            crawler read in the file was not the heading a visitor saw. */}
+        <h1>{t("pages.leaderboards.title")}</h1>
         <p>{t("pages.leaderboards.subtitle")}</p>
         <p className="leaderboard-page__explainer">
           <Link to="/ranks">{t("pages.leaderboards.ranksLink")}</Link>
