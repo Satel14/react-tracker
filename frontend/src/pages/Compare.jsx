@@ -13,7 +13,7 @@ import { getPlatformAvatar } from "../helpers/other";
 import { statNumber, statDisplay } from "../helpers/playerStats";
 import { classifyPlayerError } from "../helpers/playerError";
 import { buildCompareResolveBatches } from "../helpers/compareBatchResolve";
-import Skeleton from "../component/Skeleton";
+import { SkeletonFrame } from "../component/Skeleton";
 
 const COMPARE_ROWS = [
   { key: "matchesPlayed", label: "Matches", direction: "higher" },
@@ -248,7 +248,17 @@ const Compare = ({ t }) => {
                 </button>
 
                 {entry.loading ? (
-                  <Skeleton variant="text" count={5} label={t("pages.compare.loading")} className="compare-column__loading" />
+                  // Wears the profile row's own class: the avatar, the name
+                  // block and the rank badge are already the right size, so
+                  // nothing shifts when the player resolves.
+                  <SkeletonFrame className="compare-column__profile" label={t("pages.compare.loading")}>
+                    <span className="skeleton skeleton--avatar" aria-hidden="true" />
+                    <div>
+                      <span className="skeleton skeleton--heading" aria-hidden="true" />
+                      <span className="skeleton skeleton--label" aria-hidden="true" />
+                    </div>
+                    <span className="skeleton skeleton--badge" aria-hidden="true" />
+                  </SkeletonFrame>
                 ) : entry.error ? (
                   <Alert
                     type="error"

@@ -208,3 +208,20 @@ test("re-links rows when the region dropdown switches to KAKAO", async () => {
     expect(await screen.findByRole("link", { name: "Alpha" })).toHaveAttribute("href", "/player/kakao/Alpha");
   });
 });
+
+test("the loading state keeps the standings table's own header and rows", async () => {
+  // Ten 120px dashes stood in for a ten-column table, so the page rearranged
+  // itself the moment the standings arrived.
+  getLeaderboard.mockReturnValue(new Promise(() => {}));
+  const { container } = renderPage();
+
+  const status = await screen.findByRole("status");
+  expect(status).toHaveTextContent("pages.leaderboards.loading");
+  expect(container.querySelector(".leaderboard-page__table")).not.toBeNull();
+  // The page's own columns, so the header the reader sees while waiting is the
+  // header they keep. antd renders a measure copy of the row, hence the Set.
+  const headers = new Set([...container.querySelectorAll(".ant-table-thead th")].map((th) => th.textContent));
+  expect(headers).toContain("pages.leaderboards.rank");
+  expect(headers).toContain("pages.leaderboards.player");
+  expect(container.querySelectorAll(".ant-table-tbody tr.ant-table-row")).toHaveLength(10);
+});

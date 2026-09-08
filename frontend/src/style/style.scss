@@ -385,6 +385,18 @@ body {
       .player-tabs {
         margin-top: 14px;
 
+        // Stands in for antd's tab bar: the same strip of labels above the
+        // same bottom rule, so the first card below it does not move when the
+        // real Tabs mount.
+        &--loading {
+          display: flex;
+          align-items: center;
+          gap: 24px;
+          padding-bottom: 12px;
+          margin-bottom: 12px;
+          border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+        }
+
         .ant-tabs-nav {
           margin-bottom: 12px;
         }
@@ -3349,14 +3361,6 @@ body {
     }
   }
 
-  &__loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 80px;
-    padding: 32px 0;
-  }
-
   &__profile {
     display: flex;
     align-items: center;
@@ -3372,6 +3376,22 @@ body {
       border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
       background: #111;
       flex-shrink: 0;
+    }
+
+    // The loading row's tiles are sized from the same numbers as the avatar and
+    // the rank badge, so it is the same height as the resolved row and nothing
+    // moves when the player arrives. They keep the shimmer as their background,
+    // which is why the badge tile is not given .compare-column__rank -- that
+    // rule sets `background: transparent !important` and would erase it.
+    .skeleton--avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+    }
+
+    .skeleton--badge {
+      width: 48px;
+      height: 48px;
     }
 
     > div {
@@ -5383,12 +5403,10 @@ body {
   border: 0;
 }
 
-.skeleton-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
+// One rule per shape the UI has a placeholder for; the names are declared in
+// component/Skeleton.jsx and the two lists are read against each other by
+// src/style/skeletonVariants.test.js. A tile stands inside the real container,
+// so nothing here positions anything -- the page's own layout does.
 .skeleton {
   display: block;
   border-radius: 6px;
@@ -5402,9 +5420,33 @@ body {
   animation: skeletonShimmer 1.4s ease infinite;
 
   &--avatar { width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0; }
-  &--text { width: 100%; max-width: 120px; height: 12px; }
   &--badge { width: 30px; height: 30px; border-radius: 7px; }
-  &--block { width: 100%; height: 120px; }
+  &--button { width: 108px; height: 24px; border-radius: 7px; flex-shrink: 0; }
+  // Fills its column: a table cell and a feed row are as wide as the grid says.
+  &--cell { width: 100%; height: 12px; min-width: 0; }
+  &--chip { width: 64px; height: 18px; border-radius: 999px; flex-shrink: 0; }
+  &--heading { width: 100%; max-width: 160px; height: 18px; }
+  &--label { width: 100%; max-width: 120px; height: 12px; }
+  &--text { width: 100%; height: 12px; }
+  &--title { width: 100%; max-width: 260px; height: 30px; }
+}
+
+// A tile that fills a whole stage is over a thousand pixels wide, and a
+// gradient scaled to 400% of that sweeps so slowly it reads as a flat wash --
+// an empty box, not a loader. Pinning the band to a fixed width keeps the
+// motion legible whatever the tile's size.
+.replay-stage__layer.skeleton,
+.map-stage__bg.skeleton {
+  background-size: 900px 100%;
+}
+
+// Stands in for the scrubber, which is `flex: 1` with a 180px floor. Left at
+// width:100% the tile claims a whole flex line, wrapping the one-row control
+// bar into three.
+.match-replay__controls .skeleton--text {
+  flex: 1;
+  min-width: 180px;
+  width: auto;
 }
 
 @keyframes skeletonShimmer {
@@ -5415,9 +5457,6 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; }
 }
-
-// Definite width: the row-flex wrapper around this shrinks it to 0 otherwise.
-.playerpage__loading { width: 100%; }
 
 .empty-state {
   margin: 0;
@@ -5443,13 +5482,6 @@ body {
     font-size: 13px;
 
     &:hover { color: var(--text-strong); text-decoration: underline; }
-  }
-  &__loading {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
   }
   &__hint {
     margin: 6px 0 0;
@@ -6103,12 +6135,6 @@ body {
 
   &__tier-empty {
     color: var(--text-faint);
-  }
-
-  &__loading {
-    display: flex;
-    justify-content: center;
-    padding: 64px 0;
   }
 
   // Disabled checkbox blocks pointer events, so the wrapper must capture hover

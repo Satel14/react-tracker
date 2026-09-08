@@ -141,3 +141,17 @@ test("highlights the single best column when the values differ", async () => {
   expect(winners).toHaveLength(1);
   expect(winners[0]).toHaveTextContent("5");
 });
+
+test("a loading column stands where its profile row will be", async () => {
+  // The placeholder was five 120px dashes centred in the column head, nothing
+  // like the 56px avatar, name block and rank badge that replace them.
+  getPlayerData.mockReturnValue(new Promise(() => {}));
+  renderCompare("?p1=steam:A");
+
+  const profile = await screen.findByRole("status");
+  expect(profile).toHaveClass("compare-column__profile");
+  // Both tiles are sized by rules scoped to .compare-column__profile, so the
+  // loading row is exactly as tall as the row that replaces it.
+  expect(profile.querySelector(".skeleton--avatar")).not.toBeNull();
+  expect(profile.querySelector(".skeleton--badge")).not.toBeNull();
+});
