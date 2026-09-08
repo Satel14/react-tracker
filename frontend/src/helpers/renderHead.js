@@ -11,6 +11,7 @@
 // Extension spelled out, unlike the rest of src/: vite.config.js imports this
 // under Node's resolver, where extensionless ESM specifiers do not resolve.
 import { alternatesFor, canonicalFor, NAV_ROUTES } from "./routeMeta.js";
+import { webApplicationLd } from "./structuredData.js";
 
 const escape = (value) =>
   String(value)
@@ -105,14 +106,17 @@ export const renderHead = (shell, route, article = null) => {
       `<meta name="twitter:description" content="${description}" />`,
       "twitter:description",
     ],
-    // The shell carries one WebApplication block describing the site, and it
-    // named the site root on every page -- so each route's structured data
-    // contradicted its own canonical. The node still describes the app; it just
-    // says so at the URL it is being served from.
+    // The shell's WebApplication block is a placeholder: it named the site root
+    // and carried the homepage's description on every page, so each route's
+    // structured data contradicted its own canonical and described the wrong
+    // page. Rebuilt rather than patched, from the same helper the Pages
+    // Function uses -- one node, one place it is written.
     [
-      /"url": "https:\/\/[^"]*"/g,
-      `"url": "${url}"`,
-      "structured-data url",
+      /<script type="application\/ld\+json">[\s\S]*?<\/script>/g,
+      `<script type="application/ld+json">
+${webApplicationLd({ url, description: route.description })}
+  </script>`,
+      "structured-data block",
     ],
   ];
 

@@ -21,6 +21,7 @@
 
 import { pageHeadMeta } from "../src/helpers/pageHeadMeta.js";
 import { SITE_ORIGIN } from "../src/helpers/routeMeta.js";
+import { webApplicationLd } from "../src/helpers/structuredData.js";
 
 // Cloudflare gives every Pages project a permanent alias, and it serves this
 // build byte for byte: the whole site, twice, at two addresses. Preview aliases
@@ -119,6 +120,38 @@ export const onRequest = async (context) => {
     const [kind, name] = META_BY_KEY[key];
     rewriter = setContent(rewriter, kind, name, value);
   }
+
+  // A URL with no canonical of its own is one the router will not match, and
+  // the canonical is removed below for exactly that reason. These two were
+  // left behind still naming the homepage -- an identity claim on a page we are
+  // telling Google to ignore, which is worse than making no claim at all.
+  if (!meta.canonical) {
+    for (const selector of ['meta[property="og:url"]', 'meta[name="twitter:url"]']) {
+      rewriter = rewriter.on(selector, {
+        element(element) {
+          element.remove();
+        },
+      });
+    }
+  }
+
+  // The shell's node is a placeholder that named the site root and carried the
+  // homepage's description. The build rebuilds it per route; until now this
+  // Function did not touch it, so every player and match URL shipped structured
+  // data contradicting the canonical beside it. `html: true` because the JSON
+  // must land as text: the default escaping would turn every & in it into
+  // &amp; and leave a node that does not parse.
+  rewriter = rewriter.on('script[type="application/ld+json"]', {
+    element(element) {
+      element.setInnerContent(
+        webApplicationLd({
+          url: meta.canonical || SITE_ORIGIN,
+          description: meta.description,
+        }),
+        { html: true },
+      );
+    },
+  });
 
   rewriter = rewriter.on('link[rel="canonical"]', {
     element(element) {
