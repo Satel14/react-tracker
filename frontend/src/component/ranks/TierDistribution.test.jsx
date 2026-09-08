@@ -40,8 +40,18 @@ const SAMPLE = {
   ],
 };
 
+// `snapshot={null}` by default: these cases are about what a live read puts on
+// the page, and the committed reading would otherwise be what is rendered
+// before the request resolves. The snapshot has its own cases at the bottom.
 const show = (data, over = {}) =>
-  render(<TierDistribution t={t} load={async () => ({ status: 200, data })} {...over} />);
+  render(
+    <TierDistribution
+      t={t}
+      load={async () => ({ status: 200, data })}
+      snapshot={null}
+      {...over}
+    />,
+  );
 
 beforeEach(() => {
   setTranslations({ en });
@@ -150,7 +160,7 @@ test("states what the sample is measured from", async () => {
 
 test("says it is reading before the numbers arrive", () => {
   const { container } = render(
-    <TierDistribution t={t} load={() => new Promise(() => {})} />
+    <TierDistribution t={t} load={() => new Promise(() => {})} snapshot={null} />
   );
   expect(screen.getByText(en.pages.ranks.distribution.loading)).toBeInTheDocument();
   expect(rows(container)).toHaveLength(0);
@@ -160,7 +170,11 @@ test("says it is reading before the numbers arrive", () => {
 // line rather than taking the page with it.
 test("folds to a single line when the census cannot be reached", async () => {
   const { container } = render(
-    <TierDistribution t={t} load={async () => { throw new Error("offline"); }} />
+    <TierDistribution
+      t={t}
+      load={async () => { throw new Error("offline"); }}
+      snapshot={null}
+    />
   );
   await screen.findByText(en.pages.ranks.distribution.unavailable);
   expect(rows(container)).toHaveLength(0);
@@ -224,4 +238,100 @@ test("treats a missing flag as the current season", async () => {
   await waitFor(() => expect(rows(container).length).toBeGreaterThan(0));
 
   expect(container.querySelector(".ranks-page__share-stale")).toBeNull();
+});
+
+// --- the committed snapshot ---
+//
+// The numbers used to reach this section only through the effect above, which
+// meant a build-time render -- everything a crawler or an answer engine reads
+// -- baked the loading line into the file, and a visitor arriving while the
+// free API instance cold-started watched it for twenty seconds.
+
+test("shows the committed reading before any request has finished", () => {
+  const { container } = render(
+    <TierDistribution t={t} load={() => new Promise(() => {})} snapshot={SAMPLE} />
+  );
+  expect(rows(container)).toHaveLength(9);
+  expect(container.textContent).toContain("31.1%");
+  expect(container.textContent).not.toContain(en.pages.ranks.distribution.loading);
+});
+
+test("lets the live read overwrite it", async () => {
+  const fresher = { ...SAMPLE, tiers: SAMPLE.tiers.map((row) => (row.tier === "gold" ? { ...row, share: 0.288 } : row)) };
+  const { container } = render(
+    <TierDistribution t={t} load={async () => ({ status: 200, data: fresher })} snapshot={SAMPLE} />
+  );
+  await waitFor(() => expect(container.textContent).toContain("28.8%"));
+  expect(container.textContent).not.toContain("31.1%");
+});
+
+// Last week's shares, dated, beat a line saying the sample is unreachable --
+// and this is the path a cold Render instance actually takes.
+test("keeps the committed reading when the live read fails", async () => {
+  const { container } = render(
+    <TierDistribution
+      t={t}
+      load={async () => { throw new Error("offline"); }}
+      snapshot={SAMPLE}
+    />
+  );
+  await waitFor(() => expect(rows(container).length).toBeGreaterThan(0));
+  expect(container.textContent).not.toContain(en.pages.ranks.distribution.unavailable);
+  expect(container.textContent).toContain("31.1%");
+});
+
+// The census controller answers its own failures with HTTP 200 and a message
+// where the data should be. Before the snapshot that only cost a loading line;
+// now it would replace a full table with the "collection has just started"
+// sentence, naming no season at all.
+test("does not let a 200 with no payload wipe the table", async () => {
+  const { container } = render(
+    <TierDistribution t={t} load={async () => ({ status: 200, message: "boom" })} snapshot={SAMPLE} />
+  );
+  await waitFor(() => expect(rows(container).length).toBeGreaterThan(0));
+  expect(container.textContent).toContain("31.1%");
+  expect(container.textContent).not.toMatch(/just started/i);
+});
+
+// The one case where the committed reading has to give way even though it is
+// the fuller answer: it is a different season's, and showing it as current
+// would be the page passing a finished season off as the live one.
+test("steps aside when the live read says the season has moved on", async () => {
+  const next = {
+    ...SAMPLE,
+    seasonId: "division.bro.official.pc-2018-43",
+    tiers: [{ tier: "gold", count: 9, share: 1, low: 0.7, high: 1, n: 9, publishable: false }],
+  };
+  const { container } = render(
+    <TierDistribution t={t} load={async () => ({ status: 200, data: next })} snapshot={SAMPLE} />
+  );
+  await screen.findByText(/just started/i);
+  expect(rows(container)).toHaveLength(0);
+  expect(container.textContent).toContain("43");
+});
+
+// --- what the numbers are, and are not ---
+
+test("names the platform the sample was drawn from", async () => {
+  const { container } = show(SAMPLE);
+  await waitFor(() => expect(rows(container).length).toBeGreaterThan(0));
+  expect(container.textContent).toContain("PC (Steam)");
+});
+
+// The sentence that licenses every interval on the table. 865 is the smallest
+// effective sample among the published tiers here, and it is rounded before it
+// is printed: a figure that adjusts a count should not read as a count.
+test("says what the sample is worth once lobby clustering is allowed for", async () => {
+  const { container } = show(SAMPLE);
+  await waitFor(() => expect(rows(container).length).toBeGreaterThan(0));
+  expect(container.textContent).toContain("870");
+  expect(container.textContent).not.toContain("865");
+});
+
+test("offers the numbers as files anyone can cite", async () => {
+  const { container } = show(SAMPLE);
+  await waitFor(() => expect(rows(container).length).toBeGreaterThan(0));
+
+  const links = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+  expect(links).toEqual(["/data/tier-census.json", "/data/tier-census.csv"]);
 });

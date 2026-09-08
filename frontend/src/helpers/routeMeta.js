@@ -13,6 +13,8 @@
 // the shell -- every /player/... and /match/... deep link would 404. The route
 // exists in the router; it just must never become a file.
 
+import { ARTICLE_SEASON } from "./articleSeason.js";
+
 export const SITE_ORIGIN = "https://www.pubgtracker.top";
 
 export const canonicalFor = (path) => `${SITE_ORIGIN}${path}`;
@@ -64,8 +66,12 @@ export const ROUTE_META = [
     path: "/ranks",
     nav: "PUBG ranks explained",
     file: "ranks.html",
-    title: "PUBG Ranks Explained: Tiers, RP, Survivor (Season 42)",
-    description: "The PUBG ranked ladder as it actually stands in Season 42: all eight tiers in order, how RP is earned and lost after Update 42.1, Survivor, and RP decay.",
+    // The season comes from articleSeason.js so the head cannot name one season
+    // while the prose describes another. Nothing else here is season-specific:
+    // an update number in the description would need rewriting every quarter
+    // for no gain, and the distribution is now in the file rather than promised.
+    title: `PUBG Ranks Explained: Tiers, RP, Survivor (Season ${ARTICLE_SEASON})`,
+    description: `The PUBG ranked ladder as it stands in Season ${ARTICLE_SEASON}: all eight tiers, how RP is earned and lost, Survivor, RP decay, and a measured tier distribution.`,
     h1: "PUBG ranks explained: tiers, RP and Survivor",
     intro: "Eight tiers, one RP number shared across party types and perspectives, and a top tier you can lose overnight \u2014 this is the ranked system as it stands on 31 August 2026, sourced to KRAFTON's patch notes and official posts, with every exception labelled.",
     sitemap: true,
@@ -83,9 +89,8 @@ export const ROUTE_META = [
     lang: "uk",
     translations: "ua",
     translationOf: "/ranks",
-    title: "Ранги PUBG: тіри, RP і Survivor (сезон 42)",
-    description:
-      "Рейтингова система PUBG у сезоні 42: усі вісім тірів за порядком, як RP нараховується й списується після оновлення 42.1, Survivor і затухання RP.",
+    title: `Ранги PUBG: тіри, RP і Survivor (сезон ${ARTICLE_SEASON})`,
+    description: `Рейтингова система PUBG у сезоні ${ARTICLE_SEASON}: усі вісім тірів за порядком, як RP нараховується й списується, Survivor, затухання RP і виміряний розподіл за тірами.`,
     h1: "Ранги PUBG: як влаштовані тіри, RP і Survivor",
     intro:
       "Вісім тірів, одне спільне RP і найвищий тір, який можна втратити за одну ніч — як рейтингова система працює зараз.",
