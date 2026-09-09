@@ -308,3 +308,71 @@ test("getMasteryExtras skips the clan fetch entirely when the player has no clan
   assert.equal(extras.clan, null);
   assert.ok(calls.every((u) => !u.includes("/clans/")));
 });
+
+// The RP attribution rule reads both of these off the payload: `complete` tells
+// it whether an unseen older match could exist, `fetchedAt` how fresh the list
+// is relative to PUBG's ingestion lag.
+const profileWithMatches = (count) => ({
+  data: {
+    id: ENRICH_ACCOUNT,
+    attributes: { name: "EnrichNeo", banType: "Innocent", clanId: null },
+    relationships: {
+      matches: { data: Array.from({ length: count }, (_unused, i) => ({ type: "match", id: `m${i}` })) },
+    },
+  },
+});
+
+const matchPayload = (id) => ({
+  data: {
+    id,
+    attributes: { createdAt: "2026-09-01T15:00:00Z", duration: 1500, mapName: "Baltic_Main", gameMode: "squad-fpp", matchType: "competitive", shardId: "steam" },
+    relationships: { rosters: { data: [] } },
+  },
+  included: [],
+});
+
+test("a match list shorter than one page is reported as the whole history", async () => {
+  const { doRequest } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(3) }],
+    ["/matches/", (url) => ({ ok: true, json: async () => matchPayload(url.split("/matches/")[1]) })],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+  const before = Date.now();
+
+  const extras = await service.getMatchExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo", playerRecord: null,
+  });
+
+  assert.equal(extras.matches.complete, true);
+  assert.ok(extras.matches.fetchedAt >= before, "the fetch time is recorded");
+  assert.ok(extras.matches.fetchedAt <= Date.now());
+});
+
+test("a full page of matches may be hiding older ones, so it is not complete", async () => {
+  const { doRequest, calls } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(20) }],
+    ["/matches/", (url) => ({ ok: true, json: async () => matchPayload(url.split("/matches/")[1]) })],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMatchExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo", playerRecord: null,
+  });
+
+  assert.equal(extras.matches.complete, false);
+  assert.equal(calls.filter((url) => url.includes("/matches/")).length, 8, "knowing the list is short buys no extra fetches");
+});
+
+test("a player with no matches at all has a complete, empty history", async () => {
+  const { doRequest } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(0) }],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMatchExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo", playerRecord: null,
+  });
+
+  assert.equal(extras.matches.complete, true);
+  assert.ok(Number.isFinite(extras.matches.fetchedAt));
+});

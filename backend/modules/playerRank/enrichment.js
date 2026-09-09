@@ -442,11 +442,19 @@ function createPlayerEnrichmentService({
   }
 
   async function getRecentMatches(shard, matchIds, accountId, playerName) {
-    const limitedIds = (Array.isArray(matchIds) ? matchIds : []).slice(0, MAX_MATCH_HISTORY);
+    const ids = Array.isArray(matchIds) ? matchIds : [];
+    const limitedIds = ids.slice(0, MAX_MATCH_HISTORY);
+    // The player record lists every match PUBG still holds for the account, so a
+    // list that fits in one page is the entire history. Both fields are read by
+    // rankPointHistory: `complete` rules out an unseen older match, `fetchedAt`
+    // says how much of PUBG's ingestion lag this list can already reflect.
+    const complete = ids.length <= MAX_MATCH_HISTORY;
     if (!limitedIds.length) {
       return {
         summary: buildMatchSummary([]),
         items: [],
+        fetchedAt: Date.now(),
+        complete,
       };
     }
 
@@ -462,6 +470,8 @@ function createPlayerEnrichmentService({
     return {
       summary: buildMatchSummary(items),
       items,
+      fetchedAt: Date.now(),
+      complete,
     };
   }
 
