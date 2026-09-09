@@ -20,6 +20,16 @@ function parseMatchRegion(matchId) {
   return REGION.test(region) ? region.toLowerCase() : null;
 }
 
+// A ranged read stops mid-array, so the body cannot be parsed -- but the region
+// only needs the one string, and LogMatchDefinition sits at the top of the file.
+const MATCH_ID_IN_TEXT = /"MatchId"\s*:\s*"([^"]+)"/;
+
+function readRegionFromTelemetryHead(body) {
+  if (typeof body !== "string") return null;
+  const found = body.match(MATCH_ID_IN_TEXT);
+  return found ? parseMatchRegion(found[1]) : null;
+}
+
 function normalizeWeather(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
@@ -38,4 +48,4 @@ function readMatchContext(telemetry) {
   return { region, weather };
 }
 
-module.exports = { parseMatchRegion, readMatchContext };
+module.exports = { parseMatchRegion, readMatchContext, readRegionFromTelemetryHead };

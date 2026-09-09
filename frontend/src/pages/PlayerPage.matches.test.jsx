@@ -77,7 +77,9 @@ const payload = (items, summary = {}) => ({
       segments: [{ stats: { kd: { displayValue: "1.00" } } }],
       seasons: [],
       matches: { items, summary: { total: items.length, ...summary } },
-      profile: {},
+      // What the rank endpoint really sends: the profile block is deferred, and
+      // mergeProfileExtras only folds the extras call in when it says so.
+      profile: { status: "deferred" },
     },
   },
 });
@@ -352,6 +354,22 @@ test("carries each party mate's kills and damage on hover", async () => {
     "title",
     "MateA: 9 kills, 1020 damage"
   );
+});
+
+test("names the server a match ran on when the region is known", async () => {
+  // The region is nowhere in the match record: it comes back with the deferred
+  // extras, keyed by match id, so the card has to look it up.
+  getPlayerExtras.mockResolvedValue({ data: { status: "ok", matchRegions: { "m-1": "eu", "m-2": "as" } } });
+  const card = await renderMatchesCard([
+    matchItem({ id: "m-1" }),
+    matchItem({ id: "m-2" }),
+    matchItem({ id: "m-3" }),
+  ]);
+
+  const chips = [...rowsOf(card)].map((row) => row.querySelector(".player-match-region")?.textContent ?? null);
+  expect(chips).toEqual(["EU", "AS", null]);
+  expect([...rowsOf(card)][0].querySelector(".player-match-region"))
+    .toHaveAttribute("title", `${en.pages.match.serverLabel}: EU`);
 });
 
 test("explains on hover and on keyboard focus how the party is told apart from fill", async () => {

@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { parseMatchRegion, readMatchContext } = require("./matchContext");
+const { parseMatchRegion, readMatchContext, readRegionFromTelemetryHead } = require("./matchContext");
 
 // Real LogMatchDefinition.MatchId strings, captured 2026-09-09 by range-reading
 // the head of five telemetry files (/samples plus one ranked match of our own).
@@ -47,6 +47,28 @@ test("refuses to guess when the string is not a match id", () => {
     "match.bro.official.pc-2018-42.steam.squad-fpp.2026.09.08.21.abc",
   ].forEach((value) => {
     assert.equal(parseMatchRegion(value), null, JSON.stringify(value));
+  });
+});
+
+// A ranged read of a telemetry file cannot be parsed as JSON -- the body stops
+// mid-array -- so the region is scraped out of the text instead.
+test("reads the region out of a truncated telemetry body", () => {
+  const head = `[{"_T":"LogMatchDefinition","MatchId":"${REAL_MATCH_IDS[0][0]}","PingQuality":""},{"_T":"LogMatchStart","mapName":"Tiger_M`;
+
+  assert.equal(readRegionFromTelemetryHead(head), "eu");
+  assert.throws(() => JSON.parse(head), "the fixture has to actually be unparseable");
+});
+
+test("gives up on a body that never names a match", () => {
+  [
+    "",
+    null,
+    undefined,
+    '[{"_T":"LogPlayerPosition","character":{"name":"Me"}},{"_T":"LogPlayerAttack"',
+    // Present but not a match id: nothing to take a region from.
+    '[{"_T":"LogMatchDefinition","MatchId":"nonsense"}',
+  ].forEach((body) => {
+    assert.equal(readRegionFromTelemetryHead(body), null, String(body).slice(0, 40));
   });
 });
 
