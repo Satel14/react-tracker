@@ -311,6 +311,68 @@ test("links both ends of a Twitch Reports encounter", async () => {
     .toEqual(["/player/steam/PlayerA", "/player/steam/SomeVictim"]);
 });
 
+const seasonPayload = (rankedInfo) => {
+  const payload = rankPayload("PlayerA");
+  payload.data.data.season = {
+    id: "division.bro.official.pc-2018-42",
+    label: "Season 42",
+    isCurrentSeason: true,
+    includesRanked: true,
+    rankedInfo,
+    stats: {},
+    modes: {},
+    breakdown: { normal: {}, ranked: {} },
+  };
+  return payload;
+};
+
+const crystalRankedInfo = (overrides = {}) => ({
+  tier: "crystal",
+  subTier: "1",
+  label: "Crystal 1",
+  mode: "squad-fpp",
+  currentRankPoint: 2906,
+  bestRankPoint: 3310,
+  avgRank: 7.125,
+  leaderboardRank: null,
+  topPercentage: null,
+  iconUrl: "/images/ranks/opgg/crystal-1.webp",
+  iconFallbackUrl: "/images/ranks/opgg/crystal-1.webp",
+  byMode: [],
+  ...overrides,
+});
+
+const openSeasonTab = () => fireEvent.click(screen.getByRole("tab", { name: "Season" }));
+
+test("shows the average ranked placement in the rank badge", async () => {
+  getPlayerData.mockResolvedValue(seasonPayload(crystalRankedInfo()));
+  getPlayerReports.mockResolvedValue(reportsPayload("Nobody"));
+
+  renderAt();
+  await screen.findByText("PlayerA");
+  openSeasonTab();
+
+  const line = await screen.findByText("Avg place #7.1");
+  expect(line).toBeInTheDocument();
+  // The badge headlines one mode, so the hint may not claim every ranked match.
+  expect(line).toHaveAttribute("title", "Average finishing place in this season's ranked squad-fpp matches");
+});
+
+test("omits the placement line when ranked reports no average", async () => {
+  getPlayerData.mockResolvedValue(seasonPayload(crystalRankedInfo({ avgRank: null })));
+  getPlayerReports.mockResolvedValue(reportsPayload("Nobody"));
+
+  renderAt();
+  await screen.findByText("PlayerA");
+  openSeasonTab();
+
+  // The badge itself is on screen -- the hero card and the season card both
+  // name the tier -- so the missing line is the absence of a value rather than
+  // an unrendered card.
+  expect((await screen.findAllByText("Crystal 1")).length).toBeGreaterThan(0);
+  expect(screen.queryByText(/Avg place/)).not.toBeInTheDocument();
+});
+
 test("the loading state stands where the profile will be, not centred in an empty box", async () => {
   // The loader used to be one 120px bar centred in a height:50vh flex box, so
   // it sat well below the hero card it stood in for and the whole page jumped

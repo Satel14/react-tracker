@@ -72,6 +72,28 @@ test("breaks a tie on rank points", () => {
   assert.equal(info.currentRankPoint, 3400);
 });
 
+test("surfaces the average placement ranked reports, per mode and on the headline", () => {
+  const info = extractRankedInfo({
+    "squad-fpp": { ...mode("Crystal", 1, 2906), avgRank: 7.125 },
+    "duo-fpp": { ...mode("Gold", 3, 1800), avgRank: 3.8 },
+  });
+
+  // The headline follows the best mode, the same way tier, RP and leaderboard
+  // rank do -- not a mean across modes the badge does not name.
+  assert.equal(info.avgRank, 7.125);
+  assert.deepEqual(
+    info.byMode.map((entry) => [entry.mode, entry.avgRank]),
+    [["squad-fpp", 7.125], ["duo-fpp", 3.8]],
+  );
+});
+
+test("leaves the average placement null when ranked does not report one", () => {
+  const zeroed = extractRankedInfo({ "squad-fpp": { ...mode("Crystal", 1, 2906), avgRank: 0 } });
+  assert.equal(zeroed.avgRank, null);
+  assert.equal(zeroed.byMode[0].avgRank, null);
+  assert.equal(extractRankedInfo({ solo: mode("Gold", 3) }).avgRank, null);
+});
+
 test("gives Crystal its own badge art for every division", () => {
   for (const sub of [1, 2, 3, 4]) {
     assert.equal(

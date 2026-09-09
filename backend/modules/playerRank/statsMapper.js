@@ -26,6 +26,7 @@ const maxValues = (values) => values.reduce((acc, value) => Math.max(acc, value)
 const MODE_STAT_FIELDS = [
   { field: "kills", total: "totalKills", combine: sumValues },
   { field: "wins", total: "totalWins", combine: sumValues },
+  { field: "deaths", total: "totalDeaths", combine: sumValues },
   { field: "timeSurvived", total: "totalTime", combine: sumValues },
   { field: "damageDealt", total: "totalDamage", combine: sumValues },
   { field: "roundsPlayed", total: "totalMatches", combine: sumValues },
@@ -51,8 +52,11 @@ function formatSurvivalTime(seconds) {
   return `${hours}h ${minutes}m`;
 }
 
+// A field the source does not carry at all is as unreported as an explicit null:
+// only rankedGameModeStats has `deaths`, and normal modes must fall back to a
+// derived count rather than read the absence as a measured zero.
 function isReported(source, field) {
-  return Boolean(source) && source[field] !== null;
+  return Boolean(source) && source[field] !== null && source[field] !== undefined;
 }
 
 const isUnknown = (...values) => values.some((value) => value === null || value === undefined);
@@ -83,9 +87,20 @@ function deriveHeadshotRate({ totalHeadshots, headshotKillSample, totalKills }) 
   return totalKills > 0 ? null : 0;
 }
 
+// Ranked reports its own death count, and it can exceed roundsPlayed: a live
+// Master read 73 deaths across 68 rounds, which no matches-minus-wins figure can
+// produce. Where nothing reports a count -- every normal mode -- matches minus
+// wins remains the best available one.
+function resolveDeaths(totals) {
+  if (!isUnknown(totals.totalDeaths)) return totals.totalDeaths;
+  return isUnknown(totals.totalMatches, totals.totalWins)
+    ? null
+    : Math.max(totals.totalMatches - totals.totalWins, 0);
+}
+
 function deriveStats(totals) {
   const { totalKills, totalWins, totalMatches, totalDamage, totalTop10s } = totals;
-  const totalDeaths = isUnknown(totalMatches, totalWins) ? null : Math.max(totalMatches - totalWins, 0);
+  const totalDeaths = resolveDeaths(totals);
 
   return {
     totalDeaths,
@@ -153,9 +168,14 @@ function normalizeRankedModeStats(rankedGameModeStats = {}) {
     const source = stats || {};
     const roundsPlayed = Number(source.roundsPlayed) || 0;
     const top10Ratio = Number(source.top10Ratio) || 0;
+    const deaths = Number(source.deaths) || 0;
     const mode = {
       kills: Number(source.kills) || 0,
       wins: Number(source.wins) || 0,
+      // Zero deaths across played rounds is PUBG going quiet on the field, not a
+      // deathless run: report it as unknown so the count falls back to matches
+      // minus wins instead of turning K/D into a raw kill total.
+      deaths: roundsPlayed > 0 && deaths === 0 ? null : deaths,
       damageDealt: Number(source.damageDealt) || 0,
       roundsPlayed,
       assists: Number(source.assists) || 0,

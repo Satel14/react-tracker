@@ -9,6 +9,14 @@ function toPositiveIntOrNull(value) {
   return Math.floor(parsed);
 }
 
+// A placement is 1-based, so ranked's literal 0 means "not reported" rather than
+// a finish ahead of first place.
+function toPlacementOrNull(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
 function normalizeTierName(value) {
   if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase();
@@ -246,6 +254,7 @@ function extractRankedInfo(rankedModeStats = {}) {
       label: chosenTier.label,
       currentRankPoint: rankPoints,
       bestRankPoint: bestRankPoints,
+      avgRank: toPlacementOrNull(stats?.avgRank),
       leaderboardRank: leaderboardMeta.leaderboardRank,
       topPercentage: leaderboardMeta.topPercentage,
       iconUrl: rankBadge.iconUrl,
@@ -268,6 +277,7 @@ function extractRankedInfo(rankedModeStats = {}) {
     mode: best.mode,
     currentRankPoint: best.currentRankPoint,
     bestRankPoint: best.bestRankPoint,
+    avgRank: best.avgRank,
     leaderboardRank: best.leaderboardRank,
     topPercentage: best.topPercentage,
     iconUrl: best.iconUrl,
