@@ -363,6 +363,153 @@ test("a full page of matches may be hiding older ones, so it is not complete", a
   assert.equal(calls.filter((url) => url.includes("/matches/")).length, 8, "knowing the list is short buys no extra fetches");
 });
 
+// --- party overlap ---------------------------------------------------------
+
+const mateId = (n) => `account.${String(n).padStart(2, "0").repeat(16)}`;
+
+// A match whose roster holds the focal player plus `mates`.
+const matchWithMates = (id, mates) => ({
+  data: {
+    id,
+    attributes: { createdAt: "2026-09-08T21:00:00Z", duration: 1500, mapName: "Baltic_Main", gameMode: "squad-fpp", matchType: "competitive", shardId: "steam" },
+    relationships: { rosters: { data: [] } },
+  },
+  included: [
+    { type: "participant", id: "p0", attributes: { stats: { playerId: ENRICH_ACCOUNT, name: "EnrichNeo", kills: 2, damageDealt: 300, winPlace: 3 } } },
+    ...mates.map((account, i) => ({
+      type: "participant",
+      id: `p${i + 1}`,
+      attributes: { stats: { playerId: account, name: `Mate${i + 1}`, kills: 1, damageDealt: 100, winPlace: 3 } },
+    })),
+    {
+      type: "roster",
+      id: "r1",
+      attributes: { won: "false", stats: { rank: 3, teamId: 7 } },
+      relationships: { participants: { data: [{ id: "p0" }, ...mates.map((_unused, i) => ({ id: `p${i + 1}` }))] } },
+    },
+  ],
+});
+
+// Every mate's own match list: `shared` of the focal player's ids, then filler.
+const batchRecord = (account, name, shared, theirs) => ({
+  id: account,
+  type: "player",
+  attributes: { name },
+  relationships: {
+    matches: {
+      data: [
+        ...Array.from({ length: shared }, (_unused, i) => ({ id: `m${i}` })),
+        ...Array.from({ length: theirs - shared }, (_unused, i) => ({ id: `${name}-own-${i}` })),
+      ],
+    },
+  },
+});
+
+const partyRoutes = (matchMates, records) => [
+  [`/players/${ENRICH_ACCOUNT}/survival_mastery`, { ok: true, json: async () => ({ data: { attributes: {} } }) }],
+  [`/players/${ENRICH_ACCOUNT}/weapon_mastery`, { ok: true, json: async () => ({ data: { attributes: { weaponSummaries: {} } } }) }],
+  ["filter[playerIds]", (url) => {
+    const asked = new Set(decodeURIComponent(url.split("filter[playerIds]=")[1]).split(","));
+    return { ok: true, json: async () => ({ data: records.filter((record) => asked.has(record.id)) }) };
+  }],
+  [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(50) }],
+  ["/matches/", (url) => {
+    const id = url.split("/matches/")[1];
+    return { ok: true, json: async () => matchWithMates(id, matchMates[id] || []) };
+  }],
+];
+
+test("getMasteryExtras measures party overlap from each mate's own history", async () => {
+  // The regular shares 40 of their 50 matches with this player; the fill shares
+  // one of 100. Only the first is a party mate.
+  const regular = mateId(1);
+  const fill = mateId(2);
+  const { doRequest, calls } = createFakeDoRequest(
+    partyRoutes(
+      { m0: [regular, fill], m1: [regular] },
+      [batchRecord(regular, "Regular", 40, 50), batchRecord(fill, "Fill", 1, 100)]
+    )
+  );
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMasteryExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo",
+  });
+
+  assert.equal(extras.status, "ok");
+  assert.deepEqual(
+    extras.party.map((row) => [row.name, row.sharedMatches, row.theirMatches, row.sharePct, row.isParty]),
+    [["Regular", 40, 50, 80, true], ["Fill", 1, 100, 1, false]]
+  );
+  // One batch request covers every candidate; the focal player is not in it,
+  // since their own list already came from the profile.
+  const batches = calls.filter((url) => url.includes("filter[playerIds]"));
+  assert.equal(batches.length, 1);
+  assert.ok(!batches[0].includes(ENRICH_ACCOUNT));
+});
+
+test("party overlap asks PUBG about ten accounts per request and stops at two", async () => {
+  // Eight squad matches can surface more mates than two batches hold, so the
+  // most-seen candidates go first and the tail is dropped rather than fetched.
+  const mates = Array.from({ length: 25 }, (_unused, i) => mateId(i + 1));
+  const matchMates = {};
+  for (let i = 0; i < 8; i += 1) matchMates[`m${i}`] = mates.slice(i * 3, i * 3 + 3);
+  matchMates.m0 = [mates[0], mates[1], mates[2]];
+
+  const { doRequest, calls } = createFakeDoRequest(
+    partyRoutes(matchMates, mates.map((account, i) => batchRecord(account, `Mate${i + 1}`, 2, 40)))
+  );
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMasteryExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo",
+  });
+
+  const batches = calls.filter((url) => url.includes("filter[playerIds]"));
+  assert.equal(batches.length, 2);
+  batches.forEach((url) => {
+    const ids = decodeURIComponent(url.split("filter[playerIds]=")[1]).split(",");
+    assert.ok(ids.length <= 10, `a batch asked for ${ids.length} accounts`);
+  });
+  assert.equal(extras.party.length, 20);
+});
+
+test("a bot in the roster is never a party candidate", async () => {
+  const { doRequest, calls } = createFakeDoRequest(
+    partyRoutes({ m0: ["ai.9001", "ai.9002"] }, [])
+  );
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMasteryExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo",
+  });
+
+  assert.deepEqual(extras.party, []);
+  assert.ok(calls.every((url) => !url.includes("filter[playerIds]")), "no accounts to ask about, no request");
+});
+
+test("a failed party batch leaves clan and mastery intact and says what broke", async () => {
+  const regular = mateId(1);
+  const routes = partyRoutes({ m0: [regular] }, []);
+  const service = createService(
+    async (url) => {
+      if (url.includes("filter[playerIds]")) throw new Error("Rate Limit Reached");
+      const { doRequest } = createFakeDoRequest(routes);
+      return (await doRequest(url)).json();
+    }
+  );
+
+  const extras = await service.getMasteryExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo",
+  });
+
+  assert.equal(extras.status, "partial");
+  assert.match(extras.error, /party: Rate Limit Reached/);
+  // party is null, not [], so the page can tell "unknown" from "no party".
+  assert.equal(extras.party, null);
+  assert.ok("weaponMastery" in extras);
+});
+
 test("a player with no matches at all has a complete, empty history", async () => {
   const { doRequest } = createFakeDoRequest([
     [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(0) }],

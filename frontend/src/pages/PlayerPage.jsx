@@ -741,13 +741,19 @@ const PlayerPage = ({ t }) => {
   })();
   // PUBG never says who queued together: the roster is the in-game squad, fill
   // included, and neither the match record nor its telemetry carries a party
-  // id. A squad-mate seen in more than one of these matches queued with the
-  // player; a one-off is fill. A bot can't be in a lobby party, whatever its id
-  // does across matches.
+  // id. The extras call measures it instead -- how much of a mate's own recent
+  // history they spent in this player's matches -- and that verdict wins when
+  // it is in. Until then, or when the leg failed, a squad-mate seen in more
+  // than one of these matches counts as party and a one-off as fill. A bot
+  // can't be in a lobby party, whatever its id does across matches.
+  const partyOverlap = Array.isArray(profile?.party) ? profile.party : null;
+  const overlapByAccount = new Map((partyOverlap || []).map((row) => [row.accountId, row]));
   const partyIds = new Set(
-    squadAggregates
-      .filter((mate) => mate.shared > 1 && isAccountIdentifier(mate.accountId))
-      .map((mate) => mate.accountId)
+    partyOverlap
+      ? partyOverlap.filter((row) => row.isParty && isAccountIdentifier(row.accountId)).map((row) => row.accountId)
+      : squadAggregates
+        .filter((mate) => mate.shared > 1 && isAccountIdentifier(mate.accountId))
+        .map((mate) => mate.accountId)
   );
   const banLabel = getBanLabel(profile?.banType);
   const hasBanWarning = profile?.banType && profile.banType !== "Innocent";
@@ -1037,6 +1043,17 @@ const PlayerPage = ({ t }) => {
                     {t("pages.squad.matchesShared", { count: mate.shared })}
                     {mate.bestPlacement ? ` - ${t("pages.squad.bestPlace")} #${mate.bestPlacement}` : ""}
                   </span>
+                  {/* Only rendered once the overlap has actually been measured:
+                      an unmeasured mate gets no line rather than a zero. */}
+                  {overlapByAccount.has(mate.accountId) ? (
+                    <small className="player-squad-item__overlap">
+                      {t("pages.squad.overlap", {
+                        shared: overlapByAccount.get(mate.accountId).sharedMatches,
+                        total: overlapByAccount.get(mate.accountId).theirMatches,
+                        percent: overlapByAccount.get(mate.accountId).sharePct,
+                      })}
+                    </small>
+                  ) : null}
                 </div>
               </div>
               <div className="player-squad-item__stats">
