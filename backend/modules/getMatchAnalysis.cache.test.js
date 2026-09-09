@@ -46,6 +46,32 @@ test("psn and xbox fold to one console cache key, so the second platform reuses 
   assert.equal(viaXbox, viaPsn);
 });
 
+test("the analysis carries the region and weather only telemetry knows", async () => {
+  loadCalls = 0;
+  bundle = {
+    matchShard: "steam",
+    matchAttributes,
+    matchPayload,
+    telemetry: [
+      { _T: "LogMatchDefinition", MatchId: "match.bro.competitive.pc-2018-42.steam.squad-fpp.eu.2026.09.08.21.abc" },
+      { _T: "LogMatchStart", weatherId: "Clear", characters: [{ character: { accountId: "account.me", name: "Me", teamId: 10 } }] },
+    ],
+  };
+
+  const analysis = await getMatchAnalysis({ shard: "steam", matchId: "context-1", accountId: "account.me" });
+  assert.equal(analysis.region, "eu");
+  assert.equal(analysis.weather, "Clear");
+});
+
+test("an analysis whose telemetry says neither reports both as null", async () => {
+  loadCalls = 0;
+  bundle = { matchShard: "steam", matchAttributes, matchPayload, telemetry };
+
+  const analysis = await getMatchAnalysis({ shard: "steam", matchId: "context-2", accountId: "account.me" });
+  assert.equal(analysis.region, null);
+  assert.equal(analysis.weather, null);
+});
+
 test("a different focal player is still a cache miss", async () => {
   loadCalls = 0;
   bundle = { matchShard: "steam", matchAttributes, matchPayload, telemetry };

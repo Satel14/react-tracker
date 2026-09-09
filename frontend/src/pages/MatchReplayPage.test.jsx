@@ -451,6 +451,51 @@ test("the replay tab reserves the 16:9 stage while telemetry decodes", async () 
   expect(container.querySelector(".replay-roster__teams")).not.toBeNull();
 });
 
+const replayPayload = (extra = {}) => ({
+  data: {
+    matchId: "m1", rawMapName: "Baltic_Main", mapName: "Erangel", mapMax: 8160, duration: 100,
+    focalAccountId: "account.me", focalTeamId: 1, totalPlayers: 1, totalTeams: 1,
+    players: [{ name: "Me", accountId: "account.me", teamId: 1, isFocal: true, positions: [{ t: 0, x: 10, y: 10 }], deathTime: null, dropTime: null }],
+    kills: [],
+    zones: [{ t: 0, bx: 0, by: 0, br: 100, wx: 0, wy: 0, wr: 100, phase: 1 }],
+    ...extra,
+  },
+});
+
+test("names the server region and the weather under the title", async () => {
+  getMatchReplay.mockResolvedValueOnce(replayPayload({ region: "eu", weather: "Clear" }));
+  const { container } = renderAt("/match/steam/m1/replay");
+
+  await screen.findByRole("img", { name: /erangel/i });
+  // The labels go through t(), a passthrough in this suite, so the values are
+  // what this asserts on.
+  const meta = container.querySelector(".match-replay__meta");
+  expect(meta.textContent).toContain("EU");
+  expect(meta.textContent).toContain("Clear");
+});
+
+test("keeps the meta line present but empty when telemetry names neither", async () => {
+  // Reserved either way: a line that arrives with the data would push the tabs
+  // down on every match.
+  getMatchReplay.mockResolvedValueOnce(replayPayload());
+  const { container } = renderAt("/match/steam/m1/replay");
+
+  await screen.findByRole("img", { name: /erangel/i });
+  const meta = container.querySelector(".match-replay__meta");
+  expect(meta).not.toBeNull();
+  expect(meta.textContent).toBe("");
+});
+
+test("shows the weather alone when the match id carries no region", async () => {
+  getMatchReplay.mockResolvedValueOnce(replayPayload({ region: null, weather: "Overcast" }));
+  const { container } = renderAt("/match/steam/m1/replay");
+
+  await screen.findByRole("img", { name: /erangel/i });
+  const meta = container.querySelector(".match-replay__meta");
+  expect(meta.textContent).toContain("Overcast");
+  expect(meta.textContent).not.toContain("·");
+});
+
 test("the scoreboard tab reserves the team table while the analysis loads", async () => {
   getMatchAnalysis.mockReturnValueOnce(new Promise(() => {}));
   const { container } = renderAt("/match/steam/m1/replay?accountId=account.me&tab=scoreboard");

@@ -389,7 +389,9 @@
             "hits": "Влучання",
             "thirdParty": "Третя сторона",
             "timeRange": "Проміжок часу",
-            "weapon": "Зброя"
+            "weapon": "Зброя",
+            "serverLabel": "Сервер",
+            "weatherLabel": "Погода"
         },
         "help": {
             "title": "Як подивитися статистику PUBG",

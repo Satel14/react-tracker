@@ -5493,6 +5493,14 @@ body {
     font-size: 12px;
     color: var(--text-faint);
   }
+  &__meta {
+    // Height stands while the payload loads, so filling the line in does not
+    // push the tabs down.
+    margin: 2px 0 0;
+    min-height: 17px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
   &__speed-label { color: var(--text-muted); font-size: 12px; }
   &__controls {
     display: flex;
