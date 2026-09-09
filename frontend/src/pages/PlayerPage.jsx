@@ -1308,7 +1308,18 @@ const PlayerPage = ({ t }) => {
               </div>
 
               <div className={`player-match-stats ${isRanked ? "player-match-stats--ranked" : ""}`}>
-                <div><span>Kills</span><strong>{match.kills}</strong></div>
+                <div>
+                  <span>Kills</span>
+                  <strong>{match.kills}</strong>
+                  {/* Rank by kills inside the lobby. It rides in this cell
+                      rather than in one of its own: the grid's column count is
+                      hard-wired in the stylesheet and in three media queries. */}
+                  {match.killPlace ? (
+                    <small className="player-match-stats__rank">
+                      {match.lobbySize ? `#${match.killPlace} / ${match.lobbySize}` : `#${match.killPlace}`}
+                    </small>
+                  ) : null}
+                </div>
                 <div><span>Damage</span><strong>{match.damage}</strong></div>
                 <div><span>Assists</span><strong>{match.assists}</strong></div>
                 <div><span>DBNOs</span><strong>{match.dbnos}</strong></div>

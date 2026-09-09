@@ -1537,6 +1537,19 @@ body {
           text-overflow: ellipsis;
         }
 
+        // Second line inside a cell, not a cell of its own: this grid's column
+        // count is hard-wired above and in three media queries.
+        &__rank {
+          display: block;
+          margin-top: 2px;
+          color: var(--text-faint);
+          font-size: 10px;
+          line-height: 1.1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
         &--ranked {
           grid-template-columns: repeat(7, minmax(0, 1fr));
         }

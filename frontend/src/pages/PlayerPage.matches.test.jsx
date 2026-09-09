@@ -356,6 +356,25 @@ test("carries each party mate's kills and damage on hover", async () => {
   );
 });
 
+test("puts the kill rank under the kill count, not in a column of its own", async () => {
+  // The stats row's column count is hard-wired in the base rule and in three
+  // media queries, so the rank rides inside the cell it belongs to.
+  const card = await renderMatchesCard([
+    matchItem({ id: "m-1", kills: 3, killPlace: 4, lobbySize: 63 }),
+    matchItem({ id: "m-2", kills: 0, killPlace: null, lobbySize: 63 }),
+    matchItem({ id: "m-3", kills: 2, killPlace: 7, lobbySize: null }),
+    matchItem({ id: "m-4", matchType: "normal-squad", kills: 1, killPlace: 9, lobbySize: 61 }),
+  ]);
+
+  const rows = [...rowsOf(card)];
+  const rankOf = (row) => row.querySelector(".player-match-stats__rank")?.textContent ?? null;
+  const cellsOf = (row) => row.querySelectorAll(".player-match-stats > div").length;
+  expect(rows.map(rankOf)).toEqual(["#4 / 63", null, "#7", "#9 / 61"]);
+  // The grid is untouched: six cells, and seven on a ranked match because of the
+  // RP cell that was already there.
+  expect(rows.map(cellsOf)).toEqual([7, 7, 7, 6]);
+});
+
 test("names the server a match ran on when the region is known", async () => {
   // The region is nowhere in the match record: it comes back with the deferred
   // extras, keyed by match id, so the card has to look it up.

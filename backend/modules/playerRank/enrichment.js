@@ -157,6 +157,13 @@ function getParticipantStats(matchPayload, accountId, playerName) {
   return { participant, roster, teammates };
 }
 
+// A place is 1-based, and toInteger(x, null) would round a missing one to 0 --
+// which reads as a rank rather than as an absence.
+function toPlaceOrNull(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
+}
+
 function mapMatch(matchPayload, accountId, playerName) {
   const match = matchPayload?.data;
   const attributes = match?.attributes || {};
@@ -186,6 +193,11 @@ function mapMatch(matchPayload, accountId, playerName) {
     placementLabel: teamRank ? `#${teamRank}` : "N/A",
     isWin: teamRank === 1,
     kills,
+    // Rank by kills within the lobby, and how many were in it -- "#4 of 63"
+    // says something a bare kill count cannot.
+    killPlace: toPlaceOrNull(stats.killPlace),
+    lobbySize: (Array.isArray(matchPayload?.included) ? matchPayload.included : [])
+      .filter((item) => item?.type === "participant").length,
     damage: Math.round(damage),
     assists: toInteger(stats.assists),
     dbnos: toInteger(stats.DBNOs || stats.dBNOs),

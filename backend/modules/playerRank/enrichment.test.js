@@ -363,6 +363,55 @@ test("a full page of matches may be hiding older ones, so it is not complete", a
   assert.equal(calls.filter((url) => url.includes("/matches/")).length, 8, "knowing the list is short buys no extra fetches");
 });
 
+// --- kill rank -------------------------------------------------------------
+
+// killPlace is the player's rank by kills inside the lobby, 1-based, and it is
+// ranked for everyone -- a player with no kills still gets a place. Values here
+// follow a live capture: 3 kills read killPlace 4 out of 63 participants.
+const matchWithLobby = (id, mine) => ({
+  data: {
+    id,
+    attributes: { createdAt: "2026-09-08T21:00:00Z", duration: 1500, mapName: "Baltic_Main", gameMode: "squad-fpp", matchType: "competitive", shardId: "steam" },
+    relationships: { rosters: { data: [] } },
+  },
+  included: [
+    { type: "participant", id: "p0", attributes: { stats: { playerId: ENRICH_ACCOUNT, name: "EnrichNeo", kills: 3, damageDealt: 412, winPlace: 13, ...mine } } },
+    { type: "participant", id: "p1", attributes: { stats: { playerId: "account.a", name: "A", kills: 6, killPlace: 1 } } },
+    { type: "participant", id: "p2", attributes: { stats: { playerId: "account.b", name: "B", kills: 5, killPlace: 2 } } },
+    { type: "roster", id: "r1", attributes: { won: "false", stats: { rank: 13, teamId: 7 } }, relationships: { participants: { data: [{ id: "p0" }] } } },
+  ],
+});
+
+test("a mapped match carries the kill rank and the size of the lobby behind it", async () => {
+  const { doRequest } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(1) }],
+    ["/matches/", (url) => ({ ok: true, json: async () => matchWithLobby(url.split("/matches/")[1], { killPlace: 4 }) })],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMatchExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo", playerRecord: null,
+  });
+
+  assert.equal(extras.matches.items[0].killPlace, 4);
+  assert.equal(extras.matches.items[0].lobbySize, 3);
+});
+
+test("a match record with no kill place says null rather than a first place", async () => {
+  // toInteger(x, null) rounds a missing value to 0, and 0 would read as a rank.
+  const { doRequest } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(1) }],
+    ["/matches/", (url) => ({ ok: true, json: async () => matchWithLobby(url.split("/matches/")[1], { killPlace: undefined }) })],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMatchExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo", playerRecord: null,
+  });
+
+  assert.equal(extras.matches.items[0].killPlace, null);
+});
+
 // --- match regions ---------------------------------------------------------
 
 const telemetryHead = (region) =>
