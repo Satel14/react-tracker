@@ -4,6 +4,8 @@ const {
   weaponCategory,
 } = require("../weaponMeta");
 const { isAccountIdentifier } = require("../playerIdentity");
+const { fetchTelemetryHead, findTelemetryUrl } = require("../pubgTelemetry");
+const { readRegionFromTelemetryHead } = require("../matchContext");
 const { buildPartyOverlap } = require("./party");
 
 const MAX_MATCH_HISTORY = 8;
@@ -14,6 +16,9 @@ const MATCH_CACHE_DURATION = 6 * 60 * 60 * 1000;
 // bought at one request each.
 const PARTY_BATCH_SIZE = 10;
 const PARTY_MAX_BATCHES = 2;
+// A match's region never changes, so these entries never go stale -- they only
+// need a ceiling so a long-lived process cannot grow one match at a time.
+const MATCH_REGION_CACHE_LIMIT = 500;
 
 const MAP_LABELS = {
   Baltic_Main: "Erangel",
@@ -306,6 +311,7 @@ function createPlayerEnrichmentService({
   masteryCache,
   matchSummaryCache,
   profileCache,
+  matchRegionCache = new Map(),
   cacheDuration,
 }) {
   async function getPlayerProfile(shard, accountId) {
@@ -403,11 +409,21 @@ function createPlayerEnrichmentService({
     if (match) {
       matchSummaryCache.set(cacheKey, {
         data: match,
+        // Kept beside the mapped match rather than inside it: the region leg
+        // needs this URL later, and the client has no use for it.
+        telemetryUrl: findTelemetryUrl(matchPayload),
         timestamp: Date.now(),
       });
     }
 
     return match;
+  }
+
+  function cachedTelemetryUrl(shard, matchId, accountId) {
+    const matchShard = shard === "psn" || shard === "xbox" ? "console" : shard;
+    const cached = matchSummaryCache.get(`${matchShard}:${matchId}:${accountId}`);
+    if (!cached || Date.now() - cached.timestamp >= MATCH_CACHE_DURATION) return null;
+    return cached.telemetryUrl || null;
   }
 
   async function getRecentMatches(shard, matchIds, accountId, playerName) {
@@ -495,6 +511,50 @@ function createPlayerEnrichmentService({
     });
   }
 
+  function rememberRegion(matchId, region) {
+    matchRegionCache.set(matchId, region);
+    while (matchRegionCache.size > MATCH_REGION_CACHE_LIMIT) {
+      const oldest = matchRegionCache.keys().next().value;
+      if (oldest === undefined) break;
+      matchRegionCache.delete(oldest);
+    }
+  }
+
+  // The server region a match ran on. It exists nowhere in the match record --
+  // only inside the telemetry file, in LogMatchDefinition.MatchId -- so each
+  // match costs one ranged read of a few kilobytes off the CDN. That host is not
+  // the rate-limited API, and a region never changes once the match is played,
+  // hence the long-lived cache keyed on the match alone.
+  async function getMatchRegions({ shard, accountId, playerName, profileRecord }) {
+    const matchIds = getRecentMatchIds(profileRecord).slice(0, MAX_MATCH_HISTORY);
+    if (!matchIds.length) return {};
+
+    // Warms matchSummaryCache when the rank flow has not already: that is where
+    // the telemetry URLs come from.
+    await getRecentMatches(shard, matchIds, accountId, playerName);
+
+    const results = await Promise.allSettled(matchIds.map(async (matchId) => {
+      const known = matchRegionCache.get(matchId);
+      if (known) return [matchId, known];
+
+      const url = cachedTelemetryUrl(shard, matchId, accountId);
+      if (!url) return [matchId, null];
+
+      const region = readRegionFromTelemetryHead(await fetchTelemetryHead(url));
+      if (region) rememberRegion(matchId, region);
+      return [matchId, region];
+    }));
+
+    const regions = {};
+    results.forEach((result) => {
+      if (result.status !== "fulfilled") return;
+      const [matchId, region] = result.value;
+      if (region) regions[matchId] = region;
+    });
+
+    return regions;
+  }
+
   // How much of a squad-mate's own recent history they spent in this player's
   // matches. PUBG publishes no party id, so this overlap is the signal.
   async function getPartyOverlap({ shard, accountId, playerName, profileRecord }) {
@@ -556,11 +616,12 @@ function createPlayerEnrichmentService({
 
     const clanId = getClanIdFromPlayer(profileRecord);
 
-    const [clanResult, masteryResult, weaponResult, partyResult] = await Promise.allSettled([
+    const [clanResult, masteryResult, weaponResult, partyResult, regionResult] = await Promise.allSettled([
       getClan(shard, clanId),
       getSurvivalMastery(shard, accountId),
       getWeaponMastery(shard, accountId),
       getPartyOverlap({ shard, accountId, playerName, profileRecord }),
+      getMatchRegions({ shard, accountId, playerName, profileRecord }),
     ]);
 
     if (clanResult.status === "rejected") {
@@ -590,6 +651,10 @@ function createPlayerEnrichmentService({
       // null rather than [] when the leg failed, so the page can tell "unknown"
       // from "measured, and there is no party".
       party: partyResult.status === "fulfilled" ? partyResult.value : null,
+      // Cosmetic, and read off a host that can be down without anything else
+      // being wrong, so a failure here is an empty map rather than a partial
+      // payload.
+      matchRegions: regionResult.status === "fulfilled" ? regionResult.value : {},
     };
   }
 

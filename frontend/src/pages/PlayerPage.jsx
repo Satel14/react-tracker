@@ -752,6 +752,7 @@ const PlayerPage = ({ t }) => {
   // it is in. Until then, or when the leg failed, a squad-mate seen in more
   // than one of these matches counts as party and a one-off as fill. A bot
   // can't be in a lobby party, whatever its id does across matches.
+  const matchRegions = profile?.matchRegions && typeof profile.matchRegions === "object" ? profile.matchRegions : {};
   const partyOverlap = Array.isArray(profile?.party) ? profile.party : null;
   const overlapByAccount = new Map((partyOverlap || []).map((row) => [row.accountId, row]));
   const partyIds = new Set(
@@ -1292,6 +1293,16 @@ const PlayerPage = ({ t }) => {
                   <span>
                     {match.gameModeLabel}
                     {isRanked ? <span className="player-ranked-chip">{t("pages.player.matches.ranked")}</span> : null}
+                    {/* The region lives only in the telemetry, so it arrives
+                        with the deferred extras rather than with the match. */}
+                    {matchRegions[match.id] ? (
+                      <span
+                        className="player-match-region"
+                        title={`${t("pages.match.serverLabel")}: ${matchRegions[match.id].toUpperCase()}`}
+                      >
+                        {matchRegions[match.id].toUpperCase()}
+                      </span>
+                    ) : null}
                   </span>
                 </div>
               </div>

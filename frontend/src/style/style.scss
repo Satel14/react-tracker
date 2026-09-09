@@ -1433,6 +1433,22 @@ body {
           text-transform: uppercase;
           line-height: 1.4;
         }
+
+        // The ranked chip's shape in the muted palette: a region is context,
+        // not a status worth spending colour on.
+        .player-match-region {
+          display: inline-flex;
+          align-items: center;
+          margin-left: 6px;
+          padding: 1px 7px;
+          border-radius: 999px;
+          border: 1px solid color-mix(in srgb, var(--text-muted) 35%, transparent);
+          color: var(--text-muted);
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.8px;
+          line-height: 1.4;
+        }
       }
 
       .player-place-badge {

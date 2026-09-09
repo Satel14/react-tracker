@@ -21,6 +21,7 @@ const {
   lifetimeStatsCache,
   masteryCache,
   matchSummaryCache,
+  matchRegionCache,
   getCachedAccountId,
   setCachedAccountId,
   playerProfileCache,
@@ -87,6 +88,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey, rankPointHistory = cre
     clanCache,
     masteryCache,
     matchSummaryCache,
+    matchRegionCache,
     profileCache: playerProfileCache,
     cacheDuration: CACHE_DURATION,
   });

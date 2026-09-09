@@ -8,6 +8,9 @@ const playerProfileCache = new Map();
 const clanCache = new Map();
 const masteryCache = new Map();
 const matchSummaryCache = new Map();
+// matchId -> server region. A played match's region never changes, so this is
+// not a TTL cache; enrichment caps its size instead.
+const matchRegionCache = new Map();
 const inFlightRankRequests = new Map();
 const stalePlayerDataCache = new Map();
 const leaderboardCache = new Map();
@@ -88,6 +91,7 @@ module.exports = {
   clanCache,
   masteryCache,
   matchSummaryCache,
+  matchRegionCache,
   playerProfileCache,
   playerNameCache,
   PLAYER_NAME_CACHE_DURATION,

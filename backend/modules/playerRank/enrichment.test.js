@@ -363,6 +363,154 @@ test("a full page of matches may be hiding older ones, so it is not complete", a
   assert.equal(calls.filter((url) => url.includes("/matches/")).length, 8, "knowing the list is short buys no extra fetches");
 });
 
+// --- match regions ---------------------------------------------------------
+
+const telemetryHead = (region) =>
+  `[{"_T":"LogMatchDefinition","MatchId":"match.bro.official.pc-2018-42.steam.squad-fpp.${region}.2026.09.08.21.abc"}`;
+
+// A match record with the telemetry asset attached, the way PUBG answers.
+const matchWithAsset = (id) => ({
+  data: {
+    id,
+    attributes: { createdAt: "2026-09-08T21:00:00Z", duration: 1500, mapName: "Baltic_Main", gameMode: "squad-fpp", matchType: "competitive", shardId: "steam" },
+    relationships: { rosters: { data: [] }, assets: { data: [{ id: `asset-${id}` }] } },
+  },
+  included: [
+    { type: "participant", id: "p0", attributes: { stats: { playerId: ENRICH_ACCOUNT, name: "EnrichNeo", kills: 1, damageDealt: 100, winPlace: 4 } } },
+    { type: "roster", id: "r1", attributes: { won: "false", stats: { rank: 4, teamId: 3 } }, relationships: { participants: { data: [{ id: "p0" }] } } },
+    { type: "asset", id: `asset-${id}`, attributes: { URL: `https://telemetry-cdn.pubg.com/${id}-telemetry.json` } },
+  ],
+});
+
+const realFetch = global.fetch;
+
+test("match regions come off the telemetry head, one ranged read per match", async () => {
+  const { doRequest, calls } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}/survival_mastery`, { ok: true, json: async () => ({ data: { attributes: {} } }) }],
+    [`/players/${ENRICH_ACCOUNT}/weapon_mastery`, { ok: true, json: async () => ({ data: { attributes: { weaponSummaries: {} } } }) }],
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(3) }],
+    ["/matches/", (url) => ({ ok: true, json: async () => matchWithAsset(url.split("/matches/")[1]) })],
+  ]);
+
+  const ranged = [];
+  global.fetch = async (url, options) => {
+    ranged.push({ url, range: options?.headers?.Range });
+    return { ok: true, status: 206, text: async () => telemetryHead(url.includes("m1") ? "as" : "eu") };
+  };
+
+  try {
+    const service = createService(async (url) => (await doRequest(url)).json());
+    const extras = await service.getMasteryExtras({
+      shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo",
+    });
+
+    assert.deepEqual(extras.matchRegions, { m0: "eu", m1: "as", m2: "eu" });
+    assert.equal(ranged.length, 3);
+    ranged.forEach((call) => assert.match(call.range, /^bytes=0-\d+$/));
+    // The CDN is not the rate-limited API: none of this went through doRequest.
+    assert.ok(calls.every((url) => !url.includes("telemetry-cdn")));
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test("a match whose telemetry cannot be read simply has no region", async () => {
+  const { doRequest } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}/survival_mastery`, { ok: true, json: async () => ({ data: { attributes: {} } }) }],
+    [`/players/${ENRICH_ACCOUNT}/weapon_mastery`, { ok: true, json: async () => ({ data: { attributes: { weaponSummaries: {} } } }) }],
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(2) }],
+    ["/matches/", (url) => ({ ok: true, json: async () => matchWithAsset(url.split("/matches/")[1]) })],
+  ]);
+
+  global.fetch = async (url) => (url.includes("m0")
+    ? { ok: true, status: 206, text: async () => telemetryHead("eu") }
+    : { ok: false, status: 404, text: async () => "" });
+
+  try {
+    const service = createService(async (url) => (await doRequest(url)).json());
+    const extras = await service.getMasteryExtras({
+      shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo",
+    });
+
+    // Cosmetic field: one unreadable file must not take the rest of extras with
+    // it, nor mark the payload partial.
+    assert.deepEqual(extras.matchRegions, { m0: "eu" });
+    assert.equal(extras.status, "ok");
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test("a region already known is not fetched twice", async () => {
+  const routes = [
+    [`/players/${ENRICH_ACCOUNT}/survival_mastery`, { ok: true, json: async () => ({ data: { attributes: {} } }) }],
+    [`/players/${ENRICH_ACCOUNT}/weapon_mastery`, { ok: true, json: async () => ({ data: { attributes: { weaponSummaries: {} } } }) }],
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(1) }],
+    ["/matches/", (url) => ({ ok: true, json: async () => matchWithAsset(url.split("/matches/")[1]) })],
+  ];
+  const regionCache = new Map();
+  let reads = 0;
+  global.fetch = async () => {
+    reads += 1;
+    return { ok: true, status: 206, text: async () => telemetryHead("eu") };
+  };
+
+  try {
+    const build = () => createPlayerEnrichmentService({
+      doRequest: async (url) => (await createFakeDoRequest(routes).doRequest(url)).json(),
+      clanCache: new Map(),
+      masteryCache: new Map(),
+      matchSummaryCache: new Map(),
+      profileCache: new Map(),
+      matchRegionCache: regionCache,
+      cacheDuration: 10 * 60 * 1000,
+    });
+
+    const first = await build().getMasteryExtras({ shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo" });
+    // A fresh service, so only the shared region cache can save the read: a
+    // match's region never changes once played.
+    const second = await build().getMasteryExtras({ shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo" });
+
+    assert.deepEqual(first.matchRegions, { m0: "eu" });
+    assert.deepEqual(second.matchRegions, { m0: "eu" });
+    assert.equal(reads, 1);
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test("the region cache keeps a ceiling, oldest out first", async () => {
+  // Regions never expire -- nothing about a played match changes -- so the only
+  // thing standing between this and unbounded growth is the cap.
+  const regionCache = new Map(Array.from({ length: 500 }, (_unused, i) => [`old-${i}`, "eu"]));
+  const { doRequest } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}/survival_mastery`, { ok: true, json: async () => ({ data: { attributes: {} } }) }],
+    [`/players/${ENRICH_ACCOUNT}/weapon_mastery`, { ok: true, json: async () => ({ data: { attributes: { weaponSummaries: {} } } }) }],
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(1) }],
+    ["/matches/", (url) => ({ ok: true, json: async () => matchWithAsset(url.split("/matches/")[1]) })],
+  ]);
+  global.fetch = async () => ({ ok: true, status: 206, text: async () => telemetryHead("as") });
+
+  try {
+    const service = createPlayerEnrichmentService({
+      doRequest: async (url) => (await doRequest(url)).json(),
+      clanCache: new Map(),
+      masteryCache: new Map(),
+      matchSummaryCache: new Map(),
+      profileCache: new Map(),
+      matchRegionCache: regionCache,
+      cacheDuration: 10 * 60 * 1000,
+    });
+    await service.getMasteryExtras({ shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo" });
+
+    assert.equal(regionCache.size, 500);
+    assert.equal(regionCache.get("m0"), "as", "the new region is the one that stayed");
+    assert.equal(regionCache.has("old-0"), false, "the oldest entry is the one that went");
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
 // --- survival mastery ------------------------------------------------------
 
 // Shape captured live 2026-09-09 (steam/Satel14, 6 605 matches): level, tier, xp
