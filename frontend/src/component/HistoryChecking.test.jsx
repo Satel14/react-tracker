@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import HistoryChecking from "./HistoryChecking";
+import { MAX_RECENT_ITEMS } from "../cookie/store";
 
 const { getRecentSearchesMock } = vi.hoisted(() => ({
   getRecentSearchesMock: vi.fn(),
@@ -54,6 +55,43 @@ beforeEach(() => {
 
 afterEach(() => {
   window.localStorage.clear();
+});
+
+// The homepage's whole layout shift lived here. With nothing in storage this
+// component used to return an empty fragment until the fetch landed, so
+// .history-list was 0px tall and everything below it dropped ~740px when the
+// rows arrived -- Lighthouse named this block as the sole CLS culprit.
+//
+// Asserted synchronously, with no waitFor: the reservation is only worth
+// anything if it is on the FIRST paint. A skeleton that appears a tick later
+// has already let the shift happen.
+test("reserves the block on the first paint for a visitor with nothing stored", () => {
+  getRecentSearchesMock.mockReturnValue(new Promise(() => {}));
+
+  const { container } = renderComponent();
+
+  expect(container.querySelectorAll(".historycheck_block--loading")).toHaveLength(
+    MAX_RECENT_ITEMS
+  );
+});
+
+// /api/player/recent answers with `limit = 10`, and the client caps its cache at
+// the same number. Reserving a different count would trade a big shift for a
+// small one rather than removing it.
+test("reserves exactly as many rows as the endpoint returns", () => {
+  expect(MAX_RECENT_ITEMS).toBe(10);
+});
+
+// Reading localStorage is synchronous; only the `async` on getHistory made it
+// look otherwise, and a stored history that paints one tick late shifts the
+// column under it just as surely as the fetch does.
+test("paints stored history on the first paint too", () => {
+  window.localStorage.setItem("history", JSON.stringify(HISTORY_ENTRY));
+  getRecentSearchesMock.mockReturnValue(new Promise(() => {}));
+
+  renderComponent();
+
+  expect(screen.getByText("Neo")).toBeInTheDocument();
 });
 
 test("shows a skeleton instead of the N/A placeholder while the request is in flight", async () => {
