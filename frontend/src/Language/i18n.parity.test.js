@@ -78,3 +78,24 @@ test("every replay key the components reference exists in both locales", () => {
     expect(ua.pages?.replay?.[key], `ua is missing pages.replay.${key}`).toBeTruthy();
   }
 });
+
+// One stat, one word. The knock count is shown in four places -- the stat card,
+// the match card, the lobby scoreboard and the weapons tab -- and it used to
+// carry three different names: "Knockouts", "DBNOs" and "DBNO". DBNO is the
+// API's term, not the game's.
+test("the knock count is named the same wherever it appears", () => {
+  const pageSrc = readFileSync(
+    join(fileURLToPath(new URL("../pages", import.meta.url)), "PlayerPage.jsx"),
+    "utf8"
+  );
+
+  expect(en.pages.match.colKnocks).toBe("Knocks");
+  expect(en.pages.weapons.knocks).toBe("Knocks");
+  expect(ua.pages.match.colKnocks).toBe(ua.pages.weapons.knocks);
+
+  // The two labels on the player page are hard-coded English, like every other
+  // label in those grids, so the guard has to read the source.
+  expect(pageSrc).toContain('{ key: "dbnos", label: "Knocks"');
+  expect(pageSrc).toContain("<span>Knocks</span>");
+  expect(pageSrc).not.toMatch(/DBNOs?<|label: "Knockouts"/);
+});

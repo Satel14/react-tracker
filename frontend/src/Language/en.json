@@ -210,7 +210,7 @@
       "headshots": "Headshots",
       "damage": "Damage",
       "dmgPerKill": "DMG/Kill",
-      "knockouts": "Knockouts",
+      "knocks": "Knocks",
       "longest": "Longest",
       "cat": {
         "ar": "Assault Rifles",
@@ -366,7 +366,7 @@
       "colKills": "K",
       "colDamage": "DMG",
       "colAssists": "A",
-      "colDbno": "DBNO",
+      "colKnocks": "Knocks",
       "colHs": "HS",
       "colSurvival": "Survival",
       "won": "Winner",

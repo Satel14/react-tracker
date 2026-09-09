@@ -100,7 +100,10 @@ const ADVANCED_ITEMS = [
   { key: "longestKill", label: "Longest Kill", fallback: "0" },
   { key: "longestSurvival", label: "Longest Survival", fallback: "0h 0m" },
   { key: "assists", label: "Assists", fallback: "0" },
-  { key: "dbnos", label: "Knockouts", fallback: "0" },
+  // "Knocks" is what the game and its players call a DBNO; DBNO is the API's
+  // word for it. One name everywhere: this grid, the match card, the lobby
+  // scoreboard and the weapons tab.
+  { key: "dbnos", label: "Knocks", fallback: "0" },
   { key: "headshotRate", label: "Headshot Rate", fallback: "0%" },
   { key: "mvp", label: "Revives", fallback: "0" },
   { key: "heals", label: "Heals", fallback: "0" },
@@ -1006,7 +1009,7 @@ const PlayerPage = ({ t }) => {
                     <div><span>{t("pages.weapons.headshots")}</span><strong>{weapon.headshots.toLocaleString()}</strong></div>
                     <div><span>{t("pages.weapons.damage")}</span><strong>{weapon.damage.toLocaleString()}</strong></div>
                     <div><span>{t("pages.weapons.dmgPerKill")}</span><strong>{weapon.avgDamagePerKill}</strong></div>
-                    <div><span>{t("pages.weapons.knockouts")}</span><strong>{weapon.groggies.toLocaleString()}</strong></div>
+                    <div><span>{t("pages.weapons.knocks")}</span><strong>{weapon.groggies.toLocaleString()}</strong></div>
                     <div><span>{t("pages.weapons.longest")}</span><strong>{weapon.longestKill}m</strong></div>
                     <div><span>XP</span><strong>{weapon.xp.toLocaleString()}</strong></div>
                   </div>
@@ -1322,7 +1325,7 @@ const PlayerPage = ({ t }) => {
                 </div>
                 <div><span>Damage</span><strong>{match.damage}</strong></div>
                 <div><span>Assists</span><strong>{match.assists}</strong></div>
-                <div><span>DBNOs</span><strong>{match.dbnos}</strong></div>
+                <div><span>Knocks</span><strong>{match.dbnos}</strong></div>
                 <div><span>Survived</span><strong>{match.survivalTimeLabel}</strong></div>
                 <div><span>Longest</span><strong>{match.longestKill}m</strong></div>
                 {isRanked ? renderRpCell(match) : null}

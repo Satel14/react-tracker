@@ -210,7 +210,7 @@
             "headshots": "Хедшоти",
             "damage": "Шкода",
             "dmgPerKill": "Шкода/кіл",
-            "knockouts": "Нокдауни",
+            "knocks": "Нокдауни",
             "longest": "Найдалі",
             "cat": {
                 "ar": "Штурмові гвинтівки",
@@ -366,7 +366,7 @@
             "colKills": "В",
             "colDamage": "ШКД",
             "colAssists": "А",
-            "colDbno": "Нокдаун",
+            "colKnocks": "Нокдауни",
             "colHs": "ХС",
             "colSurvival": "Виживання",
             "won": "Переможець",
