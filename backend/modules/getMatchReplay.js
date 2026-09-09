@@ -12,10 +12,12 @@ const { extractShots } = require("./replay/shots");
 const { extractDamage } = require("./replay/damage");
 const { extractPackages } = require("./replay/packages");
 const { extractSpecialZones, extractPhases } = require("./replay/zones");
+const { readMatchContext } = require("./matchContext");
 
 // Bumped whenever the wire shape changes, so a stale cached payload is detected
 // rather than silently mis-decoded. 2 = delta-coded position columns.
-const REPLAY_FORMAT = 5;
+// 6 = region and weather.
+const REPLAY_FORMAT = 6;
 
 const replayCache = new Map();
 const REPLAY_CACHE_LIMIT = 30;
@@ -278,6 +280,8 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     for (const item of list) if (item.t > endTime) endTime = item.t;
   }
 
+  const { region, weather } = readMatchContext(telemetry);
+
   return {
     format: REPLAY_FORMAT,
     rawMapName,
@@ -286,6 +290,8 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     duration,
     endTime,
     createdAt: matchAttributes.createdAt || null,
+    region,
+    weather,
     focalAccountId,
     focalTeamId,
     totalPlayers: roster.size,

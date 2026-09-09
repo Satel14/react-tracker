@@ -400,12 +400,24 @@ const MatchReplayPage = ({ t }) => {
         },
   ];
 
+  // Region and weather exist nowhere in the match record -- they are read out of
+  // the telemetry this page already holds, so they cost nothing extra here.
+  const matchMeta = [
+    data?.region ? `${t("pages.match.serverLabel")}: ${String(data.region).toUpperCase()}` : null,
+    data?.weather ? `${t("pages.match.weatherLabel")}: ${data.weather}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <div className="match-replay">
       <Link className="match-replay__back" to={backTo}>{t("pages.replay.back")}</Link>
       <h2 className="match-replay__title">
         {t("pages.match.title")}{data ? ` — ${data.mapName}` : ""}
       </h2>
+      {/* Rendered even while empty: the values arrive with the replay payload,
+          and an element that appears late pushes the tabs down. */}
+      <p className="match-replay__meta">{matchMeta}</p>
       <Tabs activeKey={tab} onChange={setTab} items={tabItems} className="match-replay__tabs" />
     </div>
   );

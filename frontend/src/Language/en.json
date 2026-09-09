@@ -389,7 +389,9 @@
       "hits": "Hits",
       "thirdParty": "Third-party",
       "timeRange": "Time range",
-      "weapon": "Weapon"
+      "weapon": "Weapon",
+      "serverLabel": "Server",
+      "weatherLabel": "Weather"
     },
     "help": {
       "title": "How to look up PUBG stats",

@@ -3,6 +3,7 @@ const { loadMatchBundle } = require("./matchLoader");
 const { shardForMatch } = require("./pubgTelemetry");
 const { isFocalActor, readXY, buildMatchClock } = require("./telemetryUtils");
 const { telemetryWeaponName, canonicalWeaponKey } = require("./weaponMeta");
+const { readMatchContext } = require("./matchContext");
 
 const analysisCache = new Map();
 const ANALYSIS_CACHE_LIMIT = 30;
@@ -277,6 +278,8 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   const damage = parseDamage(telemetry, { accountId, playerName });
   const timeline = parseTimeline(telemetry, { clock, accountId, playerName });
 
+  const { region, weather } = readMatchContext(telemetry);
+
   const result = {
     matchId,
     rawMapName,
@@ -284,6 +287,8 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
     mapMax: meta.mapMax,
     duration: Number(matchAttributes.duration) || 0,
     createdAt: matchAttributes.createdAt || null,
+    region,
+    weather,
     focalAccountId: scoreboard.focalAccountId,
     focalTeamId: scoreboard.focalTeamId,
     scoreboard,

@@ -169,11 +169,28 @@ test("assigns a phase index that changes only when the warning circle jumps", ()
   assert.deepEqual(r.zones.map((z) => z.phase), [0, 1, 1, 2, 2]);
 });
 
-// --- format 5 payload wiring ---------------------------------------------
+// --- format 6 payload wiring ---------------------------------------------
 
 test("stamps the wire format so a stale cached payload is detectable", () => {
   const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
-  assert.equal(r.format, 5);
+  assert.equal(r.format, 6);
+});
+
+test("carries the region and weather that live only in the telemetry", () => {
+  const withContext = [
+    { _T: "LogMatchDefinition", MatchId: "match.bro.official.pc-2018-42.steam.duo-fpp.as.2026.09.07.22.abc" },
+    { _T: "LogMatchStart", weatherId: "Overcast", characters: [{ character: { accountId: "account.me", name: "Me", teamId: 1 } }] },
+    ...telemetry,
+  ];
+  const r = parseReplayTelemetry(withContext, { matchAttributes, accountId: "account.me" });
+  assert.equal(r.region, "as");
+  assert.equal(r.weather, "Overcast");
+});
+
+test("reports region and weather as null when the telemetry names neither", () => {
+  const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
+  assert.equal(r.region, null);
+  assert.equal(r.weather, null);
 });
 
 test("ships every new layer as an array, never undefined", () => {
