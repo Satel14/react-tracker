@@ -67,6 +67,7 @@ const rankedGameModeStats = {
     top10Ratio: 0.5,
     roundsPlayed: 10,
     kills: 20,
+    deaths: 12,
     wins: 3,
     damageDealt: 4000,
     headshotKills: 6,
@@ -453,6 +454,41 @@ test("a season with no activity anywhere renders zeros even when a ranked object
   assert.equal(withRanked.stats.longestSurvival.displayValue, "0h 0m");
   assert.deepEqual(withRanked.stats, withoutRanked.stats);
   assert.deepEqual(withRanked.modes, {});
+});
+
+// rankedGameModeStats carries a real death count, and it can exceed roundsPlayed
+// -- 73 deaths across 68 rounds on a live Master. Deriving deaths as
+// matches - wins therefore flattered every ranked K/D: that player read 3.53
+// against PUBG's own 2.75.
+test("a ranked-only season counts the deaths PUBG reports, not matches minus wins", () => {
+  const season = mapSeason({}, liveRankedGameModeStats);
+  assert.equal(season.stats.deaths.value, 379);
+  assert.equal(season.stats.deaths.displayValue, "379");
+  assert.notEqual(season.stats.deaths.value, 374 - 21);
+  assert.equal(season.stats.kd.value, 0.88); // 334 / 379, not 334 / 353
+  assert.equal(season.stats.kd.displayValue, "0.88");
+});
+
+test("a combined season adds ranked's reported deaths to normal's derived ones", () => {
+  const season = mapSeason(liveNormalGameModeStats, liveRankedGameModeStats);
+  assert.equal(season.breakdown.normal.deaths.value, 4); // 5 rounds - 1 win
+  assert.equal(season.breakdown.ranked.deaths.value, 379);
+  assert.equal(season.stats.deaths.value, 383);
+  assert.equal(season.stats.kd.value, 0.89); // 342 / 383
+  assert.equal(season.modes.squad.stats.deaths.value, 383);
+});
+
+test("normalizeRankedModeStats keeps the death count ranked reports", () => {
+  assert.equal(normalizeRankedModeStats(liveRankedGameModeStats).squad.deaths, 379);
+});
+
+test("a played ranked mode reporting zero deaths falls back to matches minus wins", () => {
+  const silent = { squad: { ...liveRankedGameModeStats.squad, deaths: 0 } };
+  assert.equal(normalizeRankedModeStats(silent).squad.deaths, null);
+
+  const season = mapSeason({}, silent);
+  assert.equal(season.stats.deaths.value, 353); // 374 rounds - 21 wins
+  assert.equal(season.stats.kd.value, 0.95); // not 334, which dividing by nothing would give
 });
 
 test("mapPubgStatsToFrontend combined season stats reflect both normal and ranked play", () => {

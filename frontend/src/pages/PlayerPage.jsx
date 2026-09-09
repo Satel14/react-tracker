@@ -198,6 +198,14 @@ const formatRankPlacement = (rankedInfo) => {
   return `Top ${top}%`;
 };
 
+// Ranked's own average finishing place. A placement is 1-based, so anything at
+// or below zero is PUBG not reporting one.
+const formatAvgPlacement = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return `Avg place #${parsed.toFixed(1)}`;
+};
+
 const getStatValue = (stats, key, fallback = 0) => statNumber(stats, key) ?? fallback;
 
 const clampPercent = (value, max) => {
@@ -791,6 +799,12 @@ const PlayerPage = ({ t }) => {
     const totalMatches = getDisplay(seasonStats, "matchesPlayed", "0");
     const rankedInfo = season?.rankedInfo || null;
     const rankedPlacement = formatRankPlacement(rankedInfo);
+    const rankedAvgPlacement = formatAvgPlacement(rankedInfo?.avgRank);
+    // Tier, RP and this average all come from the one mode the badge headlines,
+    // so the hint names that mode instead of claiming every ranked match.
+    const rankedAvgPlacementHint = rankedInfo?.mode
+      ? `Average finishing place in this season's ranked ${rankedInfo.mode} matches`
+      : "Average finishing place across this season's ranked matches";
 
     return (
       <section className="player-card">
@@ -839,6 +853,9 @@ const PlayerPage = ({ t }) => {
                   <span>{rankedInfo.label || "Ranked"}</span>
                   <strong>{`${formatRankPoints(rankedInfo.currentRankPoint)} RP`}</strong>
                   {rankedPlacement ? <small>{rankedPlacement}</small> : null}
+                  {rankedAvgPlacement ? (
+                    <small title={rankedAvgPlacementHint}>{rankedAvgPlacement}</small>
+                  ) : null}
                 </div>
               </div>
             </div>
