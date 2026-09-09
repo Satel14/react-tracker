@@ -119,8 +119,12 @@
         }
       }
 
+      // --text-faint rather than a fade of --text-muted. Fading toward
+      // transparent lands on whatever is behind it, and on --bg that put this
+      // label at 4.25:1 -- under AA for 12px text. The faint rung is the one
+      // the ladder already has for this, and it does not move with the backdrop.
       .titlehistory {
-        color: color-mix(in srgb, var(--text-muted) 70%, transparent);
+        color: var(--text-faint);
       }
 
       .historycheck_block {
@@ -135,14 +139,18 @@
           }
         }
 
+        // Same fade, one card down, and worse: 3.56:1 at 10px.
         .nickname {
           span {
-            color: color-mix(in srgb, var(--text-muted) 62%, transparent);
+            color: var(--text-faint);
           }
         }
 
+        // Not in the audit's list -- the sampled cards had no platform label --
+        // but it is the same declaration on the same card as .nickname span,
+        // so it fails the same way as soon as one renders.
         &-platform {
-          color: color-mix(in srgb, var(--text-muted) 62%, transparent);
+          color: var(--text-faint);
           transition: color 0.2s ease;
         }
 

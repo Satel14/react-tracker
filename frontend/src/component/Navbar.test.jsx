@@ -83,6 +83,28 @@ test("the wordmark is a link home", () => {
   expect(container.querySelector("a.navbar__logo")).toHaveAttribute("href", "/");
 });
 
+// WCAG 2.5.3, Label in Name: the accessible name has to contain the words on
+// screen. This carried aria-label="Home", which replaced them -- so a link that
+// reads PUBG.TRACKER answered only to "Home", and the nav already has a Home
+// item of its own. Queried by role so the assertion is the real name
+// computation rather than the absence of one attribute.
+test.each([["desktop", 1024], ["phone", 400]])(
+  "the %s wordmark is named by the words printed on it",
+  (_layout, width) => {
+    const restore = setViewport(width);
+    try {
+      render(
+        <MemoryRouter>
+          <Navbar />
+        </MemoryRouter>
+      );
+      expect(screen.getByRole("link", { name: "PUBG.TRACKER" })).toHaveAttribute("href", "/");
+    } finally {
+      restore();
+    }
+  }
+);
+
 // Googlebot crawls at a phone viewport, where the desktop menus are unmounted
 // and the drawer starts closed. If the destinations only exist once someone taps
 // the burger, the crawler never sees a single one of them.

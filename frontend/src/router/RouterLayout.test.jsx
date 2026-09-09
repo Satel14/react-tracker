@@ -66,6 +66,16 @@ test("falls back to the green theme when localStorage.getItem throws", () => {
   }
 });
 
+// The routed content is the page's main landmark. Pinned because it is a bare
+// tag name with no styling hanging off it -- nothing else in the app would
+// notice it turning back into a div.
+test("wraps the routed content in a single main landmark", () => {
+  const { container } = render(<RouterLayout />);
+  const landmarks = container.querySelectorAll("main");
+  expect(landmarks).toHaveLength(1);
+  expect(landmarks[0].className).toContain("content");
+});
+
 test("the theme class matches a theme that defines an accent", () => {
   const { container } = render(<RouterLayout />);
   const shell = container.querySelector(".app");

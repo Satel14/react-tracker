@@ -2352,9 +2352,14 @@ body {
       box-shadow: 0 0 0 1px rgba(3, 9, 18, 0.6), 0 6px 14px rgba(19, 54, 38, 0.45);
     }
 
+    // Both spans need the reset, not just the unit. `.navbar span` paints every
+    // span in the bar --text-strong (white), and antd nests the digit two spans
+    // deep inside the count, so resetting only the inner one left it inheriting
+    // white from its wrapper -- a white digit on the light accent fill, 1.4:1.
     .ant-scroll-number-only {
       height: 14px;
       line-height: 14px;
+      color: inherit;
     }
 
     .ant-scroll-number-only-unit {

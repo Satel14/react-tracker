@@ -68,7 +68,7 @@ const RouterLayout = () => {
       ) : (
         <div className={"app " + currentTheme}>
           <Navbar />
-          <div className="content">
+          <main className="content">
             <RouteErrorBoundary resetKey={location.pathname}>
               <Suspense fallback={<RouteFallback />}>
                 <Routes location={location}>
@@ -83,7 +83,7 @@ const RouterLayout = () => {
                 </Routes>
               </Suspense>
             </RouteErrorBoundary>
-          </div>
+          </main>
           <Footer />
           <CookieRules />
         </div>
