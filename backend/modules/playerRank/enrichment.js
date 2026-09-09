@@ -42,16 +42,6 @@ function normalizeString(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function formatNumber(value) {
-  return toInteger(value).toLocaleString();
-}
-
-function formatDistance(value) {
-  const meters = toNumber(value);
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
-  return `${Math.round(meters)} m`;
-}
-
 function formatDuration(seconds) {
   const totalSeconds = Math.max(0, toInteger(seconds));
   const hours = Math.floor(totalSeconds / 3600);
@@ -79,51 +69,22 @@ function formatMapName(value) {
   return MAP_LABELS[raw] || raw.replace(/_Main$/i, "") || "Unknown";
 }
 
-function readMetricValue(metric, preferredKeys = ["total", "value", "average"]) {
-  if (typeof metric === "number") return metric;
-  if (!metric || typeof metric !== "object") return 0;
-
-  for (const key of preferredKeys) {
-    const parsed = Number(metric[key]);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-
-  return 0;
-}
-
-function mapSurvivalMetric(stats, key, label, formatter = formatNumber, preferredKeys) {
-  const value = readMetricValue(stats?.[key], preferredKeys);
-  return {
-    key,
-    label,
-    value,
-    displayValue: formatter(value),
-  };
-}
-
+// Only the header numbers are real. Every metric under `stats` reads 0 on every
+// account -- verified 2026-09-09 against profiles with 6 605 and 14 838 matches,
+// where the sole moving value was timeSurvived.lastMatchValue -- so the
+// highlights list this used to build was always empty by the time it shipped.
 function mapSurvivalMastery(payload) {
   const attributes = payload?.data?.attributes;
   if (!attributes) return null;
-
-  const stats = attributes.stats || {};
-  const highlights = [
-    mapSurvivalMetric(stats, "damageDealt", "Damage dealt"),
-    mapSurvivalMetric(stats, "damageTaken", "Damage taken"),
-    mapSurvivalMetric(stats, "distanceTotal", "Distance", formatDistance),
-    mapSurvivalMetric(stats, "timeSurvived", "Time survived", formatDuration),
-    mapSurvivalMetric(stats, "hotDropLandings", "Hot drops"),
-    mapSurvivalMetric(stats, "teammatesRevived", "Revives"),
-    mapSurvivalMetric(stats, "top10", "Top 10s"),
-    mapSurvivalMetric(stats, "throwablesThrown", "Throwables"),
-  ].filter((item) => item.value > 0);
 
   return {
     level: toInteger(attributes.level),
     tier: toInteger(attributes.tier),
     xp: toInteger(attributes.xp),
     totalMatchesPlayed: toInteger(attributes.totalMatchesPlayed),
-    latestMatchId: normalizeString(attributes.latestMatchId) || null,
-    highlights,
+    // survival_mastery calls it lastMatchId. latestMatchId is weapon_mastery's
+    // name for the same thing, and reading that here left this null always.
+    lastMatchId: normalizeString(attributes.lastMatchId) || null,
   };
 }
 

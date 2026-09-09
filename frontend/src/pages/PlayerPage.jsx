@@ -109,6 +109,12 @@ const ADVANCED_ITEMS = [
   { key: "vehicleDestroys", label: "Vehicle Kills", fallback: "0" },
   { key: "teamKills", label: "Team Kills", fallback: "0" },
   { key: "suicides", label: "Suicides", fallback: "0" },
+  { key: "bestGameKills", label: "Best game", fallback: "0" },
+  { key: "bestKillStreak", label: "Best streak", fallback: "0" },
+  { key: "weaponsAcquired", label: "Weapons picked up", fallback: "0" },
+  { key: "distanceOnFoot", label: "On foot", fallback: "0 m" },
+  { key: "distanceByVehicle", label: "By vehicle", fallback: "0 m" },
+  { key: "distanceSwum", label: "Swum", fallback: "0 m" },
 ];
 
 const MODE_ITEMS = [
@@ -1304,7 +1310,13 @@ const PlayerPage = ({ t }) => {
                 <div className="player-match-teammates">
                   <span className="player-match-teammates__label">
                     {t("pages.player.matches.party")}
-                    <Tooltip title={t("pages.player.matches.partyHint")} mouseEnterDelay={0} trigger={["hover", "focus"]}>
+                    {/* The hint names the rule actually in force: the measured
+                        one, or the fallback while no measurement is in. */}
+                    <Tooltip
+                      title={t(partyOverlap ? "pages.player.matches.partyHint" : "pages.player.matches.partyHintFallback")}
+                      mouseEnterDelay={0}
+                      trigger={["hover", "focus"]}
+                    >
                       <QuestionCircleOutlined
                         className="player-match-teammates__hint"
                         aria-label={t("pages.player.matches.partyHintLabel")}

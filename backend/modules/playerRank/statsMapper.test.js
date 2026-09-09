@@ -56,6 +56,12 @@ const normalGameModeStats = {
     suicides: 0,
     longestKill: 120,
     longestTimeSurvived: 1200,
+    walkDistance: 12000,
+    rideDistance: 30000,
+    swimDistance: 400,
+    weaponsAcquired: 40,
+    maxKillStreaks: 3,
+    roundMostKills: 6,
   },
 };
 
@@ -185,6 +191,12 @@ const liveNormalGameModeStats = {
     suicides: 0,
     longestKill: 64,
     longestTimeSurvived: 1500,
+    walkDistance: 4500.5,
+    rideDistance: 900,
+    swimDistance: 120,
+    weaponsAcquired: 18,
+    maxKillStreaks: 2,
+    roundMostKills: 4,
   },
 };
 
@@ -312,6 +324,12 @@ test("a normal-only season is byte-for-byte what it was before the ranked fix", 
     roadKills: { displayValue: "0", value: 0 },
     teamKills: { displayValue: "0", value: 0 },
     suicides: { displayValue: "0", value: 0 },
+    distanceOnFoot: { displayValue: "4.5 km", value: 4500.5 },
+    distanceByVehicle: { displayValue: "900 m", value: 900 },
+    distanceSwum: { displayValue: "120 m", value: 120 },
+    weaponsAcquired: { displayValue: "18", value: 18 },
+    bestKillStreak: { displayValue: "2", value: 2 },
+    bestGameKills: { displayValue: "4", value: 4 },
   });
 });
 
@@ -335,6 +353,12 @@ const killlessNormalGameModeStats = {
     suicides: 0,
     longestKill: 0,
     longestTimeSurvived: 600,
+    walkDistance: 800,
+    rideDistance: 0,
+    swimDistance: 0,
+    weaponsAcquired: 5,
+    maxKillStreaks: 0,
+    roundMostKills: 0,
   },
 };
 
@@ -409,6 +433,12 @@ const idleMode = {
   suicides: 0,
   longestKill: 0,
   longestTimeSurvived: 0,
+  walkDistance: 0,
+  rideDistance: 0,
+  swimDistance: 0,
+  weaponsAcquired: 0,
+  maxKillStreaks: 0,
+  roundMostKills: 0,
 };
 
 test("an unplayed slice's zeros neither erase a measurement nor pass for a report", () => {
@@ -489,6 +519,44 @@ test("a played ranked mode reporting zero deaths falls back to matches minus win
   const season = mapSeason({}, silent);
   assert.equal(season.stats.deaths.value, 353); // 374 rounds - 21 wins
   assert.equal(season.stats.kd.value, 0.95); // not 334, which dividing by nothing would give
+});
+
+// gameModeStats has carried these six all along; the mapper simply dropped them.
+// Distances are metres (telemetry is the one that speaks centimetres).
+test("a season reports how far the player travelled, in metres or kilometres", () => {
+  const season = mapSeason(liveNormalGameModeStats, null);
+  assert.deepEqual(season.stats.distanceOnFoot, { displayValue: "4.5 km", value: 4500.5 });
+  assert.deepEqual(season.stats.distanceByVehicle, { displayValue: "900 m", value: 900 });
+  assert.deepEqual(season.stats.distanceSwum, { displayValue: "120 m", value: 120 });
+});
+
+test("a season reports the best single game, not a sum of the best ones", () => {
+  const twoModes = {
+    squad: liveNormalGameModeStats.squad,
+    solo: { ...liveNormalGameModeStats.squad, roundMostKills: 9, maxKillStreaks: 5, weaponsAcquired: 7 },
+  };
+  const season = mapSeason(twoModes, null);
+
+  assert.equal(season.stats.bestGameKills.value, 9); // max(4, 9), never 13
+  assert.equal(season.stats.bestKillStreak.value, 5); // max(2, 5)
+  assert.equal(season.stats.weaponsAcquired.value, 25); // 18 + 7, this one is a sum
+});
+
+test("ranked reports none of the six, so a ranked-only season shows an em dash", () => {
+  const season = mapSeason({}, liveRankedGameModeStats);
+  ["distanceOnFoot", "distanceByVehicle", "distanceSwum", "weaponsAcquired", "bestKillStreak", "bestGameKills"]
+    .forEach((key) => {
+      assert.equal(season.stats[key].displayValue, "—", `${key} displayValue`);
+      assert.equal(season.stats[key].value, null, `${key} value`);
+    });
+});
+
+test("a combined season keeps the normal-only travel and best-game numbers", () => {
+  const season = mapSeason(liveNormalGameModeStats, liveRankedGameModeStats);
+  assert.equal(season.stats.distanceOnFoot.displayValue, "4.5 km");
+  assert.equal(season.stats.bestGameKills.value, 4);
+  assert.equal(season.breakdown.ranked.distanceOnFoot.displayValue, "—");
+  assert.equal(season.breakdown.normal.distanceOnFoot.displayValue, "4.5 km");
 });
 
 test("mapPubgStatsToFrontend combined season stats reflect both normal and ranked play", () => {

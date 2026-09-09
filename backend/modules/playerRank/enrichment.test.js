@@ -363,6 +363,54 @@ test("a full page of matches may be hiding older ones, so it is not complete", a
   assert.equal(calls.filter((url) => url.includes("/matches/")).length, 8, "knowing the list is short buys no extra fetches");
 });
 
+// --- survival mastery ------------------------------------------------------
+
+// Shape captured live 2026-09-09 (steam/Satel14, 6 605 matches): level, tier, xp
+// and lastMatchId carry real values while every metric under `stats` is a zero
+// -- PUBG stopped populating them. The one exception is timeSurvived's
+// lastMatchValue, which is why the zeros are not simply a fresh account.
+const SURVIVAL_PAYLOAD = {
+  data: {
+    attributes: {
+      level: 449,
+      tier: 4,
+      xp: 3497680,
+      totalMatchesPlayed: 6605,
+      lastMatchId: "match-abc",
+      stats: {
+        damageDealt: { total: 0, average: 0, careerBest: 0, lastMatchValue: 0 },
+        timeSurvived: { total: 0, average: 0, careerBest: 0, lastMatchValue: 891 },
+        top10: { total: 0 },
+      },
+    },
+  },
+};
+
+test("survival mastery reads the match id from the field PUBG actually sends", async () => {
+  // survival_mastery calls it lastMatchId; latestMatchId is weapon_mastery's
+  // name for it, and reading that one made this null on every profile.
+  const { doRequest } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}/survival_mastery`, { ok: true, json: async () => SURVIVAL_PAYLOAD }],
+    [`/players/${ENRICH_ACCOUNT}/weapon_mastery`, { ok: true, json: async () => ({ data: { attributes: { weaponSummaries: {} } } }) }],
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => PROFILE_NO_CLAN }],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMasteryExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo",
+  });
+
+  assert.equal(extras.survivalMastery.lastMatchId, "match-abc");
+  assert.deepEqual(
+    [extras.survivalMastery.level, extras.survivalMastery.tier, extras.survivalMastery.totalMatchesPlayed],
+    [449, 4, 6605]
+  );
+  // The highlights list is gone: every metric it read is a zero for every
+  // account, so it shipped an always-empty array in every payload.
+  assert.ok(!("highlights" in extras.survivalMastery));
+  assert.ok(!("latestMatchId" in extras.survivalMastery));
+});
+
 // --- party overlap ---------------------------------------------------------
 
 const mateId = (n) => `account.${String(n).padStart(2, "0").repeat(16)}`;

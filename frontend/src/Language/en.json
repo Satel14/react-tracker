@@ -96,7 +96,8 @@
         "rpSummaryDecayGained": "Gained {value} RP without playing a ranked match since {since}.",
         "party": "Party",
         "partyHintLabel": "How is the party decided?",
-        "partyHint": "Squad-mates who spent at least 15% of their own recent matches in this player's. PUBG doesn't record who queued together, so this is measured from how far the two match histories overlap — random matchmaking puts strangers in the same lobby once or twice in a hundred games. Until that measurement lands, a squad-mate seen in more than one match listed here counts as party.",
+        "partyHint": "Squad-mates who spent at least 15% of their own recent matches in this player's. PUBG doesn't record who queued together, so this is measured from how much the two match histories overlap.",
+        "partyHintFallback": "PUBG doesn't record who queued together. While the history measurement is unavailable, a squad-mate seen in more than one of the matches listed here counts as party.",
         "partyMateHint": "{name}: {kills} kills, {damage} damage",
         "lobby": "Lobby"
       }

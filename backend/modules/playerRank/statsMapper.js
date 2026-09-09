@@ -18,6 +18,14 @@ const RANKED_UNREPORTED_FIELDS = [
   "suicides",
   "longestKill",
   "longestTimeSurvived",
+  // rankedGameModeStats has no distance fields at all, and reports
+  // weaponsAcquired and roundMostKills as a literal 0 whatever the player did.
+  "walkDistance",
+  "rideDistance",
+  "swimDistance",
+  "weaponsAcquired",
+  "maxKillStreaks",
+  "roundMostKills",
 ];
 
 const sumValues = (values) => values.reduce((acc, value) => acc + value, 0);
@@ -41,8 +49,16 @@ const MODE_STAT_FIELDS = [
   { field: "top10s", total: "totalTop10s", combine: sumValues },
   { field: "teamKills", total: "totalTeamKills", combine: sumValues },
   { field: "suicides", total: "totalSuicides", combine: sumValues },
+  { field: "walkDistance", total: "totalWalkDistance", combine: sumValues },
+  { field: "rideDistance", total: "totalRideDistance", combine: sumValues },
+  { field: "swimDistance", total: "totalSwimDistance", combine: sumValues },
+  { field: "weaponsAcquired", total: "totalWeaponsAcquired", combine: sumValues },
   { field: "longestKill", total: "maxKillDistance", combine: maxValues },
   { field: "longestTimeSurvived", total: "longestSurvival", combine: maxValues },
+  // Bests, not sums: the best game in one mode does not add to the best in
+  // another.
+  { field: "maxKillStreaks", total: "bestKillStreak", combine: maxValues },
+  { field: "roundMostKills", total: "bestGameKills", combine: maxValues },
 ];
 
 function formatSurvivalTime(seconds) {
@@ -233,6 +249,10 @@ function statOrUnknown(value, format) {
 const asCount = (value) => value.toLocaleString();
 const asFixed2 = (value) => value.toFixed(2);
 const asPercent = (value) => value + "%";
+// gameModeStats distances are metres, unlike telemetry's centimetres. Same rule
+// the match cards already use: kilometres once a distance is one.
+const asDistance = (value) =>
+  value >= 1000 ? `${(value / 1000).toFixed(1)} km` : `${Math.round(value)} m`;
 
 function mapAggregatedStatsToFrontend(aggregated) {
   return {
@@ -262,6 +282,12 @@ function mapAggregatedStatsToFrontend(aggregated) {
     roadKills: statOrUnknown(aggregated.totalRoadKills, asCount),
     teamKills: statOrUnknown(aggregated.totalTeamKills, asCount),
     suicides: statOrUnknown(aggregated.totalSuicides, asCount),
+    distanceOnFoot: statOrUnknown(aggregated.totalWalkDistance, asDistance),
+    distanceByVehicle: statOrUnknown(aggregated.totalRideDistance, asDistance),
+    distanceSwum: statOrUnknown(aggregated.totalSwimDistance, asDistance),
+    weaponsAcquired: statOrUnknown(aggregated.totalWeaponsAcquired, asCount),
+    bestKillStreak: statOrUnknown(aggregated.bestKillStreak, asCount),
+    bestGameKills: statOrUnknown(aggregated.bestGameKills, asCount),
   };
 }
 
