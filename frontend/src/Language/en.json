@@ -447,7 +447,7 @@
     },
     "ranks": {
       "title": "PUBG ranks explained: tiers, RP and Survivor",
-      "intro": "Eight tiers, one RP number shared across party types and perspectives, and a top tier you can lose overnight — this is the ranked system as it stands on 31 August 2026, sourced to KRAFTON's patch notes and official posts, with every exception labelled.",
+      "intro": "Eight tiers, one RP number shared across party types and perspectives, and a top tier you can lose overnight — this is the ranked system as it stands on 9 September 2026, sourced to KRAFTON's patch notes and official posts, with every exception labelled.",
       "onThisPage": "On this page",
       "keyFacts": {
         "tiers": {
@@ -561,22 +561,22 @@
         "p4": "New consecutive-placement bonus: +5 RP for a Top 4 in two matches in a row, +10 RP for a Top 1 in two matches in a row. Only the highest bonus applies.",
         "p5": "That streak resets at the start of a new season, and whenever a leaver penalty is applied.",
         "p6": "Secret Rooms came to Ranked, and AS Ranked Solo returned after being removed in Season 36.",
-        "p7": "These are still the live rules. Updates 42.2 and 42.3 touched nothing about RP, tiers or divisions."
+        "p7": "These are still the live rules. Updates 42.2 and 42.3 touched nothing about RP, tiers or divisions, and Update 43.1 changed only what a tier asks of you: in Duo and Solo, the minimum performance for Gold and above went up. The RP formula, the tier list and the divisions are untouched."
       },
       "queuesAndMaps": {
         "heading": "Some Ranked queues now have opening hours",
-        "p1": "Some region and mode queues now run on published UTC operating hours instead of all day. AS Solo (TPP) came back at 12:00–16:00 UTC in Update 42.1; EU Squad (TPP) was set to 13:00–24:00 UTC in Update 42.2.",
+        "p1": "Some region and mode queues now run on published UTC operating hours instead of all day. AS Solo (TPP) came back at 12:00–16:00 UTC in Update 42.1; EU Squad (TPP) was set to 13:00–24:00 UTC in Update 42.2. A queue can also go the other way and close for good: Update 43.1 discontinued TPP Duo in South America outright.",
         "p2": "KRAFTON says the schedule \"may continue to be adjusted\", so check the newest patch notes before assuming your queue is live.",
-        "p3": "Season 42 Ranked map pool: Erangel, Miramar, Rondo and Taego.",
+        "p3": "Season 43 Ranked map pool: Erangel, Miramar, Rondo and Taego — the same four as Season 42, each at 25%.",
         "p4": "The Red Zone came back to Ranked in Season 36 — then Update 36.2 stopped it appearing from Phase 3 onwards on Erangel, Deston and Taego, in Ranked as well as Normal Match, so on two of the four Ranked maps the late game is Red-Zone-free. Any guide still saying the Red Zone was removed from Ranked outright is out of date — including KRAFTON's own support FAQ, which was last revised in March 2023 and still describes a six-tier ladder.",
         "p5": "For entry to Ranked, that FAQ names a mastery requirement: Survival Mastery level 80. It is the most recent first-party figure, but it comes from the same stale article, so treat it as the best available number rather than a certainty."
       },
       "seasonSchedule": {
-        "heading": "Season 42, and when it ends",
-        "p1": "Season 42 went live on PC on 17 June 2026 and is deliberately long. KRAFTON set it to run three months, from Update 42.1 through Update 42.3, while it redesigns the overall Ranked season structure.",
-        "p2": "Update 42.3 was published on 11 August 2026 and went live on PC the next day, with no end date attached to the season.",
-        "p3": "We will not print one. KRAFTON has never published a calendar end date for Season 42 and the PUBG API does not expose one, so every \"season ends on…\" date in circulation is a third-party guess being copied forward.",
-        "p4": "A larger Ranked overhaul is officially in flight — announced in the 2026 roadmap, repeated in Update 42.1, no date given. Expect tiers, rewards and season length to move again."
+        "heading": "Season 43, and when it ends",
+        "p1": "Season 43 opens on PC with the Update 43.1 maintenance on 10 September 2026: the servers come back at 08:30 UTC and the Ranked leaderboard resets with them. Console follows a week later, on 17 September. Season 42 was announced up front as a three-month season; this one was given no length at all.",
+        "p2": "Update 43.1 brought three changes to Ranked and no others. In Duo and Solo the minimum performance each tier demands went up for Gold and above. South America lost its TPP Duo queue. And in the Ranked Play Point rewards, Archivist's Chests became Contender Cargo Tickets.",
+        "p3": "We will not print an end date. KRAFTON has not published one for Season 43, and the PUBG API exposes no season dates at all, so every \"season ends on…\" date in circulation is a third-party guess being copied forward. The countdown on our own homepage is one of those guesses and says so: the date it shows is Season 42's measured 85 days added to this season's start, which is why it carries a tilde.",
+        "p4": "A larger Ranked overhaul is officially in flight — announced in the 2026 roadmap, repeated in Update 42.1, no date given. Update 43.1 was not it. Expect tiers, rewards and season length to move again."
       },
       "whatWeDoNotClaim": {
         "heading": "What we deliberately do not claim",
@@ -584,7 +584,7 @@
         "p2": "No distribution outside PC, and no RP boundary for any tier. The shares above are the Steam shard only, because that is where the sample is drawn from — console and Kakao run their own ladders and we measure neither. And a share says how many players sit in a tier, never where that tier starts in RP. What we cannot measure is left saying so in the table rather than filled in: Survivor's few hundred seats worldwide mean a week of random ranked lobbies may hold none at all.",
         "p3": "No division count for Master or Survivor. Both are conventionally shown as single ranks, but KRAFTON has never published a per-tier division table, so we do not put a number on it.",
         "p4": "No decay floor for the current ladder, for the reason above.",
-        "p5": "Everything on this page is sourced to KRAFTON patch notes and official posts, and where a claim rests on anything weaker we say so on the spot. It was checked on 31 August 2026; when the rules change, this page changes."
+        "p5": "Everything on this page is sourced to KRAFTON patch notes and official posts, and where a claim rests on anything weaker we say so on the spot. It was checked on 9 September 2026, against the Update 43.1 notes; when the rules change, this page changes."
       },
       "seeLeaderboards": "See who is at the top of each region right now"
     }
