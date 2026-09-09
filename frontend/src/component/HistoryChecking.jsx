@@ -7,7 +7,9 @@ import {
   cacheRecentSearches,
   getHistory,
   HISTORY_UPDATED_EVENT,
+  MAX_RECENT_ITEMS,
   readCachedRecentSearches,
+  readHistory,
 } from "../cookie/store";
 import { getIconComponentPlatfrom, getPlatformAvatar } from "../helpers/other";
 import { normalizeDisplayName, stripPlatformPrefix } from "../helpers/playerIdentity";
@@ -69,7 +71,10 @@ const normalizeRecentEntries = (items = []) => {
     .sort((a, b) => (b?.searchedAt || 0) - (a?.searchedAt || 0));
 };
 
-const SKELETON_ROWS = [0, 1, 2];
+// One row per item the list will hold, not a token three. These rows exist to
+// hold the height open until the request lands, and a placeholder shorter than
+// what replaces it just makes the shift smaller.
+const SKELETON_ROWS = Array.from({ length: MAX_RECENT_ITEMS }, (_, row) => row);
 
 const HistorySkeleton = () =>
   SKELETON_ROWS.map((row) => (
@@ -138,7 +143,9 @@ const HistoryBlocks = ({ items, t, loading = false }) => {
 };
 
 const HistoryChecking = ({ t }) => {
-  const [historyList, setHistoryList] = useState(EMPTY_LIST);
+  const [historyList, setHistoryList] = useState(() =>
+    normalizeHistoryEntries(readHistory())
+  );
   const [recentList, setRecentList] = useState(() =>
     normalizeRecentEntries(readCachedRecentSearches())
   );
@@ -187,7 +194,10 @@ const HistoryChecking = ({ t }) => {
     };
   }, [loadHistory, loadRecent]);
 
-  if (!historyList.length && !recentList.length) {
+  // Only collapse once the request has actually settled. Returning nothing
+  // while it is still in flight is what left .history-list 0px tall on a first
+  // visit, so the two columns dropped in together and shoved the page down.
+  if (!historyList.length && !recentList.length && !recentLoading) {
     return <></>;
   }
 

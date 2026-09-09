@@ -5,7 +5,9 @@ const FAVORITES_KEY = "favorites";
 const RECENT_KEY = "recent";
 const MAX_HISTORY_ITEMS = 5;
 const MAX_FAVORITES_ITEMS = 50;
-const MAX_RECENT_ITEMS = 10;
+// Exported because the homepage reserves one skeleton row per item before the
+// request lands, and that count has to be the one the list will actually hold.
+export const MAX_RECENT_ITEMS = 10;
 export const HISTORY_UPDATED_EVENT = "history:updated";
 export const FAVORITES_UPDATED_EVENT = "favorites:updated";
 
@@ -93,8 +95,7 @@ const isAccountOnlyHistoryEntry = (entry = {}) =>
   isAccountIdentifier(String(entry?.nickname || "")) &&
   (!entry?.gameId || isAccountIdentifier(String(entry.gameId)));
 
-export const getHistory = async () => {
-  const history = readObject(HISTORY_KEY);
+const cleanHistoryEntries = (history) => {
   const cleaned = {};
   let dropped = false;
 
@@ -105,6 +106,18 @@ export const getHistory = async () => {
     }
     cleaned[key] = entry;
   }
+
+  return { cleaned, dropped };
+};
+
+// The same filtering getHistory does, with none of its cleanup write. Storage
+// is synchronous, so a component can seed its first render from this rather
+// than paint an empty column and fill it a tick later. It has to stay pure:
+// this runs inside a useState initialiser, which strict mode double-invokes.
+export const readHistory = () => cleanHistoryEntries(readObject(HISTORY_KEY)).cleaned;
+
+export const getHistory = async () => {
+  const { cleaned, dropped } = cleanHistoryEntries(readObject(HISTORY_KEY));
 
   if (dropped) {
     writeObject(HISTORY_KEY, cleaned);
