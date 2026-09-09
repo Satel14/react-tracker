@@ -3,9 +3,17 @@ const {
   weaponImageKey,
   weaponCategory,
 } = require("../weaponMeta");
+const { isAccountIdentifier } = require("../playerIdentity");
+const { buildPartyOverlap } = require("./party");
 
 const MAX_MATCH_HISTORY = 8;
 const MATCH_CACHE_DURATION = 6 * 60 * 60 * 1000;
+// PUBG takes ten account ids per players?filter[playerIds] request. Eight squad
+// matches can surface more mates than that, so candidates are ranked by how
+// often they appear and the tail beyond two requests is dropped rather than
+// bought at one request each.
+const PARTY_BATCH_SIZE = 10;
+const PARTY_MAX_BATCHES = 2;
 
 const MAP_LABELS = {
   Baltic_Main: "Erangel",
@@ -475,6 +483,71 @@ function createPlayerEnrichmentService({
     };
   }
 
+  // Candidates ranked by how many of the fetched matches they shared a roster
+  // in: that is the only ordering available before the histories are read, and
+  // it puts the likeliest party mates inside the request budget.
+  function partyCandidates(matchItems) {
+    const seen = new Map();
+    (Array.isArray(matchItems) ? matchItems : []).forEach((match) => {
+      (Array.isArray(match?.teammates) ? match.teammates : []).forEach((mate) => {
+        const accountId = normalizeString(mate?.accountId);
+        if (!accountId || !isAccountIdentifier(accountId)) return;
+        const entry = seen.get(accountId) || { accountId, name: mate.name || null, count: 0 };
+        entry.count += 1;
+        if (mate.name && mate.name !== "Unknown") entry.name = mate.name;
+        seen.set(accountId, entry);
+      });
+    });
+
+    return [...seen.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, PARTY_BATCH_SIZE * PARTY_MAX_BATCHES);
+  }
+
+  async function fetchMateHistories(shard, candidates) {
+    const byAccount = new Map();
+
+    for (let at = 0; at < candidates.length; at += PARTY_BATCH_SIZE) {
+      const chunk = candidates.slice(at, at + PARTY_BATCH_SIZE);
+      const url = `https://api.pubg.com/shards/${shard}/players?filter[playerIds]=${chunk
+        .map((candidate) => encodeURIComponent(candidate.accountId))
+        .join(",")}`;
+      const payload = await doRequest(url);
+      (Array.isArray(payload?.data) ? payload.data : []).forEach((record) => {
+        byAccount.set(record.id, {
+          // The batch knows the name the account carries today; the roster only
+          // knows the one it wore when the match was played, and a renamed
+          // player cannot be looked up under the old one.
+          name: normalizeString(record?.attributes?.name) || null,
+          matchIds: getRecentMatchIds(record),
+        });
+      });
+    }
+
+    return candidates.map((candidate) => {
+      const fetched = byAccount.get(candidate.accountId);
+      return {
+        accountId: candidate.accountId,
+        name: fetched?.name || candidate.name,
+        matchIds: fetched?.matchIds || [],
+      };
+    });
+  }
+
+  // How much of a squad-mate's own recent history they spent in this player's
+  // matches. PUBG publishes no party id, so this overlap is the signal.
+  async function getPartyOverlap({ shard, accountId, playerName, profileRecord }) {
+    const focalMatchIds = getRecentMatchIds(profileRecord);
+    if (!focalMatchIds.length) return [];
+
+    const matches = await getRecentMatches(shard, focalMatchIds, accountId, playerName);
+    const candidates = partyCandidates(matches.items);
+    if (!candidates.length) return [];
+
+    const mates = await fetchMateHistories(shard, candidates);
+    return buildPartyOverlap({ focalMatchIds, mates });
+  }
+
   async function getMatchExtras({ shard, accountId, playerName, playerRecord }) {
     let profileRecord = playerRecord || null;
     let profileError = null;
@@ -522,10 +595,11 @@ function createPlayerEnrichmentService({
 
     const clanId = getClanIdFromPlayer(profileRecord);
 
-    const [clanResult, masteryResult, weaponResult] = await Promise.allSettled([
+    const [clanResult, masteryResult, weaponResult, partyResult] = await Promise.allSettled([
       getClan(shard, clanId),
       getSurvivalMastery(shard, accountId),
       getWeaponMastery(shard, accountId),
+      getPartyOverlap({ shard, accountId, playerName, profileRecord }),
     ]);
 
     if (clanResult.status === "rejected") {
@@ -540,6 +614,10 @@ function createPlayerEnrichmentService({
       console.log(`[PUBG] Weapon mastery unavailable for ${playerName}: ${weaponResult.reason.message}`);
       errors.push(`weapon mastery: ${weaponResult.reason.message}`);
     }
+    if (partyResult.status === "rejected") {
+      console.log(`[PUBG] Party overlap unavailable for ${playerName}: ${partyResult.reason.message}`);
+      errors.push(`party: ${partyResult.reason.message}`);
+    }
 
     return {
       status: errors.length > 0 ? "partial" : "ok",
@@ -548,6 +626,9 @@ function createPlayerEnrichmentService({
       clan: clanResult.status === "fulfilled" ? clanResult.value : null,
       survivalMastery: masteryResult.status === "fulfilled" ? masteryResult.value : null,
       weaponMastery: weaponResult.status === "fulfilled" ? weaponResult.value : null,
+      // null rather than [] when the leg failed, so the page can tell "unknown"
+      // from "measured, and there is no party".
+      party: partyResult.status === "fulfilled" ? partyResult.value : null,
     };
   }
 
