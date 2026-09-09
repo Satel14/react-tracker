@@ -35,15 +35,37 @@ const seasonsNamedIn = (dictionary, locale) =>
 // This is the alarm for a season rollover, and it is meant to be loud.
 //
 // The head strings are built from ARTICLE_SEASON, so they follow it for free.
-// The prose cannot: "Season 42 went live on PC on 17 June 2026", the 42.1-42.3
-// update range and the Ranked map pool are statements about that season, and
-// swapping the number in them would turn each one into a different, false
-// statement. So the number is declared once, checked against what the census is
-// actually measuring, and when the two disagree this test fails and the copy has
-// to be rewritten by someone who knows what changed.
+// The prose cannot: "Season 43 went live on PC on 10 September 2026", the update
+// range and the Ranked map pool are statements about that season, and swapping
+// the number in them would turn each one into a different, false statement. So
+// the number is declared once and the copy is checked against it, and when they
+// disagree this test fails and the copy has to be rewritten by someone who knows
+// what changed.
+//
+// Against the census the check is one-directional, and the direction matters. A
+// season opens with no samples at all and the census job keeps serving the last
+// good reading, so for the first days of every season the article is ahead of
+// the table by design -- demanding equality there would turn the alarm on the
+// person who did the rewrite on time. Falling BEHIND is the real fault: it means
+// the census has been measuring a season the prose never heard of.
 describe("the season the ranks article describes", () => {
-  it("is the season the census is measuring", () => {
-    expect(ARTICLE_SEASON).toBe(snapshotSeasonNumber(CENSUS_SNAPSHOT));
+  it("is never behind the season the census is measuring", () => {
+    expect(Number(ARTICLE_SEASON)).toBeGreaterThanOrEqual(
+      Number(snapshotSeasonNumber(CENSUS_SNAPSHOT)),
+    );
+  });
+
+  // What makes the line above safe to loosen. While the two disagree the table
+  // has to say which season it measured, and it can only do that honestly if the
+  // number reaches it from the snapshot rather than from a translator's fingers.
+  it("is not what names the season in the distribution table", () => {
+    for (const [locale, dictionary] of [["en", en], ["ua", ua]]) {
+      for (const key of ["finished", "gathering"]) {
+        const text = dictionary.pages.ranks.distribution[key];
+        expect(text, `${locale} distribution.${key} is missing`).toBeTruthy();
+        expect(text, `${locale} distribution.${key}`).toContain("{season}");
+      }
+    }
   });
 
   it("is the season both heads name", () => {

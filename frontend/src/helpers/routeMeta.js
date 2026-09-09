@@ -76,7 +76,7 @@ export const ROUTE_META = [
     title: `PUBG Ranks Explained: Tiers, RP, Survivor (Season ${ARTICLE_SEASON})`,
     description: `The PUBG ranked ladder as it stands in Season ${ARTICLE_SEASON}: all eight tiers, how RP is earned and lost, Survivor, RP decay, and a measured tier distribution.`,
     h1: "PUBG ranks explained: tiers, RP and Survivor",
-    intro: "Eight tiers, one RP number shared across party types and perspectives, and a top tier you can lose overnight \u2014 this is the ranked system as it stands on 31 August 2026, sourced to KRAFTON's patch notes and official posts, with every exception labelled.",
+    intro: "Eight tiers, one RP number shared across party types and perspectives, and a top tier you can lose overnight \u2014 this is the ranked system as it stands on 9 September 2026, sourced to KRAFTON's patch notes and official posts, with every exception labelled.",
     sitemap: true,
     body: true,
   },

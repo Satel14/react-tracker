@@ -3,18 +3,18 @@
 // Declared once here and read by routeMeta.js for both language heads, so the
 // title, the description and the prose cannot drift apart. It is deliberately a
 // literal rather than something derived from the census at build time: the copy
-// around it -- the start date, the 42.1-42.3 update range, the Ranked map pool
-// -- is season-specific prose, and swapping the number in it would turn each
-// true sentence into a false one.
+// around it -- the start date, the update range, the Ranked map pool -- is
+// season-specific prose, and swapping the number in it would turn each true
+// sentence into a false one.
 //
-// articleSeason.test.js compares this to the season the census is actually
-// measuring. When PUBG opens the next season that test fails, which is the
-// intended alarm: someone has to rewrite the season's paragraphs and bump this,
-// and until they do, CI is red rather than the page being quietly wrong.
+// articleSeason.test.js requires this to be at least the season the census is
+// measuring, and requires every string listed below to name it. Bumping the
+// number without rewriting the paragraphs leaves CI red, which is the intended
+// alarm: the rewrite has to be done by someone who knows what changed.
 //
 // Dependency-free on purpose. routeMeta.js imports it, and vite.config.js
 // imports that under Node's resolver.
-export const ARTICLE_SEASON = "42";
+export const ARTICLE_SEASON = "43";
 
 // The copy that names the current season, as paths under `pages.ranks`. Listed
 // rather than discovered: the page quotes older seasons on purpose (Ranked
