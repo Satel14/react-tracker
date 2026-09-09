@@ -154,7 +154,6 @@ const Navbar = ({ t }) => {
             className="navbar__logo"
             to="/"
             onKeyDown={activateOnSpace}
-            aria-label={t("menu.main")}
           >
             <span className="navbar__logo-main">PUBG</span>
             <span className="navbar__logo-tracker">.TRACKER</span>
@@ -181,7 +180,6 @@ const Navbar = ({ t }) => {
             className="navbar__logo"
             to="/"
             onKeyDown={activateOnSpace}
-            aria-label={t("menu.main")}
           >
             <span className="navbar__logo-main">PUBG</span>
             <span className="navbar__logo-tracker">.TRACKER</span>
