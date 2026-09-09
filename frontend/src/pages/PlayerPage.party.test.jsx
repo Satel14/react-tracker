@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { setTranslations, setDefaultLanguage } from "react-switch-lang";
 import en from "../Language/en.json";
@@ -96,6 +96,20 @@ const renderPage = async () => {
 };
 
 const openSquadTab = () => fireEvent.click(screen.getByRole("tab", { name: "Squad" }));
+
+// antd renders a tooltip's text only while it is open, and into a portal rather
+// than into the container, so reading the hint means hovering it first.
+const openHint = async (container) => {
+  const icon = container.querySelector(".player-match-teammates__hint");
+  expect(icon).not.toBeNull();
+  fireEvent.mouseEnter(icon);
+  const tip = await waitFor(() => {
+    const node = document.querySelector(".ant-tooltip-inner");
+    expect(node).not.toBeNull();
+    return node;
+  });
+  return tip.textContent;
+};
 // The matches list is its own pane, and an unvisited pane is not mounted.
 const openMatchesTab = () => fireEvent.click(screen.getByRole("tab", { name: "Matches" }));
 
@@ -151,14 +165,55 @@ test("falls back to the shared-match rule while the overlap is unknown", async (
   expect(container.querySelectorAll(".player-match-teammates__mate")).toHaveLength(0);
 });
 
-test("the hint describes the measurement the badge is actually based on", async () => {
-  getPlayerData.mockResolvedValue(payload());
-  getPlayerExtras.mockResolvedValue({ data: { status: "ok", party: [] } });
-
-  await renderPage();
-
+test("the hint names the rule actually in force", async () => {
   // The copy names the 15% floor; drifting the threshold without touching the
-  // hint would leave the page explaining a rule it no longer applies.
+  // hint would leave the page explaining a rule it no longer applies. And the
+  // fallback rule gets its own text rather than being a clause in this one --
+  // a tooltip that describes two rules describes neither.
   expect(en.pages.player.matches.partyHint).toContain("15%");
   expect(ua.pages.player.matches.partyHint).toContain("15%");
+  expect(en.pages.player.matches.partyHintFallback).not.toContain("15%");
+  expect(ua.pages.player.matches.partyHintFallback).not.toContain("15%");
+
+  getPlayerData.mockResolvedValue(payload());
+  getPlayerExtras.mockResolvedValue({
+    data: {
+      status: "ok",
+      party: [{ accountId: REGULAR, name: "Regular", sharedMatches: 40, theirMatches: 50, sharePct: 80, isParty: true }],
+    },
+  });
+
+  const { container } = await renderPage();
+  openMatchesTab();
+  // The tooltip only renders its text once opened, so this has to hover it --
+  // asserting on the closed page would pass whatever the title said.
+  expect(await openHint(container)).toBe(en.pages.player.matches.partyHint);
+});
+
+test("with no measurement in, the hint switches to the fallback rule", async () => {
+  getPlayerData.mockResolvedValue({
+    ...payload(),
+    data: {
+      data: {
+        ...payload().data.data,
+        matches: {
+          items: [
+            { id: "m1", createdAt: "2026-09-08T21:00:00Z", mapName: "Erangel", gameModeLabel: "Squad FPP", matchType: "competitive", placement: 2, kills: 3, damage: 400, teammates: [{ accountId: REGULAR, name: "Regular", kills: 3, damage: 400, placement: 2 }] },
+            { id: "m2", createdAt: "2026-09-08T20:00:00Z", mapName: "Erangel", gameModeLabel: "Squad FPP", matchType: "competitive", placement: 5, kills: 1, damage: 120, teammates: [{ accountId: REGULAR, name: "Regular", kills: 1, damage: 90, placement: 5 }] },
+          ],
+          summary: { total: 2 },
+        },
+      },
+    },
+  });
+  // party: null means the leg failed, so the fallback rule decides -- and the
+  // mate above clears it by appearing in both matches.
+  getPlayerExtras.mockResolvedValue({ data: { status: "partial", error: "party: boom", party: null } });
+
+  const { container } = await renderPage();
+  openMatchesTab();
+
+  expect([...container.querySelectorAll(".player-match-teammates__mate")].map((el) => el.textContent))
+    .toEqual(["Regular", "Regular"]);
+  expect(await openHint(container)).toBe(en.pages.player.matches.partyHintFallback);
 });

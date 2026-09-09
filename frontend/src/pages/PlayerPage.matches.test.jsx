@@ -363,13 +363,16 @@ test("explains on hover and on keyboard focus how the party is told apart from f
   // Pinned as strings first: a missing key would make t() echo the key path and
   // the matchers below would happily accept it.
   expect(texts.partyHintLabel).toEqual(expect.any(String));
-  expect(texts.partyHint).toEqual(expect.any(String));
+  expect(texts.partyHintFallback).toEqual(expect.any(String));
 
   const hint = within(partyOf(rowsOf(card)[0])).getByLabelText(texts.partyHintLabel);
   expect(hint).toHaveAttribute("tabindex", "0");
   fireEvent.focus(hint);
   const tooltip = await screen.findByRole("tooltip");
-  expect(tooltip).toHaveTextContent(texts.partyHint);
+  // This suite's extras mock answers with nothing, so no history measurement is
+  // in and the fallback rule is the one deciding the party here. The measured
+  // wording is covered by PlayerPage.party.test.jsx.
+  expect(tooltip).toHaveTextContent(texts.partyHintFallback);
 });
 
 test("shows no party strip at all for a solo match", async () => {

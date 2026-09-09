@@ -373,6 +373,47 @@ test("omits the placement line when ranked reports no average", async () => {
   expect(screen.queryByText(/Avg place/)).not.toBeInTheDocument();
 });
 
+test("the lifetime card shows travel, best game and pickups", async () => {
+  // These six ride in gameModeStats and were mapped but never rendered.
+  const payload = rankPayload("PlayerA");
+  payload.data.data.segments = [{
+    stats: {
+      kd: { displayValue: "1.00", value: 1 },
+      distanceOnFoot: { displayValue: "1,727 km", value: 1726585 },
+      distanceByVehicle: { displayValue: "2,419 km", value: 2419202 },
+      distanceSwum: { displayValue: "4.1 km", value: 4121 },
+      weaponsAcquired: { displayValue: "9,238", value: 9238 },
+      bestKillStreak: { displayValue: "6", value: 6 },
+      bestGameKills: { displayValue: "23", value: 23 },
+    },
+  }];
+  getPlayerData.mockResolvedValue(payload);
+  getPlayerReports.mockResolvedValue(reportsPayload("Nobody"));
+
+  const { container } = renderAt();
+  await screen.findByText("PlayerA");
+
+  const tiles = [...container.querySelectorAll(".player-stat-tile")].map((tile) => tile.textContent);
+  expect(tiles).toContain("On foot1,727 km");
+  expect(tiles).toContain("By vehicle2,419 km");
+  expect(tiles).toContain("Swum4.1 km");
+  expect(tiles).toContain("Best game23");
+  expect(tiles).toContain("Best streak6");
+  expect(tiles).toContain("Weapons picked up9,238");
+});
+
+test("a stat the payload does not carry falls back rather than rendering blank", async () => {
+  getPlayerData.mockResolvedValue(rankPayload("PlayerA"));
+  getPlayerReports.mockResolvedValue(reportsPayload("Nobody"));
+
+  const { container } = renderAt();
+  await screen.findByText("PlayerA");
+
+  const tiles = [...container.querySelectorAll(".player-stat-tile")].map((tile) => tile.textContent);
+  expect(tiles).toContain("On foot0 m");
+  expect(tiles).toContain("Best game0");
+});
+
 test("the loading state stands where the profile will be, not centred in an empty box", async () => {
   // The loader used to be one 120px bar centred in a height:50vh flex box, so
   // it sat well below the hero card it stood in for and the whole page jumped
