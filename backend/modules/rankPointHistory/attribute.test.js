@@ -18,7 +18,10 @@ const deltaOf = (result, id) => result.items.find((item) => item.id === id).rpDe
 test("a lone reading gives noBaseline before it and pending after it", () => {
   const result = run([snap(3000, 100, T0)], [match("before", T0 - H), match("at", T0), match("after", T0 + H)]);
   assert.deepEqual(deltaOf(result, "before"), { kind: "noBaseline" });
-  assert.deepEqual(deltaOf(result, "at"), { kind: "noBaseline" });
+  // A match created at the very instant of the only reading, with no duration
+  // and no survival time recorded, could have been counted into that reading or
+  // could still be waiting. Both readings of it are live, so neither is shown.
+  assert.deepEqual(deltaOf(result, "at"), { kind: "unattributed" });
   assert.deepEqual(deltaOf(result, "after"), { kind: "pending" });
   assert.equal(result.summary.rankPoints, null);
   assert.equal(result.summary.total, 3, "existing summary fields survive");
@@ -101,15 +104,18 @@ test("does not mutate its inputs", () => {
 const { DECAY_WINDOW_MS } = require("./attribute");
 const DAY = 24 * H;
 
-test("merges forward when a match is visible before the ranked endpoint counted it", () => {
-  // interval 1: 2 matches visible, 1 counted; interval 2: 0 visible, 1 counted → one merged group
+test("two matches over two single-round intervals are split by the order they ended", () => {
+  // Both matches could sit in either interval on time alone, and each interval
+  // counted one round. What separates them is that "a" ended before "b", so the
+  // only consistent reading is a -> interval 1, b -> interval 2. The older rule
+  // merged the pair into one group of 30 here.
   const result = run(
     [snap(3000, 100, T0), snap(3023, 101, T0 + H), snap(3030, 102, T0 + 2 * H)],
     [match("a", T0 + 20 * 60 * 1000), match("b", T0 + 40 * 60 * 1000)]
   );
-  assert.deepEqual(deltaOf(result, "a"), { kind: "group", value: 30, matches: 2 });
-  assert.deepEqual(deltaOf(result, "b"), { kind: "group", value: 30, matches: 2 });
-  assert.deepEqual(result.summary.rankPoints, { kind: "group", value: 30, matches: 2, since: T0 });
+  assert.deepEqual(deltaOf(result, "a"), { kind: "exact", value: 23 });
+  assert.deepEqual(deltaOf(result, "b"), { kind: "exact", value: 7 });
+  assert.equal(result.summary.rankPoints, null, "an exact newest span needs no header line");
 });
 
 test("a merged span that resolves to one counted match is exact", () => {
@@ -131,14 +137,16 @@ test("a truncated window reports the counted total even when fewer matches are v
   assert.deepEqual(result.summary.rankPoints, { kind: "group", value: 37, matches: 10, since: T0 });
 });
 
-test("a complete window with fewer visible than counted matches stays unattributed", () => {
-  // a normal match older than the window proves the window is fully visible
+test("an interval that counted more rounds than we can see reports the group total", () => {
+  // Two rounds were counted and only one ranked match is visible. The missing
+  // one cannot be named, but the total and the count both can be, and saying so
+  // beats the older rule's silence.
   const result = run(
     [snap(3000, 100, T0), snap(3037, 102, T0 + 5 * H)],
     [match("older-normal", T0 - H, "official"), match("m", T0 + H)]
   );
-  assert.deepEqual(deltaOf(result, "m"), { kind: "unattributed" });
-  assert.equal(result.summary.rankPoints, null);
+  assert.deepEqual(deltaOf(result, "m"), { kind: "group", value: 37, matches: 2 });
+  assert.deepEqual(result.summary.rankPoints, { kind: "group", value: 37, matches: 2, since: T0 });
 });
 
 test("more visible than counted matches with nothing to merge into is unattributed", () => {
@@ -299,14 +307,66 @@ test("a match still running when the first reading was taken is not inside that 
   assert.deepEqual(deltaOf(result, "m3"), { kind: "exact", value: -15 });
 });
 
-test("a match that had not ended yet cannot own the change seen while it ran", () => {
-  // X1 starts 13:58 and ends 14:23. The 14:10 reading is 13 minutes too early to
-  // hold its result, so the -15 it recorded belongs to an older match that never
-  // made the visible list. X1 is still waiting for its own result, not owed one.
+test("a match still running at the last reading is never handed that reading's change", () => {
+  // X1 starts 13:58 and ends 14:23, and the last reading is 14:10. Whether the
+  // -15 it recorded can be X1's depends on something we cannot observe: PUBG may
+  // count a round when the match ends, or when the player dies in it. Under the
+  // first, X1 is still pending; under the second, the 14:10 reading may already
+  // hold it. The one thing ruled out either way is showing -15 on this row.
   const day = Date.parse("2026-09-01T13:00:00Z");
   const result = run(
     [snap(3000, 100, day, day + 65 * MIN), snap(2985, 101, day + 70 * MIN)],
     [playedMatch("x1", day + 58 * MIN)]
   );
-  assert.deepEqual(deltaOf(result, "x1"), { kind: "pending" });
+  assert.deepEqual(deltaOf(result, "x1"), { kind: "unattributed" });
+});
+
+test("fields the payload arrived with survive annotation", () => {
+  // The annotated object replaces matches in the cached payload, so anything it
+  // drops here is gone from the cache for that entry's whole lifetime --
+  // including the two fields this module itself reads.
+  const fetchedAt = T0 + 4 * H;
+  const result = attributeRankPoints({
+    series: [snap(3000, 100, T0), snap(3023, 101, T0 + 3 * H)],
+    matches: { summary: { total: 1 }, items: [match("m", T0 + H)], fetchedAt, complete: true },
+  });
+  assert.equal(result.fetchedAt, fetchedAt);
+  assert.equal(result.complete, true);
+  assert.equal(result.summary.total, 1);
+});
+
+test("an empty series also preserves the payload's own fields", () => {
+  const result = attributeRankPoints({
+    series: [],
+    matches: { summary: {}, items: [match("m", T0)], fetchedAt: T0, complete: false },
+  });
+  assert.equal(result.fetchedAt, T0);
+  assert.equal(result.complete, false);
+});
+
+test("a search too large to finish degrades to one group and says so", () => {
+  // Twelve matches that all started before the first interval and none of which
+  // has ended, with each later one running longer than the last -- so no pair
+  // ends in creation order and the order constraint never fires. Nothing is left
+  // to prune with, and the search cannot finish inside its budget.
+  const readings = Array.from({ length: 13 }, (_unused, k) => snap(3000 + k, 100 + k, T0 + k * H));
+  const items = Array.from({ length: 12 }, (_unused, k) => ({
+    id: `m${k}`,
+    createdAt: new Date(T0 + (k + 1) * 60 * 1000).toISOString(),
+    matchType: "competitive",
+    duration: (100 - k) * 3600,
+    survivalTime: 0,
+  }));
+  const logged = [];
+  const realLog = console.log;
+  console.log = (line) => logged.push(String(line));
+  let result;
+  try {
+    result = attributeRankPoints({ series: readings, matches: { summary: {}, items } });
+  } finally {
+    console.log = realLog;
+  }
+  const kinds = new Set(result.items.map((item) => item.rpDelta.kind));
+  assert.deepEqual([...kinds], ["group"], "no row may claim an exact value from an unfinished search");
+  assert.ok(logged.some((line) => line.includes("[RP] attribution budget exhausted")), "the fallback is visible in the logs");
 });

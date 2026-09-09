@@ -139,3 +139,19 @@ test("the default service is wired when none is injected", async () => {
     if (saved !== undefined) process.env.DATABASE_URL = saved;
   }
 });
+
+test("the attribution rule is handed the fetch time and whether the list is the whole history", async () => {
+  // statsMapper passes the enrichment object through untouched, and this is the
+  // guard on that: if it ever starts rebuilding `matches`, the rule silently
+  // loses both inputs and falls back to its most conservative behaviour.
+  const accountId = accountFor("f");
+  stubRouter(accountId);
+  const history = fakeHistory();
+  const { parsePlayerRank: parse } = createParsePlayerRank({ pubgApiKey: "k", steamApiKey: "", rankPointHistory: history });
+
+  await parse("steam", accountId, {});
+
+  const { matches } = history.calls[0];
+  assert.equal(matches.complete, true, "this stub player has no matches at all, so the list is complete");
+  assert.ok(Number.isFinite(matches.fetchedAt), "the fetch time reaches the rule");
+});
