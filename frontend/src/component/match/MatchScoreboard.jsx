@@ -28,7 +28,7 @@ const MatchScoreboard = ({ scoreboard, platform, t }) => {
               <span>{t("pages.match.colKills")}</span>
               <span>{t("pages.match.colDamage")}</span>
               <span>{t("pages.match.colAssists")}</span>
-              <span>{t("pages.match.colDbno")}</span>
+              <span>{t("pages.match.colKnocks")}</span>
               <span>{t("pages.match.colHs")}</span>
               <span>{t("pages.match.colSurvival")}</span>
             </div>
