@@ -43,11 +43,17 @@ function createRankPointHistoryService({ store: historyStore = store, now = Date
     }
   }
 
-  return { annotate };
+  // annotate() no-ops for free without a database, but a caller that would spend
+  // a PUBG request just to feed it cannot afford to find out afterwards.
+  function isEnabled() {
+    return Boolean(historyStore && historyStore.isConfigured());
+  }
+
+  return { annotate, isEnabled };
 }
 
 function createNoopRankPointHistoryService() {
-  return { annotate: async ({ matches }) => matches };
+  return { annotate: async ({ matches }) => matches, isEnabled: () => false };
 }
 
 async function warmRankPointHistory() {

@@ -123,3 +123,11 @@ test("the noop service is a pass-through", async () => {
   const result = await createNoopRankPointHistoryService().annotate({ ...KEY, matches: MATCHES });
   assert.equal(result, MATCHES);
 });
+
+// Callers that would spend a PUBG request purely to feed this service need to
+// ask first: annotate() is free to no-op, but the fetch behind it is not.
+test("reports whether the store is configured", () => {
+  assert.equal(createRankPointHistoryService({ store: fakeStore() }).isEnabled(), true);
+  assert.equal(createRankPointHistoryService({ store: fakeStore({ configured: false }) }).isEnabled(), false);
+  assert.equal(createNoopRankPointHistoryService().isEnabled(), false);
+});

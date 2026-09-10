@@ -37,6 +37,8 @@ const {
   inFlightResolveRequests,
   inFlightSeasonCatalogRequests,
   EXTRAS_RETRY_COOLDOWN_MS,
+  rankPointReadingCache,
+  RANK_POINT_READING_INTERVAL_MS,
 } = require("./state");
 
 function shouldReenrich(profile) {
@@ -57,7 +59,12 @@ function createProfileExtrasError(error, fallbackProfile = null) {
   };
 }
 
-function createParsePlayerRank({ pubgApiKey, steamApiKey, rankPointHistory = createRankPointHistoryService() }) {
+function createParsePlayerRank({
+  pubgApiKey,
+  steamApiKey,
+  rankPointHistory = createRankPointHistoryService(),
+  rankPointReadingIntervalMs = RANK_POINT_READING_INTERVAL_MS,
+}) {
   const { doRequest } = createPubgApiClient({
     apiKey: pubgApiKey,
     onRateLimit: setRateLimited,
@@ -152,6 +159,92 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey, rankPointHistory = cre
       setStalePlayerData(requestKey, enrichedPayload);
 
       return enrichedPayload;
+    }
+  }
+
+  function readingKey(shard, accountId, seasonId) {
+    return `${shard}:${accountId}:${seasonId}`;
+  }
+
+  function markRankPointReading(shard, accountId, seasonId) {
+    rankPointReadingCache.set(readingKey(shard, accountId, seasonId), Date.now());
+  }
+
+  function rankPointReadingIsRecent(shard, accountId, seasonId) {
+    const last = rankPointReadingCache.get(readingKey(shard, accountId, seasonId));
+    return typeof last === "number" && Date.now() - last < rankPointReadingIntervalMs;
+  }
+
+  // Attribution can only split a session into single matches when readings sit
+  // between them -- and a cache hit used to take none at all, so a player
+  // refreshing their own page between matches recorded one reading per
+  // CACHE_DURATION and every match in between collapsed into one group.
+  //
+  // The fix is to make the READING dense, not the payload: one ranked request,
+  // rate-limited to rankPointReadingIntervalMs, while the match list, lifetime
+  // stats and profile extras all stay cached. The new reading pays off even
+  // before the list refreshes, because it lands in the stored series that the
+  // next fresh lookup is attributed against.
+  async function refreshRankPointReading({
+    payload,
+    statsCacheKey,
+    requestKey,
+    shard,
+    accountId,
+    seasonId,
+    playerName,
+    isCurrentSeason,
+  }) {
+    if (!isCurrentSeason || !seasonId) return payload;
+    // Ranked stats absent when the payload was built means the request would
+    // almost certainly buy nothing. A player's first ranked match of the season
+    // is picked up by the next fresh lookup instead.
+    if (!payload?.data?.season?.rankedInfo) return payload;
+    if (!rankPointHistory.isEnabled || !rankPointHistory.isEnabled()) return payload;
+    // Unpinned by design, and the only guard here that is: a cooldown already
+    // running sends the request back with stale data long before this point, so
+    // the sole way to arrive here rate-limited is a 429 raised by the enrichment
+    // above, within this same request. Worth one line to not answer a back-off
+    // signal with another request.
+    if (isRateLimited()) return payload;
+    if (rankPointReadingIsRecent(shard, accountId, seasonId)) return payload;
+
+    // Stamped before the await, so concurrent hits cannot each fire a request,
+    // and a failed read waits out the interval instead of retrying on every view.
+    markRankPointReading(shard, accountId, seasonId);
+
+    try {
+      const rankedUrl =
+        `https://api.pubg.com/shards/${encodeSegment(shard)}/players/${encodeSegment(accountId)}` +
+        `/seasons/${encodeSegment(seasonId)}/ranked`;
+      const rankedData = await doRequest(rankedUrl);
+      const rankedGameModeStats = rankedData?.data?.attributes?.rankedGameModeStats;
+      if (!rankedGameModeStats) return payload;
+
+      const matches = await rankPointHistory.annotate({
+        shard,
+        accountId,
+        seasonId,
+        rankedGameModeStats,
+        rankedInfo: payload.data.season.rankedInfo,
+        matches: payload.data.matches,
+      });
+      if (matches === payload.data.matches) return payload;
+
+      const nextPayload = { ...payload, data: { ...payload.data, matches } };
+      // The entry keeps its original timestamp on purpose. Bumping it would renew
+      // the cached match list for as long as somebody keeps looking, so the list
+      // -- and every RP delta drawn on it -- would never refresh at all.
+      const currentEntry = statsCache.get(statsCacheKey);
+      if (currentEntry) {
+        statsCache.set(statsCacheKey, { ...currentEntry, data: nextPayload });
+      }
+      setStalePlayerData(requestKey, nextPayload);
+
+      return nextPayload;
+    } catch (readingError) {
+      console.log(`[RP] reading refresh skipped for ${playerName}: ${readingError.message}`);
+      return payload;
     }
   }
 
@@ -365,7 +458,7 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey, rankPointHistory = cre
           }
 
           console.log(`[PUBG] Serving cached stats for ${normalized.playerName} (${targetSeasonId || "no-season"})`);
-          return enrichCachedPayload({
+          const enriched = await enrichCachedPayload({
             payload: normalized.payload,
             statsCacheKey,
             cachedStats,
@@ -374,6 +467,19 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey, rankPointHistory = cre
             accountId,
             playerName: normalized.playerName,
             playerRecord,
+          });
+
+          // After enrichment, so the reading is attributed against the payload
+          // that is actually being served and cached.
+          return refreshRankPointReading({
+            payload: enriched,
+            statsCacheKey,
+            requestKey,
+            shard,
+            accountId,
+            seasonId: targetSeasonId,
+            playerName: normalized.playerName,
+            isCurrentSeason: Boolean(targetSeasonId && targetSeasonId === seasonCatalog?.currentSeasonId),
           });
         }
 
@@ -490,6 +596,9 @@ function createParsePlayerRank({ pubgApiKey, steamApiKey, rankPointHistory = cre
           } catch (rankPointError) {
             console.log(`[RP] annotation skipped for ${displayPlayerName}: ${rankPointError.message}`);
           }
+          // This fetch took a reading of its own, so a cache hit a moment later
+          // has nothing to add.
+          markRankPointReading(shard, accountId, selectedSeasonId);
         }
 
         const cacheEntry = {
