@@ -5615,11 +5615,31 @@ body {
     // The minus a damage number opens with, in the colour it is drawn in.
     &.is-damage { background: var(--zone-red); border-radius: 1px; height: 3px; width: 10px; }
     &.is-shot { background: var(--warn); border-radius: 1px; height: 3px; width: 14px; }
+    // A throw is a dot where a shot is a line, which is what tells the two
+    // apart at this size; the hue says whether the item can deal damage.
+    &.is-throw { background: var(--text); height: 6px; width: 6px; }
+    &.is-throw-hit { background: var(--warn); height: 6px; width: 6px; }
     &.is-kill { background: var(--danger); border-radius: 1px; height: 3px; width: 14px; }
     &.is-crate { background: var(--crate); border-radius: 1px; }
     &.is-flight { background: var(--flight); border-radius: 1px; height: 3px; width: 14px; }
     &.is-hazard { background: var(--zone-red); }
   }
+  // What the whole lobby threw. Sits under the legend because it describes the
+  // contents of the thrown-items layer, not the player being followed.
+  &__utility {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  &__utility-title { color: var(--text); }
+  &__utility-row { display: inline-flex; align-items: baseline; gap: 5px; }
+  &__utility-name { color: var(--text); }
+  &__utility-count { font-variant-numeric: tabular-nums; }
+  &__utility-damage { color: var(--warn); }
   &__layer {
     border: 1px solid var(--border);
     border-radius: 999px;

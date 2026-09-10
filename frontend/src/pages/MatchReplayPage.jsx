@@ -33,6 +33,8 @@ const LEGEND = [
   { key: "legendVehicle", cls: "is-vehicle" },
   { key: "legendParachute", cls: "is-parachute" },
   { key: "legendShot", cls: "is-shot" },
+  { key: "legendThrow", cls: "is-throw" },
+  { key: "legendThrowHit", cls: "is-throw-hit" },
   { key: "legendDamage", cls: "is-damage" },
   { key: "legendKill", cls: "is-kill" },
   { key: "legendCrate", cls: "is-crate" },
@@ -43,7 +45,7 @@ const LEGEND = [
 const LAYER_LABEL = {
   shots: "layerShots", landings: "layerLandings", flight: "layerFlight",
   packages: "layerPackages", specialZones: "layerZones", healthArcs: "layerHealth",
-  damage: "layerDamage",
+  damage: "layerDamage", throwables: "layerThrowables",
 };
 const INITIAL = { loading: false, error: null, data: null };
 
@@ -324,6 +326,24 @@ const MatchReplayPage = ({ t }) => {
           </span>
         ))}
       </div>
+      {data.throwKinds?.length ? (
+        <div className="match-replay__utility">
+          <span className="match-replay__utility-title">{t("pages.replay.utility")}</span>
+          {data.throwKinds.map((kind) => (
+            <span key={kind.name} className="match-replay__utility-row">
+              <span className="match-replay__utility-name">{kind.name}</span>
+              <span className="match-replay__utility-count">{kind.thrown}</span>
+              {/* Absent, not zero: smoke and flash deal no damage by design, and
+                  a "0 dmg" beside one reads as a throw that failed. */}
+              {kind.damaging ? (
+                <span className="match-replay__utility-damage">
+                  {t("pages.replay.utilityDamage", { damage: kind.damage })}
+                </span>
+              ) : null}
+            </span>
+          ))}
+        </div>
+      ) : null}
       <ReplayRoster
         rows={roster}
         focusedAccountId={focusedAccountId}

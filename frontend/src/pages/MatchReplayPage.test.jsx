@@ -516,3 +516,46 @@ test("each analysis tab gets a placeholder shaped like its own content", async (
   expect(container.querySelector(".kill-map .map-stage")).not.toBeNull();
   getMatchAnalysis.mockReset();
 });
+
+// --- what the lobby threw ---------------------------------------------------
+
+const replayWith = (extra) => ({
+  data: {
+    matchId: "m1", rawMapName: "Baltic_Main", mapName: "Erangel", mapMax: 8160, duration: 100,
+    focalAccountId: "account.me", focalTeamId: 1, totalPlayers: 1, totalTeams: 1,
+    players: [{ name: "Me", accountId: "account.me", teamId: 1, isFocal: true, positions: [{ t: 0, x: 10, y: 10 }], deathTime: null, dropTime: null }],
+    kills: [],
+    zones: [{ t: 0, bx: 0, by: 0, br: 100, wx: 0, wy: 0, wr: 100, phase: 1 }],
+    ...extra,
+  },
+});
+
+test("lists what the lobby threw, with no damage figure for a kind that cannot deal any", async () => {
+  getMatchReplay.mockResolvedValueOnce(replayWith({
+    throws: { t: [10], k: [0], ax: [100], ay: [100], vx: [null], vy: [null] },
+    throwKinds: [
+      { name: "Frag Grenade", damaging: true, thrown: 11, damage: 80 },
+      { name: "Smoke Bomb", damaging: false, thrown: 12, damage: 0 },
+    ],
+  }));
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+
+  expect(screen.getByText("Frag Grenade")).toBeInTheDocument();
+  expect(screen.getByText("Smoke Bomb")).toBeInTheDocument();
+  expect(screen.getByText("11")).toBeInTheDocument();
+
+  // The rule, not the copy: a "0 dmg" beside a smoke would read as a throw that
+  // failed, when smoke deals none by design.
+  const fragRow = screen.getByText("Frag Grenade").closest(".match-replay__utility-row");
+  const smokeRow = screen.getByText("Smoke Bomb").closest(".match-replay__utility-row");
+  expect(fragRow.querySelector(".match-replay__utility-damage")).not.toBeNull();
+  expect(smokeRow.querySelector(".match-replay__utility-damage")).toBeNull();
+});
+
+test("renders no utility block when nothing was thrown", async () => {
+  getMatchReplay.mockResolvedValueOnce(replayWith({ throws: null, throwKinds: [] }));
+  const { container } = renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  expect(container.querySelector(".match-replay__utility")).toBeNull();
+});
