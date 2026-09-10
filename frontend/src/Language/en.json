@@ -364,7 +364,7 @@
       "loadoutAtDeath": "What you were carrying when you died",
       "loadoutAtEnd": "What you were carrying at the end",
       "loadoutEmpty": "No equipment recorded for this match.",
-      "loadoutCounts": "Picked up {picked} Â· dropped {dropped} Â· {crate} from a care package",
+      "loadoutCounts": "Picked up {picked} · dropped {dropped} · {crate} from a care package",
       "lootedFrom": "Looted:",
       "armourHeadgear": "Helmet",
       "armourVest": "Vest",
