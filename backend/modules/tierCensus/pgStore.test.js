@@ -91,15 +91,28 @@ test("swallows a storage failure rather than killing the run", async () => {
 test("reads a window back with the cluster each observation came from", async () => {
   const pool = fakePool((text) =>
     /SELECT/.test(text)
-      ? { rows: [{ match_id: "m1", tier: "gold" }, { match_id: "m1", tier: "silver" }] }
+      ? { rows: [{ match_cluster: 1, tier: "gold" }, { match_cluster: 1, tier: "silver" }] }
       : { rows: [] },
   );
   __setPool(pool);
   const rows = await readWindow({ shard: "steam", seasonId: "s42", days: 7 });
   assert.deepEqual(rows, [
-    { matchId: "m1", tier: "gold" },
-    { matchId: "m1", tier: "silver" },
+    { matchId: 1, tier: "gold" },
+    { matchId: 1, tier: "silver" },
   ]);
+});
+
+// This read is the heaviest thing the module sends -- one row per sampled
+// account, ~12k on a week. Nothing downstream reads the match as an id, so it
+// travels as a small number instead of a 36-character UUID.
+test("labels the lobby with a number rather than shipping the match id", async () => {
+  const pool = fakePool(() => ({ rows: [] }));
+  __setPool(pool);
+  await readWindow({ shard: "steam", seasonId: "s42", days: 7 });
+  const select = pool.calls.find((c) => /DISTINCT ON \(account_id\)/.test(c.text));
+  const projection = select.text.trim().split("\n")[0];
+  assert.match(projection, /dense_rank\(\) OVER \(ORDER BY match_id\)::int AS match_cluster/);
+  assert.doesNotMatch(projection, /,\s*match_id\b/, "and not the raw id beside it");
 });
 
 // Pooling days is how the interval gets narrower, and an account seen on two

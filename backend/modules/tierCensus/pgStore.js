@@ -1,4 +1,5 @@
 // Where the tier census accumulates.
+const { recordDbError, recordDbOk } = require("../db/health");
 //
 // One row per account per sample day, carrying the match it was drawn from --
 // the match id is not decoration, it is the cluster the confidence interval is
@@ -97,15 +98,27 @@ const SELECT_RANK_POINTS_SQL = `
   ORDER BY account_id, window_date DESC
 `;
 
+// One row per sampled account, and the heaviest thing this file sends: ~12k rows
+// on a seven-day window.
+//
+// The match is returned as a small number rather than its 36-character id
+// because nothing downstream reads it as an id -- estimateIcc uses it only to
+// tell which observations shared a lobby, so any stable label per match does the
+// job. At ~12k rows that is roughly 400 KB of Neon transfer saved per call,
+// which stopped being academic on 2026-09-10 when the monthly allowance ran out.
+// dense_rank starts at 1, so the label is never falsy.
 const SELECT_WINDOW_SQL = `
-  SELECT DISTINCT ON (account_id) match_id, tier
-  FROM tier_census_observations
-  WHERE shard = $1 AND season_id = $2
-    AND window_date > (
-      SELECT MAX(window_date) FROM tier_census_observations
-      WHERE shard = $1 AND season_id = $2
-    ) - $3::int
-  ORDER BY account_id, window_date DESC
+  SELECT dense_rank() OVER (ORDER BY match_id)::int AS match_cluster, tier
+  FROM (
+    SELECT DISTINCT ON (account_id) match_id, tier
+    FROM tier_census_observations
+    WHERE shard = $1 AND season_id = $2
+      AND window_date > (
+        SELECT MAX(window_date) FROM tier_census_observations
+        WHERE shard = $1 AND season_id = $2
+      ) - $3::int
+    ORDER BY account_id, window_date DESC
+  ) sampled
 `;
 
 const SELECT_COVERAGE_SQL = `
@@ -168,6 +181,7 @@ async function recordObservations(observations) {
   } catch (error) {
     // A census is not worth an outage. Same posture as every other store here.
     console.log(`[census] could not record observations: ${error.message}`);
+    recordDbError("census", error.message);
     return 0;
   }
 }
@@ -177,9 +191,11 @@ async function readWindow({ shard, seasonId, days }) {
   try {
     await ensureTable();
     const result = await getPool().query(SELECT_WINDOW_SQL, [shard, seasonId, days]);
-    return (result?.rows ?? []).map((row) => ({ matchId: row.match_id, tier: row.tier }));
+    recordDbOk("census");
+    return (result?.rows ?? []).map((row) => ({ matchId: row.match_cluster, tier: row.tier }));
   } catch (error) {
     console.log(`[census] could not read the window: ${error.message}`);
+    recordDbError("census", error.message);
     return [];
   }
 }
@@ -189,11 +205,13 @@ async function isWindowCollected({ shard, seasonId, windowDate }) {
   try {
     await ensureTable();
     const result = await getPool().query(SELECT_COLLECTED_SQL, [shard, seasonId, windowDate]);
+    recordDbOk("census");
     return Boolean(result?.rows?.[0]?.collected);
   } catch (error) {
     // Fail towards collecting. Reading a day twice costs quota; skipping one we
     // do not have loses it until the window rolls past.
     console.log(`[census] could not check whether ${windowDate} is collected: ${error.message}`);
+    recordDbError("census", error.message);
     return false;
   }
 }
@@ -203,9 +221,11 @@ async function readLatestSeason({ shard, exclude = "", minWindows = 1 }) {
   try {
     await ensureTable();
     const result = await getPool().query(SELECT_LATEST_SEASON_SQL, [shard, exclude, minWindows]);
+    recordDbOk("census");
     return result?.rows?.[0]?.season_id ?? null;
   } catch (error) {
     console.log(`[census] could not read the latest season: ${error.message}`);
+    recordDbError("census", error.message);
     return null;
   }
 }
@@ -215,9 +235,11 @@ async function readRankPoints({ shard, seasonId, days }) {
   try {
     await ensureTable();
     const result = await getPool().query(SELECT_RANK_POINTS_SQL, [shard, seasonId, days]);
+    recordDbOk("census");
     return (result?.rows ?? []).map((row) => row.rank_point);
   } catch (error) {
     console.log(`[census] could not read the rank points: ${error.message}`);
+    recordDbError("census", error.message);
     return [];
   }
 }
@@ -227,6 +249,7 @@ async function readCoverage({ shard, seasonId, days }) {
   try {
     await ensureTable();
     const result = await getPool().query(SELECT_COVERAGE_SQL, [shard, seasonId, days]);
+    recordDbOk("census");
     const row = result?.rows?.[0];
     if (!row) return { ...EMPTY_COVERAGE };
     return {
@@ -238,6 +261,7 @@ async function readCoverage({ shard, seasonId, days }) {
     };
   } catch (error) {
     console.log(`[census] could not read coverage: ${error.message}`);
+    recordDbError("census", error.message);
     return { ...EMPTY_COVERAGE };
   }
 }

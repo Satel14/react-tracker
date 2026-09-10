@@ -9,6 +9,7 @@ const { getCurrentSeasonId, getSeasonCatalog } = require("../modules/getSeasonCa
 const { seasonForWindow, previousSeasonId, seasonStartDate } = require("../modules/tierCensus/seasonWindow");
 const { estimateIcc, PER_MATCH } = require("../modules/tierCensus/sampling");
 const { tierShare, rpThresholds } = require("../modules/tierCensus/stats");
+const { isDbFailing } = require("../modules/db/health");
 
 const SHARD = "steam";
 
@@ -28,6 +29,21 @@ const DEFAULT_DAYS = 7;
 // behind it -- by which point placement has largely settled and the pooled
 // interval means something.
 const MIN_WINDOWS = 3;
+
+// The collector runs once a day, and until 2026-09-10 this endpoint read the raw
+// observations back on EVERY request: two queries returning one row per sampled
+// account, ~1 MB of Neon transfer a time. It is called from the player page, so
+// crawlers alone were enough to spend the project's whole monthly allowance in
+// ten days, which took recent searches and RP history down with it.
+//
+// A published daily statistic does not need to be recomputed per visitor. Half
+// an hour of staleness is invisible against a figure that moves once a day.
+const DISTRIBUTION_CACHE_MS = 30 * 60 * 1000;
+
+// A read that failed is cached too -- briefly. Long enough that a database in
+// trouble is not asked again by every visitor, short enough that the page
+// recovers on its own within a minute of the database doing so.
+const DISTRIBUTION_ERROR_CACHE_MS = 60 * 1000;
 
 // Last resort only. Reached when PUBG's catalog cannot be asked and no override
 // is set: wrong for at most one run, and the next run is what corrects it.
@@ -137,7 +153,9 @@ const createCensusController = ({
         windowCollected({ shard: SHARD, seasonId: forSeason || season, windowDate }),
     });
 
-    if (started.done) inFlight = started.done;
+    // A finished run is new data, so the published result stops being current
+    // the moment it lands -- clear rather than wait out the TTL.
+    if (started.done) inFlight = started.done.finally(() => distributionCache.clear());
 
     return res.status(200).json({
       status: 200,
@@ -164,81 +182,130 @@ const createCensusController = ({
     });
   };
 
-  // GET /api/census/distribution -- what the page reads. Public: it is the
-  // published result, and it costs no PUBG quota.
-  const getDistribution = async (req, res) => {
-    try {
-      const days = Math.min(90, Math.max(1, Number(req.query?.days) || DEFAULT_DAYS));
-      const currentSeasonId = await seasonId();
+  // The published result for one window width, built from the raw observations.
+  // Every caller goes through the cache in getDistribution -- this is the only
+  // thing in the module that touches Postgres per request.
+  const buildDistribution = async (days) => {
+    const currentSeasonId = await seasonId();
 
-      let season = currentSeasonId;
-      let coverage = await doReadCoverage({ shard: SHARD, seasonId: season, days });
+    let season = currentSeasonId;
+    let coverage = await doReadCoverage({ shard: SHARD, seasonId: season, days });
 
-      // Too new to say anything: stand on the last season that can.
-      if (coverage.windows < MIN_WINDOWS) {
-        const latest = await doReadLatestSeason({
-          shard: SHARD,
-          exclude: season,
-          minWindows: MIN_WINDOWS,
-        });
-        if (latest && latest !== season) {
-          season = latest;
-          coverage = await doReadCoverage({ shard: SHARD, seasonId: season, days });
-        }
-      }
-
-      const rows = await doReadWindow({ shard: SHARD, seasonId: season, days });
-
-      // An extra, not the point of this endpoint: the tier bars must still ship
-      // if the rank points cannot be read.
-      let rpPercentiles = null;
-      try {
-        rpPercentiles = rpThresholds(await doReadRankPoints({ shard: SHARD, seasonId: season, days }));
-      } catch (error) {
-        console.log(`[census] could not build the RP table: ${error.message}`);
-      }
-
-      // Tiers come from what was measured, including the untiered bucket -- a
-      // player who has not queued ranked this season is a real part of the
-      // denominator, not a gap to be quietly dropped.
-      const buckets = new Map();
-      for (const row of rows) {
-        const key = row.tier ?? "unranked";
-        buckets.set(key, (buckets.get(key) ?? 0) + 1);
-      }
-
-      const tiers = [...buckets.entries()]
-        .map(([tier, count]) => {
-          const icc = estimateIcc(rows, tier === "unranked" ? null : tier);
-          return { tier, count, ...tierShare({ successes: count, n: rows.length, clusterSize: PER_MATCH, icc }) };
-        })
-        .sort((a, b) => b.count - a.count);
-
-      return res.status(200).json({
-        status: 200,
-        data: {
-          seasonId: season,
-          // Whether this is the season being played right now. False means the
-          // page is showing a finished season while the new one fills up, and
-          // it has to say so rather than pass it off as current.
-          current: season === currentSeasonId,
-          shard: SHARD,
-          days,
-          // Everything the page needs to show its working rather than just a
-          // percentage: how many accounts, how many lobbies, and over what dates.
-          accounts: rows.length,
-          matches: coverage.matches,
-          windows: coverage.windows,
-          firstDate: coverage.firstDate,
-          lastDate: coverage.lastDate,
-          perMatch: PER_MATCH,
-          // The RP standing at each whole percentile, index 0 the top of the
-          // ladder. Lets a player page place a visitor without a query of its
-          // own. Null when the sample is too thin to cut.
-          rpPercentiles,
-          tiers,
-        },
+    // Too new to say anything: stand on the last season that can.
+    if (coverage.windows < MIN_WINDOWS) {
+      const latest = await doReadLatestSeason({
+        shard: SHARD,
+        exclude: season,
+        minWindows: MIN_WINDOWS,
       });
+      if (latest && latest !== season) {
+        season = latest;
+        coverage = await doReadCoverage({ shard: SHARD, seasonId: season, days });
+      }
+    }
+
+    const rows = await doReadWindow({ shard: SHARD, seasonId: season, days });
+
+    // An extra, not the point of this endpoint: the tier bars must still ship
+    // if the rank points cannot be read.
+    let rpPercentiles = null;
+    try {
+      rpPercentiles = rpThresholds(await doReadRankPoints({ shard: SHARD, seasonId: season, days }));
+    } catch (error) {
+      console.log(`[census] could not build the RP table: ${error.message}`);
+    }
+
+    // Tiers come from what was measured, including the untiered bucket -- a
+    // player who has not queued ranked this season is a real part of the
+    // denominator, not a gap to be quietly dropped.
+    const buckets = new Map();
+    for (const row of rows) {
+      const key = row.tier ?? "unranked";
+      buckets.set(key, (buckets.get(key) ?? 0) + 1);
+    }
+
+    const tiers = [...buckets.entries()]
+      .map(([tier, count]) => {
+        const icc = estimateIcc(rows, tier === "unranked" ? null : tier);
+        return { tier, count, ...tierShare({ successes: count, n: rows.length, clusterSize: PER_MATCH, icc }) };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      status: 200,
+      data: {
+        seasonId: season,
+        // Whether this is the season being played right now. False means the
+        // page is showing a finished season while the new one fills up, and
+        // it has to say so rather than pass it off as current.
+        current: season === currentSeasonId,
+        shard: SHARD,
+        days,
+        // Everything the page needs to show its working rather than just a
+        // percentage: how many accounts, how many lobbies, and over what dates.
+        accounts: rows.length,
+        matches: coverage.matches,
+        windows: coverage.windows,
+        firstDate: coverage.firstDate,
+        lastDate: coverage.lastDate,
+        perMatch: PER_MATCH,
+        // The RP standing at each whole percentile, index 0 the top of the
+        // ladder. Lets a player page place a visitor without a query of its
+        // own. Null when the sample is too thin to cut.
+        rpPercentiles,
+        tiers,
+      },
+    };
+  };
+
+  const distributionCache = new Map();
+  const inFlightDistribution = new Map();
+
+  function startDistribution(days) {
+    // Deferred to a microtask for the same reason as the in-flight maps in
+    // parsePlayerRank: the entry has to be in place before anything that could
+    // throw synchronously runs, or the finally below would delete it first and
+    // leave a rejected promise wedged in the map.
+    const run = Promise.resolve().then(async () => {
+      try {
+        const body = await buildDistribution(days);
+        // A payload assembled while Postgres was failing is not the published
+        // result, it is the absence of one. Holding it for half an hour would
+        // keep serving zeroes for half an hour after the database came back,
+        // and telling a CDN to store it would outlive even that.
+        const failing = isDbFailing();
+        const entry = {
+          body,
+          timestamp: Date.now(),
+          maxAge: failing ? DISTRIBUTION_ERROR_CACHE_MS : DISTRIBUTION_CACHE_MS,
+          header: failing
+            ? "no-store"
+            : `public, max-age=${Math.round(DISTRIBUTION_CACHE_MS / 1000)}, stale-while-revalidate=3600`,
+        };
+        distributionCache.set(days, entry);
+        return entry;
+      } finally {
+        inFlightDistribution.delete(days);
+      }
+    });
+
+    inFlightDistribution.set(days, run);
+    return run;
+  }
+
+  const getDistribution = async (req, res) => {
+    const days = Math.min(90, Math.max(1, Number(req.query?.days) || DEFAULT_DAYS));
+
+    const cached = distributionCache.get(days);
+    if (cached && Date.now() - cached.timestamp < cached.maxAge) {
+      res.set("Cache-Control", cached.header);
+      return res.status(200).json(cached.body);
+    }
+
+    try {
+      const entry = await (inFlightDistribution.get(days) || startDistribution(days));
+      res.set("Cache-Control", entry.header);
+      return res.status(200).json(entry.body);
     } catch (e) {
       return res.status(200).json({ status: 200, message: e.message });
     }
@@ -248,7 +315,7 @@ const createCensusController = ({
   // instead of racing it on a timer.
   const __idle = () => inFlight;
 
-  return { runCensus, getStatus, getDistribution, __idle };
+  return { runCensus, getStatus, getDistribution, __idle, __clearDistributionCache: () => distributionCache.clear() };
 };
 
 const defaultController = createCensusController();

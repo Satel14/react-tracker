@@ -23,8 +23,9 @@ const freePort = () =>
 const healthz = (port) =>
   new Promise((resolve) => {
     const req = http.get({ port, host: "127.0.0.1", path: "/healthz" }, (res) => {
-      res.resume();
-      resolve(res.statusCode);
+      let body = "";
+      res.on("data", (chunk) => { body += chunk; });
+      res.on("end", () => resolve({ code: res.statusCode, body }));
     });
     req.on("error", () => resolve(null));
     req.setTimeout(1000, () => {
@@ -36,8 +37,8 @@ const healthz = (port) =>
 const waitForHealthz = async (port, deadlineMs = 15000) => {
   const until = Date.now() + deadlineMs;
   while (Date.now() < until) {
-    const code = await healthz(port);
-    if (code) return code;
+    const answer = await healthz(port);
+    if (answer?.code) return answer;
     await new Promise((r) => setTimeout(r, 200));
   }
   return null;
@@ -64,6 +65,17 @@ test("server.js comes up and serves /healthz", async (t) => {
   child.stderr.on("data", (d) => { stderr += d; });
   t.after(() => child.kill());
 
-  const code = await waitForHealthz(port);
-  assert.equal(code, 200, `/healthz never answered on port ${port}. stderr:\n${stderr}`);
+  const answer = await waitForHealthz(port);
+  assert.equal(answer?.code, 200, `/healthz never answered on port ${port}. stderr:\n${stderr}`);
+
+  // Every Postgres-backed store answers a failure with an empty list, so an
+  // outage shows up nowhere a person looks. This is where it shows up. With no
+  // DATABASE_URL nothing has queried yet, which reads as "unknown" rather than
+  // as a claim that all is well.
+  const payload = JSON.parse(answer.body);
+  assert.ok(payload.db, "/healthz must report the database");
+  assert.ok(
+    ["unknown", "ok", "failing"].includes(payload.db.status),
+    `unexpected db status: ${JSON.stringify(payload.db)}`,
+  );
 });

@@ -1,10 +1,11 @@
 process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test_key";
 
-const { test } = require("node:test");
+const { test, beforeEach } = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const fs = require("node:fs");
 const { createCensusController } = require("../controllers/census");
+const { recordDbError, __resetDbHealth } = require("../modules/db/health");
 
 const TOKEN = "a-census-token";
 
@@ -12,8 +13,10 @@ function makeRes() {
   return {
     statusCode: null,
     body: null,
+    headers: {},
     status(code) { this.statusCode = code; return this; },
     json(payload) { this.body = payload; return this; },
+    set(name, value) { this.headers[name] = value; return this; },
   };
 }
 
@@ -52,6 +55,10 @@ const build = (over = {}) => createCensusController({
 });
 
 const authed = { headers: { authorization: `Bearer ${TOKEN}` } };
+
+// The health signal is module state, and the distribution cache keys its TTL off
+// it, so a test that left it failing would change what the next one caches.
+beforeEach(() => __resetDbHealth());
 
 test("an unauthorised run request is a 404 and never reaches the collector", async () => {
   let called = false;
@@ -605,4 +612,85 @@ test("survives a store that cannot answer for the rank points", async () => {
   assert.equal(res.body.status, 200);
   assert.equal(res.body.data.rpPercentiles, null);
   assert.ok(Array.isArray(res.body.data.tiers));
+});
+
+
+// The endpoint used to read the raw observations on every request -- two queries
+// returning one row per sampled account. That is what spent the project's
+// monthly Neon transfer allowance in ten days.
+test("the published result is built once and then served from cache", async () => {
+  let reads = 0;
+  const controller = build({
+    readWindow: async () => { reads += 1; return [{ matchId: 1, tier: "gold" }]; },
+  });
+
+  const first = makeRes();
+  await controller.getDistribution({ query: {} }, first);
+  const second = makeRes();
+  await controller.getDistribution({ query: {} }, second);
+
+  assert.equal(reads, 1, "the second visitor costs no database read");
+  assert.deepEqual(second.body, first.body, "and is served the same answer");
+  assert.match(first.headers["Cache-Control"], /^public, max-age=1800, stale-while-revalidate=3600$/);
+});
+
+test("callers arriving together share one read", async () => {
+  let reads = 0;
+  const controller = build({
+    readWindow: async () => {
+      reads += 1;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return [{ matchId: 1, tier: "gold" }];
+    },
+  });
+
+  const responses = [makeRes(), makeRes(), makeRes()];
+  await Promise.all(responses.map((res) => controller.getDistribution({ query: {} }, res)));
+
+  assert.equal(reads, 1, "one read for the whole burst");
+  responses.forEach((res) => assert.equal(res.statusCode, 200));
+});
+
+test("each window width is cached on its own", async () => {
+  const asked = [];
+  const controller = build({
+    readWindow: async ({ days }) => { asked.push(days); return []; },
+  });
+
+  await controller.getDistribution({ query: { days: 7 } }, makeRes());
+  await controller.getDistribution({ query: { days: 14 } }, makeRes());
+  await controller.getDistribution({ query: { days: 7 } }, makeRes());
+
+  assert.deepEqual(asked, [7, 14], "the repeat of 7 is the only one served from cache");
+});
+
+// Zeroes assembled while Postgres was unreachable are not the published result,
+// they are the absence of one -- caching them anywhere would outlive the outage.
+test("a payload built while the database is failing is not cacheable downstream", async () => {
+  const controller = build({
+    readWindow: async () => { recordDbError("census", "data transfer quota exceeded"); return []; },
+  });
+
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+
+  assert.equal(res.headers["Cache-Control"], "no-store");
+  assert.equal(res.body.data.accounts, 0);
+});
+
+test("a finished run drops the cached result rather than waiting out its TTL", async () => {
+  let reads = 0;
+  const controller = build({
+    readWindow: async () => { reads += 1; return []; },
+    collect: async () => collected(),
+  });
+
+  await controller.getDistribution({ query: {} }, makeRes());
+  assert.equal(reads, 1);
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  await controller.getDistribution({ query: {} }, makeRes());
+  assert.equal(reads, 2, "new observations mean the published figure moved");
 });
