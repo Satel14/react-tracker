@@ -24,7 +24,7 @@ const RegionBars = ({ bucket, title, t }) => {
   );
 };
 
-const DamageBreakdown = ({ damage, focalPresent, t }) => {
+const DamageBreakdown = ({ damage, meds, focalPresent, t }) => {
   if (!focalPresent || !damage) {
     return <EmptyState className="damage__empty">{t("pages.match.focalNotInMatch")}</EmptyState>;
   }
@@ -35,6 +35,38 @@ const DamageBreakdown = ({ damage, focalPresent, t }) => {
         <RegionBars bucket={damage.dealt} title={t("pages.match.damageDealt")} t={t} />
         <RegionBars bucket={damage.taken} title={t("pages.match.damageTaken")} t={t} />
       </div>
+      {meds?.totalUses ? (
+        <div className="damage__meds">
+          <div className="damage__meds-head">{t("pages.match.consumables")}</div>
+          {meds.used.map((item) => (
+            <div key={item.key} className="damage__med">
+              <span className="damage__med-name">{item.name}</span>
+              <span className="damage__med-count">{t("pages.match.medCount", { count: item.count })}</span>
+              {/* Absent, not zero: a boost restores no HP itself, and a "+0 HP"
+                  beside an energy drink reads as a wasted use. */}
+              {item.hp != null ? (
+                <span className="damage__med-hp">{t("pages.match.medHp", { hp: item.hp })}</span>
+              ) : null}
+            </div>
+          ))}
+          {meds.boostHp > 0 ? (
+            <div className="damage__med damage__med-regen">
+              <span className="damage__med-name">{t("pages.match.boostRegen")}</span>
+              <span className="damage__med-hp">{t("pages.match.medHp", { hp: meds.boostHp })}</span>
+            </div>
+          ) : null}
+          {meds.other?.length ? (
+            <div className="damage__med-other">
+              {t("pages.match.medOther")}{" "}
+              {meds.other.map((o) => `${o.name} ×${o.count}`).join(", ")}
+            </div>
+          ) : null}
+          <div className="damage__med-context">
+            <span>{t("pages.match.medInZone", { n: meds.inBlueZone, of: meds.totalUses })}</span>
+            <span>{t("pages.match.medInVehicle", { n: meds.inVehicle, of: meds.totalUses })}</span>
+          </div>
+        </div>
+      ) : null}
       {damage.dealtByWeapon?.length ? (
         <div className="damage__weapons">
           <div className="damage__weapons-head">{t("pages.match.byWeapon")}</div>
