@@ -130,11 +130,15 @@ const DamageBreakdown = ({ damage, meds, throws, environment, focalPresent, t })
 
           {environment.vaults || environment.doorsOpened || environment.vending ? (
             <div className="damage__broke-moves">
-              {t("pages.match.brokeMoves", {
-                vaults: environment.vaults,
-                doors: environment.doorsOpened,
-                vending: environment.vending,
-              })}
+              {/* Each part only when it happened: "0 vending machines" is noise,
+                  and the rows above already hide their zeros. */}
+              {[
+                environment.vaults ? t("pages.match.brokeVaults", { n: environment.vaults }) : null,
+                environment.doorsOpened ? t("pages.match.brokeDoors", { n: environment.doorsOpened }) : null,
+                environment.vending ? t("pages.match.brokeVending", { n: environment.vending }) : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </div>
           ) : null}
         </div>

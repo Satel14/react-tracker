@@ -210,3 +210,12 @@ test("labels vehicle damage rather than printing a bare number", () => {
   expect(row.textContent).toContain("pages.match.brokeVehicles");
   expect(row.getAttribute("title")).toBe("pages.match.brokeVehiclesHint");
 });
+
+test("the movement footer omits a part that did not happen", () => {
+  // "0 vending machines" is noise, and every row above already hides its zero.
+  const { container } = withEnv({ ...environment, vending: 0 });
+  const moves = container.querySelector(".damage__broke-moves").textContent;
+  expect(moves).toContain("pages.match.brokeVaults");
+  expect(moves).toContain("pages.match.brokeDoors");
+  expect(moves).not.toContain("pages.match.brokeVending");
+});
