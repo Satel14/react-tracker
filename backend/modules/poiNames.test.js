@@ -57,8 +57,11 @@ test("treats an absent zone as no place, never as a throw", () => {
 
 test("the table itself is well formed", () => {
   const entries = Object.entries(POI_NAMES);
-  assert.ok(entries.length >= 76, `expected the harvested table, got ${entries.length} entries`);
+  assert.ok(entries.length >= 115, `expected the harvested table, got ${entries.length} entries`);
   entries.forEach(([slug, name]) => {
+    // Deston ships spaced slugs ("los arcos"), so a key may contain a space;
+    // what it may never contain is an upper-case letter, since the lookup
+    // lowercases.
     assert.equal(slug, slug.toLowerCase(), `slug ${slug} must be lowercase`);
     assert.equal(typeof name, "string");
     assert.equal(name, name.trim(), `name ${JSON.stringify(name)} must be trimmed`);
@@ -67,5 +70,37 @@ test("the table itself is well formed", () => {
     // layout, so the width itself cannot be tested -- this budget stands in for
     // it. "Sosnovka Military Base", the current longest at 22, measured 131px.
     assert.ok(name.length <= 24, `name ${JSON.stringify(name)} is too long for the kill-feed row`);
+  });
+});
+
+test("keys both forms of a slug PUBG ships two ways", () => {
+  // Deston is the one measured map that emits a flattened AND a spaced form of
+  // the same POI, and either can arrive on a given event. The spaced form is
+  // also what tells us where the words break, so nothing is guessed here.
+  [
+    ["constructionsite", "construction site", "Construction Site"],
+    ["elkoro", "el koro", "El Koro"],
+    ["hydroelectricdam", "hydroelectric dam", "Hydroelectric Dam"],
+  ].forEach(([flat, spaced, name]) => {
+    assert.equal(poiName([flat]), name, flat);
+    assert.equal(poiName([spaced]), name, spaced);
+  });
+});
+
+test("handles the Deston slug that is misspelled upstream", () => {
+  // "losacros" drops a letter the spaced form keeps, so the two are NOT the
+  // same string flattened -- both have to be keyed. Same class of upstream typo
+  // as Miramar's "manisgenerales".
+  assert.notEqual("los arcos".replace(/ /g, ""), "losacros");
+  assert.equal(poiName(["losacros"]), "Los Arcos");
+  assert.equal(poiName(["los arcos"]), "Los Arcos");
+});
+
+test("leaves a slug whose word break is unconfirmed unnamed", () => {
+  // Measured on Vikendi, Sanhok and Deston and deliberately not added: naming
+  // them would be guessing where the words break, and a missing name is the
+  // accepted failure while a wrong one is not.
+  ["laveni", "naros", "dekamesto", "kranik", "lawaki", "banana_01", "sancarna"].forEach((slug) => {
+    assert.equal(poiName([slug]), null, slug);
   });
 });
