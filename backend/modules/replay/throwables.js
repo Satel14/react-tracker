@@ -48,6 +48,11 @@ function extractThrowables(telemetry, clock) {
     const id = ev.attackId;
     if (id == null) continue;
     const amount = Number(ev.damage);
+    // A zero-damage event is a hit that took nothing off, and there are plenty:
+    // 16 of the 27 damage events on a throw in one measured match. Twelve of
+    // those were one molotov burning a victim already at 0 health -- the fire
+    // keeps ticking on a body. Excluded on purpose, because the legend says
+    // "throw that dealt damage" and a line drawn for 0 would contradict it.
     if (!Number.isFinite(amount) || amount <= 0) continue;
     const at = timeOf(ev);
     const point = readPoint(ev.victim?.location);
