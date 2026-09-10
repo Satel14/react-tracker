@@ -143,3 +143,70 @@ test("orders the blocks damage-done first, then what was spent", () => {
     "damage__meds",
   ]);
 });
+
+const environment = {
+  armourBroke: [{ level: 3, count: 1 }, { level: 2, count: 2 }],
+  armourLost: [{ level: 2, count: 1 }],
+  vehicleDamage: 288,
+  windows: 3, fences: 2, vaults: 4, doorsOpened: 12, vending: 1,
+};
+
+const withEnv = (env) => render(
+  <DamageBreakdown damage={damage} meds={meds} throws={throws} environment={env} focalPresent t={t} />
+);
+
+test("renders the armour and property card between grenades and meds", () => {
+  const { container } = withEnv(environment);
+  const order = [...container.querySelector(".damage").children].map((c) => c.className.split(" ")[0]);
+  expect(order).toEqual([
+    "damage__headshot",
+    "damage__cols",
+    "damage__weapons",
+    "damage__throws",
+    "damage__broke",
+    "damage__meds",
+  ]);
+});
+
+test("shows both armour directions and the movement footer", () => {
+  const { container } = withEnv(environment);
+  const card = container.querySelector(".damage__broke");
+  expect(card.querySelector(".damage__broke-armour-broke")).not.toBeNull();
+  expect(card.querySelector(".damage__broke-armour-lost")).not.toBeNull();
+  expect(card.querySelector(".damage__broke-moves")).not.toBeNull();
+});
+
+test("hides a row whose value is zero", () => {
+  // No armour broken in 4 matches of 10, none lost in 7, no vehicle damage in
+  // 5 -- these are ordinary states.
+  const { container } = withEnv({ ...environment, armourLost: [], vehicleDamage: 0, fences: 0 });
+  const card = container.querySelector(".damage__broke");
+  expect(card.querySelector(".damage__broke-armour-lost")).toBeNull();
+  expect(card.querySelector(".damage__broke-vehicles")).toBeNull();
+  expect(card.querySelector(".damage__broke-fences")).toBeNull();
+  expect(card.querySelector(".damage__broke-windows")).not.toBeNull();
+});
+
+test("hides the whole card when nothing happened", () => {
+  const { container } = withEnv({
+    armourBroke: [], armourLost: [], vehicleDamage: 0,
+    windows: 0, fences: 0, vaults: 0, doorsOpened: 0, vending: 0,
+  });
+  expect(container.querySelector(".damage__broke")).toBeNull();
+});
+
+test("survives a payload with no environment at all", () => {
+  const { container } = render(
+    <DamageBreakdown damage={damage} meds={meds} throws={throws} focalPresent t={t} />
+  );
+  expect(container.querySelector(".damage__broke")).toBeNull();
+});
+
+test("labels vehicle damage rather than printing a bare number", () => {
+  // 1429 damage over 10 matches destroyed zero vehicles -- a car has far more
+  // health than a player, so the figure needs saying what it is.
+  const { container } = withEnv(environment);
+  const row = container.querySelector(".damage__broke-vehicles");
+  expect(row.textContent).toContain("pages.match.brokeVehicles");
+  expect(row.getAttribute("title")).toBe("pages.match.brokeVehiclesHint");
+});
