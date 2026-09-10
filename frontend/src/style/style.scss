@@ -6611,6 +6611,36 @@ body {
   &__region-label { color: var(--text-muted); }
   &__region-track { background: var(--border); border-radius: 999px; height: 8px; overflow: hidden; }
   &__region-fill { display: block; height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+  // What the player consumed. Sits between the region columns and the weapon
+  // breakdown: damage taken and HP put back are two halves of one story.
+  &__meds { margin-top: 14px; }
+  &__meds-head {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  &__med {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13px;
+    padding: 3px 0;
+  }
+  &__med-name { color: var(--text); }
+  &__med-count { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  &__med-hp { margin-left: auto; color: var(--ok); font-variant-numeric: tabular-nums; }
+  &__med-regen .damage__med-name { color: var(--text-muted); }
+  &__med-other { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
+  &__med-context {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
   &__region-val { text-align: right; color: var(--text-strong); font-variant-numeric: tabular-nums; }
   &__col:nth-child(1) &__region-fill { background: linear-gradient(90deg, #4fd08a, var(--ok)); }
   &__col:nth-child(2) &__region-fill { background: linear-gradient(90deg, #e06b6b, var(--danger)); }

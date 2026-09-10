@@ -5,6 +5,7 @@ const { isFocalActor, readXY, buildMatchClock } = require("./telemetryUtils");
 const { telemetryWeaponName, canonicalWeaponKey } = require("./weaponMeta");
 const { readMatchContext } = require("./matchContext");
 const { poiName } = require("./poiNames");
+const { itemName } = require("./itemNames");
 
 const analysisCache = new Map();
 const ANALYSIS_CACHE_LIMIT = 30;
@@ -203,6 +204,87 @@ function parseDamage(telemetry, { accountId = null, playerName = null } = {}) {
   return { dealt, taken, dealtByWeapon, headshotDamagePct };
 }
 
+// What the focal player consumed, and where they were standing when they did.
+//
+// The category filter is not optional: ammunition loading is the same
+// LogItemUse event and outnumbers consumables in a real match (605 rounds
+// against 373 consumables in one measured capture).
+//
+// HP is aggregated per ITEM TYPE and never per use. Attributing ticks to an
+// individual use was measured and does not work: two bandages whose apply
+// windows overlap credit each other's ticks, which put a bandage at 31.5 HP
+// against a real 10. Summing each LogHeal exactly once, grouped by itemId, is
+// exact.
+//
+// boostHp is the only inference in here: LogHeal with no item. PUBG has no
+// natural regeneration, so it is almost certainly boost regen, and the UI calls
+// it that rather than claiming the boosts did it.
+function parseMeds(telemetry, { accountId = null, playerName = null } = {}) {
+  const { accountKey, lowerName } = focalKeys({ accountId, playerName });
+  const events = Array.isArray(telemetry) ? telemetry : [];
+
+  const used = new Map();
+  const other = new Map();
+  const hpByItem = new Map();
+  let boostHp = 0;
+  let totalUses = 0;
+  let inBlueZone = 0;
+  let inVehicle = 0;
+
+  for (const ev of events) {
+    if (!ev || typeof ev !== "object") continue;
+
+    if (ev._T === "LogHeal") {
+      if (!isFocalActor(ev.character, accountKey, lowerName)) continue;
+      const amount = Number(ev.healAmount);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      const itemId = ev.item?.itemId;
+      if (itemId) hpByItem.set(itemId, (hpByItem.get(itemId) || 0) + amount);
+      else boostHp += amount;
+      continue;
+    }
+
+    if (ev._T !== "LogItemUse") continue;
+    if (ev.item?.category !== "Use") continue;
+    if (!isFocalActor(ev.character, accountKey, lowerName)) continue;
+
+    const itemId = ev.item?.itemId;
+    const name = itemName(itemId);
+    if (!name) continue;
+
+    totalUses += 1;
+    if (ev.character?.isInBlueZone) inBlueZone += 1;
+    if (ev.character?.isInVehicle) inVehicle += 1;
+
+    const sub = ev.item?.subCategory;
+    const kind = sub === "Heal" ? "heal" : sub === "Boost" ? "boost" : null;
+    const bucket = kind ? used : other;
+    const entry = bucket.get(itemId) || (kind ? { key: itemId, name, kind, count: 0 } : { key: itemId, name, count: 0 });
+    entry.count += 1;
+    bucket.set(itemId, entry);
+  }
+
+  const byCountThenName = (a, b) => b.count - a.count || a.name.localeCompare(b.name);
+
+  const usedRows = [...used.values()]
+    .map((e) => ({
+      ...e,
+      // Null, not 0, for a boost: it restores no HP itself, and a "+0 HP" beside
+      // an energy drink reads as a wasted use.
+      hp: e.kind === "heal" ? Math.round(hpByItem.get(e.key) || 0) : null,
+    }))
+    .sort(byCountThenName);
+
+  return {
+    used: usedRows,
+    boostHp: Math.round(boostHp),
+    other: [...other.values()].sort(byCountThenName),
+    totalUses,
+    inBlueZone,
+    inVehicle,
+  };
+}
+
 function parseTimeline(telemetry, { clock, accountId = null, playerName = null } = {}) {
   // Callable on its own: build the clock here when nobody handed one in,
   // rather than making every caller remember to.
@@ -283,6 +365,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   const scoreboard = parseScoreboard(matchPayload, { accountId, playerName });
   const killFeed = parseKillFeed(telemetry, { clock, accountId, playerName });
   const damage = parseDamage(telemetry, { accountId, playerName });
+  const meds = parseMeds(telemetry, { accountId, playerName });
   const timeline = parseTimeline(telemetry, { clock, accountId, playerName });
 
   const { region, weather } = readMatchContext(telemetry);
@@ -301,6 +384,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
     scoreboard,
     killFeed,
     damage,
+    meds,
     timeline,
   };
 
@@ -313,4 +397,4 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   return result;
 }
 
-module.exports = { getMatchAnalysis, parseScoreboard, parseKillFeed, parseDamage, parseTimeline };
+module.exports = { getMatchAnalysis, parseScoreboard, parseKillFeed, parseDamage, parseMeds, parseTimeline };

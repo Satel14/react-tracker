@@ -407,7 +407,7 @@ const MatchReplayPage = ({ t }) => {
           label: t("pages.match.tabDamage"),
           children: renderAnalysisPane(
             <MatchAnalysisSkeleton tab="damage" label={t("pages.match.loading")} />,
-            (a) => <DamageBreakdown damage={a.damage} focalPresent={!!a.focalAccountId} t={t} />
+            (a) => <DamageBreakdown damage={a.damage} meds={a.meds} focalPresent={!!a.focalAccountId} t={t} />
           ),
         },
         {
