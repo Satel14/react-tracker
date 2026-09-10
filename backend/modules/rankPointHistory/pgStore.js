@@ -1,4 +1,5 @@
 const { isConfigured, getPool } = require("../db/pool");
+const { recordDbError, recordDbOk } = require("../db/health");
 const { sameValues } = require("./reading");
 
 const SNAPSHOT_LIMIT = 100;
@@ -91,6 +92,7 @@ function rowToSnapshot(row = {}) {
 async function loadSeries({ shard, accountId, seasonId }, limit = SNAPSHOT_LIMIT) {
   await ensureTable();
   const { rows } = await getPool().query(SELECT_SQL, [shard, accountId, seasonId, limit]);
+  recordDbOk("rank-point-history");
   return rows.map(rowToSnapshot).reverse();
 }
 
@@ -115,6 +117,7 @@ async function recordReading({ shard, accountId, seasonId }, reading, { latest =
     return { changed: true };
   } catch (e) {
     console.log(`[RP] Postgres write failed: ${e.message}`);
+    recordDbError("rank-point-history", e.message);
     return { changed: false, error: e.message };
   }
 }

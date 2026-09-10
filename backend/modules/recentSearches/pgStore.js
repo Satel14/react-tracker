@@ -1,4 +1,5 @@
 const { isConfigured, getPool, createPool, __setPool } = require("../db/pool");
+const { recordDbError, recordDbOk } = require("../db/health");
 const { normalizeRecentEntry } = require("./normalize");
 
 const CREATE_TABLE_SQL = `
@@ -78,9 +79,11 @@ async function getRecentSearches(limit) {
     const safeLimit = Number(limit);
     const effectiveLimit = Number.isFinite(safeLimit) && safeLimit > 0 ? safeLimit : null;
     const { rows } = await getPool().query(SELECT_SQL, [effectiveLimit]);
+    recordDbOk("recent-searches");
     return rows.map(rowToEntry).map(normalizeRecentEntry).filter(Boolean);
   } catch (e) {
     console.log(`[RECENT] Postgres read failed: ${e.message}`);
+    recordDbError("recent-searches", e.message);
     return [];
   }
 }
@@ -101,9 +104,11 @@ async function addRecentSearch(normalized, maxItems) {
       Date.now(),
     ]);
     await getPool().query(TRIM_SQL, [maxItems]);
+    recordDbOk("recent-searches");
     return await getRecentSearches(maxItems);
   } catch (e) {
     console.log(`[RECENT] Postgres write failed: ${e.message}`);
+    recordDbError("recent-searches", e.message);
     return [];
   }
 }

@@ -1,6 +1,7 @@
 const fileStore = require("./fileStore");
 const pgStore = require("./pgStore");
 const { MAX_RECENT_SEARCHES, normalizeRecentEntry } = require("./normalize");
+const { isDbFailing } = require("../db/health");
 
 // Every home-page visit reads this list, but it only changes when somebody looks
 // a player up, so a short TTL keeps the endpoint off Postgres without making the
@@ -17,6 +18,26 @@ const inFlightRecentRequests = new Map();
 
 function getStore() {
   return pgStore.isConfigured() ? pgStore : fileStore;
+}
+
+// Postgres answered with nothing AND reported a failure doing so.
+//
+// The file store is not a second copy of the live list -- it is whatever was
+// committed to the repo, so it is stale by definition and frozen until the next
+// deploy. It is still the better answer: the block on the home page is a list of
+// player names, and twenty real ones from last week beat "N/A" while the
+// database is unreachable. Only reached when the failure is real; a genuinely
+// empty table still reads as empty.
+async function readWithFallback(limit) {
+  const store = getStore();
+  const data = await store.getRecentSearches(limit);
+  if (data.length || store !== pgStore || !isDbFailing()) return data;
+
+  const fallback = await fileStore.getRecentSearches(limit);
+  if (fallback.length) {
+    console.log(`[RECENT] Postgres unavailable, serving ${fallback.length} committed entries`);
+  }
+  return fallback;
 }
 
 function getFreshEntry(limit) {
@@ -36,7 +57,7 @@ async function getRecentSearches(limit = 10) {
 
   const run = (async () => {
     try {
-      const data = await getStore().getRecentSearches(limit);
+      const data = await readWithFallback(limit);
       recentCache.set(limit, { data, timestamp: Date.now() });
       return data;
     } catch (e) {
