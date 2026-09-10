@@ -57,7 +57,7 @@ test("treats an absent zone as no place, never as a throw", () => {
 
 test("the table itself is well formed", () => {
   const entries = Object.entries(POI_NAMES);
-  assert.ok(entries.length >= 115, `expected the harvested table, got ${entries.length} entries`);
+  assert.ok(entries.length >= 118, `expected the harvested table, got ${entries.length} entries`);
   entries.forEach(([slug, name]) => {
     // Deston ships spaced slugs ("los arcos"), so a key may contain a space;
     // what it may never contain is an upper-case letter, since the lookup
