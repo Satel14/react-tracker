@@ -199,6 +199,33 @@ test("says collection has started when no tier is publishable yet", async () => 
   expect(container.textContent).toContain("43");
 });
 
+// What the first run after a reset actually produced: a day of lobbies played
+// under season 42, measured against the ladder of season 43, which had opened
+// that morning. Nobody had placed, so the unranked bucket held every account
+// in the sample and cleared the publication bar on its own -- 2,001 accounts,
+// interval ±0.1, and not one rung of the ladder measured.
+test("says collection has started when the only publishable row is the unranked bucket", async () => {
+  const unplaced = {
+    ...SAMPLE,
+    seasonId: "division.bro.official.pc-2018-43",
+    accounts: 2001,
+    matches: 134,
+    windows: 1,
+    firstDate: "2026-09-08",
+    lastDate: "2026-09-08",
+    tiers: [
+      { tier: "unranked", count: 2001, share: 1, low: 0.998, high: 1, n: 2001,
+        effectiveN: 2001, designEffect: 1, publishable: true },
+    ],
+  };
+  const { container } = show(unplaced);
+
+  await screen.findByText(/just started/i);
+  expect(rows(container)).toHaveLength(0);
+  expect(container.textContent).not.toContain("100.0%");
+  expect(container.textContent).toContain("43");
+});
+
 test("asks for nothing at all when there is no sample yet", async () => {
   const { container } = show({ ...SAMPLE, accounts: 0, matches: 0, windows: 0, tiers: [] });
   await screen.findByText(/just started/i);

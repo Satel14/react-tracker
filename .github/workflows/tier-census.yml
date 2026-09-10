@@ -117,16 +117,18 @@ jobs:
           stored=$(printf '%s' "$status" | jq -r '.data.result.stored // 0')
           aborted=$(printf '%s' "$status" | jq -r '.data.result.aborted // false')
           skipped=$(printf '%s' "$status" | jq -r '.data.result.skipped // false')
+          why=$(printf '%s' "$status" | jq -r '.data.result.skipReason // "it is already in the table"')
 
           if [ -z "$window" ] || [ "$window" = "null" ]; then
             echo "::error::the census finished without reporting a window"
             exit 1
           fi
 
-          # Nothing stored and nothing wrong: the API found the day already in
-          # the table and stopped before spending a single player read.
+          # Nothing stored and nothing wrong: the day was already in the table,
+          # or it straddles a season reset and belongs to neither season.
+          # Either way the run stopped before spending a single player read.
           if [ "$skipped" = "true" ]; then
-            echo "::notice::$window is already collected; the run stopped without spending quota"
+            echo "::notice::$window was not collected -- $why; the run stopped without spending quota"
             exit 0
           fi
           if [ "$stored" -eq 0 ]; then
@@ -149,8 +151,15 @@ jobs:
           # and the live fetch then cannot differ in shape, only in age.
           body=$(curl -sS -m 120 "$API/api/census/distribution?days=7")
 
+          # A publishable tier is not enough: it has to be a tier on the
+          # ladder. The first run after a reset measures a day of the previous
+          # season's lobbies against the new season's ladder, and the unranked
+          # bucket comes back holding 100% of the sample -- publishable by
+          # every test, and not a distribution. Committing that once was enough
+          # to put "Unranked 100.0%" in the static HTML and in the two data
+          # files people are asked to cite.
           usable=$(printf '%s' "$body" | jq -r \
-            '(.status == 200) and ((.data.tiers // []) | map(select(.publishable)) | length > 0)' \
+            '(.status == 200) and ((.data.tiers // []) | map(select(.publishable and .tier != "unranked")) | length > 0)' \
             2>/dev/null || echo false)
           if [ "$usable" != "true" ]; then
             echo "::warning::the distribution came back unusable; keeping the committed reading"

@@ -2,6 +2,8 @@ process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test_key";
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const path = require("node:path");
+const fs = require("node:fs");
 const { createCensusController } = require("../controllers/census");
 
 const TOKEN = "a-census-token";
@@ -40,6 +42,11 @@ const build = (over = {}) => createCensusController({
   readLatestSeason: async () => null,
   readRankPoints: async () => [],
   currentSeason: async () => SEASON,
+  // Stubbed in the shared builder rather than per test: the real ones reach
+  // PUBG's catalog and the season-dates file, and no unit test here wants
+  // either. The tests about a rollover set them explicitly.
+  previousSeason: async () => null,
+  startDateOf: () => null,
   token: () => TOKEN,
   ...over,
 });
@@ -199,6 +206,32 @@ test("the run hands the collector a way to check the window against the store", 
     seasonId: "division.bro.official.pc-2018-42",
     windowDate: "2026-08-30",
   }], "the guard has to name the shard and season it is asking about");
+
+  // And when the window turns out to belong to the season before, the guard
+  // has to ask about that one -- otherwise it answers about a day nobody is
+  // going to write.
+  await options.windowCollected("2026-09-08", "division.bro.official.pc-2018-41");
+  assert.equal(asked[1].seasonId, "division.bro.official.pc-2018-41");
+});
+
+// The only path an observation has into Postgres. Nothing else in the run
+// would notice it missing: the collector logs no batch, the status reports the
+// zero it was handed, and the job's "stored no rows" check would be the first
+// thing to speak up -- an hour of quota later.
+test("the run hands the collector somewhere to put what it reads", async () => {
+  let options = null;
+  const written = [];
+  const controller = build({
+    collect: async (o) => { options = o; return collected(); },
+    store: async (batch) => { written.push(batch); return batch.length; },
+  });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.equal(typeof options.onObservations, "function", "the collector was given nowhere to write");
+  assert.equal(await options.onObservations([{ accountId: "a" }]), 1);
+  assert.deepEqual(written, [[{ accountId: "a" }]]);
 });
 
 test("a skipped run says so instead of looking like an empty one", async () => {
@@ -216,6 +249,25 @@ test("a skipped run says so instead of looking like an empty one", async () => {
   assert.equal(res.body.data.state, "done");
   assert.equal(res.body.data.result.skipped, true);
   assert.equal(res.body.data.result.stored, 0);
+});
+
+// Two runs skip: one over a day already in the table, one over a day no season
+// owns. They cost different things and mean different things, and the job's
+// log is the only place anyone will look.
+test("a skipped run says why it skipped", async () => {
+  const controller = build({
+    collect: async () => collected({
+      matchesSeen: 0, rankedMatches: 0, observations: [], stored: 0, calls: 1,
+      skipped: true, skipReason: "no season owns this window",
+    }),
+  });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  const res = makeRes();
+  await controller.getStatus(authed, res);
+  assert.equal(res.body.data.result.skipReason, "no season owns this window");
 });
 
 test("an ordinary run is not reported as skipped", async () => {
@@ -286,6 +338,110 @@ test("a catalog that cannot answer does not stop the run", async () => {
   assert.match(options.seasonId, /^division\.bro\.official\.pc-\d{4}-\d+$/);
 });
 
+// --- the two days a rollover touches ---
+//
+// The sample is two days old, so for the first days of a season the day being
+// collected was played under the previous one. Tagging it with the season that
+// opened this morning reads every one of those players as unranked and stores
+// a day of sample as a measurement of nothing.
+
+const acrossTheReset = (over = {}) => build({
+  currentSeason: async () => "division.bro.official.pc-2018-43",
+  previousSeason: async () => "division.bro.official.pc-2018-42",
+  startDateOf: () => "2026-09-10T08:30:00Z",
+  ...over,
+});
+
+test("measures a sample day from before the reset against the season it was played in", async () => {
+  let options = null;
+  const controller = acrossTheReset({ collect: async (o) => { options = o; return collected(); } });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.equal(options.seasonFor("2026-09-08"), "division.bro.official.pc-2018-42");
+});
+
+test("measures a sample day after the reset against the new season", async () => {
+  let options = null;
+  const controller = acrossTheReset({ collect: async (o) => { options = o; return collected(); } });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.equal(options.seasonFor("2026-09-12"), "division.bro.official.pc-2018-43");
+});
+
+test("leaves the day the season opened to neither season", async () => {
+  let options = null;
+  const controller = acrossTheReset({ collect: async (o) => { options = o; return collected(); } });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.equal(options.seasonFor("2026-09-10"), null);
+});
+
+// The override means "collect for exactly this season", which is also how a
+// day lost to the rule above can be backfilled by hand.
+test("an override pins every window to the season it names", async () => {
+  const previous = process.env.PUBG_CENSUS_SEASON;
+  process.env.PUBG_CENSUS_SEASON = "division.bro.official.pc-2018-42";
+  try {
+    let options = null;
+    const controller = acrossTheReset({ collect: async (o) => { options = o; return collected(); } });
+
+    await controller.runCensus(authed, makeRes());
+    await controller.__idle();
+
+    assert.equal(options.seasonFor("2026-09-10"), "division.bro.official.pc-2018-42");
+    assert.equal(options.seasonFor("2026-09-12"), "division.bro.official.pc-2018-42");
+  } finally {
+    if (previous === undefined) delete process.env.PUBG_CENSUS_SEASON;
+    else process.env.PUBG_CENSUS_SEASON = previous;
+  }
+});
+
+// Same posture as the current-season lookup beside it: a catalog that cannot
+// answer costs the rule its previous season, not the run.
+test("a catalog that cannot name the previous season still collects the new one", async () => {
+  let options = null;
+  const controller = acrossTheReset({
+    collect: async (o) => { options = o; return collected(); },
+    previousSeason: async () => { throw new Error("PUBG API error: 503"); },
+  });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.equal(options.seasonFor("2026-09-12"), "division.bro.official.pc-2018-43");
+  assert.equal(options.seasonFor("2026-09-08"), null, "an unattributable day is skipped, not guessed");
+});
+
+// The last-resort season, reached only when the catalog cannot be asked. It is
+// a hardcoded id, so it goes stale in exactly one place and on exactly one
+// day: the rollover. season-dates.json is updated by hand for that same
+// rollover, which makes it the thing to check against.
+test("the last-resort season is the newest one the dates file knows about", async () => {
+  const config = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "json", "season-dates.json"), "utf8"),
+  );
+  const newest = Object.keys(config.seasons).sort(
+    (a, b) => Number(a.match(/(\d+)$/)[1]) - Number(b.match(/(\d+)$/)[1]),
+  ).pop();
+
+  let options = null;
+  const controller = build({
+    collect: async (o) => { options = o; return collected(); },
+    currentSeason: async () => { throw new Error("PUBG API error: 503"); },
+  });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.equal(options.seasonId, newest);
+});
+
 test("asks the catalog once for the run, not once per player", async () => {
   let asked = 0;
   const controller = build({
@@ -337,6 +493,25 @@ test("a season too new to mean anything falls back to the last one with data", a
   assert.equal(res.body.data.seasonId, "division.bro.official.pc-2018-42");
   assert.equal(res.body.data.current, false, "the page has to be able to say so");
   assert.deepEqual(asked, ["division.bro.official.pc-2018-43", "division.bro.official.pc-2018-42"]);
+});
+
+// The store cannot work out on its own which season it must not answer with,
+// and on a rollover day the new season is the one holding the newest row.
+test("tells the store which season it is stepping off, and how thin is too thin", async () => {
+  let asked = null;
+  const controller = build({
+    currentSeason: async () => "division.bro.official.pc-2018-43",
+    readCoverage: async () => coverage({ windows: 1, matches: 90 }),
+    readLatestSeason: async (query) => { asked = query; return null; },
+  });
+
+  await controller.getDistribution({ query: {} }, makeRes());
+
+  assert.deepEqual(asked, {
+    shard: "steam",
+    exclude: "division.bro.official.pc-2018-43",
+    minWindows: 3,
+  });
 });
 
 test("does not fall back when there is nothing older to fall back to", async () => {

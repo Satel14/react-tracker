@@ -42,6 +42,10 @@ const sampleWindowStart = (at) => `${new Date(at - 48 * 3600 * 1000).toISOString
 const collect = async ({
   shard,
   seasonId,
+  // Which season this particular sample day should be measured against. Only
+  // the caller can answer it, and only once PUBG has named the window, so it
+  // arrives as a function rather than as the season itself.
+  seasonFor,
   apiKey,
   fetch: doFetch,
   sleep,
@@ -119,6 +123,17 @@ const collect = async ({
   const sample = await sampleResponse.json();
   const windowDate = (sample?.data?.attributes?.createdAt ?? "").slice(0, 10) || null;
 
+  // A day that straddles a reset belongs to neither season, and the one metered
+  // call already spent is the whole cost of finding that out. Everything below
+  // stores under, and reads out of, this season rather than the one the run
+  // started with.
+  const season = seasonFor ? seasonFor(windowDate) : seasonId;
+  if (!season) {
+    return { windowDate, matchesSeen: 0, rankedMatches: 0, matchesFailed: 0, playersFailed: 0,
+      observations: [], stored: 0, aborted: false, skipped: true,
+      skipReason: "no season owns this window", ...pacer.stats() };
+  }
+
   // A day already in the store can only give back players from lobbies we drew
   // last time: the extra rows sit in the same clusters, so the design effect
   // climbs about as fast as the count and the hour of quota buys nothing. A
@@ -127,7 +142,7 @@ const collect = async ({
   let collected = false;
   if (windowCollected && windowDate) {
     try {
-      collected = Boolean(await windowCollected(windowDate));
+      collected = Boolean(await windowCollected(windowDate, season));
     } catch (error) {
       console.log(`[census] could not check whether ${windowDate} is collected: ${error.message}`);
     }
@@ -164,7 +179,7 @@ const collect = async ({
 
     const { matchId, accountId } = queue[i];
     const response = await metered(
-      `${BASE}/${shard}/players/${accountId}/seasons/${seasonId}/ranked`,
+      `${BASE}/${shard}/players/${accountId}/seasons/${season}/ranked`,
     );
     if (!response || response.status !== 200) {
       playersFailed += 1;
@@ -179,7 +194,7 @@ const collect = async ({
     // impossible and quietly bias the denominator.
     observations.push({
       shard,
-      seasonId,
+      seasonId: season,
       windowDate,
       matchId,
       accountId,

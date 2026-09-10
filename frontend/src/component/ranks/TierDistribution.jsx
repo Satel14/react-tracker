@@ -2,18 +2,22 @@ import React, { useEffect, useState } from "react";
 import { getLanguage } from "react-switch-lang";
 import { getRankDistribution } from "../../api/census";
 import { RANK_LADDER } from "../../helpers/rankLadder";
-import { CENSUS_SNAPSHOT, effectiveReadings, usableSnapshot } from "../../helpers/censusSnapshot";
+import {
+  CENSUS_SNAPSHOT,
+  UNRANKED,
+  effectiveReadings,
+  hasLadderReading,
+  usableSnapshot,
+} from "../../helpers/censusSnapshot";
 import {
   CENSUS_DATA_URL,
   CENSUS_CSV_URL,
   CENSUS_DATA_PUBLISHED,
 } from "../../helpers/censusDataFiles";
 
-// Players with no ranked record who turned up in a ranked lobby. Kept as its
-// own row rather than dropped: removing them would quietly shrink the
-// denominator every other share is measured against.
-const UNRANKED = "unranked";
-
+// The unranked bucket -- players with no ranked record who turned up in a
+// ranked lobby -- is kept as its own row rather than dropped: removing them
+// would quietly shrink the denominator every other share is measured against.
 const ROWS = [...RANK_LADDER.map((tier) => tier.key), UNRANKED];
 
 // "division.bro.official.pc-2018-42" -> "42". The dictionaries supply the word
@@ -100,7 +104,13 @@ const TierDistribution = ({
 
   // Every season rollover passes through here. Naming the season is what makes
   // the empty section read as a calendar event rather than as a broken page.
-  if (!publishable.length) {
+  //
+  // A reading whose only publishable row is the unranked bucket lands here
+  // too. That is what the first sample of a new season looks like -- nobody
+  // has placed, so 100% of it is unplaced -- and drawing it as a full-width
+  // bar would answer "where do players sit on the ladder" with a row that is
+  // not on the ladder.
+  if (!hasLadderReading(data)) {
     return (
       <p className="ranks-page__share-note">
         {t("pages.ranks.distribution.gathering", { season: seasonNumber(data.seasonId) })}

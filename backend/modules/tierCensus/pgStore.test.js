@@ -218,17 +218,54 @@ test("reports nothing collected when the query fails", async () => {
 // the page falls back to the last season that has something to say -- and this
 // is how it finds it.
 
-test("names the season the newest window belongs to", async () => {
+test("names the most recent season that has something to say", async () => {
   const pool = fakePool(() => ({ rows: [{ season_id: "division.bro.official.pc-2018-42" }] }));
   __setPool(pool);
 
-  assert.equal(await readLatestSeason({ shard: "steam" }), "division.bro.official.pc-2018-42");
+  const latest = await readLatestSeason({
+    shard: "steam",
+    exclude: "division.bro.official.pc-2018-43",
+    minWindows: 3,
+  });
+
+  assert.equal(latest, "division.bro.official.pc-2018-42");
   const asked = pool.calls.find(
     (call) => /tier_census_observations/.test(call.text) && !/CREATE/.test(call.text)
   );
   assert.ok(asked, "no question was asked");
-  assert.deepEqual(asked.params, ["steam"]);
-  assert.match(asked.text, /ORDER BY window_date DESC/);
+  assert.deepEqual(asked.params, ["steam", "division.bro.official.pc-2018-43", 3]);
+  assert.match(asked.text, /ORDER BY MAX\(window_date\) DESC/);
+});
+
+// The whole point of the fallback is to step off the season being served, and
+// on the day a season turns over that season owns the newest row in the table.
+// Ordering by window_date alone therefore answered with the very season the
+// caller was trying to get away from, and the page published a day of nobody
+// having placed yet as if it were the ladder.
+test("never names the season it was asked to step off", async () => {
+  const pool = fakePool(() => ({ rows: [] }));
+  __setPool(pool);
+
+  await readLatestSeason({
+    shard: "steam",
+    exclude: "division.bro.official.pc-2018-43",
+    minWindows: 3,
+  });
+
+  const asked = pool.calls.find((call) => /SELECT/.test(call.text) && !/CREATE/.test(call.text));
+  assert.match(asked.text, /season_id <> \$2/, "the served season is not excluded in SQL");
+});
+
+// A season with one day behind it is exactly what the caller is falling back
+// FROM. Handing back another of the same is not an answer.
+test("skips a season too thin to stand in for the one being served", async () => {
+  const pool = fakePool(() => ({ rows: [] }));
+  __setPool(pool);
+
+  await readLatestSeason({ shard: "steam", exclude: "s43", minWindows: 3 });
+
+  const asked = pool.calls.find((call) => /SELECT/.test(call.text) && !/CREATE/.test(call.text));
+  assert.match(asked.text, /HAVING COUNT\(DISTINCT window_date\) >= \$3/);
 });
 
 test("names no season when the table is empty", async () => {
