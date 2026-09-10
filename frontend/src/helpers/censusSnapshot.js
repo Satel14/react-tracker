@@ -23,6 +23,21 @@ import snapshot from "../data/tierCensus.json";
 export const snapshotSeasonNumber = (data = snapshot) =>
   (typeof data?.seasonId === "string" && data.seasonId.match(/(\d+)\s*$/)?.[1]) || "";
 
+// Players with no ranked record who turned up in a ranked lobby. A row of the
+// table like any other, but never a distribution on its own.
+export const UNRANKED = "unranked";
+
+// Whether a reading is a tier distribution at all.
+//
+// The unranked bucket is deliberately excluded. On the first day of a season
+// the census measures a sample of lobbies played under the previous one
+// against the new season's ladder, and every player in it comes back unplaced:
+// a reading of 100% unranked, publishable by every statistical test, and an
+// answer to a question nobody asked. The page's subject is where players sit
+// on the ladder, so at least one rung of it has to be measured.
+export const hasLadderReading = (data) =>
+  (data?.tiers ?? []).some((row) => row?.publishable && row.tier !== UNRANKED);
+
 // Whether a reading can stand in a static file for a day or two.
 //
 // The bar is not "did the request succeed" but "is this still true tomorrow".
@@ -34,7 +49,7 @@ export const snapshotSeasonNumber = (data = snapshot) =>
 export const usableSnapshot = (data) => {
   if (!data || typeof data !== "object") return null;
   if (!Array.isArray(data.tiers)) return null;
-  if (!data.tiers.some((row) => row?.publishable)) return null;
+  if (!hasLadderReading(data)) return null;
   if (!data.firstDate || !data.lastDate) return null;
   if (!(Number(data.accounts) > 0)) return null;
   return data;

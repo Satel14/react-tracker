@@ -50,6 +50,30 @@ describe("usableSnapshot", () => {
     expect(usableSnapshot(snapshot({ tiers: [] }))).toBeNull();
   });
 
+  // What a reading looks like when a day of season 42 lobbies is measured
+  // against the ladder of a season that opened that morning: everybody comes
+  // back unplaced, and the one row that clears the publication bar says 100%
+  // unranked. It is arithmetically fine and it is not a tier distribution --
+  // the page's whole subject is where players sit on the ladder.
+  it("refuses one where the only publishable row is the unranked bucket", () => {
+    const unplaced = snapshot({
+      seasonId: "division.bro.official.pc-2018-43",
+      accounts: 2001,
+      windows: 1,
+      tiers: [tier({ tier: "unranked", count: 2001, share: 1, low: 0.998, high: 1 })],
+    });
+
+    expect(usableSnapshot(unplaced)).toBeNull();
+  });
+
+  it("accepts one where a ladder tier is publishable alongside the unranked bucket", () => {
+    const mixed = snapshot({
+      tiers: [tier({ tier: "unranked" }), tier({ tier: "gold" })],
+    });
+
+    expect(usableSnapshot(mixed)).toEqual(mixed);
+  });
+
   it("refuses one that cannot date itself", () => {
     expect(usableSnapshot(snapshot({ firstDate: null }))).toBeNull();
     expect(usableSnapshot(snapshot({ lastDate: "" }))).toBeNull();

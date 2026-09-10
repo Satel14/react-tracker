@@ -5,7 +5,8 @@ const {
   recordObservations, readWindow, readCoverage, isWindowCollected, readLatestSeason,
   readRankPoints,
 } = require("../modules/tierCensus/pgStore");
-const { getCurrentSeasonId } = require("../modules/getSeasonCatalog");
+const { getCurrentSeasonId, getSeasonCatalog } = require("../modules/getSeasonCatalog");
+const { seasonForWindow, previousSeasonId, seasonStartDate } = require("../modules/tierCensus/seasonWindow");
 const { estimateIcc, PER_MATCH } = require("../modules/tierCensus/sampling");
 const { tierShare, rpThresholds } = require("../modules/tierCensus/stats");
 
@@ -30,7 +31,9 @@ const MIN_WINDOWS = 3;
 
 // Last resort only. Reached when PUBG's catalog cannot be asked and no override
 // is set: wrong for at most one run, and the next run is what corrects it.
-const FALLBACK_SEASON = "division.bro.official.pc-2018-42";
+// Kept in step with json/season-dates.json, which a rollover updates anyway --
+// censusController.test.js fails when the two drift.
+const FALLBACK_SEASON = "division.bro.official.pc-2018-43";
 
 // What a poll is allowed to see. The raw observations are a couple of thousand
 // rows and belong in Postgres, not in a status response.
@@ -46,6 +49,7 @@ const summarise = (result) => ({
   rateLimited: result.rateLimited,
   aborted: result.aborted,
   skipped: Boolean(result.skipped),
+  skipReason: result.skipReason,
 });
 
 const createCensusController = ({
@@ -57,6 +61,11 @@ const createCensusController = ({
   readRankPoints: doReadRankPoints = readRankPoints,
   windowCollected = isWindowCollected,
   currentSeason = () => getCurrentSeasonId(SHARD),
+  // The same catalog the line above reads, and the same cached fetch: the
+  // rollover rule needs the season below the current one to attribute a sample
+  // day played before the reset.
+  previousSeason = async () => previousSeasonId(await getSeasonCatalog(SHARD)),
+  startDateOf = seasonStartDate,
   token = () => process.env.CENSUS_TOKEN,
 } = {}) => {
   const runner = createRunner({ collect: doCollect });
@@ -74,6 +83,26 @@ const createCensusController = ({
     }
     return FALLBACK_SEASON;
   };
+  // Which season a given sample day should be measured against, decided once
+  // per run. The collector cannot decide it: PUBG names the window, and it
+  // only does that once the run's first call has already been spent.
+  const windowSeason = async (season) => {
+    // A pinned season means "collect for exactly this one", which is also how
+    // a day the rule below declines to attribute gets backfilled by hand.
+    if (process.env.PUBG_CENSUS_SEASON) return () => season;
+
+    let previous = null;
+    try {
+      previous = await previousSeason();
+    } catch (error) {
+      console.log(`[census] could not resolve the previous season: ${error.message}`);
+    }
+
+    const startDate = startDateOf(season);
+    return (windowDate) =>
+      seasonForWindow({ windowDate, currentSeasonId: season, previousSeasonId: previous, startDate });
+  };
+
   let inFlight = Promise.resolve();
 
   // 404 rather than 401, on both guarded routes: an unauthorised caller learns
@@ -95,12 +124,17 @@ const createCensusController = ({
     const started = runner.start({
       shard: SHARD,
       seasonId: season,
+      seasonFor: await windowSeason(season),
       apiKey: process.env.PUBG_API_KEY,
       fetch: globalThis.fetch,
       sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
       deadlineMs: RUN_DEADLINE_MS,
       onObservations: store,
-      windowCollected: (windowDate) => windowCollected({ shard: SHARD, seasonId: season, windowDate }),
+      // The season the collector settled on, not the one the run opened with:
+      // asking about a day under a season nothing will be written to answers
+      // about the wrong rows.
+      windowCollected: (windowDate, forSeason) =>
+        windowCollected({ shard: SHARD, seasonId: forSeason || season, windowDate }),
     });
 
     if (started.done) inFlight = started.done;
@@ -142,7 +176,11 @@ const createCensusController = ({
 
       // Too new to say anything: stand on the last season that can.
       if (coverage.windows < MIN_WINDOWS) {
-        const latest = await doReadLatestSeason({ shard: SHARD });
+        const latest = await doReadLatestSeason({
+          shard: SHARD,
+          exclude: season,
+          minWindows: MIN_WINDOWS,
+        });
         if (latest && latest !== season) {
           season = latest;
           coverage = await doReadCoverage({ shard: SHARD, seasonId: season, days });

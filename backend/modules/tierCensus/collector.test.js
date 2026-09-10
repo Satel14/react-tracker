@@ -374,6 +374,58 @@ test("collects as usual when no guard is attached", async () => {
   assert.equal(result.observations.length, 30);
 });
 
+// --- which season the sample day is measured against ---
+//
+// The sample is two days old and the ladder being read is today's. Every day
+// but two in a season those are the same season, and on the two around a reset
+// they are not: tiers read out of a season that opened this morning, for
+// players drawn from lobbies played under the last one, come back empty for
+// all of them. The caller decides; the collector cannot, because it does not
+// know the window date until PUBG answers.
+
+test("stores the sample under the season the caller picks for that window", async () => {
+  const api = fakeApi({ matchTypes: competitive(1) });
+  const result = await run(api, { seasonId: "season-current", seasonFor: () => "season-before" });
+
+  assert.equal(result.observations[0].seasonId, "season-before");
+  assert.ok(
+    api.asked.some((url) => url.includes("/seasons/season-before/ranked")),
+    "the tier was read out of the wrong season's ladder",
+  );
+});
+
+test("offers the window PUBG returned when it asks which season that is", async () => {
+  const api = fakeApi({ matchTypes: competitive(1) });
+  const seen = [];
+  await run(api, { seasonFor: (windowDate) => { seen.push(windowDate); return SEASON; } });
+
+  assert.deepEqual(seen, ["2026-08-30"]);
+});
+
+test("spends nothing on a sample day that belongs to no season", async () => {
+  const api = fakeApi({ matchTypes: competitive(4) });
+  const result = await run(api, { seasonFor: () => null });
+
+  assert.equal(result.skipped, true);
+  assert.equal(result.skipReason, "no season owns this window");
+  assert.equal(result.windowDate, "2026-08-30", "the window still has to be reported");
+  assert.equal(result.observations.length, 0);
+  assert.equal(api.asked.filter((u) => u.includes("/matches/")).length, 0, "no match was classified");
+  assert.equal(api.asked.filter((u) => u.includes("/ranked")).length, 0, "no player was read");
+});
+
+test("asks the collected-guard about the season it would store under", async () => {
+  const api = fakeApi({ matchTypes: competitive(1) });
+  const seen = [];
+  await run(api, {
+    seasonId: "season-current",
+    seasonFor: () => "season-before",
+    windowCollected: async (windowDate, seasonId) => { seen.push({ windowDate, seasonId }); return false; },
+  });
+
+  assert.deepEqual(seen, [{ windowDate: "2026-08-30", seasonId: "season-before" }]);
+});
+
 // Losing a day because the database blinked is worse than reading it twice.
 test("a guard that throws lets the run go ahead", async () => {
   const api = fakeApi({ matchTypes: competitive(2) });

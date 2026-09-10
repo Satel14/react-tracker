@@ -53,14 +53,22 @@ const INSERT_SQL = `
 // PUBG's sample lags a day and a run can be missed, so counting back from
 // CURRENT_DATE would quietly return six days of data when asked for seven --
 // and the page prints that number as part of its methodology.
-// Which season the table has most recently heard from. For the first days of a
-// new season its own rows only say that nobody has placed yet, so the page
-// falls back to the last season that has something to report.
+// The most recent season that can stand in for the one being served. For the
+// first days of a new season its own rows only say that nobody has placed yet,
+// so the page falls back to the last season with something to report.
+//
+// Both conditions are load-bearing. Ordering by window_date alone named the
+// season with the newest row, which on a rollover day is the new season itself
+// -- the very one the caller is stepping off -- so the fallback could never
+// fire. And a candidate with a day or two behind it is no better than what it
+// would replace, which is why it has to clear the same bar.
 const SELECT_LATEST_SEASON_SQL = `
   SELECT season_id
   FROM tier_census_observations
-  WHERE shard = $1
-  ORDER BY window_date DESC
+  WHERE shard = $1 AND season_id <> $2
+  GROUP BY season_id
+  HAVING COUNT(DISTINCT window_date) >= $3
+  ORDER BY MAX(window_date) DESC
   LIMIT 1
 `;
 
@@ -190,11 +198,11 @@ async function isWindowCollected({ shard, seasonId, windowDate }) {
   }
 }
 
-async function readLatestSeason({ shard }) {
+async function readLatestSeason({ shard, exclude = "", minWindows = 1 }) {
   if (!isConfigured()) return null;
   try {
     await ensureTable();
-    const result = await getPool().query(SELECT_LATEST_SEASON_SQL, [shard]);
+    const result = await getPool().query(SELECT_LATEST_SEASON_SQL, [shard, exclude, minWindows]);
     return result?.rows?.[0]?.season_id ?? null;
   } catch (error) {
     console.log(`[census] could not read the latest season: ${error.message}`);
