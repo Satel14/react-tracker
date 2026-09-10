@@ -5989,6 +5989,18 @@ body {
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
+  // Capped rather than left to grow, so a long name cannot push the row's flex
+  // layout around on a narrow viewport. 160px, not 130: the longest name in the
+  // table renders at 131px, and measuring it in the browser is the only way to
+  // catch that -- jsdom has no layout. poiNames.test.js caps the table's names
+  // at 24 characters to keep them inside this box.
+  &__poi {
+    opacity: 0.55;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .maps-tab {

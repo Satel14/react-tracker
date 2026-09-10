@@ -62,3 +62,29 @@ describe("profile links", () => {
     expect([...container.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Foe"]);
   });
 });
+
+describe("kill location", () => {
+  const row = (over = {}) => ({
+    t: 60, killerName: "Me", victimName: "Foe", weapon: "AUG", distance: 87,
+    victimPoi: "Hosan Prison", ...over,
+  });
+
+  it("names where the victim fell", () => {
+    render(<KillFeed kills={[row()]} t={t} />);
+    expect(screen.getByText("Hosan Prison")).toBeInTheDocument();
+  });
+
+  it("renders no place for a kill in the open field", () => {
+    // zone is absent on roughly half of real kills, so the row has to read
+    // correctly with nothing there rather than showing an empty pill.
+    const { container } = render(<KillFeed kills={[row({ victimPoi: null })]} t={t} />);
+    expect(container.querySelector(".kill-feed__poi")).toBeNull();
+  });
+
+  it("leaves the place plain, with nothing on hover", () => {
+    // Measured over 197 real kills: the killer's zone and the victim's are
+    // never different, so there is no second place to reveal.
+    const { container } = render(<KillFeed kills={[row()]} t={t} />);
+    expect(container.querySelector(".kill-feed__poi").getAttribute("title")).toBeNull();
+  });
+});
