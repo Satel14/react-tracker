@@ -82,6 +82,37 @@ test("parseKillFeed attaches team ids from LogMatchStart", () => {
   assert.equal(feed[0].victimTeamId, 2);
 });
 
+// zone is on 30-50% of the actors on a real LogPlayerKillV2, so the feed has to
+// read correctly both with a place and without one.
+const poiTelemetry = [
+  { _T: "LogMatchStart", characters: [
+    { character: { accountId: "account.me", name: "Me", teamId: 1 } },
+    { character: { accountId: "account.foe", name: "Foe", teamId: 2 } },
+  ] },
+  // Killer and victim in different places -- the row must name the victim's.
+  { _T: "LogPlayerKillV2", elapsedTime: 30,
+    killer: { accountId: "account.me", name: "Me", location: { x: 1, y: 1, z: 0 }, zone: ["terminal"] },
+    victim: { accountId: "account.foe", name: "Foe", location: { x: 2, y: 2, z: 0 }, zone: ["hosanprison"] },
+    killerDamageInfo: { damageCauserName: "WeapHK416_C", distance: 5000, damageReason: "HeadShot" } },
+  // Neither actor is in a named place: a fight in the open field.
+  { _T: "LogPlayerKillV2", elapsedTime: 60,
+    killer: { accountId: "account.me", name: "Me", location: { x: 3, y: 3, z: 0 }, zone: [] },
+    victim: { accountId: "account.foe", name: "Foe", location: { x: 4, y: 4, z: 0 }, zone: ["None"] },
+    killerDamageInfo: { damageCauserName: "WeapHK416_C", distance: 1000, damageReason: "TorsoShot" } },
+];
+
+test("parseKillFeed names the place from each actor's zone", () => {
+  const feed = parseKillFeed(poiTelemetry, { accountId: "account.me" });
+  assert.equal(feed[0].victimPoi, "Hosan Prison");
+  assert.equal(feed[0].killerPoi, "Terminal");
+});
+
+test("parseKillFeed leaves a kill in the open field unnamed", () => {
+  const feed = parseKillFeed(poiTelemetry, { accountId: "account.me" });
+  assert.equal(feed[1].victimPoi, null);
+  assert.equal(feed[1].killerPoi, null);
+});
+
 const { parseDamage } = require("./getMatchAnalysis");
 
 const dmgTelemetry = [

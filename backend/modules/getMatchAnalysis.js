@@ -4,6 +4,7 @@ const { shardForMatch } = require("./pubgTelemetry");
 const { isFocalActor, readXY, buildMatchClock } = require("./telemetryUtils");
 const { telemetryWeaponName, canonicalWeaponKey } = require("./weaponMeta");
 const { readMatchContext } = require("./matchContext");
+const { poiName } = require("./poiNames");
 
 const analysisCache = new Map();
 const ANALYSIS_CACHE_LIMIT = 30;
@@ -119,6 +120,12 @@ function parseKillFeed(telemetry, { clock, accountId = null, playerName = null }
       weaponKey,
       distance,
       damageReason: dmgInfo.damageReason || null,
+      // Where the victim fell. The killer's own place rides alongside so the UI
+      // can show it on hover, but it is NEVER substituted for a missing
+      // victimPoi -- that would label a death with a location the victim was
+      // never in.
+      victimPoi: poiName(victim?.zone),
+      killerPoi: poiName(killer?.zone),
       kx: kxy ? kxy.x : null,
       ky: kxy ? kxy.y : null,
       vx: vxy ? vxy.x : null,
