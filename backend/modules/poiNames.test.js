@@ -34,7 +34,14 @@ test("returns null rather than guessing at an unknown slug", () => {
   // The whole point of the allow-list: a name we cannot spell correctly is not
   // shown at all. Title-casing would turn "ferrypier" into "Ferrypier".
   assert.equal(poiName(["someplacewehavenotmapped"]), null);
+});
+
+test("refuses to name a kill after an event-mode overlay", () => {
+  // These two are real slugs the probe reports as missing, and they must STAY
+  // missing: they span kilometres (3.3 km measured on Rondo), so they name a
+  // third of the map rather than a place.
   assert.equal(poiName(["9thEventSpot"]), null);
+  assert.equal(poiName(["8theventspot"]), null);
 });
 
 test("skips unknown entries and takes the last one it does know", () => {
@@ -50,7 +57,7 @@ test("treats an absent zone as no place, never as a throw", () => {
 
 test("the table itself is well formed", () => {
   const entries = Object.entries(POI_NAMES);
-  assert.ok(entries.length >= 58, `expected the harvested table, got ${entries.length} entries`);
+  assert.ok(entries.length >= 76, `expected the harvested table, got ${entries.length} entries`);
   entries.forEach(([slug, name]) => {
     assert.equal(slug, slug.toLowerCase(), `slug ${slug} must be lowercase`);
     assert.equal(typeof name, "string");

@@ -18,16 +18,33 @@
 // that appeared in live matches and are absent here. A probe only sees POIs that
 // were actually visited (one match visits 9-17 of a map's ~20), so absence from
 // this table means "not harvested yet", never "not a place".
+//
+// Two slugs are absent ON PURPOSE and must stay that way: "8theventspot" and
+// "9thEventSpot" are event-mode overlays spanning kilometres (3.3 km measured
+// for the Rondo one), not places. Naming a kill after one would label it with a
+// region covering a third of the map.
 const POI_NAMES = Object.freeze({
+  // --- shared across maps ---
+  // The table is flat, so a slug two maps share has to mean the same place on
+  // both. These do: Erangel and Taego both label a School, and Erangel and
+  // Miramar both label a Prison.
+  school: "School",
+  prison: "Prison",
+
   // --- Taego (Tiger_Main) ---
   armybase: "Army Base",
   buksansa: "Buksansa",
+  fishingcamp: "Fishing Camp",
   godok: "Godok",
+  haemoosa: "Haemoosa",
   hosan: "Hosan",
   hosanprison: "Hosan Prison",
+  kangneung: "Kangneung",
   palace: "Palace",
   shipyard: "Shipyard",
+  songam: "Songam",
   terminal: "Terminal",
+  wolsong: "Wolsong",
   yongcheon: "Yongcheon",
 
   // --- Miramar (Desert_Main) ---
@@ -41,12 +58,15 @@ const POI_NAMES = Object.freeze({
   // game displays as Minas Generales. Keyed as shipped, named as displayed.
   manisgenerales: "Minas Generales",
   haciendadelpatron: "Hacienda del Patrón",
+  elpozo: "El Pozo",
+  graveyard: "Graveyard",
   impala: "Impala",
   losleones: "Los Leones",
   montenuevo: "Monte Nuevo",
   pecado: "Pecado",
-  prison: "Prison",
+  powergrid: "Power Grid",
   sanmartin: "San Martín",
+  valledelmar: "Valle del Mar",
   // Both spellings occur, and they nest as ["truckstop", "GDTruckStop"] -- one
   // place, so both keys carry the same name and the rule's answer is stable
   // whichever entry it lands on.
@@ -60,12 +80,20 @@ const POI_NAMES = Object.freeze({
   ferrypier: "Ferry Pier",
   gatka: "Gatka",
   georgopol: "Georgopol",
+  hospital: "Hospital",
+  lipovka: "Lipovka",
   mylta: "Mylta",
+  myltapower: "Mylta Power",
   novorepnoye: "Novorepnoye",
   pochinki: "Pochinki",
   primorsk: "Primorsk",
+  quarry: "Quarry",
+  rozhok: "Rozhok",
   ruins: "Ruins",
+  severny: "Severny",
+  shelter: "Shelter",
   sosnovkamilitarybase: "Sosnovka Military Base",
+  yasnayapolyana: "Yasnaya Polyana",
 
   // --- Rondo (Neon_Main) ---
   beili: "Bei Li",
