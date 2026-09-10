@@ -6617,6 +6617,7 @@ body {
   &__col,
   &__weapons,
   &__throws,
+  &__broke,
   &__meds {
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -6626,6 +6627,8 @@ body {
   &__col { min-width: 0; }
   &__weapons,
   &__throws,
+  &__broke,
+  &__meds { margin-top: 14px; }
   &__col-head {
     display: flex;
     justify-content: space-between;
@@ -6647,9 +6650,28 @@ body {
   &__region-label { color: var(--text-muted); }
   &__region-track { background: var(--border); border-radius: 999px; height: 8px; overflow: hidden; }
   &__region-fill { display: block; height: 100%; border-radius: 999px; transition: width 0.3s ease; }
-  // What the player consumed. Sits between the region columns and the weapon
-  // breakdown: damage taken and HP put back are two halves of one story.
-  &__meds { margin-top: 14px; }
+  &__broke-head {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    margin: 6px 0 4px;
+
+    &:first-child { margin-top: 0; }
+  }
+  // The colour is not optional: body sets rgb(0, 0, 0), so a label that relies
+  // on inheritance renders near-black on this dark card. Every block on this tab
+  // sets its own for the same reason.
+  &__broke-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13px;
+    padding: 2px 0;
+    color: var(--text);
+  }
+  &__broke-val { margin-left: auto; color: var(--text); font-variant-numeric: tabular-nums; }
+  &__broke-moves { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
   &__throws-head {
     font-size: 12px;
     text-transform: uppercase;

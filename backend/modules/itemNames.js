@@ -27,6 +27,15 @@ const ITEM_NAMES = Object.freeze({
 // so Item_Heal_FirstAid_C reads "First Aid" rather than "Heal First Aid".
 const TYPE_SEGMENTS = new Set(["heal", "boost", "weapon", "attach", "armor", "back", "ammo", "special"]);
 
+// The Lv token is the only part of an armour id that carries information --
+// Item_Head_F_01_Lv2_C against Item_Head_G_01_Lv2_C is a skin. Some armour has
+// no level at all (Item_Back_BlueBlocker), and several ids ship without the
+// trailing _C, so neither may be assumed.
+function armourLevel(itemId) {
+  const m = /_Lv(\d)/.exec(typeof itemId === "string" ? itemId : "");
+  return m ? Number(m[1]) : null;
+}
+
 function splitCamel(word) {
   return word.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
 }
@@ -48,4 +57,4 @@ function itemName(itemId) {
   return name || null;
 }
 
-module.exports = { itemName, ITEM_NAMES };
+module.exports = { itemName, armourLevel, ITEM_NAMES };

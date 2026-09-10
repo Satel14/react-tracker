@@ -24,7 +24,18 @@ const RegionBars = ({ bucket, title, t }) => {
   );
 };
 
-const DamageBreakdown = ({ damage, meds, throws, focalPresent, t }) => {
+// "Lv2 x2 . Lv3 x1" from the tallied levels. A level-less armour id prints its
+// count alone -- Item_Back_BlueBlocker really has no level.
+const armourTally = (rows, t) =>
+  rows
+    .map((r) => (r.level == null ? `×${r.count}` : `${t("pages.match.armourLevel", { level: r.level })} ×${r.count}`))
+    .join(" · ");
+
+const envTotal = (e) =>
+  (e.armourBroke?.length || 0) + (e.armourLost?.length || 0) +
+  e.vehicleDamage + e.windows + e.fences + e.vaults + e.doorsOpened + e.vending;
+
+const DamageBreakdown = ({ damage, meds, throws, environment, focalPresent, t }) => {
   if (!focalPresent || !damage) {
     return <EmptyState className="damage__empty">{t("pages.match.focalNotInMatch")}</EmptyState>;
   }
@@ -64,6 +75,70 @@ const DamageBreakdown = ({ damage, meds, throws, focalPresent, t }) => {
           {throws.totalDamage > 0 ? (
             <div className="damage__throw-share">
               {t("pages.match.throwShare", { damage: throws.totalDamage, total: damage.dealt.total })}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {environment && envTotal(environment) > 0 ? (
+        <div className="damage__broke">
+          {environment.armourBroke.length || environment.armourLost.length ? (
+            <>
+              <div className="damage__broke-head">{t("pages.match.brokeArmour")}</div>
+              {environment.armourBroke.length ? (
+                <div className="damage__broke-row damage__broke-armour-broke">
+                  <span>{t("pages.match.brokeArmourEnemy")}</span>
+                  <span className="damage__broke-val">{armourTally(environment.armourBroke, t)}</span>
+                </div>
+              ) : null}
+              {environment.armourLost.length ? (
+                <div className="damage__broke-row damage__broke-armour-lost">
+                  <span>{t("pages.match.brokeArmourOwn")}</span>
+                  <span className="damage__broke-val">{armourTally(environment.armourLost, t)}</span>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+
+          {environment.vehicleDamage || environment.windows || environment.fences ? (
+            <>
+              <div className="damage__broke-head">{t("pages.match.brokeThings")}</div>
+              {environment.vehicleDamage ? (
+                /* Labelled, not bare: a car has far more health than a player,
+                   so 864 must not read as catastrophic. */
+                <div
+                  className="damage__broke-row damage__broke-vehicles"
+                  title={t("pages.match.brokeVehiclesHint")}
+                >
+                  <span>{t("pages.match.brokeVehicles")}</span>
+                  <span className="damage__broke-val">{environment.vehicleDamage}</span>
+                </div>
+              ) : null}
+              {environment.windows ? (
+                <div className="damage__broke-row damage__broke-windows">
+                  <span>{t("pages.match.brokeWindows")}</span>
+                  <span className="damage__broke-val">{environment.windows}</span>
+                </div>
+              ) : null}
+              {environment.fences ? (
+                <div className="damage__broke-row damage__broke-fences">
+                  <span>{t("pages.match.brokeFences")}</span>
+                  <span className="damage__broke-val">{environment.fences}</span>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+
+          {environment.vaults || environment.doorsOpened || environment.vending ? (
+            <div className="damage__broke-moves">
+              {/* Each part only when it happened: "0 vending machines" is noise,
+                  and the rows above already hide their zeros. */}
+              {[
+                environment.vaults ? t("pages.match.brokeVaults", { n: environment.vaults }) : null,
+                environment.doorsOpened ? t("pages.match.brokeDoors", { n: environment.doorsOpened }) : null,
+                environment.vending ? t("pages.match.brokeVending", { n: environment.vending }) : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </div>
           ) : null}
         </div>

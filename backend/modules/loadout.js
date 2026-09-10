@@ -1,5 +1,6 @@
 const { isFocalActor } = require("./telemetryUtils");
 const { telemetryWeaponName } = require("./weaponMeta");
+const { armourLevel } = require("./itemNames");
 
 // What the focal player was carrying, reconstructed from the item log.
 //
@@ -50,13 +51,6 @@ const timeOf = (ev) => {
   const t = Date.parse(ev?._D);
   return Number.isFinite(t) ? t : null;
 };
-
-// Item ids are not consistent about the trailing _C: Item_Back_BlueBlocker and
-// Item_Back_BlueBlocker_Lv1 both ship without one.
-function armourLevel(itemId) {
-  const m = /_Lv(\d)/.exec(String(itemId || ""));
-  return m ? Number(m[1]) : null;
-}
 
 function attachmentSlot(itemId) {
   const m = /^Item_Attach_Weapon_([A-Za-z]+)_/.exec(String(itemId || ""));

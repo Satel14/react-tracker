@@ -8,6 +8,7 @@ const { poiName } = require("./poiNames");
 const { itemName } = require("./itemNames");
 const { throwCountsFor } = require("./replay/throwables");
 const { buildLoadout } = require("./loadout");
+const { buildEnvironment } = require("./environment");
 
 const analysisCache = new Map();
 const ANALYSIS_CACHE_LIMIT = 30;
@@ -370,6 +371,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   const meds = parseMeds(telemetry, { accountId, playerName });
   const throws = throwCountsFor(telemetry, { accountId, playerName });
   const loadout = buildLoadout(telemetry, { accountId, playerName });
+  const environment = buildEnvironment(telemetry, { accountId, playerName });
   const timeline = parseTimeline(telemetry, { clock, accountId, playerName });
 
   const { region, weather } = readMatchContext(telemetry);
@@ -391,6 +393,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
     meds,
     throws,
     loadout,
+    environment,
     timeline,
   };
 

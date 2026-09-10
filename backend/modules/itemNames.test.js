@@ -45,3 +45,17 @@ test("the table is well formed", () => {
     assert.ok(name.length > 0, `${id} has an empty name`);
   });
 });
+
+const { armourLevel } = require("./itemNames");
+
+test("reads an armour level off the id", () => {
+  // Item ids are inconsistent about the trailing _C, and some armour carries no
+  // level token at all -- both measured on real data.
+  assert.equal(armourLevel("Item_Head_F_01_Lv2_C"), 2);
+  assert.equal(armourLevel("Item_Armor_C_01_Lv3_C"), 3);
+  assert.equal(armourLevel("Item_Back_BlueBlocker_Lv1"), 1);
+  assert.equal(armourLevel("Item_Back_BlueBlocker"), null);
+  [null, undefined, 42, "", "Item_Weapon_HK416_C"].forEach((value) => {
+    assert.equal(armourLevel(value), null, JSON.stringify(value));
+  });
+});
