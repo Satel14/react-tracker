@@ -6007,6 +6007,50 @@ body {
   }
 }
 
+.loadout {
+  &__cutoff {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  // The same card shell the damage tab uses, so the two tabs read as one system.
+  &__weapons,
+  &__armour,
+  &__looted,
+  &__counts {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.22);
+    margin-bottom: 12px;
+  }
+  &__weapon {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 10px;
+    padding: 5px 0;
+    font-size: 13px;
+  }
+  &__weapon-name { color: var(--text-strong); font-weight: 600; min-width: 96px; }
+  &__attachments { display: flex; flex-wrap: wrap; gap: 6px; }
+  &__attach {
+    font-size: 12px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 1px 8px;
+  }
+  &__armour { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
+  &__armour-item { display: inline-flex; align-items: baseline; gap: 5px; }
+  &__armour-slot { color: var(--text-muted); }
+  &__armour-level { color: var(--text-strong); font-variant-numeric: tabular-nums; }
+  &__looted,
+  &__counts { font-size: 12px; color: var(--text-muted); }
+}
+
 .maps-tab {
   max-width: 720px;
 
