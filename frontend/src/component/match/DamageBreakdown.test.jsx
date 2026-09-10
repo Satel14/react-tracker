@@ -81,3 +81,65 @@ test("survives a payload with no meds at all", () => {
   const { container } = render(<DamageBreakdown damage={damage} focalPresent t={t} />);
   expect(container.querySelector(".damage__meds")).toBeNull();
 });
+
+const throws = {
+  used: [
+    { key: "Item_Weapon_Grenade_C", name: "Frag Grenade", damaging: true, count: 3, damage: 55 },
+    { key: "Item_Weapon_SmokeBomb_C", name: "Smoke Bomb", damaging: false, count: 4, damage: 0 },
+    { key: "Item_Weapon_Molotov_C", name: "Molotov", damaging: true, count: 1, damage: 0 },
+  ],
+  totalThrown: 8,
+  totalDamage: 55,
+};
+
+test("renders the grenade card with a damage figure only for damaging kinds", () => {
+  const { container } = render(
+    <DamageBreakdown damage={damage} meds={meds} throws={throws} focalPresent t={t} />
+  );
+  const rows = [...container.querySelectorAll(".damage__throw")];
+  const byName = (n) => rows.find((r) => r.textContent.includes(n));
+
+  // A molotov that dealt nothing keeps its +0: it CAN deal damage and did not.
+  expect(byName("Frag Grenade").querySelector(".damage__throw-dmg")).not.toBeNull();
+  expect(byName("Molotov").querySelector(".damage__throw-dmg")).not.toBeNull();
+  // Smoke deals none by design, so a "+0" beside it would read as a miss.
+  expect(byName("Smoke Bomb").querySelector(".damage__throw-dmg")).toBeNull();
+});
+
+test("shows the attribution line only when grenades dealt something", () => {
+  const { container } = render(
+    <DamageBreakdown damage={damage} meds={meds} throws={throws} focalPresent t={t} />
+  );
+  expect(container.querySelector(".damage__throw-share")).not.toBeNull();
+
+  const { container: zero } = render(
+    <DamageBreakdown damage={damage} meds={meds} throws={{ ...throws, totalDamage: 0 }} focalPresent t={t} />
+  );
+  expect(zero.querySelector(".damage__throw-share")).toBeNull();
+});
+
+test("renders no grenade card when nothing was thrown", () => {
+  const { container } = render(
+    <DamageBreakdown damage={damage} meds={meds} throws={{ used: [], totalThrown: 0, totalDamage: 0 }} focalPresent t={t} />
+  );
+  expect(container.querySelector(".damage__throws")).toBeNull();
+});
+
+test("survives a payload with no throws at all", () => {
+  const { container } = render(<DamageBreakdown damage={damage} meds={meds} focalPresent t={t} />);
+  expect(container.querySelector(".damage__throws")).toBeNull();
+});
+
+test("orders the blocks damage-done first, then what was spent", () => {
+  const { container } = render(
+    <DamageBreakdown damage={damage} meds={meds} throws={throws} focalPresent t={t} />
+  );
+  const order = [...container.querySelector(".damage").children].map((c) => c.className.split(" ")[0]);
+  expect(order).toEqual([
+    "damage__headshot",
+    "damage__cols",
+    "damage__weapons",
+    "damage__throws",
+    "damage__meds",
+  ]);
+});
