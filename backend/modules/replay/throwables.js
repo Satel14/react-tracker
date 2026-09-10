@@ -1,4 +1,4 @@
-const { readXY } = require("../telemetryUtils");
+const { readXY, isFocalActor } = require("../telemetryUtils");
 const { telemetryWeaponName } = require("../weaponMeta");
 
 // Thrown items, packed column-wise like replay/shots.js: parallel arrays where
@@ -34,27 +34,23 @@ function readPoint(loc) {
   return readXY(loc);
 }
 
-function extractThrowables(telemetry, clock) {
-  const empty = { throws: { t: [], k: [], ax: [], ay: [], vx: [], vy: [] }, throwKinds: [] };
-  const timeOf = typeof clock?.timeOf === "function" ? clock.timeOf.bind(clock) : null;
-  if (!timeOf) return empty;
-  const events = Array.isArray(telemetry) ? telemetry : [];
-
-  // attackId -> { damage, at, x, y } for the earliest damage event of that
-  // attack. Sum over every hit, but keep only the first point.
+// attackId -> { damage, at, x, y } for the earliest LOCATED damage of that
+// attack. Sum over every hit, but keep only the first point.
+//
+// A zero-damage event is a hit that took nothing off, and there are plenty: 16
+// of the 27 damage events on a throw in one measured match. Twelve of those were
+// one molotov burning a victim already at 0 health -- the fire keeps ticking on a
+// body. Excluded on purpose, because both the map legend ("throw that dealt
+// damage") and the Damage tab claim damage, and counting a zero contradicts them.
+function indexHits(events, timeOf) {
   const hits = new Map();
   for (const ev of events) {
     if (ev?._T !== "LogPlayerTakeDamage") continue;
     const id = ev.attackId;
     if (id == null) continue;
     const amount = Number(ev.damage);
-    // A zero-damage event is a hit that took nothing off, and there are plenty:
-    // 16 of the 27 damage events on a throw in one measured match. Twelve of
-    // those were one molotov burning a victim already at 0 health -- the fire
-    // keeps ticking on a body. Excluded on purpose, because the legend says
-    // "throw that dealt damage" and a line drawn for 0 would contradict it.
     if (!Number.isFinite(amount) || amount <= 0) continue;
-    const at = timeOf(ev);
+    const at = timeOf ? timeOf(ev) : null;
     const point = readPoint(ev.victim?.location);
     const entry = hits.get(id) || { damage: 0, at: null, x: null, y: null };
     entry.damage += amount;
@@ -65,6 +61,16 @@ function extractThrowables(telemetry, clock) {
     }
     hits.set(id, entry);
   }
+  return hits;
+}
+
+function extractThrowables(telemetry, clock) {
+  const empty = { throws: { t: [], k: [], ax: [], ay: [], vx: [], vy: [] }, throwKinds: [] };
+  const timeOf = typeof clock?.timeOf === "function" ? clock.timeOf.bind(clock) : null;
+  if (!timeOf) return empty;
+  const events = Array.isArray(telemetry) ? telemetry : [];
+
+  const hits = indexHits(events, timeOf);
 
   const rows = [];
   // Insertion-ordered, so throwKinds comes out in first-seen order and the
@@ -124,4 +130,46 @@ function extractThrowables(telemetry, clock) {
   return out;
 }
 
-module.exports = { extractThrowables };
+// The same throws, counted for ONE player, for the Damage tab.
+//
+// That tab is entirely about the focal player, so a lobby inventory there would
+// be somebody else's data. Counting per player also turns the block into damage
+// attribution, which is what the tab is for -- hence the damage beside each count.
+//
+// Needs no clock: nothing here is placed in time, only counted.
+function throwCountsFor(telemetry, { accountId = null, playerName = null } = {}) {
+  const events = Array.isArray(telemetry) ? telemetry : [];
+  const accountKey = typeof accountId === "string" && accountId.trim() ? accountId.trim() : null;
+  const lowerName = typeof playerName === "string" && playerName.trim() ? playerName.trim().toLowerCase() : null;
+
+  const hits = indexHits(events, null);
+  const kinds = new Map();
+  let totalThrown = 0;
+  let totalDamage = 0;
+
+  for (const ev of events) {
+    if (ev?._T !== "LogPlayerUseThrowable") continue;
+    if (!isFocalActor(ev.attacker, accountKey, lowerName)) continue;
+
+    const itemId = ev.weapon?.itemId;
+    const name = telemetryWeaponName(itemId) || GENERIC_NAME;
+    const damage = ev.attackId == null ? 0 : hits.get(ev.attackId)?.damage || 0;
+
+    totalThrown += 1;
+    totalDamage += damage;
+
+    const kind = kinds.get(name) || { key: itemId, name, damaging: DAMAGE_CAPABLE.has(itemId), count: 0, damage: 0 };
+    kind.count += 1;
+    kind.damage += damage;
+    if (damage > 0) kind.damaging = true;
+    kinds.set(name, kind);
+  }
+
+  const used = [...kinds.values()]
+    .map((k) => ({ ...k, damage: Math.round(k.damage) }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+  return { used, totalThrown, totalDamage: Math.round(totalDamage) };
+}
+
+module.exports = { extractThrowables, throwCountsFor };
