@@ -1,8 +1,5 @@
 {
-  "updatedAt": "2026-09-08",
-  "defaults": {
-    "cycleDays": 85
-  },
+  "updatedAt": "2026-09-10",
   "seasons": {
     "division.bro.official.pc-2018-42": {
       "startDate": "2026-06-17T00:00:00Z",
@@ -13,10 +10,10 @@
     },
     "division.bro.official.pc-2018-43": {
       "startDate": "2026-09-10T08:30:00Z",
-      "endDate": "2026-12-04T00:00:00Z",
-      "isEstimated": true,
-      "source": "pubg-maintenance-announcement",
-      "note": "Start is official: Update 43.1 becomes available when the maintenance completes. End is a guess -- KRAFTON has not announced one -- carried over from Season 42's measured 85 days, so the homepage prints it with a tilde. Replace it when 43.3's schedule is published."
+      "endDate": "2026-11-04T00:00:00Z",
+      "isEstimated": false,
+      "source": "in-game-season-countdown",
+      "note": "Start is official: Update 43.1 becomes available when the maintenance completes. End is derived from the in-game season timer, read 2026-09-10 09:12 UTC as 54 d 14 h 48 m remaining, which lands exactly on 2026-11-04 00:00 UTC -- the same midnight-maintenance shape as Season 42's end, which is what makes the arithmetic trustworthy. That makes Season 43 55 days against Season 42's 85: PUBG season lengths are not a fixed cycle, which is why there is no cycleDays fallback here."
     }
   }
 }
