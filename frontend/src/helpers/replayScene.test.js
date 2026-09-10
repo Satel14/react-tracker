@@ -1,6 +1,6 @@
 import {
   drawScene, drawBackground, pickIndex, SCREEN,
-  paintFlight, paintLandings, paintPackages, paintSpecialZones, paintShots,
+  paintFlight, paintLandings, paintPackages, paintSpecialZones, paintShots, paintThrows,
 } from "./replayScene";
 import { buildTracks, sampleTracks } from "./replayTracks";
 import { fitCamera, clampCamera, worldToScreen } from "./replayCamera";
@@ -1418,4 +1418,80 @@ describe("damage numbers", () => {
       expect(draw(bad)).toEqual([]);
     }
   });
+});
+
+// ------------------------------------------------------------------- throws
+
+const thrown = (over = {}) => ({
+  x: 4000, y: 4000, vx: null, vy: null, kind: "Smoke Bomb",
+  damaging: false, hit: false, age: 0, ...over,
+});
+
+test("a dot is drawn for every on-screen throw, and an off-screen one is culled", () => {
+  const ctx = recordingCtx();
+  paintThrows(ctx, {
+    ...frameAt(6),
+    throws: [thrown(), thrown({ x: 4100, y: 4100, damaging: true, kind: "Frag Grenade" }), thrown({ x: 50, y: 50 })],
+    colors: P2_COLORS,
+  });
+  expect(arcsOf(ctx)).toHaveLength(2);
+});
+
+test("only a throw whose damage was located gets a line", () => {
+  // The line ends at a VICTIM, a median 42 m from the thrower. A throw with no
+  // located damage must not get one, or the marker would claim an impact point
+  // telemetry does not have.
+  const ctx = recordingCtx();
+  paintThrows(ctx, {
+    ...frameAt(6),
+    throws: [
+      thrown({ damaging: true, kind: "Frag Grenade", hit: true, vx: 4100, vy: 4100 }),
+      thrown(),
+    ],
+    colors: P2_COLORS,
+  });
+  expect(linesOf(ctx)).toHaveLength(1);
+});
+
+test("a throw is tinted by whether its kind can deal damage", () => {
+  const hot = recordingCtx();
+  paintThrows(hot, { ...frameAt(6), throws: [thrown({ damaging: true })], colors: P2_COLORS });
+  expect(hot.calls.filter((c) => c.name === "fill").map((c) => c.fillStyle)).toEqual([P2_COLORS.warn]);
+
+  const cold = recordingCtx();
+  paintThrows(cold, { ...frameAt(6), throws: [thrown({ damaging: false })], colors: P2_COLORS });
+  expect(cold.calls.filter((c) => c.name === "fill").map((c) => c.fillStyle)).toEqual([P2_COLORS.enemy]);
+});
+
+test("a throw marker fades by age", () => {
+  const alphas = [];
+  const probe = recordingCtx();
+  const orig = Object.getOwnPropertyDescriptor(probe, "globalAlpha");
+  Object.defineProperty(probe, "globalAlpha", {
+    get: orig.get,
+    set(v) { alphas.push(v); orig.set.call(probe, v); },
+  });
+  paintThrows(probe, {
+    ...frameAt(1),
+    throws: [thrown({ age: 0 }), thrown({ age: 0.75 })],
+    colors: P2_COLORS,
+  });
+  expect(alphas[0]).toBeCloseTo(1, 6);
+  expect(alphas[1]).toBeCloseTo(0.25, 6);
+});
+
+test("throw marker size is constant across zoom", () => {
+  const throws = [thrown({ damaging: true, hit: true, vx: 4100, vy: 4100 })];
+  const a = recordingCtx();
+  const b = recordingCtx();
+  paintThrows(a, { ...frameAt(1), throws, colors: P2_COLORS });
+  paintThrows(b, { ...frameAt(6), throws, colors: P2_COLORS });
+  expect(arcsOf(a).map((c) => c.args[2])).toEqual(arcsOf(b).map((c) => c.args[2]));
+});
+
+test("an empty throw layer paints nothing and a missing context is survivable", () => {
+  const ctx = recordingCtx();
+  paintThrows(ctx, { ...frameAt(6), throws: [], colors: P2_COLORS });
+  expect(ctx.calls).toHaveLength(0);
+  paintThrows(null, { ...frameAt(6), throws: [thrown()], colors: P2_COLORS });
 });

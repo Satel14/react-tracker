@@ -89,6 +89,10 @@ export const SCREEN = {
   // handful still playing.
   deadFadeStart: 60,
   deadFadeEnd: 240,
+  // Small enough to read as a mark rather than a player, and constant across
+  // zoom like every other marker here.
+  throwRadius: 3,
+  throwOutline: 1,
 };
 
 // One fill per hazard. An unknown type falls back to the neutral crate colour
@@ -256,6 +260,45 @@ export const paintShots = (ctx, { cam, vw, vh, shots, colors }) => {
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+};
+
+// A dot where the item was THROWN FROM, and -- only when its damage was
+// located -- a line out to that point. One shape in two colour classes rather
+// than nine silhouettes: the vehicle code in getMatchReplay settled the same
+// question, 54 ids collapsing to the six groupings worth telling apart at
+// marker size. Which kind it was lives in the counter block and the legend,
+// not in the marker.
+//
+// The dot cannot be read as an impact: the thrower sits a median 42 m from
+// where a frag's damage lands (max 100, n=27), and 58% of real throws have no
+// second position at all.
+export const paintThrows = (ctx, { cam, vw, vh, throws, colors }) => {
+  if (!ctx || !throws || throws.length === 0) return;
+  for (const item of throws) {
+    const a = worldToScreen(cam, vw, vh, item.x, item.y);
+    if (offScreen(a, vw, vh)) continue;
+    const tint = item.damaging ? colors.warn : colors.enemy;
+    ctx.globalAlpha = 1 - item.age;
+
+    if (item.hit) {
+      const b = worldToScreen(cam, vw, vh, item.vx, item.vy);
+      ctx.strokeStyle = tint;
+      ctx.lineWidth = SCREEN.shotWidth;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, SCREEN.throwRadius, 0, Math.PI * 2);
+    ctx.fillStyle = tint;
+    ctx.fill();
+    ctx.strokeStyle = colors.outline;
+    ctx.lineWidth = SCREEN.throwOutline;
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
@@ -492,7 +535,7 @@ export const drawScene = (ctx, frame) => {
     cam, vw, vh, tracks, zone, flashes, nowMs, focusedAccountId, hoveredIndex,
     colors, atlas, labelCap = 24, focalTeamId = null,
     shots, specialZones, packages, landings, landingsT, flightSeg, flight, knocks, revives, crateArt,
-    damage,
+    damage, throws,
     t: frameT,
     flightAlpha: fAlpha = 1, landingsAlpha: lAlpha = 1, focalIds,
     layers = {},
@@ -513,6 +556,7 @@ export const drawScene = (ctx, frame) => {
   if (on("landings")) paintLandings(ctx, { cam, vw, vh, landings, alpha: lAlpha, colors, atlas, focalIds, t: landingsT });
   if (on("packages")) paintPackages(ctx, { cam, vw, vh, packages, colors, atlas, images: crateArt });
   if (on("shots")) paintShots(ctx, { cam, vw, vh, shots, colors });
+  if (on("throwables")) paintThrows(ctx, { cam, vw, vh, throws, colors });
   paintMarkers(ctx, { cam, vw, vh, knocks, revives, t: frameT, colors });
   drawFlashes(ctx, { cam, vw, vh, flashes, nowMs, colors });
 

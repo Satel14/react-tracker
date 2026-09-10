@@ -4,7 +4,7 @@ import { buildTracks, sampleTracks } from "../../helpers/replayTracks";
 import { createSweep, pruneFlashes } from "../../helpers/replayEvents";
 import { drawBackground, drawScene, pickIndex, SCREEN } from "../../helpers/replayScene";
 import {
-  createShotWindow, flightSegment, flightAlpha, landingsAlpha,
+  createShotWindow, createThrowWindow, flightSegment, flightAlpha, landingsAlpha,
   specialZonesAt, packagesAt,
 } from "../../helpers/replayLayers";
 import { clampCamera, fitCamera, followCamera, scaleOf, zoomAt } from "../../helpers/replayCamera";
@@ -115,6 +115,10 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
   const tracks = useMemo(() => buildTracks(data.players), [data.players]);
   const sweep = useMemo(() => createSweep(data.kills || []), [data.kills]);
   const shotWindow = useMemo(() => createShotWindow(data.shots), [data.shots]);
+  const throwWindow = useMemo(
+    () => createThrowWindow(data.throws, data.throwKinds),
+    [data.throws, data.throwKinds],
+  );
   // The flight corridor and the focal id set are per-match constants: computing
   // them once keeps the frame loop free of allocation.
   const flightSeg = useMemo(
@@ -147,6 +151,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     shotBuf: [],
     zoneBuf: [],
     pkgBuf: [],
+    throwBuf: [],
     layers: {},
   });
 
@@ -372,6 +377,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
             focalTeamId: data.focalTeamId ?? null,
             crateArt: v.crateArt,
             shots: shotWindow.activeAt(t, v.shotBuf),
+            throws: throwWindow.activeAt(t, v.throwBuf),
             // Whole layer, not a window: damageAt walks it from the newest end
             // and stops at the first number too old, so a per-frame slice would
             // buy nothing and cost a cursor that scrubbing has to reset.
@@ -398,7 +404,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     return () => { if (raf !== null) cancelAnimationFrame(raf); };
   }, [clockRef, data.zones, data.specialZones, data.packages, data.landings,
       data.knocks, data.revives, data.flight, data.focalTeamId, data.damage,
-      sweep, tracks, publish, shotWindow, flightSeg, focalIds]);
+      sweep, tracks, publish, shotWindow, throwWindow, flightSeg, focalIds]);
 
   const localPoint = (e) => {
     const rect = wrapRef.current.getBoundingClientRect();
