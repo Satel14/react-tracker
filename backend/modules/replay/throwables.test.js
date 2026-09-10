@@ -55,6 +55,21 @@ test("leaves the endpoint null for a throw that damaged nobody", () => {
   assert.deepEqual(out.throws.vy, [null]);
 });
 
+test("a throw whose only damage event is zero gets no endpoint", () => {
+  // This is where the zero-damage filter actually bites. A molotov burning a
+  // body already at 0 HP produced 12 such events in one measured match; if they
+  // counted, the map would draw a line to a victim for a throw that took nothing
+  // off, and the legend says "throw that dealt damage".
+  const out = extractThrowables([
+    throwEv(20, 1, "Item_Weapon_Molotov_C", 100000, 100000),
+    dmgEv(21, 1, "Foe", 104200, 100000, 0),
+  ], clock);
+
+  assert.deepEqual(out.throws.vx, [null]);
+  assert.deepEqual(out.throws.vy, [null]);
+  assert.equal(out.throwKinds[0].damage, 0);
+});
+
 test("takes the FIRST damage event by time when a throw hits several victims", () => {
   const out = extractThrowables([
     throwEv(20, 1, "Item_Weapon_Grenade_C", 100000, 100000),
@@ -151,4 +166,115 @@ test("survives junk without throwing", () => {
   // A clock that cannot tell the time yields nothing rather than NaN rows.
   const out = extractThrowables([throwEv(10, 1, "Item_Weapon_Grenade_C", 100000, 100000)], {});
   assert.deepEqual(out.throws.t, []);
+});
+
+// ------------------------------------------------- focal-scoped counts
+
+const { throwCountsFor } = require("./throwables");
+
+const opts = { accountId: "account.Me" };
+
+// The `thrower` helper builds accountId as `account.${name}`, so the focal id
+// above matches a thrower named "Me".
+const otherThrow = (elapsedTime, attackId, itemId) => ({
+  _T: "LogPlayerUseThrowable", elapsedTime, attackId,
+  attacker: thrower("Foe", 500000, 500000),
+  weapon: { itemId, stackCount: 1, category: "Equipment", subCategory: "Throwable" },
+});
+
+test("counts only the focal player's throws", () => {
+  const out = throwCountsFor([
+    throwEv(10, 1, "Item_Weapon_Grenade_C", 100000, 100000),
+    otherThrow(11, 2, "Item_Weapon_Grenade_C"),
+    otherThrow(12, 3, "Item_Weapon_SmokeBomb_C"),
+  ], opts);
+
+  assert.equal(out.totalThrown, 1);
+  assert.deepEqual(out.used.map((u) => [u.name, u.count]), [["Frag Grenade", 1]]);
+});
+
+test("joins damage by attackId, for the focal player's throws only", () => {
+  const out = throwCountsFor([
+    throwEv(10, 1, "Item_Weapon_Grenade_C", 100000, 100000),
+    dmgEv(11, 1, "Foe", 104200, 100000, 55),
+    otherThrow(12, 2, "Item_Weapon_Grenade_C"),
+    dmgEv(13, 2, "Someone", 504200, 500000, 90),
+  ], opts);
+
+  assert.equal(out.totalDamage, 55);
+  assert.equal(out.used[0].damage, 55);
+});
+
+test("a damage-capable kind that dealt nothing keeps the flag and reports zero", () => {
+  // The molotov row is meant to read "+0 dmg": it can deal damage and did not.
+  const out = throwCountsFor([
+    throwEv(10, 1, "Item_Weapon_Molotov_C", 100000, 100000),
+  ], opts);
+
+  assert.equal(out.used[0].damaging, true);
+  assert.equal(out.used[0].damage, 0);
+  assert.equal(out.totalDamage, 0);
+});
+
+test("a kind that cannot deal damage reports no damage and no flag", () => {
+  const out = throwCountsFor([
+    throwEv(10, 1, "Item_Weapon_SmokeBomb_C", 100000, 100000),
+  ], opts);
+
+  assert.equal(out.used[0].damaging, false);
+  assert.equal(out.used[0].damage, 0);
+});
+
+test("a zero-damage hit does not count as damage in the focal counts", () => {
+  // 16 of 27 damage events on a throw carried damage 0 in one measured match --
+  // twelve of them one molotov burning a body already at 0 HP.
+  const out = throwCountsFor([
+    throwEv(10, 1, "Item_Weapon_Grenade_C", 100000, 100000),
+    dmgEv(11, 1, "Foe", 104200, 100000, 0),
+  ], opts);
+
+  assert.equal(out.totalDamage, 0);
+  assert.equal(out.used[0].damage, 0);
+});
+
+test("an unknown focal kind that damaged someone is marked damaging", () => {
+  const out = throwCountsFor([
+    throwEv(10, 1, "Item_Weapon_SomethingNew_C", 100000, 100000),
+    dmgEv(11, 1, "Foe", 104200, 100000, 35),
+  ], opts);
+
+  assert.equal(out.used[0].damaging, true);
+  assert.equal(out.used[0].damage, 35);
+});
+
+test("sorts focal counts by count descending then by name", () => {
+  const out = throwCountsFor([
+    throwEv(10, 1, "Item_Weapon_SmokeBomb_C", 100000, 100000),
+    throwEv(11, 2, "Item_Weapon_Grenade_C", 100000, 100000),
+    throwEv(12, 3, "Item_Weapon_Grenade_C", 100000, 100000),
+    throwEv(13, 4, "Item_Weapon_FlashBang_C", 100000, 100000),
+  ], opts);
+
+  assert.deepEqual(out.used.map((u) => u.name), ["Frag Grenade", "Flash Bang", "Smoke Bomb"]);
+});
+
+test("resolves the focal player by name as well as by account id", () => {
+  const byName = throwCountsFor([throwEv(10, 1, "Item_Weapon_Grenade_C", 100000, 100000)], { playerName: "me" });
+  assert.equal(byName.totalThrown, 1);
+});
+
+test("keeps an unrecognised focal throwable under the generic label", () => {
+  const out = throwCountsFor([
+    throwEv(10, 1, "Item_Weapon_CoverStructDropHandFlare_C", 100000, 100000),
+  ], opts);
+  assert.equal(out.used[0].name, "Throwable");
+});
+
+test("returns an empty, well-shaped result for junk", () => {
+  [[], null, undefined, 42, [null, 7]].forEach((value) => {
+    const out = throwCountsFor(value, opts);
+    assert.deepEqual(out.used, [], JSON.stringify(value));
+    assert.equal(out.totalThrown, 0);
+    assert.equal(out.totalDamage, 0);
+  });
 });
