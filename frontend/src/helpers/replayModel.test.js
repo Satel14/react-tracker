@@ -326,3 +326,24 @@ describe("the damage layer", () => {
     expect(decodeReplay({ damage: rows }).damage).toEqual(rows);
   });
 });
+
+test("decodes the throw columns into rows", () => {
+  const out = decodeReplay({
+    throws: { t: [10, 20], k: [0, 1], ax: [100, 200], ay: [300, 400], vx: [150, null], vy: [350, null] },
+    throwKinds: [{ name: "Frag Grenade", damaging: true, thrown: 1, damage: 55 }],
+  });
+
+  expect(out.throws).toEqual([
+    { t: 10, k: 0, ax: 100, ay: 300, vx: 150, vy: 350 },
+    { t: 20, k: 1, ax: 200, ay: 400, vx: null, vy: null },
+  ]);
+  expect(out.throwKinds[0].name).toBe("Frag Grenade");
+});
+
+test("a payload from before throws existed decodes to empty, not undefined", () => {
+  // decodeReplay must never throw and must never hand the draw loop undefined:
+  // a format-6 payload can still be in an in-process cache.
+  const out = decodeReplay({ players: [] });
+  expect(out.throws).toEqual([]);
+  expect(out.throwKinds).toEqual([]);
+});

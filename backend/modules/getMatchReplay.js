@@ -12,12 +12,13 @@ const { extractShots } = require("./replay/shots");
 const { extractDamage } = require("./replay/damage");
 const { extractPackages } = require("./replay/packages");
 const { extractSpecialZones, extractPhases } = require("./replay/zones");
+const { extractThrowables } = require("./replay/throwables");
 const { readMatchContext } = require("./matchContext");
 
 // Bumped whenever the wire shape changes, so a stale cached payload is detected
 // rather than silently mis-decoded. 2 = delta-coded position columns.
-// 6 = region and weather.
-const REPLAY_FORMAT = 6;
+// 6 = region and weather. 7 = thrown items.
+const REPLAY_FORMAT = 7;
 
 const replayCache = new Map();
 const REPLAY_CACHE_LIMIT = 30;
@@ -264,6 +265,7 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
   const specialZones = extractSpecialZones(telemetry, clock);
   const phases = extractPhases(telemetry, clock);
   const flight = extractFlight(telemetry, clock);
+  const { throws, throwKinds } = extractThrowables(telemetry, clock);
   for (const p of players) p.landTime = landTime.has(p.accountId) ? landTime.get(p.accountId) : null;
 
   // `duration` is wall-clock seconds from the match record; the replay scrubber
@@ -308,6 +310,8 @@ function parseReplayTelemetry(telemetry, { matchAttributes = {}, accountId = nul
     packages,
     specialZones,
     phases,
+    throws,
+    throwKinds,
   };
 }
 

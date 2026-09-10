@@ -12,6 +12,7 @@ const EXPECTED_DEFAULTS = {
   specialZones: true,
   healthArcs: true,
   damage: true,
+  throwables: true,
 };
 
 // The logic project runs in bare Node: no `window`, no `localStorage`. Tests
@@ -42,10 +43,10 @@ afterEach(() => {
 test("shot lines default off and every other layer defaults on", () => {
   expect(DEFAULT_LAYERS).toEqual(EXPECTED_DEFAULTS);
   expect(DEFAULT_LAYERS.shots).toBe(false);
-  expect(Object.keys(DEFAULT_LAYERS)).toHaveLength(7);
+  expect(Object.keys(DEFAULT_LAYERS)).toHaveLength(8);
 });
 
-test("LAYER_KEYS lists the seven layers in a stable order", () => {
+test("LAYER_KEYS lists the eight layers in a stable order", () => {
   expect(LAYER_KEYS).toEqual([
     "shots",
     "landings",
@@ -54,10 +55,11 @@ test("LAYER_KEYS lists the seven layers in a stable order", () => {
     "specialZones",
     "healthArcs",
     "damage",
+    "throwables",
   ]);
 });
 
-test("an empty store reads back the defaults, all seven keys", () => {
+test("an empty store reads back the defaults, all eight keys", () => {
   installStorage();
   const prefs = readLayerPrefs();
   expect(prefs).toEqual(EXPECTED_DEFAULTS);
@@ -76,6 +78,7 @@ test("write then read preserves every value", () => {
     specialZones: false,
     healthArcs: true,
   damage: true,
+  throwables: true,
   };
   expect(writeLayerPrefs(wanted)).toEqual(wanted);
   expect(readLayerPrefs()).toEqual(wanted);
@@ -246,4 +249,12 @@ test("writeLayerPrefs normalises a garbage argument to the defaults", () => {
     expect(writeLayerPrefs(bad)).toEqual(EXPECTED_DEFAULTS);
   }
   expect(readLayerPrefs()).toEqual(EXPECTED_DEFAULTS);
+});
+
+test("the throwables layer exists and starts visible", () => {
+  // Only the densest layer starts hidden -- gunfire, at 443-737 a match. Throws
+  // are ~170, sparser than the ~900 damage numbers that are on by default.
+  expect(LAYER_KEYS).toContain("throwables");
+  expect(DEFAULT_LAYERS.throwables).toBe(true);
+  expect(readLayerPrefs().throwables).toBe(true);
 });
