@@ -169,11 +169,11 @@ test("assigns a phase index that changes only when the warning circle jumps", ()
   assert.deepEqual(r.zones.map((z) => z.phase), [0, 1, 1, 2, 2]);
 });
 
-// --- format 6 payload wiring ---------------------------------------------
+// --- format 7 payload wiring ---------------------------------------------
 
 test("stamps the wire format so a stale cached payload is detectable", () => {
   const r = parseReplayTelemetry(telemetry, { matchAttributes, accountId: "account.me" });
-  assert.equal(r.format, 6);
+  assert.equal(r.format, 7);
 });
 
 test("carries the region and weather that live only in the telemetry", () => {
@@ -462,4 +462,28 @@ test("a kill whose only named cause is the engine's empty name credits none", ()
   assert.equal(r.kills[0].w, "AUG");
   assert.equal(r.kills[0].wk, "aug_a3");
   assert.equal(r.kills[0].dist, 50);
+});
+
+test("the replay payload carries thrown items and their kinds", () => {
+  const thrownTelemetry = [
+    { _T: "LogMatchStart", characters: [{ character: { accountId: "account.me", name: "Me", teamId: 1 } }] },
+    { _T: "LogPlayerUseThrowable", elapsedTime: 30, attackId: 7,
+      attacker: { accountId: "account.me", name: "Me", teamId: 1, location: { x: 100000, y: 100000, z: 0 } },
+      weapon: { itemId: "Item_Weapon_Grenade_C" } },
+    { _T: "LogPlayerTakeDamage", elapsedTime: 31, attackId: 7, damage: 55,
+      attacker: { accountId: "account.me", name: "Me" },
+      victim: { accountId: "account.foe", name: "Foe", location: { x: 104200, y: 100000, z: 0 } } },
+  ];
+
+  const payload = parseReplayTelemetry(thrownTelemetry, { matchAttributes });
+
+  // Bumped because the wire shape changed: a payload cached under 6 has no
+  // throws at all, and must be refetched rather than decoded as empty.
+  assert.equal(payload.format, 7);
+  assert.deepEqual(payload.throws.t, [30]);
+  assert.deepEqual(payload.throws.ax, [1000]);
+  assert.deepEqual(payload.throws.vx, [1042]);
+  assert.equal(payload.throwKinds[0].name, "Frag Grenade");
+  assert.equal(payload.throwKinds[0].thrown, 1);
+  assert.equal(payload.throwKinds[0].damage, 55);
 });
