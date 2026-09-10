@@ -631,7 +631,7 @@ test("the published result is built once and then served from cache", async () =
 
   assert.equal(reads, 1, "the second visitor costs no database read");
   assert.deepEqual(second.body, first.body, "and is served the same answer");
-  assert.match(first.headers["Cache-Control"], /^public, max-age=1800, stale-while-revalidate=3600$/);
+  assert.match(first.headers["Cache-Control"], /^public, max-age=3600, stale-while-revalidate=3600$/);
 });
 
 test("callers arriving together share one read", async () => {

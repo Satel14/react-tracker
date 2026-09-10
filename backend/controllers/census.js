@@ -36,9 +36,20 @@ const MIN_WINDOWS = 3;
 // crawlers alone were enough to spend the project's whole monthly allowance in
 // ten days, which took recent searches and RP history down with it.
 //
-// A published daily statistic does not need to be recomputed per visitor. Half
-// an hour of staleness is invisible against a figure that moves once a day.
-const DISTRIBUTION_CACHE_MS = 30 * 60 * 1000;
+// A published daily statistic does not need to be recomputed per visitor.
+//
+// Six hours rather than something cautious like thirty minutes, because this TTL
+// is only a backstop: a finished collection clears the cache outright (see
+// runCensus), so the figure is never stale for having been cached -- it is stale
+// only if the collector did not run, in which case a shorter TTL would just
+// re-read the same rows. The difference is 4 cold reads a day against 48.
+const DISTRIBUTION_CACHE_MS = 6 * 60 * 60 * 1000;
+
+// Kept shorter than the in-process TTL on purpose. A visitor re-asking hourly is
+// answered from memory at no cost to Postgres, while a CDN or browser holding
+// the answer for six hours could outlive a collection that has already replaced
+// it -- and nothing downstream can be told to drop it early.
+const DISTRIBUTION_HTTP_MAX_AGE_S = 60 * 60;
 
 // A read that failed is cached too -- briefly. Long enough that a database in
 // trouble is not asked again by every visitor, short enough that the page
@@ -280,7 +291,7 @@ const createCensusController = ({
           maxAge: failing ? DISTRIBUTION_ERROR_CACHE_MS : DISTRIBUTION_CACHE_MS,
           header: failing
             ? "no-store"
-            : `public, max-age=${Math.round(DISTRIBUTION_CACHE_MS / 1000)}, stale-while-revalidate=3600`,
+            : `public, max-age=${DISTRIBUTION_HTTP_MAX_AGE_S}, stale-while-revalidate=3600`,
         };
         distributionCache.set(days, entry);
         return entry;
