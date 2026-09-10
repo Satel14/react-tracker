@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Alert, Button, Slider, Segmented, Tabs } from "antd";
+import { Alert, Button, Popover, Slider, Segmented, Tabs } from "antd";
 import { translate } from "react-switch-lang";
 import ReplayStage from "../component/charts/ReplayStage";
 import ReplayPaneSkeleton from "../component/skeletons/ReplayPaneSkeleton";
@@ -98,6 +98,9 @@ const MatchReplayPage = ({ t }) => {
   // the checkboxes, so a toggle costs one render of the control bar, not of the
   // animation.
   const [layers, setLayers] = useState(readLayerPrefs);
+  // Read by the popover trigger, so a layer turned off is visible without
+  // opening it.
+  const layersOn = LAYER_KEYS.filter((key) => layers[key]).length;
   // Persist outside the updater: React may call an updater twice (StrictMode,
   // and any re-render it decides to discard), and a storage write is a side
   // effect that must happen once.
@@ -303,29 +306,58 @@ const MatchReplayPage = ({ t }) => {
           {t("pages.replay.follow")}
         </Button>
         <Button onClick={() => stageRef.current?.resetView()}>{t("pages.replay.resetView")}</Button>
-      </div>
-      <div className="match-replay__layers">
-        <span className="match-replay__layers-title">{t("pages.replay.layers")}</span>
-        {LAYER_KEYS.map((key) => (
-          <button
-            key={key}
-            type="button"
-            className={`match-replay__layer${layers[key] ? " is-on" : ""}`}
-            aria-pressed={!!layers[key]}
-            onClick={() => toggleLayer(key)}
-          >
-            {t(`pages.replay.${LAYER_LABEL[key]}`)}
-          </button>
-        ))}
-      </div>
-      <div className="match-replay__legend">
-        <span className="match-replay__legend-title">{t("pages.replay.legend")}</span>
-        {LEGEND.map((item) => (
-          <span key={item.key} className="match-replay__legend-item">
-            <span className={`match-replay__swatch ${item.cls}`} aria-hidden="true" />
-            {t(`pages.replay.${item.key}`)}
-          </span>
-        ))}
+        {/* One trigger instead of two page rows. They stacked 8 toggles and 14
+            legend items above the roster -- 30 elements of chrome in 107 px --
+            and both describe the same thing: what the canvas is painting. It
+            sits in the controls row so it inherits the accent button styling
+            those already have, rather than duplicating that rule.
+
+            rootClassName is load-bearing: antd's popover surface is white by
+            default and this app never themed it, so without it the panel
+            renders white with white-on-white toggles. Measured in the browser,
+            not guessed -- jsdom has no cascade to catch it. */}
+        <Popover
+          trigger="click"
+          placement="topLeft"
+          rootClassName="match-replay__pop"
+          content={(
+            <div className="match-replay__layers-pop">
+              <div className="match-replay__layers">
+                {LAYER_KEYS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`match-replay__layer${layers[key] ? " is-on" : ""}`}
+                    aria-pressed={!!layers[key]}
+                    onClick={() => toggleLayer(key)}
+                  >
+                    {t(`pages.replay.${LAYER_LABEL[key]}`)}
+                  </button>
+                ))}
+              </div>
+              <div className="match-replay__legend">
+                <span className="match-replay__legend-title">{t("pages.replay.legend")}</span>
+                {LEGEND.map((item) => (
+                  <span key={item.key} className="match-replay__legend-item">
+                    <span className={`match-replay__swatch ${item.cls}`} aria-hidden="true" />
+                    {t(`pages.replay.${item.key}`)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        >
+          <Button className="match-replay__layers-trigger">
+            {t("pages.replay.layers")}
+            {/* Only when something is off: a hidden toggle must not hide the
+                fact that a layer was turned off, or a blank map reads as a bug. */}
+            {layersOn < LAYER_KEYS.length ? (
+              <span className="match-replay__layers-count">
+                {t("pages.replay.layersSome", { on: layersOn, of: LAYER_KEYS.length })}
+              </span>
+            ) : null}
+          </Button>
+        </Popover>
       </div>
       <ReplayRoster
         rows={roster}

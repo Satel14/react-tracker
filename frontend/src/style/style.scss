@@ -5577,20 +5577,28 @@ body {
     font-size: 11px;
     color: var(--text-faint);
   }
+  // Both of these used to be page rows above the roster. They now live inside
+  // one popover, so they lay out for a panel rather than for a wide bar: the
+  // toggles in two columns, the legend in one.
+  // Only the gap. Overriding display or align-items here knocks the label off
+  // antd's own centre/centre and the text sits on a baseline instead.
+  &__layers-trigger { gap: 6px; }
+  // Only rendered when a layer is off, which is the whole point of it.
+  &__layers-count { color: var(--warn); font-size: 12px; font-variant-numeric: tabular-nums; }
+  &__layers-pop { max-width: 320px; }
   &__layers {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 10px;
   }
-  &__layers-title { color: var(--text-muted); font-size: 12px; margin-right: 2px; }
   &__legend {
-    display: flex;
-    align-items: center;
-    gap: 4px 14px;
-    flex-wrap: wrap;
+    // Two columns: fourteen rows in one made the panel 515 px tall.
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px 12px;
     margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
     font-size: 12px;
     color: var(--text-muted);
   }
@@ -6049,6 +6057,17 @@ body {
   &__armour-level { color: var(--text-strong); font-variant-numeric: tabular-nums; }
   &__looted,
   &__counts { font-size: 12px; color: var(--text-muted); }
+}
+
+// The layers popover renders in a portal at body level, outside every scope
+// this stylesheet themes, so antd's own light surface wins unless it is named.
+.match-replay__pop {
+  .ant-popover-inner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+  .ant-popover-arrow::before { background: var(--surface); }
 }
 
 .maps-tab {

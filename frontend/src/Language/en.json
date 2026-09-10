@@ -322,6 +322,7 @@
       "fullscreen": "Fullscreen",
       "exitFullscreen": "Exit fullscreen",
       "layers": "Layers",
+      "layersSome": "{on} of {of}",
       "layerShots": "Shots",
       "layerLandings": "Landings",
       "layerFlight": "Flight path",

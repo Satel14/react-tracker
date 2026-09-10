@@ -322,6 +322,7 @@
             "fullscreen": "На весь екран",
             "exitFullscreen": "Вийти з повного екрана",
             "layers": "Шари",
+            "layersSome": "{on} з {of}",
             "layerShots": "Постріли",
             "layerLandings": "Висадки",
             "layerFlight": "Маршрут літака",
