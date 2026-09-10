@@ -6,6 +6,7 @@ const { telemetryWeaponName, canonicalWeaponKey } = require("./weaponMeta");
 const { readMatchContext } = require("./matchContext");
 const { poiName } = require("./poiNames");
 const { itemName } = require("./itemNames");
+const { throwCountsFor } = require("./replay/throwables");
 
 const analysisCache = new Map();
 const ANALYSIS_CACHE_LIMIT = 30;
@@ -366,6 +367,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   const killFeed = parseKillFeed(telemetry, { clock, accountId, playerName });
   const damage = parseDamage(telemetry, { accountId, playerName });
   const meds = parseMeds(telemetry, { accountId, playerName });
+  const throws = throwCountsFor(telemetry, { accountId, playerName });
   const timeline = parseTimeline(telemetry, { clock, accountId, playerName });
 
   const { region, weather } = readMatchContext(telemetry);
@@ -385,6 +387,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
     killFeed,
     damage,
     meds,
+    throws,
     timeline,
   };
 
