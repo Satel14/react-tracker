@@ -128,3 +128,18 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+# --- this project ---
+
+# Throwaway probes against the live PUBG API. They are written to answer one
+# question, kept only so the next question starts from working code, and are
+# deliberately never committed: they carry no tests and reach the network, and
+# test/requireResolution.test.js walks every file here, so one that requires a
+# module absent from the checked-out branch breaks the whole suite.
+scripts/apiProbe/
+
+# Measurement logs from scripts/rpLag/measure.js -- one per session, named after
+# the player and the day. Data, not source.
+scripts/rpLag/*.jsonl
+
+# Written into the repo root by scripts/apiProbe/probePoiSweep.js.
+poi-sweep.json
