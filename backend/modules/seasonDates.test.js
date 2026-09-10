@@ -36,22 +36,29 @@ test("an entry only drops the estimated flag when it carries a real end date", (
   }
 });
 
-test("the cycle fallback is a plausible season length", () => {
-  // Used only when a season has no entry: startDate + cycleDays. It is a guess
-  // by construction, but a guess that disagrees with the seasons we have
-  // actually measured is worse than none -- it renders as a countdown.
+test("no cycle fallback invents an end date", () => {
+  // There used to be a defaults.cycleDays here, applied to an entry that had a
+  // start but no end. Two seasons have now been measured and they disagree by a
+  // month -- 85 days for Season 42, 55 for Season 43 -- so no single cycle
+  // length can be within a fortnight of both, and any guess renders on the
+  // homepage as a confident "ends in N days" that can be a month wrong.
+  //
+  // PUBG's /seasons carries no dates, so the honest answer for a season nobody
+  // has researched yet is no countdown at all. getSeasonOverride already returns
+  // null for a season with no entry, so nothing needs a fallback to degrade to.
+  assert.equal(config.defaults?.cycleDays, undefined, "a cycle guess is worse than no countdown");
+
   const measured = entries()
     .filter(([, s]) => s.startDate && s.endDate && !s.isEstimated)
-    .map(([, s]) => Math.round((new Date(s.endDate) - new Date(s.startDate)) / 86400000));
+    .map(([id, s]) => [id, Math.round((new Date(s.endDate) - new Date(s.startDate)) / 86400000)]);
 
-  const cycleDays = Number(config.defaults?.cycleDays);
-  assert.ok(cycleDays > 0, "cycleDays must be positive");
-
-  for (const days of measured) {
-    // Within a fortnight of every season whose real length we know.
-    assert.ok(
-      Math.abs(days - cycleDays) <= 14,
-      `cycleDays ${cycleDays} is ${Math.abs(days - cycleDays)} days off a measured season of ${days}`
-    );
-  }
+  // Guards the premise above rather than the numbers: if every measured season
+  // ever agrees to within a fortnight again, a cycle fallback becomes defensible
+  // and this test is the note explaining why it was dropped.
+  assert.ok(measured.length >= 2, "need at least two measured seasons to claim they vary");
+  const lengths = measured.map(([, days]) => days);
+  assert.ok(
+    Math.max(...lengths) - Math.min(...lengths) > 14,
+    `measured seasons ${JSON.stringify(measured)} agree closely enough that a cycle fallback would be defensible`
+  );
 });
