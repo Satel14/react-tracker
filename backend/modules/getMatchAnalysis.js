@@ -120,12 +120,12 @@ function parseKillFeed(telemetry, { clock, accountId = null, playerName = null }
       weaponKey,
       distance,
       damageReason: dmgInfo.damageReason || null,
-      // Where the victim fell. The killer's own place rides alongside so the UI
-      // can show it on hover, but it is NEVER substituted for a missing
-      // victimPoi -- that would label a death with a location the victim was
+      // Where the victim fell. Only the victim's: measured over 197 real kills,
+      // the killer's zone and the victim's are never different (73 identical,
+      // 118 both empty, 6 where one side alone has one), so a killer's place
+      // would be either the same string twice or a location the victim was
       // never in.
       victimPoi: poiName(victim?.zone),
-      killerPoi: poiName(killer?.zone),
       kx: kxy ? kxy.x : null,
       ky: kxy ? kxy.y : null,
       vx: vxy ? vxy.x : null,

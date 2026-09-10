@@ -89,7 +89,8 @@ const poiTelemetry = [
     { character: { accountId: "account.me", name: "Me", teamId: 1 } },
     { character: { accountId: "account.foe", name: "Foe", teamId: 2 } },
   ] },
-  // Killer and victim in different places -- the row must name the victim's.
+  // The row names the VICTIM's place, not the killer's -- so this fixture gives
+  // the two different values to prove which one is read.
   { _T: "LogPlayerKillV2", elapsedTime: 30,
     killer: { accountId: "account.me", name: "Me", location: { x: 1, y: 1, z: 0 }, zone: ["terminal"] },
     victim: { accountId: "account.foe", name: "Foe", location: { x: 2, y: 2, z: 0 }, zone: ["hosanprison"] },
@@ -101,16 +102,16 @@ const poiTelemetry = [
     killerDamageInfo: { damageCauserName: "WeapHK416_C", distance: 1000, damageReason: "TorsoShot" } },
 ];
 
-test("parseKillFeed names the place from each actor's zone", () => {
+test("parseKillFeed names the place the victim fell, not the shooter's", () => {
   const feed = parseKillFeed(poiTelemetry, { accountId: "account.me" });
   assert.equal(feed[0].victimPoi, "Hosan Prison");
-  assert.equal(feed[0].killerPoi, "Terminal");
+  // The killer's zone says "terminal" and must not leak into the row.
+  assert.equal(feed[0].killerPoi, undefined);
 });
 
 test("parseKillFeed leaves a kill in the open field unnamed", () => {
   const feed = parseKillFeed(poiTelemetry, { accountId: "account.me" });
   assert.equal(feed[1].victimPoi, null);
-  assert.equal(feed[1].killerPoi, null);
 });
 
 const { parseDamage } = require("./getMatchAnalysis");

@@ -374,7 +374,6 @@
             "killAt": "{time}",
             "killWith": "з {weapon}",
             "killDistance": "{distance} м",
-            "killFromPoi": "Стріляв із {poi}",
             "filterAll": "Усі",
             "filterFocal": "Мої",
             "noKills": "Вбивств не зафіксовано.",

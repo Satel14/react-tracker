@@ -374,7 +374,6 @@
       "killAt": "{time}",
       "killWith": "with {weapon}",
       "killDistance": "{distance} m",
-      "killFromPoi": "Shot from {poi}",
       "filterAll": "All",
       "filterFocal": "Mine",
       "noKills": "No kills recorded.",

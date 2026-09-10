@@ -50,18 +50,7 @@ const KillFeed = ({ kills = [], platform, t }) => {
             {/* Where the victim fell. Absent on roughly half of real kills --
                 a fight in the open between POIs has no name, and the row
                 simply carries none. */}
-            {k.victimPoi ? (
-              <span
-                className="kill-feed__poi"
-                title={
-                  k.killerPoi && k.killerPoi !== k.victimPoi
-                    ? t("pages.match.killFromPoi", { poi: k.killerPoi })
-                    : undefined
-                }
-              >
-                {k.victimPoi}
-              </span>
-            ) : null}
+            {k.victimPoi ? <span className="kill-feed__poi">{k.victimPoi}</span> : null}
           </li>
         ))}
       </ul>

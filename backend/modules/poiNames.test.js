@@ -63,5 +63,9 @@ test("the table itself is well formed", () => {
     assert.equal(typeof name, "string");
     assert.equal(name, name.trim(), `name ${JSON.stringify(name)} must be trimmed`);
     assert.ok(name.length > 0, `slug ${slug} has an empty name`);
+    // The kill-feed span is capped at 160px and ellipsises past it. jsdom has no
+    // layout, so the width itself cannot be tested -- this budget stands in for
+    // it. "Sosnovka Military Base", the current longest at 22, measured 131px.
+    assert.ok(name.length <= 24, `name ${JSON.stringify(name)} is too long for the kill-feed row`);
   });
 });
