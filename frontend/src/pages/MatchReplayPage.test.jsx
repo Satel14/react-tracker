@@ -543,12 +543,85 @@ test("the lobby utility counters are gone from the replay pane", async () => {
 
   expect(container.querySelector(".match-replay__utility")).toBeNull();
   expect(screen.queryByText("Frag Grenade")).not.toBeInTheDocument();
-  // The layer toggle stays -- only the counters left.
-  expect(screen.getByText("pages.replay.layerThrowables")).toBeInTheDocument();
+  // The layer toggle stays -- only the counters left. It lives in the popover
+  // now, so it has to be opened before the label exists in the DOM.
+  fireEvent.click(screen.getByText("pages.replay.layers"));
+  expect(await screen.findByText("pages.replay.layerThrowables")).toBeInTheDocument();
 });
 
 test("the loadout tab is offered and opens from the url", async () => {
   const { container } = renderAtWithUrl("/match/steam/m1/replay?tab=loadout");
   await screen.findByText("pages.match.tabLoadout");
   expect(container.querySelector('[data-testid="url"]').textContent).toContain("tab=loadout");
+});
+
+
+// --- the layers popover ----------------------------------------------------
+
+const openLayers = async () => {
+  fireEvent.click(screen.getByText("pages.replay.layers"));
+  return screen.findByText("pages.replay.layerShots");
+};
+
+test("layers and the legend are behind one trigger rather than two page rows", async () => {
+  // Before this they stacked 8 buttons and 14 legend items above the roster --
+  // 30 elements of chrome measured in 107 px.
+  const { container } = renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+
+  expect(container.querySelector(".match-replay__layers")).toBeNull();
+  expect(container.querySelector(".match-replay__legend")).toBeNull();
+  expect(screen.getByText("pages.replay.layers")).toBeInTheDocument();
+  expect(screen.queryByText("pages.replay.layerShots")).not.toBeInTheDocument();
+  expect(screen.queryByText("pages.replay.legendFocal")).not.toBeInTheDocument();
+});
+
+test("opening the trigger reveals every toggle and the legend", async () => {
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  // Absent first, or this test would pass against the old always-on rows.
+  expect(screen.queryByText("pages.replay.layerThrowables")).not.toBeInTheDocument();
+  await openLayers();
+
+  // All eight toggles, and the legend in the same panel.
+  expect(screen.getByText("pages.replay.layerThrowables")).toBeInTheDocument();
+  expect(screen.getByText("pages.replay.layerDamage")).toBeInTheDocument();
+  expect(screen.getByText("pages.replay.legendFocal")).toBeInTheDocument();
+  expect(screen.getByText("pages.replay.legendThrowHit")).toBeInTheDocument();
+});
+
+test("a toggle inside the popover still persists", async () => {
+  renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  // Same guard: the toggle must be reachable only through the trigger.
+  expect(screen.queryByText("pages.replay.layerDamage")).not.toBeInTheDocument();
+  await openLayers();
+
+  const before = JSON.parse(localStorage.getItem("replayLayers") || "{}").damage;
+  fireEvent.click(screen.getByText("pages.replay.layerDamage"));
+  const after = JSON.parse(localStorage.getItem("replayLayers")).damage;
+  expect(after).toBe(!(before ?? true));
+});
+
+test("the trigger says how many layers are on, but only when one is off", async () => {
+  // Hidden toggles must not hide the fact that something was turned off, or a
+  // blank map reads as a bug.
+  //
+  // Asserted on the element, not the copy: in a page test `t` is the real
+  // translate HOC with no language loaded, so it returns the bare key and drops
+  // the interpolated values entirely.
+  const allOn = {
+    shots: true, landings: true, flight: true, packages: true,
+    specialZones: true, healthArcs: true, damage: true, throwables: true,
+  };
+  localStorage.setItem("replayLayers", JSON.stringify(allOn));
+  const first = renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  expect(first.container.querySelector(".match-replay__layers-count")).toBeNull();
+  first.unmount();
+
+  localStorage.setItem("replayLayers", JSON.stringify({ ...allOn, shots: false }));
+  const second = renderAt("/match/steam/m1/replay");
+  await screen.findByRole("img", { name: /erangel/i });
+  expect(second.container.querySelector(".match-replay__layers-count")).not.toBeNull();
 });
