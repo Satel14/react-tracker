@@ -7,6 +7,7 @@ const { readMatchContext } = require("./matchContext");
 const { poiName } = require("./poiNames");
 const { itemName } = require("./itemNames");
 const { throwCountsFor } = require("./replay/throwables");
+const { buildLoadout } = require("./loadout");
 
 const analysisCache = new Map();
 const ANALYSIS_CACHE_LIMIT = 30;
@@ -368,6 +369,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
   const damage = parseDamage(telemetry, { accountId, playerName });
   const meds = parseMeds(telemetry, { accountId, playerName });
   const throws = throwCountsFor(telemetry, { accountId, playerName });
+  const loadout = buildLoadout(telemetry, { accountId, playerName });
   const timeline = parseTimeline(telemetry, { clock, accountId, playerName });
 
   const { region, weather } = readMatchContext(telemetry);
@@ -388,6 +390,7 @@ async function getMatchAnalysis({ shard, matchId, accountId = null, playerName =
     damage,
     meds,
     throws,
+    loadout,
     timeline,
   };
 

@@ -58,3 +58,11 @@ describe("MatchAnalysisSkeleton", () => {
     tiles.forEach((tile) => expect(tile).toHaveAttribute("aria-hidden", "true"));
   });
 });
+
+test("the loadout skeleton wears the real panel's container class", () => {
+  // The house rule: a skeleton wears the real container's classes, so the swap
+  // does not move anything on the page.
+  const { container } = render(<MatchAnalysisSkeleton tab="loadout" label="loading" />);
+  expect(container.querySelector(".loadout")).not.toBeNull();
+  expect(container.querySelector(".loadout__weapons")).not.toBeNull();
+});

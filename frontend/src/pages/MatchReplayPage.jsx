@@ -11,6 +11,7 @@ import MatchScoreboard from "../component/match/MatchScoreboard";
 import KillFeed from "../component/match/KillFeed";
 import KillMap from "../component/match/KillMap";
 import DamageBreakdown from "../component/match/DamageBreakdown";
+import LoadoutPanel from "../component/match/LoadoutPanel";
 import CombatTimeline from "../component/match/CombatTimeline";
 import { getMatchReplay, getMatchAnalysis } from "../api/player";
 import { useReplayClock } from "../component/charts/useReplayClock";
@@ -52,7 +53,7 @@ const INITIAL = { loading: false, error: null, data: null };
 // The active tab lives in the query string so a link can point at one -- the
 // Recent Matches card links straight to the scoreboard. Anything not on this
 // list opens the replay rather than handing Tabs a key it has no pane for.
-const TAB_KEYS = ["replay", "scoreboard", "kills", "damage", "timeline"];
+const TAB_KEYS = ["replay", "scoreboard", "kills", "damage", "timeline", "loadout"];
 
 function reducer(state, action) {
   switch (action.type) {
@@ -398,6 +399,14 @@ const MatchReplayPage = ({ t }) => {
           children: renderAnalysisPane(
             <MatchAnalysisSkeleton tab="timeline" label={t("pages.match.loading")} />,
             (a) => <CombatTimeline timeline={a.timeline} focalPresent={!!a.focalAccountId} t={t} />
+          ),
+        },
+        {
+          key: "loadout",
+          label: t("pages.match.tabLoadout"),
+          children: renderAnalysisPane(
+            <MatchAnalysisSkeleton tab="loadout" label={t("pages.match.loading")} />,
+            (a) => <LoadoutPanel loadout={a.loadout} focalPresent={!!a.focalAccountId} t={t} />
           ),
         },
   ];
