@@ -5989,6 +5989,15 @@ body {
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
+  // Capped rather than left to grow: "Sosnovka Military Base" is long enough to
+  // push the row's flex layout around on a narrow viewport.
+  &__poi {
+    opacity: 0.55;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .maps-tab {

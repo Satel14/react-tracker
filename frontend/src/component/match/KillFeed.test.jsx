@@ -62,3 +62,34 @@ describe("profile links", () => {
     expect([...container.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Foe"]);
   });
 });
+
+describe("kill location", () => {
+  const row = (over = {}) => ({
+    t: 60, killerName: "Me", victimName: "Foe", weapon: "AUG", distance: 87,
+    victimPoi: "Hosan Prison", killerPoi: "Hosan Prison", ...over,
+  });
+
+  it("names where the victim fell", () => {
+    render(<KillFeed kills={[row()]} t={t} />);
+    expect(screen.getByText("Hosan Prison")).toBeInTheDocument();
+  });
+
+  it("renders no place for a kill in the open field", () => {
+    // zone is absent on roughly half of real kills, so the row has to read
+    // correctly with nothing there rather than showing an empty pill.
+    const { container } = render(<KillFeed kills={[row({ victimPoi: null, killerPoi: null })]} t={t} />);
+    expect(container.querySelector(".kill-feed__poi")).toBeNull();
+  });
+
+  it("puts the shooter's place on hover when it differs", () => {
+    const { container } = render(<KillFeed kills={[row({ killerPoi: "Terminal" })]} t={t} />);
+    expect(container.querySelector(".kill-feed__poi").getAttribute("title")).toBe(
+      'pages.match.killFromPoi:{"poi":"Terminal"}'
+    );
+  });
+
+  it("adds no hover when both actors were in the same place", () => {
+    const { container } = render(<KillFeed kills={[row()]} t={t} />);
+    expect(container.querySelector(".kill-feed__poi").getAttribute("title")).toBeNull();
+  });
+});
