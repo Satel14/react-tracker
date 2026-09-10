@@ -530,32 +530,19 @@ const replayWith = (extra) => ({
   },
 });
 
-test("lists what the lobby threw, with no damage figure for a kind that cannot deal any", async () => {
+test("the lobby utility counters are gone from the replay pane", async () => {
+  // They moved to the Damage tab as the focal player's own numbers. The payload
+  // still carries throwKinds because the map layer needs it, so this is the pin
+  // that stops the old block quietly coming back.
   getMatchReplay.mockResolvedValueOnce(replayWith({
     throws: { t: [10], k: [0], ax: [100], ay: [100], vx: [null], vy: [null] },
-    throwKinds: [
-      { name: "Frag Grenade", damaging: true, thrown: 11, damage: 80 },
-      { name: "Smoke Bomb", damaging: false, thrown: 12, damage: 0 },
-    ],
+    throwKinds: [{ name: "Frag Grenade", damaging: true, thrown: 11, damage: 80 }],
   }));
-  renderAt("/match/steam/m1/replay");
-  await screen.findByRole("img", { name: /erangel/i });
-
-  expect(screen.getByText("Frag Grenade")).toBeInTheDocument();
-  expect(screen.getByText("Smoke Bomb")).toBeInTheDocument();
-  expect(screen.getByText("11")).toBeInTheDocument();
-
-  // The rule, not the copy: a "0 dmg" beside a smoke would read as a throw that
-  // failed, when smoke deals none by design.
-  const fragRow = screen.getByText("Frag Grenade").closest(".match-replay__utility-row");
-  const smokeRow = screen.getByText("Smoke Bomb").closest(".match-replay__utility-row");
-  expect(fragRow.querySelector(".match-replay__utility-damage")).not.toBeNull();
-  expect(smokeRow.querySelector(".match-replay__utility-damage")).toBeNull();
-});
-
-test("renders no utility block when nothing was thrown", async () => {
-  getMatchReplay.mockResolvedValueOnce(replayWith({ throws: null, throwKinds: [] }));
   const { container } = renderAt("/match/steam/m1/replay");
   await screen.findByRole("img", { name: /erangel/i });
+
   expect(container.querySelector(".match-replay__utility")).toBeNull();
+  expect(screen.queryByText("Frag Grenade")).not.toBeInTheDocument();
+  // The layer toggle stays -- only the counters left.
+  expect(screen.getByText("pages.replay.layerThrowables")).toBeInTheDocument();
 });

@@ -332,8 +332,6 @@
       "layerThrowables": "Thrown items",
       "legendThrow": "Thrown from",
       "legendThrowHit": "Throw that dealt damage",
-      "utility": "Thrown by the lobby",
-      "utilityDamage": "{damage} dmg",
       "shortcuts": "Space play/pause, arrows seek 5 s (Shift 30 s), comma/period step 10 s, 0-4 speed, F fullscreen, R reset view",
       "stateAlive": "Alive",
       "teamless": "No team",
