@@ -546,3 +546,9 @@ test("the lobby utility counters are gone from the replay pane", async () => {
   // The layer toggle stays -- only the counters left.
   expect(screen.getByText("pages.replay.layerThrowables")).toBeInTheDocument();
 });
+
+test("the loadout tab is offered and opens from the url", async () => {
+  const { container } = renderAtWithUrl("/match/steam/m1/replay?tab=loadout");
+  await screen.findByText("pages.match.tabLoadout");
+  expect(container.querySelector('[data-testid="url"]').textContent).toContain("tab=loadout");
+});

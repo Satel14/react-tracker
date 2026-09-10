@@ -68,12 +68,37 @@ const TimelineSkeleton = ({ label, rows }) => (
   </SkeletonFrame>
 );
 
+// Two weapon rows because that is what the game lets a player carry, and the
+// panel draws one per weapon.
+const LoadoutSkeleton = ({ label }) => (
+  <SkeletonFrame className="loadout" label={label}>
+    <div className="loadout__cutoff"><Tile variant="label" /></div>
+    <div className="loadout__weapons">
+      {Array.from({ length: 2 }, (_, row) => (
+        <div className="loadout__weapon" key={row}>
+          <Tile variant="label" />
+          <span className="loadout__attachments">
+            <Tile variant="chip" />
+            <Tile variant="chip" />
+            <Tile variant="chip" />
+          </span>
+        </div>
+      ))}
+    </div>
+    <div className="loadout__armour">
+      <Cells count={3} />
+    </div>
+    <div className="loadout__counts"><Tile variant="label" /></div>
+  </SkeletonFrame>
+);
+
 // One shape per analysis tab rather than one shared stack: the tabs differ by a
 // square map and a seven-column table, so a single placeholder could only ever
 // match one of them.
 const MatchAnalysisSkeleton = ({ label, tab = "kills", rows = 8 }) => {
   if (tab === "damage") return <DamageSkeleton label={label} />;
   if (tab === "timeline") return <TimelineSkeleton label={label} rows={rows} />;
+  if (tab === "loadout") return <LoadoutSkeleton label={label} />;
   return <KillsSkeleton label={label} rows={rows} />;
 };
 
