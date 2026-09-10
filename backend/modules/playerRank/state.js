@@ -18,6 +18,9 @@ const extrasCache = new Map();
 const inFlightExtrasRequests = new Map();
 const inFlightResolveRequests = new Map();
 const inFlightSeasonCatalogRequests = new Map();
+// `shard:accountId:seasonId` -> when a rank-point reading was last taken, from
+// either a fresh fetch or a cache-hit refresh.
+const rankPointReadingCache = new Map();
 
 // 30 min matches PUBG's guidance: a match lasts 20-30 min and new data takes
 // 5-15 min to reach the API, so a shorter TTL mostly refetches unchanged stats.
@@ -32,6 +35,11 @@ const LEADERBOARD_CACHE_DURATION = 2 * 60 * 60 * 1000;
 const PLAYER_NAME_CACHE_DURATION = 6 * 60 * 60 * 1000;
 const RATE_LIMIT_COOLDOWN_MS = 20 * 1000;
 const EXTRAS_RETRY_COOLDOWN_MS = 120 * 1000;
+// How often a cache hit may spend one ranked request to record a reading. A
+// ranked match runs 20-30 min, so a minute is far finer than the thing being
+// measured and still caps a page held on refresh at 60 requests an hour of the
+// 100-per-minute budget.
+const RANK_POINT_READING_INTERVAL_MS = 60 * 1000;
 
 let rateLimitedUntil = 0;
 
@@ -112,4 +120,6 @@ module.exports = {
   inFlightResolveRequests,
   inFlightSeasonCatalogRequests,
   EXTRAS_RETRY_COOLDOWN_MS,
+  rankPointReadingCache,
+  RANK_POINT_READING_INTERVAL_MS,
 };
