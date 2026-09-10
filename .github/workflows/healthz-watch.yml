@@ -1,0 +1,95 @@
+name: Health watch
+
+# Watches the one thing that had no watcher.
+#
+# On 2026-09-10 the Neon project's monthly transfer allowance ran out and every
+# Postgres-backed feature -- recent searches, the tier census, RP history --
+# answered with an empty list for days. Each store swallows its own errors on
+# purpose, so an outage is indistinguishable from "nothing collected yet", and
+# nobody noticed until a visitor did. `/healthz` now reports what the last real
+# query saw; this job is what reads it.
+#
+# Deliberately NOT a keep-warm pinger. The free Render instance sleeps after 15
+# minutes, and waking it costs instance-hours against a 750/month cap that was
+# already a third spent -- an hourly poke would add ~180 h/month for no benefit
+# here, because the failure this guards against develops over days, not minutes.
+# Six-hourly turns a ten-day outage into a six-hour one, which is the whole win.
+
+on:
+  schedule:
+    # Every six hours, offset off the hour: GitHub delivers scheduled runs late
+    # under load, and nothing here cares whether it is :00 or :40.
+    - cron: "40 */6 * * *"
+  workflow_dispatch:
+
+# A late fire must not stack on top of the previous one.
+concurrency:
+  group: healthz-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      API: https://api.pubgtracker.top
+    steps:
+      - name: Read /healthz and judge the database
+        run: |
+          set -u
+
+          # Three attempts, because the first request to a sleeping instance can
+          # take the best part of a minute and a cold start is not an outage.
+          body=""
+          for attempt in 1 2 3; do
+            body=$(curl -sS -m 120 "$API/healthz" || echo "")
+            if [ -n "$body" ]; then
+              echo "attempt $attempt: $body"
+              break
+            fi
+            echo "attempt $attempt: no answer"
+            sleep 20
+          done
+
+          if [ -z "$body" ]; then
+            echo "::error::/healthz did not answer at all after three attempts -- the API is down, not just its database"
+            exit 1
+          fi
+
+          status=$(printf '%s' "$body" | jq -r '.db.status // "absent"' 2>/dev/null || echo absent)
+
+          case "$status" in
+            ok)
+              echo "Database is answering (last seen $(printf '%s' "$body" | jq -r '.db.at // "?"'))."
+              ;;
+            failing)
+              error=$(printf '%s' "$body" | jq -r '.db.error // "no message"')
+              scope=$(printf '%s' "$body" | jq -r '.db.scope // "?"')
+              since=$(printf '%s' "$body" | jq -r '.db.at // "?"')
+              echo "::error::Postgres is failing since $since ($scope): $error"
+              # Named because it is the one that has actually happened, and it
+              # cannot be fixed by redeploying -- it needs the Neon allowance.
+              case "$error" in
+                *"data transfer quota"*)
+                  echo "::error::This is the monthly Neon transfer allowance. Check Neon -> Billing; it resets on the 1st."
+                  ;;
+              esac
+              exit 1
+              ;;
+            unknown)
+              # Never seen in production with DATABASE_URL set: warmRecentSearches
+              # queries at boot, so the status is decided within a second of
+              # listening. Still "unknown" means nothing ever tried, which on this
+              # deployment means the connection string is missing.
+              echo "::error::/healthz reports no database at all -- DATABASE_URL is probably unset on Render"
+              exit 1
+              ;;
+            absent)
+              echo "::error::/healthz answered without a db field. Running an old build? Body above."
+              exit 1
+              ;;
+            *)
+              echo "::error::unrecognised db status '$status' -- this workflow needs updating"
+              exit 1
+              ;;
+          esac
