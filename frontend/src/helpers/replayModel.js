@@ -14,6 +14,7 @@
 
 const SHOT_KEYS = ["t", "a", "v", "ax", "ay", "vx", "vy"];
 const DAMAGE_KEYS = ["t", "a", "v", "d"];
+const THROW_KEYS = ["t", "k", "ax", "ay", "vx", "vy"];
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -112,6 +113,8 @@ export const decodeReplay = (payload) => {
     players: decodePlayers(src.players),
     shots: decodeColumns(src.shots, SHOT_KEYS),
     damage: decodeColumns(src.damage, DAMAGE_KEYS),
+    throws: decodeColumns(src.throws, THROW_KEYS),
+    throwKinds: asArray(src.throwKinds),
     kills: asArray(src.kills),
     zones: asArray(src.zones),
     landings: asArray(src.landings),

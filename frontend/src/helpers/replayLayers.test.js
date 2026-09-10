@@ -1,5 +1,6 @@
 import {
   createShotWindow,
+  createThrowWindow,
   flightSegment,
   planeAt,
   flightAlpha,
@@ -604,4 +605,95 @@ test("a package nobody touched is never open", () => {
   const out = [];
   packagesAt([{ kind: "small", x: 1, y: 2, ts: 10, t: 20, lootedAt: null }], 999, out);
   expect(out[0].looted).toBe(false);
+});
+
+describe("createThrowWindow", () => {
+  const kinds = [
+    { name: "Frag Grenade", damaging: true, thrown: 2, damage: 95 },
+    { name: "Smoke Bomb", damaging: false, thrown: 1, damage: 0 },
+  ];
+  const columns = {
+    t: [10, 12, 40],
+    k: [0, 1, 0],
+    ax: [100, 200, 300],
+    ay: [110, 210, 310],
+    vx: [140, null, null],
+    vy: [150, null, null],
+  };
+
+  it("yields the throws inside the lifetime window", () => {
+    const w = createThrowWindow(columns, kinds, { lifetimeSeconds: 4 });
+    const active = w.activeAt(13);
+    expect(active.map((e) => e.kind)).toEqual(["Frag Grenade", "Smoke Bomb"]);
+    expect(active.map((e) => e.damaging)).toEqual([true, false]);
+  });
+
+  it("marks a throw whose damage was located as a hit, and the rest not", () => {
+    const w = createThrowWindow(columns, kinds, { lifetimeSeconds: 4 });
+    const active = w.activeAt(13);
+    expect(active[0]).toMatchObject({ x: 100, y: 110, vx: 140, vy: 150, hit: true });
+    expect(active[1]).toMatchObject({ x: 200, y: 210, hit: false });
+    expect(active[1].vx).toBeNull();
+  });
+
+  it("ages an entry across its lifetime", () => {
+    const w = createThrowWindow(columns, kinds, { lifetimeSeconds: 4 });
+    expect(w.activeAt(10)[0].age).toBeCloseTo(0);
+    expect(w.activeAt(12)[0].age).toBeCloseTo(0.5);
+    // A throw is gone once its lifetime is spent, and the scrubber can land
+    // anywhere -- including before every throw.
+    expect(w.activeAt(14).map((e) => e.kind)).toEqual(["Smoke Bomb"]);
+    expect(w.activeAt(0)).toEqual([]);
+    expect(w.activeAt(9.9)).toEqual([]);
+  });
+
+  it("seeks backwards as readily as forwards", () => {
+    const w = createThrowWindow(columns, kinds, { lifetimeSeconds: 4 });
+    expect(w.activeAt(41).map((e) => e.kind)).toEqual(["Frag Grenade"]);
+    expect(w.activeAt(13).map((e) => e.kind)).toEqual(["Frag Grenade", "Smoke Bomb"]);
+  });
+
+  it("fills a caller-owned array without growing it", () => {
+    // The draw loop reuses one buffer at up to 62 players a frame; a window that
+    // allocated per frame is the thing this shape exists to avoid.
+    const w = createThrowWindow(columns, kinds, { lifetimeSeconds: 4 });
+    const buf = [];
+    w.activeAt(13, buf);
+    expect(buf).toHaveLength(2);
+    const first = buf[0];
+    w.activeAt(41, buf);
+    expect(buf).toHaveLength(1);
+    expect(buf[0]).toBe(first);
+    expect(buf[0].kind).toBe("Frag Grenade");
+  });
+
+  it("accepts the decoded array-of-objects shape too", () => {
+    // decodeReplay hands the app rows, not columns, and a window that silently
+    // drew nothing is exactly the failure this module exists to prevent.
+    const rows = [{ t: 10, k: 0, ax: 100, ay: 110, vx: 140, vy: 150 }];
+    const w = createThrowWindow(rows, kinds, { lifetimeSeconds: 4 });
+    expect(w.activeAt(10).map((e) => e.kind)).toEqual(["Frag Grenade"]);
+  });
+
+  it("caps how many it will yield at once", () => {
+    const many = { t: [], k: [], ax: [], ay: [], vx: [], vy: [] };
+    for (let i = 0; i < 50; i += 1) {
+      many.t.push(10);
+      many.k.push(0);
+      many.ax.push(i);
+      many.ay.push(i);
+      many.vx.push(null);
+      many.vy.push(null);
+    }
+    const w = createThrowWindow(many, kinds, { lifetimeSeconds: 4, cap: 20 });
+    expect(w.activeAt(10)).toHaveLength(20);
+  });
+
+  it("yields nothing for junk instead of throwing", () => {
+    [null, undefined, 42, "x"].forEach((value) => {
+      expect(createThrowWindow(value, kinds).activeAt(5)).toEqual([]);
+    });
+    expect(createThrowWindow(columns, null).activeAt(13).map((e) => e.kind)).toEqual([null, null]);
+    expect(createThrowWindow(columns, kinds).activeAt(NaN)).toEqual([]);
+  });
 });

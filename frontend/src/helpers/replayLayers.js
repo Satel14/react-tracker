@@ -116,6 +116,102 @@ export const createShotWindow = (shots, options) => {
   return { activeAt };
 };
 
+// ------------------------------------------------------------- throw window
+
+const THROW_COLUMNS = ["t", "k", "ax", "ay", "vx", "vy"];
+
+// Same both-shapes tolerance as the shot window, and for the same reason:
+// decodeReplay hands the rest of the app rows, the wire carries columns.
+const toThrowColumns = (throws) => {
+  const columns = { t: [], k: [], ax: [], ay: [], vx: [], vy: [] };
+  if (Array.isArray(throws)) {
+    for (const row of throws) {
+      if (!row || typeof row !== "object") continue;
+      for (const key of THROW_COLUMNS) columns[key].push(row[key]);
+    }
+    return columns;
+  }
+  if (!throws || typeof throws !== "object") return columns;
+  for (const key of THROW_COLUMNS) columns[key] = asArray(throws[key]);
+  return columns;
+};
+
+// A throw is an instant, so the marker needs a lifetime to be noticed at all.
+// Four seconds rather than the shot layer's 1.5: long enough to read at 1x
+// playback, short enough that ~170 throws a match never pile up on screen.
+//
+// `kinds` is the payload's throwKinds table, because `k` is an index into it and
+// `damaging` lives there. The marker at (x, y) is where the item was THROWN
+// FROM; (vx, vy) is where its damage landed and is null for 58% of real throws,
+// which have no second position anywhere in telemetry.
+export const createThrowWindow = (throws, kinds, options) => {
+  const opts = optionsOf(options);
+  const lifetime = Math.max(numberOption(opts.lifetimeSeconds, 4), 0) || 4;
+  const cap = Math.max(Math.floor(numberOption(opts.cap, 20)), 0);
+  const table = asArray(kinds);
+
+  const columns = toThrowColumns(throws);
+  const src = columns.t;
+  const T = [];
+  const K = [];
+  const AX = [];
+  const AY = [];
+  const VX = [];
+  const VY = [];
+  for (let i = 0; i < src.length; i += 1) {
+    const t = src[i];
+    const ax = columns.ax[i];
+    const ay = columns.ay[i];
+    // A throw with no usable origin is dropped here rather than drawn at the
+    // map origin. The endpoint is allowed to be missing.
+    if (!isNum(t) || !isNum(ax) || !isNum(ay)) continue;
+    const vx = columns.vx[i];
+    const vy = columns.vy[i];
+    T.push(t);
+    K.push(columns.k[i]);
+    AX.push(ax);
+    AY.push(ay);
+    VX.push(isNum(vx) ? vx : null);
+    VY.push(isNum(vy) ? vy : null);
+  }
+
+  const buffer = [];
+
+  const activeAt = (t, out) => {
+    const dest = Array.isArray(out) ? out : buffer;
+    if (!isNum(t)) {
+      dest.length = 0;
+      return dest;
+    }
+    let from = upperBound(T, t - lifetime);
+    const to = upperBound(T, t);
+    if (to - from > cap) from = to - cap;
+
+    let n = 0;
+    for (let i = from; i < to; i += 1) {
+      const kind = table[K[i]] || null;
+      const entry = dest[n];
+      const next = {
+        x: AX[i],
+        y: AY[i],
+        vx: VX[i],
+        vy: VY[i],
+        kind: kind ? kind.name : null,
+        damaging: kind ? !!kind.damaging : false,
+        hit: VX[i] !== null && VY[i] !== null,
+        age: (t - T[i]) / lifetime,
+      };
+      if (entry) Object.assign(entry, next);
+      else dest.push(next);
+      n += 1;
+    }
+    dest.length = n;
+    return dest;
+  };
+
+  return { activeAt };
+};
+
 // ------------------------------------------------------------------- flight
 
 // Liang-Barsky, run on the INFINITE line through the two exit points rather than
