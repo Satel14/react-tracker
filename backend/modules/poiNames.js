@@ -95,6 +95,59 @@ const POI_NAMES = Object.freeze({
   sosnovkamilitarybase: "Sosnovka Military Base",
   yasnayapolyana: "Yasnaya Polyana",
 
+  // --- Vikendi (DihorOtok_Main) ---
+  castle: "Castle",
+  coalmine: "Coal Mine",
+  observatory: "Observatory",
+  trainstation: "Train Station",
+
+  // --- Sanhok (Savage_Main) ---
+  bantai: "Ban Tai",
+  bootcamp: "Bootcamp",
+  campalpha: "Camp Alpha",
+  campbravo: "Camp Bravo",
+  campcharlie: "Camp Charlie",
+  docks: "Docks",
+  hatinh: "Ha Tinh",
+  khao: "Khao",
+  mongnai: "Mong Nai",
+  painan: "Pai Nan",
+  paradiseresort: "Paradise Resort",
+  sahmee: "Sahmee",
+  tatmok: "Tat Mok",
+
+  // --- Karakin (Summerland_Main) ---
+  alhabar: "Al Habar",
+  alhayik: "Al Hayik",
+  bahrsahir: "Bahr Sahir",
+  hadiqanemo: "Hadiqa Nemo",
+
+  // --- Deston (Kiki_Main) ---
+  // Deston is the one map that ships a SPACED form of some slugs alongside the
+  // flattened one, so its word breaks are read off the data instead of guessed.
+  // Both forms are keyed, because either can arrive on a given event.
+  arena: "Arena",
+  assembly: "Assembly",
+  barclift: "Barclift",
+  buxley: "Buxley",
+  cavala: "Cavala",
+  concert: "Concert",
+  constructionsite: "Construction Site",
+  "construction site": "Construction Site",
+  elkoro: "El Koro",
+  "el koro": "El Koro",
+  hydroelectricdam: "Hydroelectric Dam",
+  "hydroelectric dam": "Hydroelectric Dam",
+  lodge: "Lodge",
+  // Misspelled upstream: the flattened form drops a letter that the spaced form
+  // keeps ("losacros" against "los arcos"), so they are not the same string.
+  // Same class of upstream typo as Miramar's "manisgenerales".
+  losacros: "Los Arcos",
+  "los arcos": "Los Arcos",
+  ripton: "Ripton",
+  swamp: "Swamp",
+  turrita: "Turrita",
+
   // --- Rondo (Neon_Main) ---
   beili: "Bei Li",
   danching: "Dan Ching",
