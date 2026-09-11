@@ -18,7 +18,7 @@ const SOURCE = "https://www.pubgtracker.top/ranks";
 // Short enough to travel with the file, specific enough that a reader can tell
 // what the numbers do and do not answer. The long version is on the page.
 const METHOD =
-  "A daily random sample of PUBG ranked matches on the PC (Steam) shard, taking the current tier of fifteen players drawn from each match, pooled over the window below and counting each account once at its most recent reading. Because the sample is drawn from matches, a player who queues more often is likelier to appear in it: read a share as where a random ranked lobby seat sits, not as a headcount of accounts. Intervals are 95% and adjusted for lobby clustering; a tier whose own sample is too thin is marked publishable: false and carries no usable share.";
+  "A daily random sample of PUBG ranked matches on the PC (Steam) shard, taking the current tier of fifteen players drawn from each match, pooled over the window below and counting each account once at its most recent reading. Because the sample is drawn from matches, a player who queues more often is likelier to appear in it: read a share as where a random ranked lobby seat sits, not as a headcount of accounts. Intervals are 95% and adjusted for lobby clustering; a tier whose own sample is too thin is marked publishable: false and carries no usable share. rpPercentiles, when present, is 101 rank-point readings at each whole percentile of the same sample, with index 0 the top of the ladder; it is absent or null when the sample is too thin to cut.";
 
 export const censusJson = (snapshot) =>
   `${JSON.stringify({ ...snapshot, source: SOURCE, method: METHOD }, null, 2)}\n`;

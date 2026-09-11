@@ -35,6 +35,8 @@ describe("RankPoints", () => {
     // The constraint, stated on the page itself.
     expect(screen.getByText(/We do not publish where each tier starts/)).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("table")).toBeNull());
+    // No table means no lookup control either -- there is nothing to look up.
+    expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 
   it("renders the committed snapshot immediately, without waiting for a fetch", () => {
@@ -62,6 +64,23 @@ describe("RankPoints", () => {
     />);
     await waitFor(() => expect(screen.getByRole("table")).toBeInTheDocument());
     expect(screen.getByText(/Half the ranked players/)).toHaveTextContent("3,000");
+  });
+
+  // The real launch state: the committed snapshot itself has no table yet
+  // (rpPercentiles is null, not just thin), and the live read comes back with
+  // no `data` at all -- the shape the backend answers its own failures with.
+  // A guard keyed on the snapshot HAVING a table never fires here, because
+  // there was never a table to protect -- and setData(null) then wipes out
+  // the season number the snapshot did carry, leaving "Season  has only just
+  // started" with a blank where the number belongs.
+  it("does not blank the season when neither the snapshot nor the live read has a table", async () => {
+    at("/rank-points", <RankPoints
+      snapshot={payload({ rpPercentiles: null })}
+      load={() => Promise.resolve({ status: 200, message: "no data" })}
+    />);
+    await waitFor(() =>
+      expect(screen.getByText(/Collection for Season 43 has only just started/)).toBeInTheDocument());
+    expect(screen.queryByText(/Season\s{2,}has only just started/)).toBeNull();
   });
 
   // Unless it names a different season, in which case the committed reading is

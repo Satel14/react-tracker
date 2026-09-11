@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { setTranslations, setDefaultLanguage, setLanguage, t } from "react-switch-lang";
 import en from "../../Language/en.json";
 import RankPointsTable from "./RankPointsTable";
@@ -33,6 +33,17 @@ describe("RankPointsTable", () => {
     expect(rows).toHaveLength(9);
     expect(rows[0]).toHaveTextContent("above 99% of players");
     expect(rows[8]).toHaveTextContent("above 1% of players");
+  });
+
+  // The row labels were pinned, but never the cell they sit next to -- the
+  // table's entire published payload. Renaming cut.rp to cut.value in the
+  // component would leave nine blank cells and every existing test green.
+  it("puts the measured RP value in the matching row's cell", () => {
+    render(<RankPointsTable t={t} data={payload()} />);
+    const rows = screen.getAllByRole("row").slice(1); // drop the header row
+    const row = rows.find((r) => /above 50% of players/.test(r.textContent));
+    expect(row).toBeTruthy();
+    expect(within(row).getByRole("cell")).toHaveTextContent("3,000");
   });
 
   it("never phrases a row as a top-n percentage", () => {

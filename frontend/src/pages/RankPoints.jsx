@@ -58,8 +58,12 @@ const RankPoints = ({ t, load = getRankDistribution, days = 7, snapshot = CENSUS
         // is what TierDistribution does too: the committed reading is the fixed
         // thing this fetch is trying to improve on, and reading state here would
         // put a stale closure in the dependency list for no gain.
+        // Keyed on the snapshot's existence, not on whether it has a table: the
+        // launch state IS a snapshot with no table yet, and keying on the table
+        // meant this guard could never fire until the census had one -- exactly
+        // when a failed read (200, no data) would otherwise blank the page.
         const movedOn = Boolean(fresh?.seasonId) && fresh.seasonId !== snapshot?.seasonId;
-        if (rpTable(snapshot) && !rpTable(fresh) && !movedOn) return;
+        if (snapshot && !rpTable(fresh) && !movedOn) return;
         setData(fresh);
       })
       .catch(() => {
