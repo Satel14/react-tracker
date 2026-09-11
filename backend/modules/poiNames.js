@@ -40,6 +40,7 @@ const POI_NAMES = Object.freeze({
   hosan: "Hosan",
   hosanprison: "Hosan Prison",
   kangneung: "Kangneung",
+  ohhyang: "Oh Hyang",
   palace: "Palace",
   shipyard: "Shipyard",
   songam: "Songam",
@@ -48,6 +49,10 @@ const POI_NAMES = Object.freeze({
   yongcheon: "Yongcheon",
 
   // --- Miramar (Desert_Main) ---
+  // Alcantara carries no accent, unlike Hacienda del Patrón and La Cobrería --
+  // the game is inconsistent about them, so each one is as confirmed, not as
+  // Spanish orthography would have it.
+  alcantara: "Alcantara",
   brickyard: "Brickyard",
   campomilitar: "Campo Militar",
   cantera: "Cantera",
@@ -61,6 +66,7 @@ const POI_NAMES = Object.freeze({
   elpozo: "El Pozo",
   graveyard: "Graveyard",
   impala: "Impala",
+  lacobreria: "La Cobrería",
   losleones: "Los Leones",
   montenuevo: "Monte Nuevo",
   pecado: "Pecado",
