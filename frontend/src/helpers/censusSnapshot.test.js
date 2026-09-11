@@ -3,6 +3,8 @@ import {
   usableSnapshot,
   snapshotSeasonNumber,
   effectiveReadings,
+  rpTable,
+  RP_TABLE_LENGTH,
 } from "./censusSnapshot";
 import committed from "../data/tierCensus.json";
 
@@ -165,5 +167,83 @@ describe("the committed snapshot", () => {
       expect(row.low, row.tier).toBeLessThanOrEqual(row.share);
       expect(row.high, row.tier).toBeGreaterThanOrEqual(row.share);
     }
+  });
+});
+
+describe("rpTable", () => {
+  const table = (overrides = {}) => {
+    const values = Array.from({ length: 101 }, (_, i) => 5000 - i * 40);
+    values[50] = values[49];
+    return { rpPercentiles: values, ...overrides };
+  };
+
+  it("returns the table when it is 101 readings in non-ascending order", () => {
+    const data = table();
+    expect(rpTable(data)).toEqual(data.rpPercentiles);
+  });
+
+  it("allows equal neighbours, which is the normal shape of a crowded band", () => {
+    const values = Array.from({ length: 101 }, () => 2000);
+    expect(rpTable({ rpPercentiles: values })).toEqual(values);
+  });
+
+  it("refuses a table that is not exactly 101 long", () => {
+    const values = table().rpPercentiles;
+    expect(rpTable({ rpPercentiles: values.slice(0, 100) })).toBeNull();
+    expect(rpTable({ rpPercentiles: [...values, 0] })).toBeNull();
+  });
+
+  it("refuses a table that rises anywhere", () => {
+    const values = table().rpPercentiles.slice();
+    values[70] = values[69] + 1;
+    expect(rpTable({ rpPercentiles: values })).toBeNull();
+  });
+
+  it("refuses entries that are not numbers", () => {
+    for (const bad of [null, "", "2000", undefined, NaN]) {
+      const values = table().rpPercentiles.slice();
+      values[3] = bad;
+      expect(rpTable({ rpPercentiles: values }), String(bad)).toBeNull();
+    }
+  });
+
+  it("returns null when there is no table at all", () => {
+    expect(rpTable({})).toBeNull();
+    expect(rpTable({ rpPercentiles: null })).toBeNull();
+    expect(rpTable(null)).toBeNull();
+    expect(rpTable(undefined)).toBeNull();
+  });
+
+  it("exposes the length it requires", () => {
+    expect(RP_TABLE_LENGTH).toBe(101);
+  });
+});
+
+describe("the RP table is not part of snapshot usability", () => {
+  it("keeps a snapshot usable when the RP table is absent", () => {
+    const snap = usableSnapshot(
+      snapshot({
+        tiers: [tier({ effectiveN: 2400 })],
+        firstDate: "2026-09-01",
+        lastDate: "2026-09-07",
+        accounts: 11836,
+      })
+    );
+    expect(snap).not.toBeNull();
+    expect(rpTable(snap)).toBeNull();
+  });
+
+  it("keeps a snapshot usable when the RP table is malformed", () => {
+    const snap = usableSnapshot(
+      snapshot({
+        tiers: [tier({ effectiveN: 2400 })],
+        firstDate: "2026-09-01",
+        lastDate: "2026-09-07",
+        accounts: 11836,
+        rpPercentiles: [1, 2, 3],
+      })
+    );
+    expect(snap).not.toBeNull();
+    expect(rpTable(snap)).toBeNull();
   });
 });
