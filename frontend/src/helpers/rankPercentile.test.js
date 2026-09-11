@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rpPercentile } from "./rankPercentile";
+import { rpPercentile, RP_CUTS, rpCuts, rpMedian } from "./rankPercentile";
 
 // The endpoint ships 101 RP thresholds, highest first, so the index a player's
 // RP lands on IS their "top n%". These tables are built the same way.
@@ -73,5 +73,47 @@ describe("when it cannot answer", () => {
   // the same as having no reading at all.
   it("still answers for nought RP", () => {
     expect(rpPercentile(0, LADDER)).toBe(99);
+  });
+});
+
+// A table whose value equals its own index, so an assertion can check the
+// index arithmetic directly: "above N% of players" is the top (100 - N)%, and
+// the table is indexed by exactly that.
+const indexTable = Array.from({ length: 101 }, (_, i) => 100 - i);
+
+describe("rpCuts", () => {
+  it("cuts at nine places, counted upwards and descending down the table", () => {
+    expect(RP_CUTS).toEqual([99, 95, 90, 75, 50, 25, 10, 5, 1]);
+    const cuts = rpCuts(indexTable);
+    expect(cuts.map((cut) => cut.above)).toEqual(RP_CUTS);
+  });
+
+  // On this table index i holds 100 - i, so the RP at "above N%" is N itself.
+  // That pins the mapping rather than restating it.
+  it("reads each cut off the index its share corresponds to", () => {
+    for (const cut of rpCuts(indexTable)) expect(cut.rp, `above ${cut.above}`).toBe(cut.above);
+  });
+
+  it("descends in RP as the share it beats descends", () => {
+    const rps = rpCuts(indexTable).map((cut) => cut.rp);
+    for (let i = 1; i < rps.length; i += 1) expect(rps[i]).toBeLessThanOrEqual(rps[i - 1]);
+  });
+
+  it("returns nothing to render when there is no usable table", () => {
+    expect(rpCuts(null)).toEqual([]);
+    expect(rpCuts([])).toEqual([]);
+    expect(rpCuts([2000])).toEqual([]);
+    expect(rpCuts(undefined)).toEqual([]);
+  });
+});
+
+describe("rpMedian", () => {
+  it("is the reading half the sample sits below", () => {
+    expect(rpMedian(indexTable)).toBe(50);
+  });
+
+  it("is null when there is no table", () => {
+    expect(rpMedian(null)).toBeNull();
+    expect(rpMedian([2000])).toBeNull();
   });
 });
