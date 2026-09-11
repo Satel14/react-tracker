@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { setTranslations, setDefaultLanguage, setLanguage } from "react-switch-lang";
 import Navbar from "./Navbar";
+import { NAV_ROUTES } from "../helpers/routeMeta";
 import en from "../Language/en.json";
 import ua from "../Language/ua.json";
 
@@ -48,7 +49,7 @@ test("renders the Ukrainian Home label when language is ua", () => {
   expect(screen.queryByText("menu.main")).not.toBeInTheDocument();
 });
 
-const NAV_DESTINATIONS = ["/", "/favorites", "/help", "/leaderboards"];
+const NAV_DESTINATIONS = ["/", "/favorites", "/help", "/leaderboards", "/ranks", "/rank-points"];
 
 const hrefsIn = (container) =>
   Array.from(container.querySelectorAll("a[href]")).map((a) => a.getAttribute("href"));
@@ -71,6 +72,31 @@ test("every nav destination is reachable by href, not just by click", () => {
   );
 
   expect(hrefsIn(container)).toEqual(expect.arrayContaining(NAV_DESTINATIONS));
+});
+
+// The crawlable shell nav (NAV_ROUTES, built from NAV_ORDER in routeMeta.js)
+// and this component's navItems/rightNavItems are two independent lists that
+// have to describe the same set of destinations, or a crawler and a visitor
+// see different menus. This is a one-way check on purpose: the React navbar
+// legitimately carries entries the shell nav does not, such as /favorites,
+// which is noindex and deliberately left out of the shell nav that points
+// only at pages we are willing to have indexed. Asserting set equality here
+// would demand /favorites be added to the shell nav -- an SEO regression, not
+// a fix -- so do not "tighten" this to equality later. The two navs also
+// deliberately differ in ORDER: the shell nav ends with /help, while the
+// React navbar splits into a left menu and a right menu, so Help renders
+// third. This guard is about membership, not sequence.
+test("every crawlable shell nav destination also exists in the React navbar", () => {
+  const { container } = render(
+    <MemoryRouter>
+      <Navbar />
+    </MemoryRouter>
+  );
+
+  const rendered = hrefsIn(container);
+  for (const route of NAV_ROUTES) {
+    expect(rendered, route.path).toContain(route.path);
+  }
 });
 
 test("the wordmark is a link home", () => {
