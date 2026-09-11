@@ -193,7 +193,17 @@ export const ROUTE_META = [
 // which is ordered indexable-first for its own reasons. Membership follows
 // the sitemap: a route linked from every page ought to be one we are willing
 // to have indexed, and renderHead.test.js pins exactly that.
-const NAV_ORDER = ["/", "/leaderboards", "/ranks", "/rank-points", "/help"];
+// /rank-points is deliberately absent, and it is the one entry that has been
+// tried and taken back out. Measured on a 1200px .app container: the right-hand
+// menu has to fit between the centred logo and the theme switcher, which is
+// 313px, and a third item makes it 441px in English and 500px in Ukrainian. The
+// header had three pixels of clearance with two items, so there is no room to
+// find -- dropping the icons, shrinking the logo and tightening the padding were
+// each measured and none of them closes a 136px overlap, let alone Ukrainian's
+// 194px. The route keeps its `nav` label for the day the header is rebuilt.
+// Until then the page is reached from the /ranks distribution section, from
+// every player page's percentile line, and from the sitemap.
+const NAV_ORDER = ["/", "/leaderboards", "/ranks", "/help"];
 
 export const NAV_ROUTES = NAV_ORDER.map((path) => {
   const route = ROUTE_META.find((item) => item.path === path);

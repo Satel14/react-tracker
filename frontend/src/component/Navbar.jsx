@@ -6,7 +6,6 @@ import {
   HomeOutlined,
   TrophyOutlined,
   CrownOutlined,
-  LineChartOutlined,
   HeartOutlined,
   QuestionCircleOutlined,
   MenuOutlined,
@@ -29,7 +28,6 @@ const navItems = [
 const rightNavItems = [
   { key: "leaderboards", path: "/leaderboards", icon: <TrophyOutlined /> },
   { key: "ranks", path: "/ranks", icon: <CrownOutlined /> },
-  { key: "rankPoints", path: "/rank-points", icon: <LineChartOutlined /> },
 ];
 
 const allNavItems = [...navItems, ...rightNavItems];

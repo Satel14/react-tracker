@@ -49,7 +49,7 @@ test("renders the Ukrainian Home label when language is ua", () => {
   expect(screen.queryByText("menu.main")).not.toBeInTheDocument();
 });
 
-const NAV_DESTINATIONS = ["/", "/favorites", "/help", "/leaderboards", "/ranks", "/rank-points"];
+const NAV_DESTINATIONS = ["/", "/favorites", "/help", "/leaderboards", "/ranks"];
 
 const hrefsIn = (container) =>
   Array.from(container.querySelectorAll("a[href]")).map((a) => a.getAttribute("href"));

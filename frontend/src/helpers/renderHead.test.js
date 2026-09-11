@@ -154,7 +154,7 @@ describe("what the share-card guard pins, re-checked on the output", () => {
 // Nothing in the raw HTML links anywhere. The navbar's anchors are rendered by
 // React, so a crawler that does not run JS -- GPTBot, ClaudeBot, PerplexityBot,
 // and anything reading the shell directly -- can only find pages through the
-// sitemap. These put the same five indexable routes into every shell.
+// sitemap. These put the same four indexable routes into every shell.
 describe("crawlable navigation", () => {
   const navOf = (html) => {
     const block = /<nav[^>]*>([\s\S]*?)<\/nav>/.exec(html);
@@ -164,7 +164,7 @@ describe("crawlable navigation", () => {
 
   it.each(ROUTE_META.map((r) => r.path))("puts the nav into %s", (path) => {
     const html = renderHead(shell, ROUTE_META.find((r) => r.path === path));
-    expect(navOf(html)).toEqual(["/", "/leaderboards", "/ranks", "/rank-points", "/help"]);
+    expect(navOf(html)).toEqual(["/", "/leaderboards", "/ranks", "/help"]);
   });
 
   // A nav is site furniture rather than content, so it goes into every shell,
@@ -172,7 +172,7 @@ describe("crawlable navigation", () => {
   // gets, and the only crawlable link list this site has without JavaScript.
   it("gives the homepage the nav", () => {
     const html = renderHead(shell, ROUTE_META.find((r) => r.path === "/"));
-    expect(navOf(html)).toHaveLength(5);
+    expect(navOf(html)).toHaveLength(4);
   });
 
   it("carries a real label on every link, not a bare path", () => {

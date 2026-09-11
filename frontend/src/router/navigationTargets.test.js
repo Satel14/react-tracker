@@ -36,7 +36,7 @@ const REVIEWED = [
   {
     file: "component/Navbar.jsx",
     target: "path",
-    why: 'Destructured from navItems/rightNavItems, module-scope arrays of hard-coded literal paths ("/", "/favorites", "/help", "/leaderboards", "/ranks", "/rank-points"). Nothing user-supplied reaches them.',
+    why: 'Destructured from navItems/rightNavItems, module-scope arrays of hard-coded literal paths ("/", "/favorites", "/help", "/leaderboards", "/ranks"). Nothing user-supplied reaches them.',
   },
   {
     file: "Language/SetLanguage.jsx",

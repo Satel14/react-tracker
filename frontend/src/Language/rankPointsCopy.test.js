@@ -39,6 +39,12 @@ describe("the rank points page copy", () => {
     }
   });
 
+  // The label has no live consumer right now: the top nav is full, so
+  // /rank-points is absent from NAV_ORDER and from Navbar's own lists (see the
+  // comment on NAV_ORDER for the measurements). It is kept, in both locales and
+  // under test, because the route still carries its `nav` label for the day the
+  // header is rebuilt -- and a label that exists in one language only is how a
+  // half-finished nav entry ships.
   it.each([["en", en], ["ua", ua]])("%s names the page in the menu", (locale, dict) => {
     expect(dict.menu?.rankPoints, `${locale} menu.rankPoints`).toBeTruthy();
   });
