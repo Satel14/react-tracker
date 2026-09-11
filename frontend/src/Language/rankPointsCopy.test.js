@@ -1,16 +1,24 @@
 import en from "./en.json";
 import ua from "./ua.json";
+import { routeMetaFor } from "../helpers/routeMeta.js";
 
-// A tier name followed by a number in the same sentence is the shape of
-// "Diamond starts at 3,000 RP" -- a claim that traces to our own
-// RANK_PROGRESS_STEPS rather than to KRAFTON, and the one thing this page must
-// never print. A measured statement is phrased the other way round ("above 92%
-// of players sat at or above 3,000 RP") and names no tier, so it does not match.
+// A tier name and a number in the same sentence is the shape of "Diamond
+// starts at 3,000 RP" -- a claim that traces to our own RANK_PROGRESS_STEPS
+// rather than to KRAFTON, and the one thing this page must never print. A
+// measured statement is phrased the other way round ("above 92% of players
+// sat at or above 3,000 RP") and names no tier, so it does not match.
+//
+// Mirrored so a tier name is caught on either side of the number: the
+// original one-directional pattern let "3,000 RP puts you in Diamond" through
+// even though it makes exactly the same claim as "Diamond starts at 3,000 RP".
 //
 // Tier names are English in both locales on purpose: the game prints them in
 // English and the Ukrainian ladder copy says "Master" too.
-const TIER_BAND =
-  /(bronze|silver|gold|platinum|crystal|diamond|master|survivor)[^.!?]{0,60}?\d{3}/i;
+const TIER_NAME = "(bronze|silver|gold|platinum|crystal|diamond|master|survivor)";
+const TIER_BAND = new RegExp(
+  `(?:${TIER_NAME}[^.!?]{0,60}?\\d{3}|\\d{3}[^.!?]{0,60}?${TIER_NAME})`,
+  "i",
+);
 
 const strings = (value) =>
   typeof value === "string"
@@ -60,8 +68,23 @@ describe("the rank points page copy", () => {
   it("recognises the sentence it is meant to be refusing", () => {
     expect("Diamond starts at 3,000 RP.").toMatch(TIER_BAND);
     expect("Тір Diamond починається з 3000 RP.").toMatch(TIER_BAND);
+    // The mirrored direction: a tier name after the number is the same claim.
+    expect("3,000 RP puts you in Diamond.").toMatch(TIER_BAND);
     expect("Above 92% of players sat at or above 3,000 RP.").not.toMatch(TIER_BAND);
   });
+
+  // The guard above scans dict.pages.rankPoints only, but the route metadata
+  // that feeds the <head> and the h1 -- title, description, h1, intro -- is
+  // rendered copy too, and is outside that scan entirely.
+  it.each(["/rank-points", "/ua/rank-points"])(
+    "%s's route metadata never states a tier's RP floor either",
+    (path) => {
+      const meta = routeMetaFor(path);
+      for (const key of ["title", "description", "h1", "intro"]) {
+        expect(meta[key], `${path} ${key}`).not.toMatch(TIER_BAND);
+      }
+    },
+  );
 
   // The placeholders the components interpolate. A key that loses one renders
   // the brace literally, which no snapshot test would catch.

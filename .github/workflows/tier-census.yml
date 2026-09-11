@@ -174,10 +174,6 @@ jobs:
           # tier shares cannot come to name different seasons or windows -- they
           # share one capturedAt and one seasonId by construction.
           #
-          # Everything the page renders and nothing it does not: the hundred-row
-          # RP percentile table belongs to the player pages and would only be
-          # noise in a file about tier shares.
-          #
           # In a file rather than a shell variable so no layer has to quote a
           # multi-line jq program correctly. This is also exactly what was run
           # against a live payload before shipping it.

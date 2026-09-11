@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { prerenderBody, PRERENDERED_ROUTES } from "./prerenderBody";
+import { ROUTE_META } from "./routeMeta.js";
 import en from "../Language/en.json";
 
 const ranks = () => prerenderBody("/ranks");
@@ -20,6 +21,21 @@ describe("which routes ship their article", () => {
     // them in, so there is nothing to put in a file.
     expect(prerenderBody("/favorites")).toBeNull();
     expect(prerenderBody("/compare")).toBeNull();
+  });
+
+  // The literal list above pins today's seven routes but would stay green if a
+  // future indexable route were added to the sitemap without a PAGES entry --
+  // prerenderBody would silently return null and renderHead would fall back to
+  // the hand-written stub, no throw, no warning. Keyed on `sitemap` rather
+  // than on `body`, because a blanket rule on `body: true` would be wrong: the
+  // four application routes (/favorites, /compare, /player, /bugreport) carry
+  // `body: true` on purpose and are never meant to be indexed. The invariant
+  // that actually matters is indexability, and it holds today because every
+  // `sitemap: true` route is prerendered.
+  it("prerenders every route the sitemap lists", () => {
+    for (const route of ROUTE_META.filter((r) => r.sitemap)) {
+      expect(PRERENDERED_ROUTES, route.path).toContain(route.path);
+    }
   });
 });
 

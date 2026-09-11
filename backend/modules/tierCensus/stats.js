@@ -94,6 +94,12 @@ const tierShare = ({ successes, n, clusterSize, icc }) => {
 // A step of one percentage point is as fine as this sample can honestly be cut.
 // With a design effect of three to six, a tenth of a percent would be invented
 // precision.
+//
+// frontend/src/helpers/censusSnapshot.js's RP_TABLE_LENGTH (101) must agree
+// with PERCENTILE_STEPS + 1. Neither side reads the other's value -- both are
+// hand-typed literals -- so if they ever disagree, rpTable() there rejects
+// every table this endpoint ships as malformed, and /rank-points sits in its
+// empty state forever with CI green on both ends.
 const PERCENTILE_STEPS = 100;
 
 // Below this a "distribution" is a handful of people, and one reading could
