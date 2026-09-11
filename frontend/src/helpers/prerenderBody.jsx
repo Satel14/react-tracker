@@ -18,6 +18,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { StaticRouter } from "react-router-dom/server.mjs";
 import { setTranslations, setDefaultLanguage, setLanguage } from "react-switch-lang";
 import Ranks from "../pages/Ranks.jsx";
+import RankPoints from "../pages/RankPoints.jsx";
 import HomeIntro from "../component/home/HomeIntro.jsx";
 import Help from "../pages/Help.jsx";
 import LeaderboardStatic from "../component/leaderboard/LeaderboardIntro.jsx";
@@ -48,6 +49,8 @@ import ua from "../Language/ua.json";
 const PAGES = {
   "/ranks": { Page: Ranks, language: "en" },
   "/ua/ranks": { Page: Ranks, language: "ua" },
+  "/rank-points": { Page: RankPoints, language: "en" },
+  "/ua/rank-points": { Page: RankPoints, language: "ua" },
   "/": { Page: HomeIntro, language: "en" },
   "/help": { Page: Help, language: "en" },
   "/leaderboards": { Page: LeaderboardStatic, language: "en" },

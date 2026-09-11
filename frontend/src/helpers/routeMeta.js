@@ -80,6 +80,22 @@ export const ROUTE_META = [
     sitemap: true,
     body: true,
   },
+  // No season number in this head, unlike /ranks. The page's numbers are dated
+  // by the snapshot and its season is named in the body from the data, so a
+  // season in the title would need the same rollover guard for no gain.
+  {
+    path: "/rank-points",
+    nav: "Rank points",
+    file: "rank-points.html",
+    title: "Is Your PUBG RP Good? Measured Rank Point Standings",
+    description:
+      "What a PUBG rank point total is worth, measured from a daily sample of ranked lobbies: the RP at nine cuts of the ladder, and where any number lands.",
+    h1: "Is your PUBG RP good?",
+    intro:
+      "The rank points at each cut of the ladder, measured from a daily sample of ranked lobbies — and where a given number lands among them.",
+    sitemap: true,
+    body: true,
+  },
   // The same article, rendered from the ua dictionary. `translationOf` is what
   // pairs the two: it drives the hreflang set, the language switch and the
   // sitemap entry, so a twin cannot exist half-wired.
@@ -97,6 +113,21 @@ export const ROUTE_META = [
     h1: "Ранги PUBG: як влаштовані тіри, RP і Survivor",
     intro:
       "Вісім тірів, одне спільне RP і найвищий тір, який можна втратити за одну ніч — як рейтингова система працює зараз.",
+    sitemap: true,
+    body: true,
+  },
+  {
+    path: "/ua/rank-points",
+    file: "ua/rank-points.html",
+    lang: "uk",
+    translations: "ua",
+    translationOf: "/rank-points",
+    title: "Чи добре твоє RP у PUBG? Виміряні рівні рейтингових балів",
+    description:
+      "Скільки вартий рейтинговий бал у PUBG, виміряно з добової вибірки рейтингових лобі: RP на дев'яти зрізах ладдера і куди потрапляє будь-яке число.",
+    h1: "Чи добре твоє RP у PUBG?",
+    intro:
+      "Скільки RP на кожному зрізі ладдера, виміряно з добової вибірки рейтингових лобі — і куди серед них потрапляє конкретне число.",
     sitemap: true,
     body: true,
   },
@@ -162,6 +193,16 @@ export const ROUTE_META = [
 // which is ordered indexable-first for its own reasons. Membership follows
 // the sitemap: a route linked from every page ought to be one we are willing
 // to have indexed, and renderHead.test.js pins exactly that.
+// /rank-points is deliberately absent, and it is the one entry that has been
+// tried and taken back out. Measured on a 1200px .app container: the right-hand
+// menu has to fit between the centred logo and the theme switcher, which is
+// 313px, and a third item makes it 441px in English and 500px in Ukrainian. The
+// header had three pixels of clearance with two items, so there is no room to
+// find -- dropping the icons, shrinking the logo and tightening the padding were
+// each measured and none of them closes a 136px overlap, let alone Ukrainian's
+// 194px. The route keeps its `nav` label for the day the header is rebuilt.
+// Until then the page is reached from the /ranks distribution section, from
+// every player page's percentile line, and from the sitemap.
 const NAV_ORDER = ["/", "/leaderboards", "/ranks", "/help"];
 
 export const NAV_ROUTES = NAV_ORDER.map((path) => {

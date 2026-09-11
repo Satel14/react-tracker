@@ -16,6 +16,7 @@ const SNAPSHOT = {
     { tier: "gold", count: 3788, share: 0.3, low: 0.28, high: 0.32, n: 12509, effectiveN: 2531, designEffect: 4.94, publishable: true },
     { tier: "survivor", count: 3, share: 0.00024, low: 0.00008, high: 0.0007, n: 12509, effectiveN: 12509, designEffect: 1, publishable: false },
   ],
+  rpPercentiles: Array.from({ length: 101 }, (_, i) => 5000 - i * 40),
 };
 
 describe("censusJson", () => {
@@ -37,6 +38,42 @@ describe("censusJson", () => {
 
   it("ends with a newline, like every other file we write", () => {
     expect(censusJson(SNAPSHOT).endsWith("\n")).toBe(true);
+  });
+
+  // Pinned as literals rather than derived from SNAPSHOT's own keys: an
+  // expectation built from the same object it checks would pass no matter what
+  // field the collector adds next. This is the guard that was missing when
+  // rpPercentiles landed silently in the file nobody documented it in.
+  it("publishes exactly this set of top-level keys", () => {
+    const parsed = JSON.parse(censusJson(SNAPSHOT));
+    expect(Object.keys(parsed).sort()).toEqual(
+      [
+        "capturedAt",
+        "seasonId",
+        "current",
+        "shard",
+        "days",
+        "accounts",
+        "matches",
+        "windows",
+        "firstDate",
+        "lastDate",
+        "perMatch",
+        "tiers",
+        "rpPercentiles",
+        "source",
+        "method",
+      ].sort(),
+    );
+  });
+
+  // The file this ships in is the one we invite third parties to cite, so the
+  // orientation of a hundred-and-one bare numbers has to be stated in the file
+  // itself, not just on the page next to it.
+  it("documents which end of rpPercentiles is the top of the ladder", () => {
+    const parsed = JSON.parse(censusJson(SNAPSHOT));
+    expect(parsed.method).toMatch(/rpPercentiles/);
+    expect(parsed.method).toMatch(/index 0.{0,20}top of the ladder/i);
   });
 });
 

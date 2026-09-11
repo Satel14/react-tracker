@@ -167,9 +167,12 @@ jobs:
             exit 0
           fi
 
-          # Everything the page renders and nothing it does not: the hundred-row
-          # RP percentile table belongs to the player pages and would only be
-          # noise in a file about tier shares.
+          # rpPercentiles is here deliberately, against the note that used to
+          # say a hundred rows of RP would be noise in a file about tier shares.
+          # That was true while nothing rendered them; /rank-points does. It
+          # rides in THIS file rather than a second one so the RP table and the
+          # tier shares cannot come to name different seasons or windows -- they
+          # share one capturedAt and one seasonId by construction.
           #
           # In a file rather than a shell variable so no layer has to quote a
           # multi-line jq program correctly. This is also exactly what was run
@@ -186,6 +189,7 @@ jobs:
             firstDate: .data.firstDate,
             lastDate: .data.lastDate,
             perMatch: .data.perMatch,
+            rpPercentiles: .data.rpPercentiles,
             tiers: [.data.tiers[] | {tier, count, share, low, high, n, effectiveN, designEffect, publishable}]
           }
           JQ

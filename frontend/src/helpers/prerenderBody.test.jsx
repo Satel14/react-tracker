@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { prerenderBody, PRERENDERED_ROUTES } from "./prerenderBody";
+import { ROUTE_META } from "./routeMeta.js";
 import en from "../Language/en.json";
 
 const ranks = () => prerenderBody("/ranks");
@@ -10,7 +11,9 @@ describe("which routes ship their article", () => {
   // homepage's file is also what Pages serves for every unmatched URL, so
   // prose in it would become duplicate copy across an unbounded set of them.
   it("renders the article, the homepage body, the FAQ and the leaderboard prose", () => {
-    expect(PRERENDERED_ROUTES).toEqual(["/ranks", "/ua/ranks", "/", "/help", "/leaderboards"]);
+    expect(PRERENDERED_ROUTES).toEqual([
+      "/ranks", "/ua/ranks", "/rank-points", "/ua/rank-points", "/", "/help", "/leaderboards",
+    ]);
   });
 
   it("says nothing for a route that is not prerendered", () => {
@@ -18,6 +21,21 @@ describe("which routes ship their article", () => {
     // them in, so there is nothing to put in a file.
     expect(prerenderBody("/favorites")).toBeNull();
     expect(prerenderBody("/compare")).toBeNull();
+  });
+
+  // The literal list above pins today's seven routes but would stay green if a
+  // future indexable route were added to the sitemap without a PAGES entry --
+  // prerenderBody would silently return null and renderHead would fall back to
+  // the hand-written stub, no throw, no warning. Keyed on `sitemap` rather
+  // than on `body`, because a blanket rule on `body: true` would be wrong: the
+  // four application routes (/favorites, /compare, /player, /bugreport) carry
+  // `body: true` on purpose and are never meant to be indexed. The invariant
+  // that actually matters is indexability, and it holds today because every
+  // `sitemap: true` route is prerendered.
+  it("prerenders every route the sitemap lists", () => {
+    for (const route of ROUTE_META.filter((r) => r.sitemap)) {
+      expect(PRERENDERED_ROUTES, route.path).toContain(route.path);
+    }
   });
 });
 
@@ -245,6 +263,41 @@ describe("the Ukrainian twin", () => {
   it("is a whole article too, not a stub", () => {
     const words = prerenderBody("/ua/ranks").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean);
     expect(words.length).toBeGreaterThan(1500);
+  });
+});
+
+describe("the rank points pages", () => {
+  const page = (path) => prerenderBody(path);
+
+  it("renders a body rather than a stub, in both languages", () => {
+    for (const path of ["/rank-points", "/ua/rank-points"]) {
+      const words = page(path).replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean);
+      expect(words.length, path).toBeGreaterThan(250);
+    }
+  });
+
+  it("carries exactly one h1 on each", () => {
+    for (const path of ["/rank-points", "/ua/rank-points"]) {
+      expect((page(path).match(/<h1[ >]/g) || []).length, path).toBe(1);
+    }
+  });
+
+  // The whole point of the page shipping before its numbers do: the prose has
+  // to stand on its own, including the constraint it states out loud.
+  it("states what it refuses to publish even with no table yet", () => {
+    expect(page("/rank-points")).toContain("We do not publish where each tier starts");
+  });
+
+  it("reads each language from its own dictionary", () => {
+    expect(page("/rank-points")).toContain("Is your PUBG RP good?");
+    expect(page("/ua/rank-points")).toContain("Чи добре твоє RP");
+  });
+
+  it("links the article and the leaderboards from both", () => {
+    for (const path of ["/rank-points", "/ua/rank-points"]) {
+      expect(page(path), path).toContain('href="/ranks"');
+      expect(page(path), path).toContain('href="/leaderboards"');
+    }
   });
 });
 

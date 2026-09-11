@@ -55,7 +55,10 @@ test("tells the player how many out of a hundred they are above", async () => {
   show();
   const note = await screen.findByRole("link");
 
-  expect(note).toHaveAttribute("href", "/ranks#distribution");
+  // The line says "better than n out of 100 players", and /rank-points is the
+  // page that answers that sentence. /ranks#distribution answers the
+  // neighbouring question about tier shares.
+  expect(note).toHaveAttribute("href", "/rank-points");
   // 16th percentile from the top means 84 of every 100 are below. The plain
   // sentence carries that; the percentile sits beside it as a badge, for
   // readers who already think in "top n%".

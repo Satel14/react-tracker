@@ -57,6 +57,39 @@ export const usableSnapshot = (data) => {
 
 export const CENSUS_SNAPSHOT = usableSnapshot(snapshot);
 
+// rpThresholds ships exactly PERCENTILE_STEPS + 1 readings, highest first.
+export const RP_TABLE_LENGTH = 101;
+
+// The committed RP table, or null when there is not one worth rendering.
+//
+// Both properties checked here are load-bearing rather than incidental. The
+// length is what makes an index a percentile: on a shorter array index 50 is
+// not the median of anything. The order is what makes rpPercentile a lookup at
+// all -- it finds a standing with findIndex(threshold <= rp), which on a
+// scrambled array returns a confidently wrong number instead of nothing.
+//
+// Deliberately NOT folded into usableSnapshot. A sample too thin to cut leaves
+// rpPercentiles null while the tier shares stay good, and gating the snapshot
+// on it would blank the distribution on /ranks to protect a page that has its
+// own empty state.
+export const rpTable = (data) => {
+  const values = data?.rpPercentiles;
+  if (!Array.isArray(values) || values.length !== RP_TABLE_LENGTH) return null;
+
+  // A real number, not a coercible one: Number(null) and Number("") are both 0
+  // and both finite, so a hole in the table would enter it as zero RP.
+  if (!values.every((value) => typeof value === "number" && Number.isFinite(value))) return null;
+
+  // Non-ascending rather than strictly descending: whole percentile bands share
+  // a value wherever the ladder is crowded, and at ~11,800 accounts that is the
+  // normal shape rather than a fault.
+  for (let i = 1; i < values.length; i += 1) {
+    if (values[i] > values[i - 1]) return null;
+  }
+
+  return values;
+};
+
 // How many independent readings the sample is worth, for the tier where lobby
 // clustering bites hardest.
 //

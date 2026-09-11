@@ -5,7 +5,8 @@
     "favorites": "Favorites",
     "obs": "OBS overlay",
     "help": "Help",
-    "ranks": "Ranks"
+    "ranks": "Ranks",
+    "rankPoints": "Rank points"
   },
   "pages": {
     "main": {
@@ -546,7 +547,8 @@
         "loading": "Reading the latest sample…",
         "unavailable": "The sample is not reachable right now. The rest of this page is unaffected.",
         "finished": "Season {season} has ended. These are its final numbers — collection for the new season is under way, and the page switches over once it has enough days behind it.",
-        "gathering": "Collection for Season {season} has only just started, so no tier has enough observations to publish yet."
+        "gathering": "Collection for Season {season} has only just started, so no tier has enough observations to publish yet.",
+        "seeRankPoints": "What a rank point total is worth, at nine cuts of the ladder"
       },
       "grandmaster": {
         "heading": "There is no Grandmaster tier",
@@ -630,6 +632,44 @@
         "p4": "No decay floor for the current ladder, for the reason above.",
         "p5": "Everything on this page is sourced to KRAFTON patch notes and official posts, and where a claim rests on anything weaker we say so on the spot. It was checked on 9 September 2026, against the Update 43.1 notes; when the rules change, this page changes."
       },
+      "seeLeaderboards": "See who is at the top of each region right now"
+    },
+    "rankPoints": {
+      "title": "Is your PUBG RP good?",
+      "intro": "Rank points are the only number the PUBG ladder actually moves you on, and the game never tells you whether yours is high. This page answers that from a measured sample of ranked lobbies: the rank points at each cut of the ladder, and where a given number lands among them.",
+      "lead": "Half the ranked players in our sample sat below {rp} RP.",
+      "table": {
+        "heading": "Rank points at each cut",
+        "standingHeader": "Standing",
+        "rpHeader": "Rank points",
+        "above": "above {percent}% of players"
+      },
+      "gathering": "Collection for Season {season} has only just started, so there is no rank point table to publish yet. It appears here once the sample has enough days behind it.",
+      "finished": "Season {season} has ended, so these are its final readings. Ranked resets with every season, and the table switches over once the new one has enough days behind it.",
+      "sample": "Measured from {accounts} accounts across {matches} ranked matches on {platform}, {from} to {to}.",
+      "platform": "PC (Steam)",
+      "lookup": {
+        "heading": "Find your own standing",
+        "label": "Your rank points",
+        "placeholder": "e.g. 2100",
+        "blank": "Enter your rank points to see where they sit.",
+        "result": "{rp} RP is better than {n} out of 100 ranked players",
+        "top": "top {percent}%"
+      },
+      "method": {
+        "heading": "How this is measured",
+        "p1": "Once a day we ask PUBG for a random sample of finished matches, keep the ranked ones, and read the current standing of fifteen players drawn from each. One reading per account, at its most recent value, pooled over the last seven days.",
+        "p2": "The table is that pool sorted and cut at nine places. A row says what a rank point total has to be to sit above that share of the sampled players, and nothing more: it is not a threshold the game enforces, and not a tier boundary."
+      },
+      "limits": {
+        "heading": "What this cannot tell you",
+        "p1": "This is the Steam shard only. Console and Kakao run their own ladders and we measure neither.",
+        "p2": "The sample is drawn from matches rather than from a list of accounts, so somebody who queues twenty times a week is likelier to appear in it than somebody who queues twice. Read a row as where a rank point total sits among ranked lobby seats, not among everyone who owns the game.",
+        "p3": "Players in one lobby are alike, because matchmaking put them there by rating, so the sample carries less information than its raw size suggests. At nine cuts that sits comfortably inside what it can resolve; at a hundred it would not.",
+        "p4": "Rank points reset every season, so the table describes the season named above and no other.",
+        "p5": "We do not publish where each tier starts in rank points. The only figures we have for that are our own, and a number invented here would be repeated elsewhere as though KRAFTON had said it."
+      },
+      "seeRanks": "How the ranked system works: tiers, RP and Survivor",
       "seeLeaderboards": "See who is at the top of each region right now"
     }
   },

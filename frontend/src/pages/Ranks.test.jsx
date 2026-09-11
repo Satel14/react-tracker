@@ -219,6 +219,12 @@ test("draws one division pip per division, and none for a single rank", () => {
 // reading, so the section renders numbers at first paint and the live read only
 // refreshes them -- the census request is still held unresolved by the mock at
 // the top of this file, so what is asserted here is the committed reading.
+it("sends a reader from the tier shares to the rank point standings", () => {
+  renderPage();
+  expect(screen.getByRole("link", { name: /rank point/i }))
+    .toHaveAttribute("href", "/rank-points");
+});
+
 test("renders the committed census reading rather than a loading line", () => {
   const { container } = renderPage();
   const section = container.querySelector("#distribution");

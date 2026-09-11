@@ -4334,6 +4334,169 @@ body {
   }
 }
 
+// Tokens only, no literals: --accent is rewritten at runtime by the theme
+// classes, and a hardcoded colour here would ignore the switcher.
+.rank-points {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 0 8px;
+  color: var(--text);
+
+  &__hero {
+    margin-bottom: 28px;
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 34px;
+      color: var(--text-strong);
+    }
+
+    p {
+      margin: 0 0 10px;
+      color: var(--text-muted);
+    }
+  }
+
+  &__lang {
+    color: var(--accent);
+
+    &:hover {
+      color: var(--text-strong);
+    }
+  }
+
+  // The answer the page exists for, so it is the largest thing under the hero.
+  &__lead {
+    margin: 0 0 16px;
+    font-size: 22px;
+    color: var(--text-strong);
+  }
+
+  &__table-wrap {
+    margin-bottom: 28px;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+
+    caption {
+      margin-bottom: 8px;
+      text-align: left;
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+
+    th,
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      color: var(--text);
+    }
+
+    thead th {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-faint);
+    }
+
+    // The reading, not its label: right-aligned and tabular so nine rows of
+    // digits line up on their own decimal column.
+    tbody td {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      color: var(--text-strong);
+    }
+
+    tbody th {
+      font-weight: 400;
+      color: var(--text);
+    }
+  }
+
+  &__note,
+  &__stale {
+    margin: 10px 0 0;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  &__lookup {
+    margin: 0 0 28px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      color: var(--text-strong);
+    }
+  }
+
+  &__lookup-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  &__lookup-input {
+    width: 160px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-strong);
+  }
+
+  &__lookup-result {
+    margin: 12px 0 0;
+    color: var(--text-strong);
+  }
+
+  // The same measurement from the other end, and quieter on purpose: it is the
+  // framing that needs inverting before it means anything.
+  &__lookup-top {
+    margin-left: 8px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  &__section {
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 24px;
+      color: var(--text-strong);
+    }
+
+    p {
+      margin: 0 0 10px;
+      color: var(--text);
+    }
+  }
+
+  &__outro {
+    margin: 0 0 8px;
+
+    a {
+      color: var(--accent);
+
+      &:hover {
+        color: var(--text-strong);
+      }
+    }
+  }
+}
+
 .leaderboard-page__explainer {
   margin: 6px 0 0;
   font-size: 14px;
