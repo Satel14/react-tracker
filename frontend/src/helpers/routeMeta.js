@@ -193,7 +193,7 @@ export const ROUTE_META = [
 // which is ordered indexable-first for its own reasons. Membership follows
 // the sitemap: a route linked from every page ought to be one we are willing
 // to have indexed, and renderHead.test.js pins exactly that.
-const NAV_ORDER = ["/", "/leaderboards", "/ranks", "/help"];
+const NAV_ORDER = ["/", "/leaderboards", "/ranks", "/rank-points", "/help"];
 
 export const NAV_ROUTES = NAV_ORDER.map((path) => {
   const route = ROUTE_META.find((item) => item.path === path);

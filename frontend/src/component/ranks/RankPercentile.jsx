@@ -71,7 +71,11 @@ const RankPercentile = ({ t, rankPoint, seasonId, load = getRankDistribution, da
 
   return (
     <p className="player-rank-percentile">
-      <Link to="/ranks#distribution" title={detail}>
+      {/* The visible line answers the one question the reader arrived with, and
+          /rank-points is the page that answers it at length. It used to point
+          at /ranks#distribution, which answers the neighbouring question about
+          tier shares. */}
+      <Link to="/rank-points" title={detail}>
         {t("pages.player.percentile.line", { n: below })}
         {/* The same measurement from the other end, for readers who already
             think in "top n%". Second, and quieter: it is the framing that

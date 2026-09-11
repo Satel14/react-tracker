@@ -181,6 +181,14 @@ const Ranks = ({ t }) => (
             {paragraphKeys(section.paragraphs).map((paragraph) => (
               <p key={paragraph}>{t(`pages.ranks.${section.key}.${paragraph}`)}</p>
             ))}
+            {/* After the prose rather than beside the table: the paragraphs are
+                what explain that these shares are lobby seats, and the page
+                being linked carries the same caveats. */}
+            {section.distribution && (
+              <p className="ranks-page__outro">
+                <Link to="/rank-points">{t("pages.ranks.distribution.seeRankPoints")}</Link>
+              </p>
+            )}
             {/* After the prose, not before it: p4 is the sentence that hands
                 over the numbers the table then draws. */}
             {section.slots && <SurvivorSlots t={t} />}
