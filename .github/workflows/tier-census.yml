@@ -204,10 +204,27 @@ jobs:
           was=$(jq -r '.seasonId // ""' "$SNAPSHOT" 2>/dev/null || echo "")
           now_season=$(printf '%s' "$body" | jq -r '.data.seasonId // ""')
           if [ -n "$was" ] && [ "$was" != "$now_season" ]; then
-            # articleSeason.test.js fails on the next CI run and says what to do.
-            # Committing anyway is deliberate: the numbers and their window stay
-            # true, and it is the prose around them that a person has to rewrite.
-            echo "::warning::the season moved from $was to $now_season -- the ranks copy needs rewriting"
+            # Ask the question articleSeason.test.js asks, which is not "did the
+            # season move". The prose is allowed to be AHEAD of the table and
+            # normally is: a season opens with no samples, so for its first days
+            # the copy names a season the census cannot measure yet. Only the
+            # copy falling BEHIND is a fault. Comparing against the file this
+            # step is replacing cannot tell those apart, and on 2026-09-10 it
+            # said "the ranks copy needs rewriting" about copy that had already
+            # been rewritten -- an alarm nobody can act on.
+            #
+            # Committing anyway stays deliberate either way: the numbers and
+            # their window are true, and it is the prose that a person rewrites.
+            article=$(sed -n 's/.*ARTICLE_SEASON = "\([0-9][0-9]*\)".*/\1/p' \
+              frontend/src/helpers/articleSeason.js)
+            measured=$(printf '%s' "$now_season" | sed -n 's/.*-\([0-9][0-9]*\)$/\1/p')
+            if [ -z "$article" ] || [ -z "$measured" ]; then
+              echo "::warning::the season moved from $was to $now_season, and the season numbers could not be read -- check the ranks copy by hand"
+            elif [ "$measured" -gt "$article" ]; then
+              echo "::warning::the census now measures season $measured and the ranks copy is written about season $article -- it needs rewriting, and articleSeason.test.js stays red until it is"
+            else
+              echo "::notice::the season moved from $was to $now_season; the ranks copy already names season $article"
+            fi
           fi
 
           printf '%s' "$body" | jq -f "$RUNNER_TEMP/snapshot.jq" > "$SNAPSHOT"
