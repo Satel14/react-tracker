@@ -34,9 +34,19 @@ describe("RankPointsLookup", () => {
 
     fireEvent.change(screen.getByLabelText(/Your rank points/), { target: { value: "10" } });
     expect(screen.queryByText(/top \d+%/)).toBeNull();
+
+    // These two values pin the exact TOP_UP_TO boundary at 50: rp=50 → at=50 (show),
+    // rp=49 → at=51 (hide). Mutating `<=` to `<` would pass other tests but fail these.
+    fireEvent.change(screen.getByLabelText(/Your rank points/), { target: { value: "50" } });
+    expect(screen.getByText(/top 50%/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Your rank points/), { target: { value: "49" } });
+    expect(screen.queryByText(/top \d+%/)).toBeNull();
   });
 
-  it("says nothing rather than something wrong for a non-number", () => {
+  it("leaves blank message when input refuses non-numeric value", () => {
+    // jsdom's input[type=number] sanitizes "abc" to "" before React sees it, so the
+    // component takes the blank-input branch; rpPercentile's guard is not reached here.
     render(<RankPointsLookup t={t} table={table} />);
     fireEvent.change(screen.getByLabelText(/Your rank points/), { target: { value: "abc" } });
     expect(screen.getByText(/Enter your rank points/)).toBeInTheDocument();
