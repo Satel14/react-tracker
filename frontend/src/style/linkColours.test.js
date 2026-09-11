@@ -29,6 +29,21 @@ const blockBody = (selector) => {
   return blockFrom(scss, start);
 };
 
+// A bare nested selector like `&__lang` is ambiguous the moment two blocks
+// define one: `scss.indexOf` on it resolves to whichever occurrence comes
+// first in the whole file, not the one the caller means. That is exactly the
+// bug this guard had -- `blockBody("&__lang")` was reading `.ranks-page`'s
+// `&__lang` while this file believed it was checking `.rank-points`'s, and
+// the `.rank-points` link was never actually verified. Scoping the lookup to
+// a named parent first removes the ambiguity, for both the old block and the
+// new one.
+const nestedBlockBody = (parent, selector) => {
+  const outer = blockBody(parent);
+  const start = outer.indexOf(selector);
+  if (start === -1) throw new Error(`no ${selector} inside ${parent}`);
+  return blockFrom(outer, start);
+};
+
 // The declarations a rule makes itself, with every nested block removed -- so a
 // colour that only exists on :hover cannot stand in for the resting one.
 const ownDeclarations = (rule) => {
@@ -61,6 +76,26 @@ const BLOCKS_WITH_PROSE_LINKS = [
   ".home-intro",
 ];
 
+// `[parent, child]` pairs rather than bare child selectors, so a lookup can
+// never resolve to the wrong block: two different pages each nest a `&__lang`
+// and a `&__outro`, and only the parent tells them apart.
+//
+// Links whose colour sits on a nested `a { }` rule -- the block itself has no
+// class of its own, so the anchor is reached by its parent's `a` selector.
+const NESTED_ANCHOR_LINKS = [
+  [".ranks-page", "&__outro"],
+  [".rank-points", "&__outro"],
+];
+
+// Links that carry their own class, so the colour sits on the block's own
+// declarations rather than on a nested `a` rule. The language link rendered
+// in the browser's visited purple on a live page until this pinned it, which
+// is exactly the failure the block guard above misses.
+const OWN_COLOUR_LINKS = [
+  [".ranks-page", "&__lang"],
+  [".rank-points", "&__lang"],
+];
+
 describe("prose links state their own colour", () => {
   it.each(BLOCKS_WITH_PROSE_LINKS)("%s gives its anchors a resting colour", (selector) => {
     const body = blockBody(selector);
@@ -72,14 +107,25 @@ describe("prose links state their own colour", () => {
     );
   });
 
-  // An anchor that carries a class of its own is not reached by its block's
-  // `a` rule -- .ranks-page's anchor colour lives inside __toc. The language
-  // link rendered in the browser's visited purple on a live page until this
-  // pinned it, which is exactly the failure the block guard above missed.
-  it.each(["&__lang"])("%s states a resting colour of its own", (selector) => {
-    expect(ownDeclarations(blockBody(selector)), `${selector} sets no colour`).toMatch(
-      /color:\s*var\(--/,
-    );
+  it.each(NESTED_ANCHOR_LINKS)(
+    "%s %s gives its anchor a resting colour",
+    (parent, selector) => {
+      const body = nestedBlockBody(parent, selector);
+      const anchorAt = /^\s*a\s*\{/m.exec(body);
+      expect(anchorAt, `${parent} ${selector} has no rule for a`).not.toBeNull();
+      const declarations = ownDeclarations(blockFrom(body, anchorAt.index));
+      expect(
+        declarations,
+        `${parent} ${selector} a { } sets no colour of its own`
+      ).toMatch(/color:\s*var\(--/);
+    }
+  );
+
+  it.each(OWN_COLOUR_LINKS)("%s %s states a resting colour of its own", (parent, selector) => {
+    expect(
+      ownDeclarations(nestedBlockBody(parent, selector)),
+      `${parent} ${selector} sets no colour`
+    ).toMatch(/color:\s*var\(--/);
   });
 
   it("finds the blocks it is meant to be guarding", () => {
@@ -87,5 +133,7 @@ describe("prose links state their own colour", () => {
     // above throw rather than pass, but a list that shrank to nothing would
     // pass silently.
     expect(BLOCKS_WITH_PROSE_LINKS.length).toBeGreaterThan(1);
+    expect(NESTED_ANCHOR_LINKS.length).toBeGreaterThan(1);
+    expect(OWN_COLOUR_LINKS.length).toBeGreaterThan(1);
   });
 });
