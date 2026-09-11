@@ -89,7 +89,7 @@ export const ROUTE_META = [
     file: "rank-points.html",
     title: "Is Your PUBG RP Good? Measured Rank Point Standings",
     description:
-      "What a PUBG rank point total is actually worth, measured from a daily random sample of ranked lobbies: the RP at nine cuts of the ladder, and where any number lands among them.",
+      "What a PUBG rank point total is worth, measured from a daily sample of ranked lobbies: the RP at nine cuts of the ladder, and where any number lands.",
     h1: "Is your PUBG RP good?",
     intro:
       "The rank points at each cut of the ladder, measured from a daily sample of ranked lobbies — and where a given number lands among them.",
@@ -124,7 +124,7 @@ export const ROUTE_META = [
     translationOf: "/rank-points",
     title: "Чи добре твоє RP у PUBG? Виміряні рівні рейтингових балів",
     description:
-      "Скільки насправді вартий рейтинговий бал у PUBG, виміряно з добової випадкової вибірки рейтингових лобі: RP на дев'яти зрізах ладдера і куди серед них потрапляє будь-яке число.",
+      "Скільки вартий рейтинговий бал у PUBG, виміряно з добової вибірки рейтингових лобі: RP на дев'яти зрізах ладдера і куди потрапляє будь-яке число.",
     h1: "Чи добре твоє RP у PUBG?",
     intro:
       "Скільки RP на кожному зрізі ладдера, виміряно з добової вибірки рейтингових лобі — і куди серед них потрапляє конкретне число.",
