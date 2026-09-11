@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { translate } from "react-switch-lang";
+import { getLanguage, translate } from "react-switch-lang";
 
 // The homepage's body. It is a component rather than copy injected into the
 // static shell because the build renders it into that shell (see
@@ -22,8 +22,19 @@ const paragraphKeys = (count) => Array.from({ length: count }, (_, index) => `p$
 
 const HomeIntro = ({ t }) => (
   <section className="home-intro">
-    <h1 className="home-intro__title">{t("pages.main.about.h1")}</h1>
+    <h2 className="home-intro__title">{t("pages.main.about.h1")}</h2>
     <p className="home-intro__lead">{t("pages.main.about.lead")}</p>
+
+    <section className="home-intro__section home-intro__rp">
+      <h2>{t("pages.main.about.rankPoints.heading")}</h2>
+      <p>{t("pages.main.about.rankPoints.p1")}</p>
+      <p>{t("pages.main.about.rankPoints.p2")}</p>
+      <p>
+        <Link to={`/${getLanguage() === "ua" ? "ua/" : ""}rank-points`}>
+          {t("pages.main.about.rankPoints.link")}
+        </Link>
+      </p>
+    </section>
 
     {SECTIONS.map((section) => (
       <section className="home-intro__section" key={section.key}>
@@ -34,8 +45,7 @@ const HomeIntro = ({ t }) => (
       </section>
     ))}
 
-    {/* The only two pages on this site worth indexing besides this one, linked
-        from the only page that has any standing in search. */}
+    {/* Related guides remain reachable in both the static and live page. */}
     <nav className="home-intro__links" aria-label={t("pages.main.about.h1")}>
       <Link to="/ranks">{t("pages.main.about.ranksLink")}</Link>
       <Link to="/leaderboards">{t("pages.main.about.leaderboardsLink")}</Link>

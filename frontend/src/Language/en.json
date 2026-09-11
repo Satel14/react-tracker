@@ -10,12 +10,23 @@
   },
   "pages": {
     "main": {
-      "title": "PUBG",
-      "subtitle": "Track detailed PUBG: BATTLEGROUNDS stats and leaderboards",
+      "title": "PUBG Stats Tracker",
+      "subtitle": "Find player stats on Steam, Xbox and PlayStation. Check K/D, ranked RP and recent match replays. No sign-up required.",
+      "guides": {
+        "label": "PUBG ranked guides",
+        "ranks": "Ranks explained",
+        "rankPoints": "Check your RP"
+      },
       "searchingHistory": "Searching History",
       "about": {
         "h1": "PUBG stats tracker for Steam, Xbox and PlayStation",
         "lead": "Type a nickname into the box above and you get that player's current season: ranked RP and tier, kills and damage, win rate, and the last matches they played — each one openable as a replay. Everything comes from the official PUBG API, and nothing here needs an account.",
+        "rankPoints": {
+          "heading": "Is your PUBG RP good?",
+          "p1": "See what your rank points mean alongside our sample of ranked matches on Steam. The RP page explains how we collect the data, which period it covers, and why it does not represent every PUBG player or console rankings.",
+          "p2": "When there is enough data, you can enter your RP and compare it with the sample. During collection, you can read about the method and its limits.",
+          "link": "Explore PUBG rank points"
+        },
         "lookup": {
           "heading": "Three ways to find a player",
           "p1": "The quickest is the in-game nickname. It is case-sensitive and it is the name as it is written today, so a player who renamed since you last saw them will not come up under the old one — PUBG keeps no alias history and neither can we.",
@@ -34,7 +45,7 @@
         "ranked": {
           "heading": "Ranked, RP and where you stand",
           "p1": "Since Season 36 there is a single RP number rather than one per party type and perspective, so the tier on a profile is the tier for everything the player queues. Eight tiers run from Bronze to Survivor, and the top one needs both an RP threshold and a slot in its region.",
-          "p2": "RP alone does not tell you much without knowing what the ladder looks like, which is what the two pages below are for."
+          "p2": "The ranks guide explains how the ladder works, while the regional leaderboards show its leading players. The RP page linked above helps put a rank point total in context."
         },
         "data": {
           "heading": "Where the numbers come from",
@@ -542,6 +553,27 @@
         "clustering": "Because players in one lobby are alike, that is worth about {effective} independent readings at its tightest — which is what each interval above already allows for.",
         "platform": "PC (Steam)",
         "download": "Citing these numbers? Take them as a file:",
+        "chart": {
+          "title": "PUBG rank distribution",
+          "subtitle": "A measured sample of ranked matches on PC (Steam)",
+          "season": "Season {season}",
+          "historical": "HISTORICAL SAMPLE",
+          "dated": "DATED SAMPLE",
+          "accounts": "sampled accounts",
+          "matches": "ranked matches",
+          "window": "sample window · UTC",
+          "tier": "TIER",
+          "share": "SHARE OF THE SAMPLE",
+          "interval": "95% INTERVAL",
+          "tooFew": "Insufficient data",
+          "method": "One latest reading per account, sampled from ranked matches. Console and Kakao are not included.",
+          "limits": "More active players are likelier to appear: this is a match-based sample, not a census of all accounts.",
+          "uncertainty": "White whiskers: 95% intervals adjusted for lobby clustering. Unranked stays in the sample.",
+          "downloadLabel": "Download chart:",
+          "downloadPng": "Download chart (PNG)",
+          "downloadSvg": "Download chart (SVG)",
+          "error": "The chart could not be downloaded. Try again, or choose SVG."
+        },
         "tooFew": "too few observations",
         "unranked": "Unranked",
         "loading": "Reading the latest sample…",

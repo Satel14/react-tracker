@@ -11,6 +11,8 @@ import { m } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import HistoryChecking from "../component/HistoryChecking";
 import HomeIntro from "../component/home/HomeIntro";
+import HomeHeading from "../component/home/HomeHeading";
+import HomeGuideLinks from "../component/home/HomeGuideLinks";
 import { getLiveSnapshot, getPlayerSteamName } from '../api/player'
 import openNotification from '../component/Notification';
 import SteamIcon from '../component/icons/SteamIcon';
@@ -149,10 +151,7 @@ const Main = ({ t }) => {
       <Row className="mainpage__hero" style={{ justifyContent: "center" }}>
         <Col xs={24} sm={22} md={18} lg={15}>
           <div className="mainpage_left">
-            <div className="mainpage_left__text">
-              {t("pages.main.title")}
-              <span>{t("pages.main.subtitle")}</span>
-            </div>
+            <HomeHeading />
             <div className="chooser">
               <div className="choose-platform" role="radiogroup" aria-label={t("pages.main.title")}>
                 {PLATFORM_OPTIONS.map((item) => {
@@ -211,6 +210,8 @@ const Main = ({ t }) => {
                 <EnterOutlined />
               </div>
             </div>
+
+            <HomeGuideLinks />
 
             <div className="mainpage_left__stats">
               <m.div

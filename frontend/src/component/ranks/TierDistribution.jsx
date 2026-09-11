@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { getLanguage } from "react-switch-lang";
 import { getRankDistribution } from "../../api/census";
 import { RANK_LADDER } from "../../helpers/rankLadder";
+import CensusChartDownload from "./CensusChartDownload";
+import { canExportCensusChart } from "../../helpers/censusChart";
 import {
   CENSUS_SNAPSHOT,
   UNRANKED,
@@ -98,9 +100,12 @@ const TierDistribution = ({
     return <p className="ranks-page__share-note">{t("pages.ranks.distribution.unavailable")}</p>;
   }
 
-  const data = state.data ?? {};
-  const measured = new Map((data.tiers ?? []).map((row) => [row.tier, row]));
-  const publishable = (data.tiers ?? []).filter((row) => row.publishable);
+  const fresh = state.data ?? {};
+  const gathering = !hasLadderReading(fresh);
+  const archived = gathering && canExportCensusChart(snapshot) && snapshot.seasonId !== fresh.seasonId;
+  // Keep the historical chart visible while the new season is being sampled.
+  // Its own season, dates and historical label travel with both the HTML and export.
+  const data = archived ? { ...snapshot, current: false } : fresh;
 
   // Every season rollover passes through here. Naming the season is what makes
   // the empty section read as a calendar event rather than as a broken page.
@@ -121,11 +126,29 @@ const TierDistribution = ({
   // Off the widest upper bound, not off the widest share. Scaled off the share,
   // the top tier's bar fills the track and its interval is clipped away by the
   // end of it -- drawing the least certain tier as the most certain one.
+  const measured = new Map((data.tiers ?? []).map((row) => [row.tier, row]));
+  const publishable = (data.tiers ?? []).filter((row) => row.publishable);
   const widest = Math.max(...publishable.map((row) => row.high));
   const effective = effectiveReadings(data);
 
   return (
-    <div className="ranks-page__shares">
+    <figure className="ranks-page__shares">
+      <figcaption className="ranks-page__share-caption">
+        <h3>{t("pages.ranks.distribution.chart.season", { season: seasonNumber(data.seasonId) })}</h3>
+        {data.current === false && (
+          <span>{t("pages.ranks.distribution.chart.historical")}</span>
+        )}
+      </figcaption>
+      {archived && (
+        <p className="ranks-page__share-stale">
+          {t("pages.ranks.distribution.gathering", { season: seasonNumber(fresh.seasonId) })}
+        </p>
+      )}
+      {!archived && data.current === false && (
+        <p className="ranks-page__share-stale">
+          {t("pages.ranks.distribution.finished", { season: seasonNumber(data.seasonId) })}
+        </p>
+      )}
       <ol className="ranks-page__share-list">
         {ROWS.map((key) => {
           const ladder = RANK_LADDER.find((tier) => tier.key === key);
@@ -187,12 +210,6 @@ const TierDistribution = ({
         })}
       </ol>
 
-      {data.current === false && (
-        <p className="ranks-page__share-stale">
-          {t("pages.ranks.distribution.finished", { season: seasonNumber(data.seasonId) })}
-        </p>
-      )}
-
       <p className="ranks-page__share-note">
         {t("pages.ranks.distribution.sample", {
           accounts: groupDigits(data.accounts),
@@ -206,6 +223,8 @@ const TierDistribution = ({
           : null}
       </p>
 
+      <CensusChartDownload data={data} t={t} />
+
       {/* The one asset here nobody else publishes, as something a post or a
           wiki page can point at rather than screenshot. Written by the build
           from the same snapshot this table renders, so the file and the page
@@ -218,7 +237,7 @@ const TierDistribution = ({
           <a href={CENSUS_CSV_URL}>CSV</a>
         </p>
       )}
-    </div>
+    </figure>
   );
 };
 

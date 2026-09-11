@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { routeMetaFor } from "./routeMeta";
 
 const html = readFileSync(
   fileURLToPath(new URL("../../index.html", import.meta.url)),
@@ -29,6 +30,21 @@ const contentOf = (key) => {
   const hit = metaTags().find((tag) => tag.key === key);
   return hit ? hit.content : undefined;
 };
+
+describe("homepage metadata parity", () => {
+  it("keeps the development, production and share descriptions aligned", () => {
+    const { description, title } = routeMetaFor("/");
+    for (const key of ["description", "og:description", "twitter:description"]) {
+      expect(contentOf(key)).toBe(description);
+    }
+    const structured = JSON.parse(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)[1]);
+    expect(structured.description).toBe(description);
+    expect(description).toContain("Steam, Xbox and PlayStation");
+    expect(description).toContain("No sign-up required.");
+    expect(title).toBe("PUBG Tracker - Player Stats & Leaderboards");
+    expect(html).toContain(`<title>${title}</title>`);
+  });
+});
 
 // PNG header: 8-byte signature, then a 4-byte length and the "IHDR" tag, then
 // width and height as big-endian uint32.

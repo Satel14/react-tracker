@@ -24,11 +24,10 @@ export const ROUTE_META = [
     path: "/",
     nav: "PUBG Tracker",
     file: "index.html",
-    // Unchanged from the shell: this is the one page that already ranks, and a
-    // new title would restart whatever standing it has.
+    // Keep the existing descriptive title while improving the hero and snippet.
     title: "PUBG Tracker - Player Stats & Leaderboards",
     description:
-      "Track PUBG player statistics, view match history, and check leaderboards. Fast and easy PUBG stats tracker for steam.",
+      "Track PUBG stats on Steam, Xbox and PlayStation. Search by nickname to view K/D, ranked RP, match history and replays. No sign-up required.",
     sitemap: true,
     // No hand-written stub -- and no longer "no body at all", which is what
     // this comment used to say. The homepage does ship prose: prerenderBody

@@ -74,6 +74,7 @@ const BLOCKS_WITH_PROSE_LINKS = [
   ".leaderboard-intro",
   ".prerender__nav",
   ".home-intro",
+  ".home-guide-links",
 ];
 
 // `[parent, child]` pairs rather than bare child selectors, so a lookup can

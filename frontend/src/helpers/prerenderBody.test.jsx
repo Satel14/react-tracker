@@ -48,6 +48,8 @@ describe("the homepage body", () => {
   it("gives the homepage the h1 it never had", () => {
     // `<h1[ >]`, not `<h1>`: this one carries a class.
     expect((home().match(/<h1[ >]/g) || []).length).toBe(1);
+    expect(home()).toContain(`<h1>${en.pages.main.title}</h1>`);
+    expect(decode(home())).toContain(en.pages.main.subtitle);
   });
 
   it("is a body rather than a slogan", () => {
@@ -58,6 +60,8 @@ describe("the homepage body", () => {
   it("links the two pages we want crawled from the one page that ranks", () => {
     expect(home()).toContain('href="/ranks"');
     expect(home()).toContain('href="/leaderboards"');
+    expect(home()).toContain('href="/rank-points"');
+    expect(home()).toContain(en.pages.main.guides.rankPoints);
   });
 });
 

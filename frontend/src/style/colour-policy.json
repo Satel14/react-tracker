@@ -14,6 +14,7 @@
   ],
   "mergeThreshold": 15,
   "exemptions": [
+    { "file": "helpers/censusChart.js", "id": "#ffffff", "count": 7, "until": "Standalone chart exports need fixed colours: SVG/PNG files have no access to the site's CSS theme tokens." },
     { "file": "style/mixins.scss", "id": "$backgroundColorFirst", "count": 3, "until": "PR C" },
     { "file": "style/mixins.scss", "id": "#fff", "count": 1, "until": "PR C" },
     { "file": "style/mixins.scss", "id": "near-duplicate", "count": 1, "until": "PR C" },

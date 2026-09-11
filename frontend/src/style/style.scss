@@ -3577,11 +3577,60 @@ body {
   width: 100%;
   min-height: 72vh;
   align-items: flex-start;
+
+  .chooser {
+    margin-bottom: 0;
+  }
 }
 
 .mainpage__body {
   width: 100%;
   border-top: 1px solid var(--border);
+}
+
+.home-heading {
+  margin: 0 auto 24px;
+  max-width: 62ch;
+  text-align: center;
+
+  h1 {
+    margin: 0 0 10px;
+    font-size: clamp(26px, 4vw, 36px);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text-strong);
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+}
+
+.home-guide-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 12px;
+  margin: 8px 0 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+
+    &:hover {
+      color: var(--accent);
+    }
+  }
 }
 
 // The prose below the standings. Four sections rather than five, so the
@@ -3679,7 +3728,7 @@ body {
     border-radius: 12px;
     background: rgba(0, 0, 0, 0.25);
 
-    // Five sections in two columns leaves the last one alone; it takes the
+    // Five guide sections in two columns leave the last one alone; it takes the
     // whole row instead of sitting in a half-empty one.
     &:last-of-type {
       grid-column: 1 / -1;
@@ -3696,6 +3745,10 @@ body {
       line-height: 1.7;
       color: var(--text-muted);
     }
+  }
+
+  &__rp {
+    grid-column: 1 / -1;
   }
 
   &__links {
@@ -4109,6 +4162,27 @@ body {
   // ladder rather than as a leaderboard.
   &__shares {
     margin: 0 0 24px;
+    padding-top: 10px;
+  }
+
+  &__share-caption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 18px;
+    margin-bottom: 18px;
+
+    h3 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--text-strong);
+    }
+
+    span {
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
   }
 
   &__share-list {
@@ -4204,6 +4278,44 @@ body {
     font-size: 13px;
     line-height: 1.6;
     color: var(--text);
+  }
+
+  &__chart-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+    font-size: 12px;
+    color: var(--text-muted);
+
+    button {
+      min-height: 32px;
+      min-width: 48px;
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: color-mix(in srgb, var(--accent) 5%, transparent);
+      color: var(--text);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+
+      &:hover:not(:disabled) {
+        border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        color: var(--accent);
+      }
+
+      &:active:not(:disabled) {
+        background: color-mix(in srgb, var(--accent) 18%, transparent);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+    }
   }
 
   &__share-note {

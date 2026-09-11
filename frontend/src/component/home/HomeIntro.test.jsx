@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { setTranslations, setDefaultLanguage, setLanguage } from "react-switch-lang";
@@ -12,10 +12,12 @@ const paragraphs = () =>
     .flatMap(([, value]) => Object.entries(value).filter(([key]) => /^p\d+$/.test(key)))
     .map(([, text]) => text);
 
-const renderIntro = () => {
+afterEach(() => setLanguage("en"));
+
+const renderIntro = (language = "en") => {
   setTranslations({ en, ua });
   setDefaultLanguage("en");
-  setLanguage("en");
+  setLanguage(language);
   return render(
     <MemoryRouter>
       <HomeIntro />
@@ -26,11 +28,10 @@ const renderIntro = () => {
 describe("the homepage's own words", () => {
   // The page holding every one of this site's search impressions rendered
   // eight words and no heading at all. This is the body it was missing.
-  it("gives the page exactly one h1", () => {
+  it("leaves the page's h1 to the search hero", () => {
     renderIntro();
-    const headings = screen.getAllByRole("heading", { level: 1 });
-    expect(headings).toHaveLength(1);
-    expect(headings[0].textContent.length).toBeGreaterThan(15);
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: en.pages.main.about.h1 })).toBeInTheDocument();
   });
 
   it("renders every paragraph the copy defines", () => {
@@ -48,15 +49,18 @@ describe("the homepage's own words", () => {
     expect(words.length).toBeGreaterThan(400);
   });
 
-  // The homepage is the only page with any standing in search, so it is the
-  // one place a link to the two pages we do want indexed is worth anything.
-  it("sends readers to the pages worth reading", () => {
-    renderIntro();
-    expect(screen.getByRole("link", { name: /rank/i })).toHaveAttribute("href", "/ranks");
-    expect(screen.getByRole("link", { name: /leaderboard/i })).toHaveAttribute(
+  it.each([
+    ["en", en, "/rank-points"],
+    ["ua", ua, "/ua/rank-points"],
+  ])("sends %s readers to the guides and their language's RP page", (language, dictionary, rpPath) => {
+    renderIntro(language);
+    const copy = dictionary.pages.main.about;
+    expect(screen.getByRole("link", { name: copy.ranksLink })).toHaveAttribute("href", "/ranks");
+    expect(screen.getByRole("link", { name: copy.leaderboardsLink })).toHaveAttribute(
       "href",
       "/leaderboards",
     );
+    expect(screen.getByRole("link", { name: copy.rankPoints.link })).toHaveAttribute("href", rpPath);
   });
 
   it("gives each section a heading of its own", () => {

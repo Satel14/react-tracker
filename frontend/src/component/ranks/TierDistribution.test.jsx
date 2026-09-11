@@ -320,10 +320,9 @@ test("does not let a 200 with no payload wipe the table", async () => {
   expect(container.textContent).not.toMatch(/just started/i);
 });
 
-// The one case where the committed reading has to give way even though it is
-// the fuller answer: it is a different season's, and showing it as current
-// would be the page passing a finished season off as the live one.
-test("steps aside when the live read says the season has moved on", async () => {
+// A new season with no publishable sample keeps the saved graph visible,
+// explicitly labelled with its own season rather than passed off as current.
+test("shows the historical graph while the new season is gathering", async () => {
   const next = {
     ...SAMPLE,
     seasonId: "division.bro.official.pc-2018-43",
@@ -333,8 +332,16 @@ test("steps aside when the live read says the season has moved on", async () => 
     <TierDistribution t={t} load={async () => ({ status: 200, data: next })} snapshot={SAMPLE} />
   );
   await screen.findByText(/just started/i);
-  expect(rows(container)).toHaveLength(0);
+  expect(rows(container)).toHaveLength(9);
   expect(container.textContent).toContain("43");
+  expect(container.textContent).toContain("31.1%");
+  const archive = screen.getByRole("figure");
+  expect(archive).not.toBeNull();
+  expect(archive).toHaveTextContent("Season 42");
+  expect(archive).toHaveTextContent("HISTORICAL SAMPLE");
+  expect(archive).toHaveTextContent("2026-08-30 to 2026-08-31");
+  expect(within(archive).getByRole("button", { name: "Download chart (PNG)" })).toBeEnabled();
+  expect(within(archive).getByRole("button", { name: "Download chart (SVG)" })).toBeEnabled();
 });
 
 // --- what the numbers are, and are not ---

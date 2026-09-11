@@ -56,14 +56,18 @@ const renderPage = () =>
     </MemoryRouter>
   );
 
-// The static file a crawler receives is HomeIntro rendered on its own, so the
-// page has to render that same component -- otherwise the document Google
-// reads and the document a visitor sees drift apart, which is the whole
-// reason the body is a component instead of copy injected into the shell.
+// The static file and the interactive page share the heading, links and body.
 test("renders the same body component the static shell carries", () => {
   const { container } = renderPage();
   expect(container.querySelector(".home-intro")).not.toBeNull();
   expect(container.querySelectorAll("h1")).toHaveLength(1);
+  const heading = container.querySelector(".mainpage__hero h1");
+  const search = container.querySelector('input[type="search"]');
+  const links = container.querySelector(".home-guide-links");
+  expect(heading).not.toBeNull();
+  expect(heading.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(search.compareDocumentPosition(links) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(links.compareDocumentPosition(container.querySelector(".mainpage_left__stats")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 test("shows a notification and does not navigate when Steam resolution returns no account", async () => {

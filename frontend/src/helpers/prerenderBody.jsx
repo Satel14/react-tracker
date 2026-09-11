@@ -20,6 +20,8 @@ import { setTranslations, setDefaultLanguage, setLanguage } from "react-switch-l
 import Ranks from "../pages/Ranks.jsx";
 import RankPoints from "../pages/RankPoints.jsx";
 import HomeIntro from "../component/home/HomeIntro.jsx";
+import HomeHeading from "../component/home/HomeHeading.jsx";
+import HomeGuideLinks from "../component/home/HomeGuideLinks.jsx";
 import Help from "../pages/Help.jsx";
 import LeaderboardStatic from "../component/leaderboard/LeaderboardIntro.jsx";
 import en from "../Language/en.json";
@@ -29,10 +31,8 @@ import ua from "../Language/ua.json";
 // article read from different dictionaries, and the URL is what decides which.
 // Everything else in the shell is still English -- language stays a
 // client-side choice on every route that does not carry one in its path.
-// The homepage renders its body component, not the whole page: the hero
-// around it reaches for the live snapshot and for framer-motion's feature
-// context, neither of which exists in a build. HomeIntro is the part with the
-// words in it, and the page renders the very same component.
+// The homepage renders its shared heading, guide links and body, without
+// the search or live widgets that need the application context.
 //
 // /help joined once its answers existed in the DOM at all. antd's collapse
 // renders a closed panel's content as null, so a static render of that page
@@ -46,12 +46,20 @@ import ua from "../Language/ua.json";
 // is still absent, for the reason it always was -- live standings would need a
 // build-time call to an API that sleeps, and would hand a crawler numbers that
 // stopped matching the page the moment they were written.
+const HomeStatic = () => (
+  <>
+    <HomeHeading />
+    <HomeGuideLinks />
+    <HomeIntro />
+  </>
+);
+
 const PAGES = {
   "/ranks": { Page: Ranks, language: "en" },
   "/ua/ranks": { Page: Ranks, language: "ua" },
   "/rank-points": { Page: RankPoints, language: "en" },
   "/ua/rank-points": { Page: RankPoints, language: "ua" },
-  "/": { Page: HomeIntro, language: "en" },
+  "/": { Page: HomeStatic, language: "en" },
   "/help": { Page: Help, language: "en" },
   "/leaderboards": { Page: LeaderboardStatic, language: "en" },
 };
