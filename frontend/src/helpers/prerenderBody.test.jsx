@@ -10,7 +10,9 @@ describe("which routes ship their article", () => {
   // homepage's file is also what Pages serves for every unmatched URL, so
   // prose in it would become duplicate copy across an unbounded set of them.
   it("renders the article, the homepage body, the FAQ and the leaderboard prose", () => {
-    expect(PRERENDERED_ROUTES).toEqual(["/ranks", "/ua/ranks", "/", "/help", "/leaderboards"]);
+    expect(PRERENDERED_ROUTES).toEqual([
+      "/ranks", "/ua/ranks", "/rank-points", "/ua/rank-points", "/", "/help", "/leaderboards",
+    ]);
   });
 
   it("says nothing for a route that is not prerendered", () => {
@@ -245,6 +247,41 @@ describe("the Ukrainian twin", () => {
   it("is a whole article too, not a stub", () => {
     const words = prerenderBody("/ua/ranks").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean);
     expect(words.length).toBeGreaterThan(1500);
+  });
+});
+
+describe("the rank points pages", () => {
+  const page = (path) => prerenderBody(path);
+
+  it("renders a body rather than a stub, in both languages", () => {
+    for (const path of ["/rank-points", "/ua/rank-points"]) {
+      const words = page(path).replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean);
+      expect(words.length, path).toBeGreaterThan(250);
+    }
+  });
+
+  it("carries exactly one h1 on each", () => {
+    for (const path of ["/rank-points", "/ua/rank-points"]) {
+      expect((page(path).match(/<h1[ >]/g) || []).length, path).toBe(1);
+    }
+  });
+
+  // The whole point of the page shipping before its numbers do: the prose has
+  // to stand on its own, including the constraint it states out loud.
+  it("states what it refuses to publish even with no table yet", () => {
+    expect(page("/rank-points")).toContain("We do not publish where each tier starts");
+  });
+
+  it("reads each language from its own dictionary", () => {
+    expect(page("/rank-points")).toContain("Is your PUBG RP good?");
+    expect(page("/ua/rank-points")).toContain("Чи добре твоє RP");
+  });
+
+  it("links the article and the leaderboards from both", () => {
+    for (const path of ["/rank-points", "/ua/rank-points"]) {
+      expect(page(path), path).toContain('href="/ranks"');
+      expect(page(path), path).toContain('href="/leaderboards"');
+    }
   });
 });
 

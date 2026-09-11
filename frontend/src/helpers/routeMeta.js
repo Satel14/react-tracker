@@ -80,6 +80,22 @@ export const ROUTE_META = [
     sitemap: true,
     body: true,
   },
+  // No season number in this head, unlike /ranks. The page's numbers are dated
+  // by the snapshot and its season is named in the body from the data, so a
+  // season in the title would need the same rollover guard for no gain.
+  {
+    path: "/rank-points",
+    nav: "Rank points",
+    file: "rank-points.html",
+    title: "Is Your PUBG RP Good? Measured Rank Point Standings",
+    description:
+      "What a PUBG rank point total is actually worth, measured from a daily random sample of ranked lobbies: the RP at nine cuts of the ladder, and where any number lands among them.",
+    h1: "Is your PUBG RP good?",
+    intro:
+      "The rank points at each cut of the ladder, measured from a daily sample of ranked lobbies — and where a given number lands among them.",
+    sitemap: true,
+    body: true,
+  },
   // The same article, rendered from the ua dictionary. `translationOf` is what
   // pairs the two: it drives the hreflang set, the language switch and the
   // sitemap entry, so a twin cannot exist half-wired.
@@ -97,6 +113,21 @@ export const ROUTE_META = [
     h1: "Ранги PUBG: як влаштовані тіри, RP і Survivor",
     intro:
       "Вісім тірів, одне спільне RP і найвищий тір, який можна втратити за одну ніч — як рейтингова система працює зараз.",
+    sitemap: true,
+    body: true,
+  },
+  {
+    path: "/ua/rank-points",
+    file: "ua/rank-points.html",
+    lang: "uk",
+    translations: "ua",
+    translationOf: "/rank-points",
+    title: "Чи добре твоє RP у PUBG? Виміряні рівні рейтингових балів",
+    description:
+      "Скільки насправді вартий рейтинговий бал у PUBG, виміряно з добової випадкової вибірки рейтингових лобі: RP на дев'яти зрізах ладдера і куди серед них потрапляє будь-яке число.",
+    h1: "Чи добре твоє RP у PUBG?",
+    intro:
+      "Скільки RP на кожному зрізі ладдера, виміряно з добової вибірки рейтингових лобі — і куди серед них потрапляє конкретне число.",
     sitemap: true,
     body: true,
   },
