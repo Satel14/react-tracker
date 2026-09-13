@@ -23,7 +23,10 @@ const SAMPLE = {
   days: 7,
   accounts: 4430,
   matches: 297,
-  windows: 2,
+  // A pooled week, because that is what the copy beside the table promises and
+  // what the page now requires before it will draw a reading at all. It stood
+  // at 2 while nothing looked at the field.
+  windows: 7,
   firstDate: "2026-08-30",
   lastDate: "2026-08-31",
   perMatch: 15,
@@ -342,6 +345,54 @@ test("shows the historical graph while the new season is gathering", async () =>
   expect(archive).toHaveTextContent("2026-08-30 to 2026-08-31");
   expect(within(archive).getByRole("button", { name: "Download chart (PNG)" })).toBeEnabled();
   expect(within(archive).getByRole("button", { name: "Download chart (SVG)" })).toBeEnabled();
+});
+
+// The reading that actually shipped on 2026-09-13, and the reason this rule
+// exists. One day of season 43 -- the second day of a reset, 145 matches --
+// came back with five publishable rungs, so every gate the page had was
+// satisfied and the thin day replaced a pooled week of season 42 in the table,
+// in the static HTML and in both files the copy invites people to cite. Gold
+// read 39.4% against 29.0%, which is not a distribution moving; it is
+// re-climbing being measured and published as standing.
+test("keeps the finished season while the new one has only a day or two behind it", async () => {
+  const secondDayOfAReset = {
+    seasonId: "division.bro.official.pc-2018-43",
+    current: true,
+    shard: "steam",
+    days: 7,
+    accounts: 2172,
+    matches: 145,
+    windows: 1,
+    firstDate: "2026-09-11",
+    lastDate: "2026-09-11",
+    perMatch: 15,
+    tiers: [
+      tier("gold", 0.3936, 0.351, 0.438),
+      tier("silver", 0.3343, 0.297, 0.374),
+      tier("bronze", 0.1331, 0.105, 0.168),
+      tier("platinum", 0.0783, 0.059, 0.103),
+      tier("crystal", 0.0078, 0.004, 0.016),
+    ],
+  };
+  const { container } = render(
+    <TierDistribution
+      t={t}
+      load={async () => ({ status: 200, data: secondDayOfAReset })}
+      snapshot={SAMPLE}
+    />,
+  );
+
+  await screen.findByText(/just started/i);
+  expect(container.textContent).toContain("31.1%");
+  expect(container.textContent).not.toContain("39.4%");
+
+  const archive = screen.getByRole("figure");
+  expect(archive).toHaveTextContent("Season 42");
+  expect(archive).toHaveTextContent("HISTORICAL SAMPLE");
+  // The window under the table has to be the one the numbers were measured
+  // over, not the day that failed to replace them.
+  expect(archive).toHaveTextContent("2026-08-30 to 2026-08-31");
+  expect(container.textContent).not.toContain("2026-09-11");
 });
 
 // --- what the numbers are, and are not ---

@@ -158,8 +158,24 @@ jobs:
           # every test, and not a distribution. Committing that once was enough
           # to put "Unranked 100.0%" in the static HTML and in the two data
           # files people are asked to cite.
+          #
+          # And a ladder tier is not enough either, which cost the same two
+          # files again on 2026-09-13. By the second day of a reset people have
+          # placed, so five rungs cleared the bar off ONE day of lobbies -- 145
+          # matches -- and it replaced a pooled week of season 42 with Gold at
+          # 39.4% against 29.0%. Both gates are about the same mistake: a tier's
+          # own statistics say how often it was seen, never whether the days
+          # behind it are representative. The window count is the only thing
+          # that answers that, so it is asked for here.
+          #
+          # 3 is MIN_WINDOWS in backend/controllers/census.js and
+          # MIN_POOLED_WINDOWS in frontend/src/helpers/censusSnapshot.js. Three
+          # hand-typed literals, because no two of these layers can read each
+          # other; censusSnapshot.test.js pins the frontend one to this value.
           usable=$(printf '%s' "$body" | jq -r \
-            '(.status == 200) and ((.data.tiers // []) | map(select(.publishable and .tier != "unranked")) | length > 0)' \
+            '(.status == 200)
+             and ((.data.windows // 0) >= 3)
+             and ((.data.tiers // []) | map(select(.publishable and .tier != "unranked")) | length > 0)' \
             2>/dev/null || echo false)
           if [ "$usable" != "true" ]; then
             echo "::warning::the distribution came back unusable; keeping the committed reading"
