@@ -8,7 +8,7 @@ import {
   CENSUS_SNAPSHOT,
   UNRANKED,
   effectiveReadings,
-  hasLadderReading,
+  publishableReading,
   usableSnapshot,
 } from "../../helpers/censusSnapshot";
 import {
@@ -101,7 +101,7 @@ const TierDistribution = ({
   }
 
   const fresh = state.data ?? {};
-  const gathering = !hasLadderReading(fresh);
+  const gathering = !publishableReading(fresh);
   const archived = gathering && canExportCensusChart(snapshot) && snapshot.seasonId !== fresh.seasonId;
   // Keep the historical chart visible while the new season is being sampled.
   // Its own season, dates and historical label travel with both the HTML and export.
@@ -115,7 +115,11 @@ const TierDistribution = ({
   // has placed, so 100% of it is unplaced -- and drawing it as a full-width
   // bar would answer "where do players sit on the ladder" with a row that is
   // not on the ladder.
-  if (!hasLadderReading(data)) {
+  //
+  // So does a reading pooled over a day or two, however well its tiers score:
+  // the days after a reset measure how far people have re-climbed, not where
+  // they sit.
+  if (!publishableReading(data)) {
     return (
       <p className="ranks-page__share-note">
         {t("pages.ranks.distribution.gathering", { season: seasonNumber(data.seasonId) })}

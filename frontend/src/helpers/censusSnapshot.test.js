@@ -1,10 +1,12 @@
 import {
   CENSUS_SNAPSHOT,
   usableSnapshot,
+  publishableReading,
   snapshotSeasonNumber,
   effectiveReadings,
   rpTable,
   RP_TABLE_LENGTH,
+  MIN_POOLED_WINDOWS,
 } from "./censusSnapshot";
 import committed from "../data/tierCensus.json";
 
@@ -89,6 +91,51 @@ describe("usableSnapshot", () => {
     for (const value of [null, undefined, 0, "", [], { tiers: "gold" }]) {
       expect(usableSnapshot(value)).toBeNull();
     }
+  });
+});
+
+// A tier clearing the per-tier statistical bar says nothing about how many days
+// of lobbies stand behind it. On 2026-09-13 one day of season 43 -- 145 matches,
+// the second day of a reset -- came back with five publishable rungs and put
+// Gold at 39.4% where a pooled week of season 42 had it at 29.0%. It was not a
+// distribution, it was a snapshot of how far people had re-climbed by Thursday,
+// and it displaced the finished season's chart everywhere: the page, the static
+// HTML and both files the copy invites people to cite.
+describe("publishableReading", () => {
+  it("refuses a reading pooled over fewer days than the method claims", () => {
+    expect(publishableReading(snapshot({ windows: 1 }))).toBe(false);
+    expect(publishableReading(snapshot({ windows: 2 }))).toBe(false);
+  });
+
+  it("accepts one at the threshold", () => {
+    expect(publishableReading(snapshot({ windows: MIN_POOLED_WINDOWS }))).toBe(true);
+  });
+
+  // Absence is not zero. An older deploy of the API, and every fixture written
+  // before the field existed, simply do not send it -- and silence must not
+  // blank a table that is otherwise sound.
+  it("treats a missing window count as unknown rather than as none", () => {
+    const { windows, ...undated } = snapshot();
+    expect(windows).toBeDefined();
+    expect(publishableReading(undated)).toBe(true);
+  });
+
+  it("still demands a rung of the ladder, however deep the pool", () => {
+    const unplaced = snapshot({ windows: 7, tiers: [tier({ tier: "unranked" })] });
+    expect(publishableReading(unplaced)).toBe(false);
+  });
+
+  it("agrees with the backend's own pooling floor", () => {
+    expect(MIN_POOLED_WINDOWS).toBe(3);
+  });
+});
+
+// Defence in depth against the same day. The workflow gate is what should stop
+// a thin reading being committed; this is what stops one already committed from
+// being rendered as though it were a measurement.
+describe("usableSnapshot and pooling depth", () => {
+  it("refuses a snapshot pooled over too few days", () => {
+    expect(usableSnapshot(snapshot({ windows: 1 }))).toBeNull();
   });
 });
 

@@ -38,6 +38,36 @@ export const UNRANKED = "unranked";
 export const hasLadderReading = (data) =>
   (data?.tiers ?? []).some((row) => row?.publishable && row.tier !== UNRANKED);
 
+// How many daily samples have to stand behind a reading before it is a
+// distribution rather than a day.
+//
+// Hand-typed here and as MIN_WINDOWS in backend/controllers/census.js, the same
+// way RP_TABLE_LENGTH below mirrors PERCENTILE_STEPS: neither side reads the
+// other's value. The backend uses it to decide which season to serve and cannot
+// apply it here, because when it has no earlier season to fall back to it still
+// has to answer with something -- and it does, honestly, by reporting how thin
+// the answer is. This is the side that has the finished season in hand.
+export const MIN_POOLED_WINDOWS = 3;
+
+// Absence is not zero: a payload from a deploy that predates the field, or a
+// fixture written without it, is unknown rather than empty. Only a count that
+// is actually reported and actually short is refused.
+const pooledEnough = (data) =>
+  data?.windows === null || data?.windows === undefined
+    ? true
+    : Number(data.windows) >= MIN_POOLED_WINDOWS;
+
+// Whether a reading may be drawn as the tier distribution.
+//
+// Two independent questions, and the per-tier statistics only answer the first.
+// A tier clears its own bar on the strength of how often it was SEEN, which one
+// busy day supplies easily; it says nothing about whether that day is
+// representative of the season. The second day of a reset is the case that
+// proves them separate -- five publishable rungs, and Gold twelve points above
+// where a pooled week put it, because the sample was measuring re-climbing
+// rather than standing.
+export const publishableReading = (data) => hasLadderReading(data) && pooledEnough(data);
+
 // Whether a reading can stand in a static file for a day or two.
 //
 // The bar is not "did the request succeed" but "is this still true tomorrow".
@@ -49,7 +79,7 @@ export const hasLadderReading = (data) =>
 export const usableSnapshot = (data) => {
   if (!data || typeof data !== "object") return null;
   if (!Array.isArray(data.tiers)) return null;
-  if (!hasLadderReading(data)) return null;
+  if (!publishableReading(data)) return null;
   if (!data.firstDate || !data.lastDate) return null;
   if (!(Number(data.accounts) > 0)) return null;
   return data;
