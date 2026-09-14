@@ -117,6 +117,12 @@ const SELECT_RANK_POINTS_SQL = `
 // job. At ~12k rows that is roughly 400 KB of Neon transfer saved per call,
 // which stopped being academic on 2026-09-10 when the monthly allowance ran out.
 // dense_rank starts at 1, so the label is never falsy.
+//
+// The match_cluster labels here are NOT complete lobby rosters: the DISTINCT ON
+// keeps one day per account, so an account seen twice in a window appears only
+// in its latest lobby. estimateIcc only needs to know which observations shared
+// a lobby, so that is fine for it; lobbyMix reads the same rows pairwise and
+// documents what the thinning costs it.
 const SELECT_WINDOW_SQL = `
   SELECT dense_rank() OVER (ORDER BY match_id)::int AS match_cluster, tier
   FROM (
