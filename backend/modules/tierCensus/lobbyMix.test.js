@@ -83,3 +83,25 @@ test("tripling the pairs inside the same lobbies does not narrow the interval", 
     `interval moved with the pair count: ${widthOf(sparse)} -> ${widthOf(dense)}`,
   );
 });
+
+// An opponent bucket with no name in the ladder must not get a silent vote in
+// the denominator either, or every other bucket's share is deflated by it.
+test("an opponent tier outside the ladder does not deflate the shares we can name", () => {
+  const rows = [];
+  for (let i = 1; i <= ROW_MIN_LOBBIES; i += 1) rows.push(...lobby(i, "gold", "silver", "grandmaster"));
+  const gold = lobbyMix(rows).find((r) => r.tier === "gold");
+  assert.equal(gold.mix.some((m) => m.tier === "grandmaster"), false);
+  assert.equal(gold.opponents, ROW_MIN_LOBBIES);
+  const total = gold.mix.reduce((sum, m) => sum + m.share, 0);
+  assert.ok(Math.abs(total - 1) < 1e-9, `shares summed to ${total}`);
+});
+
+// n >= ROW_MIN_LOBBIES is necessary but not sufficient: a row with no
+// opponents at all has nothing to publish a mix for.
+test("a row with no opponents at all is not publishable", () => {
+  const rows = [];
+  for (let i = 1; i <= ROW_MIN_LOBBIES; i += 1) rows.push(...lobby(i, "gold"));
+  const gold = lobbyMix(rows).find((r) => r.tier === "gold");
+  assert.equal(gold.opponents, 0);
+  assert.equal(gold.publishable, false);
+});
