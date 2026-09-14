@@ -4610,6 +4610,67 @@ body {
   }
 }
 
+// Tokens only, no literals: same reasoning as .rank-points above.
+.ranked-lobbies {
+  &__table-wrap {
+    margin-bottom: 28px;
+  }
+
+  &__lead {
+    margin: 0 0 16px;
+    font-size: 22px;
+    color: var(--text-strong);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+
+    caption {
+      margin-bottom: 8px;
+      text-align: left;
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+
+    th,
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      color: var(--text);
+    }
+
+    thead th {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-faint);
+    }
+
+    // The reading, not its label: right-aligned and tabular so a column of
+    // percentages lines up on its own decimal column.
+    tbody td {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      color: var(--text-strong);
+    }
+
+    tbody th {
+      font-weight: 400;
+      color: var(--text);
+    }
+  }
+
+  &__note,
+  &__stale {
+    margin: 10px 0 0;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+}
+
 .leaderboard-page__explainer {
   margin: 6px 0 0;
   font-size: 14px;
