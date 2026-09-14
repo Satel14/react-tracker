@@ -210,12 +210,26 @@ jobs:
             tiers: [.data.tiers[] | {tier, count, share, low, high, n, effectiveN, designEffect, publishable}]
           }
           JQ
-          { printf '{capturedAt: (now | todate)} + (\n'; cat "$RUNNER_TEMP/reading.jq"; printf ')\n'; } > "$RUNNER_TEMP/snapshot.jq"
-
           # capturedAt moves every run, so it is excluded from the comparison:
           # a commit a day that says nothing new is a deploy a day for nothing.
           # -S on both sides, so key order cannot make two equal readings differ.
           fresh=$(printf '%s' "$body" | jq -S -f "$RUNNER_TEMP/reading.jq")
+
+          # The tier gate above says nothing about lobbyMix: the controller
+          # builds it from a separate aggregator and answers with null when
+          # that one throws, which must not freeze a good tier table -- but
+          # committing that null over a good table is exactly what wiped it.
+          # When the fresh reading has no usable mix, splice the held one back
+          # in before anything else in this run reads or writes `fresh`.
+          mix_usable=$(printf '%s' "$body" | jq -r \
+            '((.data.lobbyMix // []) | type) == "array" and ((.data.lobbyMix // []) | length > 0)' \
+            2>/dev/null || echo false)
+          if [ "$mix_usable" != "true" ]; then
+            held_mix=$(jq -c '.lobbyMix // null' "$SNAPSHOT" 2>/dev/null || echo null)
+            fresh=$(printf '%s' "$fresh" | jq -S --argjson heldMix "$held_mix" '.lobbyMix = $heldMix')
+            echo "::warning::the fresh reading has no usable lobby mix; keeping the committed one"
+          fi
+
           held=$(jq -S 'del(.capturedAt)' "$SNAPSHOT" 2>/dev/null || echo null)
           if [ "$fresh" = "$held" ]; then
             echo "::notice::the reading has not changed; nothing to commit"
@@ -248,7 +262,7 @@ jobs:
             fi
           fi
 
-          printf '%s' "$body" | jq -f "$RUNNER_TEMP/snapshot.jq" > "$SNAPSHOT"
+          printf '%s' "$fresh" | jq -S '{capturedAt: (now | todate)} + .' > "$SNAPSHOT"
 
           git config user.name "tier-census"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

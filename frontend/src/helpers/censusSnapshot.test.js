@@ -338,4 +338,22 @@ describe("lobbyMixRows", () => {
     ];
     expect(lobbyMixRows({ lobbyMix: [corrupted] })).toBeNull();
   });
+
+  // lobbyMix.js legitimately emits mix: [] for a tier whose lobbies held no
+  // other sampled player (its own test "a lobby with one sampled player
+  // contributes no pairs" pins that). An empty mix sums to zero, and the old
+  // check refused the WHOLE payload for it -- one such row blanked a perfectly
+  // good day of data for every other tier too.
+  it("a publishable row with an empty mix does not blank the rest of the payload", () => {
+    const emptyMix = row("survivor", true);
+    emptyMix.mix = [];
+    const rows = lobbyMixRows({ lobbyMix: [row("gold", true), emptyMix] });
+    expect(rows).not.toBeNull();
+    expect(rows.map((r) => r.tier).sort()).toEqual(["gold", "survivor"]);
+  });
+
+  it("keeps the tiers a fresh reading gated out, for the page to name", () => {
+    const rows = lobbyMixRows({ lobbyMix: [row("gold", true), row("master", false)] });
+    expect(rows.gated.map((r) => r.tier)).toEqual(["master"]);
+  });
 });

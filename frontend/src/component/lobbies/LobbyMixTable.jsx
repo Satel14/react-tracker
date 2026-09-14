@@ -31,6 +31,29 @@ const percent = (share) => {
   }).format(value);
 };
 
+// The tiers a fresh reading gated out, named with the lobby count each rests
+// on -- built from the data rather than hardcoded, because which tiers clear
+// ROW_MIN_LOBBIES shifts with the sample (a Master row appeared the very first
+// week this shipped). Null when nothing was gated, so the caller renders no
+// line rather than an empty sentence.
+const gatedNote = (t, rows) => {
+  const gated = rows.gated ?? [];
+  if (!gated.length) return null;
+
+  const entries = gated.map((row) =>
+    t("pages.rankedLobbies.limits.gatedEntry", {
+      tier: t(`pages.rankedLobbies.tier.${row.tier}`),
+      lobbies: groupDigits(row.lobbies),
+    }),
+  );
+  const tiers = new Intl.ListFormat(getLanguage() === "ua" ? "uk-UA" : "en-US", {
+    style: "long",
+    type: "conjunction",
+  }).format(entries);
+
+  return t("pages.rankedLobbies.limits.gated", { tiers });
+};
+
 const LobbyMixTable = ({ t, data }) => {
   const payload = data ?? {};
   const rows = lobbyMixRows(payload);
@@ -52,6 +75,7 @@ const LobbyMixTable = ({ t, data }) => {
   const columns = order.filter((tier) => seen.has(tier));
 
   const shareIn = (row, tier) => row.mix.find((cell) => cell.tier === tier)?.share ?? 0;
+  const gated = gatedNote(t, rows);
 
   return (
     <div className="ranked-lobbies__table-wrap">
@@ -82,6 +106,8 @@ const LobbyMixTable = ({ t, data }) => {
           ))}
         </tbody>
       </table>
+
+      {gated && <p className="ranked-lobbies__note">{gated}</p>}
 
       {payload.current === false && (
         <p className="ranked-lobbies__stale">

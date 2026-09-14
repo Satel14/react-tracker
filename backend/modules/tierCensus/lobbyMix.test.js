@@ -1,6 +1,8 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { lobbyMix, ROW_MIN_LOBBIES } = require("./lobbyMix");
+const fs = require("node:fs");
+const path = require("node:path");
+const { lobbyMix, LADDER, ROW_MIN_LOBBIES } = require("./lobbyMix");
 
 // Two players in one lobby see each other and nobody else.
 const lobby = (id, ...tiers) => tiers.map((tier) => ({ matchId: id, tier }));
@@ -104,4 +106,19 @@ test("a row with no opponents at all is not publishable", () => {
   const gold = lobbyMix(rows).find((r) => r.tier === "gold");
   assert.equal(gold.opponents, 0);
   assert.equal(gold.publishable, false);
+});
+
+// LADDER mirrors RANK_LADDER by hand, and neither side can import the other --
+// this repo is two separate Node projects. Adding a tier to RANK_LADDER
+// without adding it here would make lobbyMix silently drop it from every mix
+// while shares still summed to 1, so nothing else would notice. Read as text
+// rather than imported: rankLadder.js is ESM and this suite runs on node:test.
+test("LADDER mirrors RANK_LADDER in frontend/src/helpers/rankLadder.js", () => {
+  const file = path.join(__dirname, "..", "..", "..", "frontend", "src", "helpers", "rankLadder.js");
+  const src = fs.readFileSync(file, "utf8");
+  const block = src.match(/RANK_LADDER\s*=\s*\[([\s\S]*?)\];/);
+  assert.ok(block, `RANK_LADDER array not found in ${file}`);
+  const keys = [...block[1].matchAll(/key:\s*"([a-z]+)"/g)].map((m) => m[1]);
+  assert.ok(keys.length, `no tier keys found in RANK_LADDER in ${file}`);
+  assert.deepEqual(LADDER, keys, "backend LADDER and frontend RANK_LADDER must agree in content and order");
 });

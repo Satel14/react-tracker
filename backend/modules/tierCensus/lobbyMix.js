@@ -65,12 +65,10 @@ const lobbyMix = (rows) => {
       entry.focals += 1;
       entry.lobbies.add(lobbyId);
       for (const [other, count] of inLobby) {
-        // An opponent bucket with no name in the ladder (or unranked) gets no
-        // column in the published mix, so it must not get a silent vote in
-        // the denominator either -- otherwise every named share comes out
-        // deflated by however many of these there were. The failure mode is
-        // deliberately a missing bucket, never a wrong share: the same call
-        // this project already made for map place names in the kill feed.
+        // An opponent absent from both the ladder and UNRANKED gets no column
+        // in the published mix, so it must not get a silent vote in the
+        // denominator either -- otherwise every named share comes out
+        // deflated by however many of these there were.
         if (other !== UNRANKED && !LADDER.includes(other)) continue;
         const opponents = other === tier ? count - 1 : count;
         if (opponents > 0) entry.counts.set(other, (entry.counts.get(other) ?? 0) + opponents);

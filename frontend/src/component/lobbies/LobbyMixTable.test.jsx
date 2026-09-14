@@ -98,6 +98,22 @@ test("the sample line names the window and the platform", () => {
 // The platform label must come from this page's own dictionary namespace, not
 // borrowed from rank-points's -- otherwise a rewording of that page's label
 // silently rewords this one too, and this page's own key ships unread.
+const masterRow = {
+  tier: "master", lobbies: 12, focals: 40, opponents: 0, publishable: false, mix: [],
+};
+
+test("a gated tier is named beneath the table with its lobby count", () => {
+  render(<LobbyMixTable t={t} data={payload([goldRow, masterRow])} />);
+  const note = screen.getByText(/pages\.rankedLobbies\.limits\.gated\b/);
+  expect(note.textContent).toMatch(/tier\.master/);
+  expect(note.textContent).toMatch(/\b12\b/);
+});
+
+test("with nothing gated the note is not rendered at all", () => {
+  render(<LobbyMixTable t={t} data={payload([goldRow])} />);
+  expect(screen.queryByText(/pages\.rankedLobbies\.limits\.gated\b/)).not.toBeInTheDocument();
+});
+
 test("the platform label is read from this page's own namespace", () => {
   render(<LobbyMixTable t={t} data={payload([goldRow])} />);
   expect(screen.getByText(/pages\.rankedLobbies\.platform\b/)).toBeInTheDocument();

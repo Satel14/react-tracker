@@ -141,7 +141,10 @@ export const effectiveReadings = (data) => {
 // lobby, so its shares add to one by construction; a row that does not is an
 // aggregation that drifted, and drawing it would put a bar chart on the page
 // whose bars mean nothing. Whole-payload refusal rather than per-row, because a
-// build that produced one broken row has no claim to the others.
+// build that produced one broken row has no claim to the others. An EMPTY mix
+// is exempt from the sum check rather than failing it: lobbyMix.js emits one
+// for a tier whose lobbies held no other sampled player at all, and zero
+// summing to zero is the correct reading of that, not drift.
 //
 // Deliberately NOT folded into usableSnapshot, for the reason rpTable is not: a
 // mix too thin to draw must not blank the tier distribution on /ranks.
@@ -153,6 +156,7 @@ export const lobbyMixRows = (data) => {
 
   for (const row of rows) {
     if (!Array.isArray(row?.mix)) return null;
+    if (!row.mix.length) continue;
     // A coercible value like null or "" is not a number; only real finite numbers count.
     if (!row.mix.every((cell) => typeof cell?.share === "number" && Number.isFinite(cell.share))) return null;
     const total = row.mix.reduce((sum, cell) => sum + cell.share, 0);
@@ -160,5 +164,12 @@ export const lobbyMixRows = (data) => {
   }
 
   const published = rows.filter((row) => row.publishable);
-  return published.length ? published : null;
+  if (!published.length) return null;
+
+  // Attached rather than returned alongside, so the truthiness check
+  // RankedLobbies.jsx runs against this function's result is unchanged: the
+  // return value is still exactly the array of publishable rows, just one that
+  // also remembers what it left out and why.
+  published.gated = rows.filter((row) => !row.publishable);
+  return published;
 };

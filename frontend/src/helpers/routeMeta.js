@@ -104,7 +104,7 @@ export const ROUTE_META = [
     file: "ranked-lobbies.html",
     title: "Who Shares Your PUBG Ranked Lobby? Measured Tier Mix",
     description:
-      "Which tiers actually share a PUBG ranked lobby with yours, measured from a daily sample across all eight tiers of the ladder.",
+      "Which tiers actually share a PUBG ranked lobby with yours, measured from a daily sample of the ranked ladder.",
     h1: "Who's really in your PUBG ranked lobby?",
     intro:
       "PUBG puts ranked players into lobbies by rating, but it never says how wide that net is cast. This page reads it off a measured sample: for a player sitting in a given tier, the tiers of the other players who turned up in the same lobby.",
