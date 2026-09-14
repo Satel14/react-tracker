@@ -29,7 +29,11 @@ function createCorsOptions(rawValue) {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error(`Origin ${origin} is not allowed by CORS`));
+        // Tagged so express's error handler can answer 403 rather than the 500
+        // an untagged error reads as.
+        const error = new Error(`Origin ${origin} is not allowed by CORS`);
+        error.status = 403;
+        callback(error);
       }
     },
   };

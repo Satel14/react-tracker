@@ -31,6 +31,34 @@ const header = (headers, name) => {
   return Number.isFinite(value) ? value : undefined;
 };
 
+// PUBG lists every ranked mode, in an order of its own, and a mode the player
+// never queued is a zero-round shell with an empty tier. Reading whichever key
+// came first files a Diamond player under "unranked", and /samples only serves
+// recent days, so the mistake cannot be repaired afterwards. Same rule as
+// rankPointHistory/reading.js: a played mode first, and only fall back when
+// there is nothing better -- older payloads may carry no roundsPlayed at all.
+const readMode = (modes) => {
+  const values = Object.values(modes ?? {});
+  return (
+    values.find((m) => Number(m?.roundsPlayed) > 0 && m?.currentTier?.tier) ??
+    values.find((m) => m?.currentTier?.tier) ??
+    values[0]
+  );
+};
+
+// Node's fetch REJECTS on a DNS, socket or TLS error rather than answering a
+// non-200, and a truncated body rejects in json(). Unguarded, one blip out of
+// the ~3000 calls a run makes throws out of collect and discards everything
+// since the last flush -- the failure the batched flush exists to prevent.
+const tryCall = async (what) => {
+  try {
+    return await what();
+  } catch (error) {
+    console.log(`[census] call failed: ${error.message}`);
+    return null;
+  }
+};
+
 // PUBG buckets its sample by calendar day and answers 400 for a filter under a
 // day old, so the window is a DATE, not an offset. It used to be "now minus 26
 // hours", which meant the day it landed on depended on the hour the job fired:
@@ -95,7 +123,8 @@ const collect = async ({
       const delay = pacer.delayBefore(now());
       if (delay > 0) await sleep(delay);
 
-      const response = await doFetch(url, { headers });
+      const response = await tryCall(() => doFetch(url, { headers }));
+      if (!response) continue;
       if (response.status === 429) {
         pacer.rateLimited({ resetAt: header(response.headers, "x-ratelimit-reset") });
         continue;
@@ -110,17 +139,18 @@ const collect = async ({
     return null;
   };
 
-  const free = async (url) => doFetch(url, { headers });
+  const free = async (url) => tryCall(() => doFetch(url, { headers }));
+  const body = async (response) => tryCall(() => response.json());
 
   // 1. The sample: one metered call for ~1100 match ids.
   const sampleUrl =
     `${BASE}/${shard}/samples?filter[createdAt-start]=${encodeURIComponent(sampleWindowStart(now()))}`;
   const sampleResponse = await metered(sampleUrl);
-  if (!sampleResponse || sampleResponse.status !== 200) {
+  const sample = sampleResponse?.status === 200 ? await body(sampleResponse) : null;
+  if (!sample) {
     return { windowDate: null, matchesSeen: 0, rankedMatches: 0, matchesFailed: 1, playersFailed: 0,
       observations: [], stored: 0, aborted: false, skipped: false, ...pacer.stats() };
   }
-  const sample = await sampleResponse.json();
   const windowDate = (sample?.data?.attributes?.createdAt ?? "").slice(0, 10) || null;
 
   // A day that straddles a reset belongs to neither season, and the one metered
@@ -162,7 +192,11 @@ const collect = async ({
       matchesFailed += 1;
       continue;
     }
-    const payload = await response.json();
+    const payload = await body(response);
+    if (!payload) {
+      matchesFailed += 1;
+      continue;
+    }
     if (payload?.data?.attributes?.matchType !== RANKED_MATCH_TYPE) continue;
     rankedMatches += 1;
     ranked.push({
@@ -192,9 +226,12 @@ const collect = async ({
       continue;
     }
 
-    const payload = await response.json();
-    const modes = payload?.data?.attributes?.rankedGameModeStats ?? {};
-    const first = Object.values(modes)[0];
+    const payload = await body(response);
+    if (!payload) {
+      playersFailed += 1;
+      continue;
+    }
+    const first = readMode(payload?.data?.attributes?.rankedGameModeStats);
     // A player who has not queued ranked this season answers 200 with nothing.
     // Kept, with a null tier: dropping them would make an unranked bucket
     // impossible and quietly bias the denominator.

@@ -89,11 +89,20 @@ function rowToSnapshot(row = {}) {
   };
 }
 
+// Rejects on purpose -- annotate() decides what an unavailable history means
+// for the payload. It still has to say so on the way out: a failed read here is
+// the one failure mode this feature has in production, and without this it was
+// invisible to /healthz while the card rendered blank.
 async function loadSeries({ shard, accountId, seasonId }, limit = SNAPSHOT_LIMIT) {
-  await ensureTable();
-  const { rows } = await getPool().query(SELECT_SQL, [shard, accountId, seasonId, limit]);
-  recordDbOk("rank-point-history");
-  return rows.map(rowToSnapshot).reverse();
+  try {
+    await ensureTable();
+    const { rows } = await getPool().query(SELECT_SQL, [shard, accountId, seasonId, limit]);
+    recordDbOk("rank-point-history");
+    return rows.map(rowToSnapshot).reverse();
+  } catch (e) {
+    recordDbError("rank-point-history", e.message);
+    throw e;
+  }
 }
 
 async function recordReading({ shard, accountId, seasonId }, reading, { latest = null, now = Date.now() } = {}) {

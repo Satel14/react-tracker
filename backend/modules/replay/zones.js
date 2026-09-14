@@ -42,22 +42,42 @@ function extractSpecialZones(telemetry, clock) {
 
     let group = byUid.get(info.uniqueId);
     if (!group) {
-      group = { type, uid: info.uniqueId, t0: t, t1: t, r: 0, path: [] };
+      group = { type, uid: info.uniqueId, t0: t, t1: t, r: 0, rAt: -Infinity, path: [] };
       byUid.set(info.uniqueId, group);
     }
 
     if (t < group.t0) group.t0 = t;
     if (t > group.t1) group.t1 = t;
 
-    // Telemetry radii are centimetres; the last reading of the group wins.
+    // Telemetry radii are centimetres; the newest reading of the group wins.
+    // By TIME, not by position in the file -- t0/t1 are min/max above precisely
+    // because the two are not the same thing.
     const radius = Number(info.horizontalRadius);
-    if (Number.isFinite(radius)) group.r = Math.round(radius / 100);
+    if (Number.isFinite(radius) && t >= group.rAt) {
+      group.r = Math.round(radius / 100);
+      group.rAt = t;
+    }
 
-    const last = group.path[group.path.length - 1];
-    if (!last || last.x !== xy.x || last.y !== xy.y) group.path.push({ t, x: xy.x, y: xy.y });
+    group.path.push({ t, x: xy.x, y: xy.y });
   }
 
-  return [...groups.values()].flatMap((byUid) => [...byUid.values()]).sort((a, b) => a.t0 - b.t0);
+  // Sorted before the repeats collapse, because "consecutive" is a statement
+  // about time: the frontend binary-searches this array by t, and an
+  // arrival-ordered path parks a moving zone at the wrong position or
+  // interpolates it across a negative span.
+  const settle = (group) => {
+    group.path.sort((a, b) => a.t - b.t);
+    group.path = group.path.filter(
+      (point, i) => i === 0 || point.x !== group.path[i - 1].x || point.y !== group.path[i - 1].y,
+    );
+    delete group.rAt;
+    return group;
+  };
+
+  return [...groups.values()]
+    .flatMap((byUid) => [...byUid.values()])
+    .map(settle)
+    .sort((a, b) => a.t0 - b.t0);
 }
 
 // The game emits LogPhaseChange in pairs, so distinct phases are kept once.

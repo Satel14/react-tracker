@@ -7,6 +7,7 @@ const { isAccountIdentifier } = require("../playerIdentity");
 const { fetchTelemetryHead, findTelemetryUrl } = require("../pubgTelemetry");
 const { readRegionFromTelemetryHead } = require("../matchContext");
 const { buildPartyOverlap } = require("./party");
+const { encodeSegment } = require("../pubgUrlSafety");
 
 const MAX_MATCH_HISTORY = 8;
 const MATCH_CACHE_DURATION = 6 * 60 * 60 * 1000;
@@ -173,7 +174,7 @@ function mapMatch(matchPayload, accountId, playerName) {
 
   const stats = participant?.attributes?.stats || {};
   const rosterStats = roster?.attributes?.stats || {};
-  const teamRank = toInteger(rosterStats.rank || stats.winPlace, null);
+  const teamRank = toPlaceOrNull(rosterStats.rank || stats.winPlace);
   const damage = toNumber(stats.damageDealt);
   const kills = toInteger(stats.kills);
   const createdAt = normalizeString(attributes.createdAt);
@@ -333,7 +334,7 @@ function createPlayerEnrichmentService({
       return cached.data;
     }
 
-    const profileUrl = `https://api.pubg.com/shards/${shard}/players/${accountId}`;
+    const profileUrl = `https://api.pubg.com/shards/${encodeSegment(shard)}/players/${encodeSegment(accountId)}`;
     const profile = await doRequest(profileUrl);
     const data = profile?.data || null;
 
@@ -356,7 +357,7 @@ function createPlayerEnrichmentService({
       return cached.data;
     }
 
-    const clanUrl = `https://api.pubg.com/shards/${shard}/clans/${encodeURIComponent(clanId)}`;
+    const clanUrl = `https://api.pubg.com/shards/${encodeSegment(shard)}/clans/${encodeSegment(clanId)}`;
     const clanPayload = await doRequest(clanUrl);
     const clan = mapClan(clanPayload, clanId);
 
@@ -375,7 +376,7 @@ function createPlayerEnrichmentService({
       return cached.data;
     }
 
-    const masteryUrl = `https://api.pubg.com/shards/${shard}/players/${accountId}/survival_mastery`;
+    const masteryUrl = `https://api.pubg.com/shards/${encodeSegment(shard)}/players/${encodeSegment(accountId)}/survival_mastery`;
     const masteryPayload = await doRequest(masteryUrl);
     const mastery = mapSurvivalMastery(masteryPayload);
 
@@ -394,7 +395,7 @@ function createPlayerEnrichmentService({
       return cached.data;
     }
 
-    const url = `https://api.pubg.com/shards/${shard}/players/${accountId}/weapon_mastery`;
+    const url = `https://api.pubg.com/shards/${encodeSegment(shard)}/players/${encodeSegment(accountId)}/weapon_mastery`;
     const payload = await doRequest(url);
     const weapons = mapWeaponMastery(payload);
 
@@ -406,6 +407,14 @@ function createPlayerEnrichmentService({
     return weapons;
   }
 
+  // The cache is only written once a response lands, so two callers that start
+  // together both miss it. getMasteryExtras starts exactly that way: the party
+  // leg and the region leg walk the same eight match ids inside one
+  // Promise.allSettled, and a cold extras call used to spend sixteen requests
+  // for eight matches against a key measured at 100 calls a minute and shared
+  // with the live site.
+  const inFlightMatches = new Map();
+
   async function getMatch(shard, matchId, accountId, playerName) {
     const matchShard = shard === "psn" || shard === "xbox" ? "console" : shard;
     const cacheKey = `${matchShard}:${matchId}:${accountId}`;
@@ -414,21 +423,35 @@ function createPlayerEnrichmentService({
       return cached.data;
     }
 
-    const matchUrl = `https://api.pubg.com/shards/${matchShard}/matches/${encodeURIComponent(matchId)}`;
-    const matchPayload = await doRequest(matchUrl);
-    const match = mapMatch(matchPayload, accountId, playerName);
+    const inFlight = inFlightMatches.get(cacheKey);
+    if (inFlight) return inFlight;
 
-    if (match) {
-      matchSummaryCache.set(cacheKey, {
-        data: match,
-        // Kept beside the mapped match rather than inside it: the region leg
-        // needs this URL later, and the client has no use for it.
-        telemetryUrl: findTelemetryUrl(matchPayload),
-        timestamp: Date.now(),
-      });
-    }
+    // Deferred to a microtask for the same reason as the in-flight maps in
+    // parsePlayerRank: the entry has to be in place before anything that could
+    // throw synchronously runs, or the delete below would fire first and leave
+    // a rejected promise wedged in the map.
+    const request = Promise.resolve()
+      .then(async () => {
+        const matchUrl = `https://api.pubg.com/shards/${encodeSegment(matchShard)}/matches/${encodeSegment(matchId)}`;
+        const matchPayload = await doRequest(matchUrl);
+        const match = mapMatch(matchPayload, accountId, playerName);
 
-    return match;
+        if (match) {
+          matchSummaryCache.set(cacheKey, {
+            data: match,
+            // Kept beside the mapped match rather than inside it: the region leg
+            // needs this URL later, and the client has no use for it.
+            telemetryUrl: findTelemetryUrl(matchPayload),
+            timestamp: Date.now(),
+          });
+        }
+
+        return match;
+      })
+      .finally(() => inFlightMatches.delete(cacheKey));
+
+    inFlightMatches.set(cacheKey, request);
+    return request;
   }
 
   function cachedTelemetryUrl(shard, matchId, accountId) {
@@ -498,7 +521,7 @@ function createPlayerEnrichmentService({
 
     for (let at = 0; at < candidates.length; at += PARTY_BATCH_SIZE) {
       const chunk = candidates.slice(at, at + PARTY_BATCH_SIZE);
-      const url = `https://api.pubg.com/shards/${shard}/players?filter[playerIds]=${chunk
+      const url = `https://api.pubg.com/shards/${encodeSegment(shard)}/players?filter[playerIds]=${chunk
         .map((candidate) => encodeURIComponent(candidate.accountId))
         .join(",")}`;
       const payload = await doRequest(url);

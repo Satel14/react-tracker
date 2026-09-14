@@ -1,6 +1,7 @@
 const { buildFallbackAvatarDataUri } = require("./avatar");
 const { extractRankedInfo } = require("./ranked");
 const { toSeasonLabel } = require("./season");
+const { createEmptyMatches } = require("./enrichment");
 
 const UNKNOWN_DISPLAY = "—";
 
@@ -335,15 +336,17 @@ function mapPubgStatsToFrontend(
     currentSeasonId,
     selectedSeasonId: effectiveSelectedSeasonId,
     profile: profileExtras?.profile || defaultProfile,
-    matches: profileExtras?.matches || { summary: { total: 0 }, items: [] },
+    matches: profileExtras?.matches || createEmptyMatches(),
   };
 
-  if (
-    seasonData &&
-    seasonData.attributes &&
-    (seasonData.attributes.gameModeStats || rankedSeasonData?.attributes?.rankedGameModeStats)
-  ) {
-    const normalModeStats = seasonData.attributes.gameModeStats || {};
+  // Either source is enough. parsePlayerRank leaves seasonData null when the
+  // season-stats response comes back 200 without data.attributes, and then still
+  // runs the ranked request -- which can succeed. Requiring seasonData dropped
+  // the whole block for such a player: no rank badge, and refreshRankPointReading
+  // no-ops for them for good, because it reads data.season.rankedInfo.
+  if (seasonData?.attributes?.gameModeStats || rankedSeasonData?.attributes?.rankedGameModeStats) {
+    const seasonId = seasonData?.id || rankedSeasonData?.id || effectiveSelectedSeasonId;
+    const normalModeStats = seasonData?.attributes?.gameModeStats || {};
     const rankedModeStats = rankedSeasonData?.attributes?.rankedGameModeStats || {};
     const hasRanked = Object.keys(rankedModeStats).length > 0;
     // extractRankedInfo needs the RAW ranked payload (currentTier, rank points),
@@ -358,9 +361,9 @@ function mapPubgStatsToFrontend(
       : normalAggregated;
 
     data.season = {
-      id: seasonData.id,
-      label: toSeasonLabel(seasonData.id),
-      isCurrentSeason: seasonData.id === currentSeasonId,
+      id: seasonId,
+      label: toSeasonLabel(seasonId),
+      isCurrentSeason: seasonId === currentSeasonId,
       includesRanked: hasRanked,
       rankedInfo,
       stats: mapAggregatedStatsToFrontend(combinedAggregated),

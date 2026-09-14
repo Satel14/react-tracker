@@ -26,24 +26,24 @@ function extractHeatmapEvents(telemetry, { matchStartMs = 0, accountId = null, p
 
   const events = [];
   const resolvedName = lowerName;
-  let dropPushed = false;
+  let drop = null;
 
   for (const event of Array.isArray(telemetry) ? telemetry : []) {
     const type = event?._T;
     if (!type) continue;
 
     if (type === "LogParachuteLanding") {
-      if (dropPushed) continue;
       if (!isFocalActor(event.character, accountKey, resolvedName)) continue;
       const loc = readXY(event.character?.location);
       if (!loc) continue;
-      events.push({
-        type: "drop",
-        x: loc.x,
-        y: loc.y,
-        time: eventTime(event, matchStartMs),
-      });
-      dropPushed = true;
+      // A player lands 1-5 times a match -- Taego's Comeback BR, redeploy
+      // towers -- and the stream is not ordered, so the drop is the EARLIEST
+      // landing, never the first index. Same rule as replay/landings.js. These
+      // points are persisted into the 60-match aggregate, so one bad match
+      // would pollute the landing heatmap for good.
+      const time = eventTime(event, matchStartMs);
+      if (drop && !(time < drop.time)) continue;
+      drop = { type: "drop", x: loc.x, y: loc.y, time };
       continue;
     }
 
@@ -59,18 +59,20 @@ function extractHeatmapEvents(telemetry, { matchStartMs = 0, accountId = null, p
 
       if (!meIsKiller && !meIsVictim) continue;
 
-      const weapon =
-        event.killerDamageInfo?.damageCauserName ||
-        event.finishDamageInfo?.damageCauserName ||
-        event.damageCauserName ||
-        null;
+      // The first block that NAMES a weapon, not the first that exists: a
+      // bleed-out ships a present-but-blank killerDamageInfo -- damageCauserName
+      // "None", distance 0 -- and taking it records the kill as an unnamed shot
+      // from zero metres. Same rule as getMatchAnalysis and getMatchReplay.
+      const named = (info) => info?.damageCauserName && !/^none$/i.test(info.damageCauserName);
+      const dmgInfo =
+        [event.killerDamageInfo, event.dBNODamageInfo, event.finishDamageInfo].find(named) || null;
+
+      const weapon = dmgInfo?.damageCauserName || (named(event) ? event.damageCauserName : null);
 
       const distance =
-        event.killerDamageInfo?.distance !== undefined
-          ? Math.round(Number(event.killerDamageInfo.distance) / 100)
-          : event.finishDamageInfo?.distance !== undefined
-            ? Math.round(Number(event.finishDamageInfo.distance) / 100)
-            : null;
+        dmgInfo?.distance !== undefined && dmgInfo?.distance !== null
+          ? Math.round(Number(dmgInfo.distance) / 100)
+          : null;
 
       if (meIsKiller) {
         const loc = readXY(victim?.location);
@@ -103,6 +105,10 @@ function extractHeatmapEvents(telemetry, { matchStartMs = 0, accountId = null, p
       continue;
     }
   }
+
+  // The drop is decided only once every landing has been seen, so it is joined
+  // back in time order rather than appended at the end.
+  if (drop) events.unshift(drop);
 
   return events;
 }

@@ -52,7 +52,7 @@ const WEAPON_LABELS = {
   Item_Weapon_R45_C: "R45",
   "Item_Weapon_SCAR-L_C": "Scar-L",
   Item_Weapon_SKS_C: "SKS",
-  Item_Weapon_Saiga12_C: "O12",
+  Item_Weapon_Saiga12_C: "S12K",
   Item_Weapon_TacticalRifle_C: "Mk14 EBR",
   Item_Weapon_Thompson_C: "Tommy Gun",
   Item_Weapon_UMP_C: "UMP45",

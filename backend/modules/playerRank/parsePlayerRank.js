@@ -144,11 +144,17 @@ function createParsePlayerRank({
       return enrichedPayload;
     } catch (profileExtrasError) {
       console.log(`[PUBG] Cached profile extras unavailable for ${playerName}: ${profileExtrasError.message}`);
+      // Keeping whatever match list the cache already held, the same way the
+      // success branch above does. createProfileExtrasError returns an empty
+      // list, and spreading it unconditionally would let one failed retry blank
+      // the Recent Matches card for the rest of the 30-minute TTL.
+      const failedExtras = createProfileExtrasError(profileExtrasError, cachedData.profile);
       const enrichedPayload = {
         ...payload,
         data: {
           ...cachedData,
-          ...createProfileExtrasError(profileExtrasError, cachedData.profile),
+          ...failedExtras,
+          matches: cachedData.matches || failedExtras.matches,
         },
       };
 

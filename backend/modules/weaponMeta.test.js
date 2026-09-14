@@ -51,3 +51,12 @@ test("canonicalWeaponKey returns a string for inherited object keys", () => {
   assert.equal(canonicalWeaponKey("constructor"), "constructor");
   assert.equal(canonicalWeaponKey("__proto__"), "__proto__");
 });
+
+// The kill feed named one shotgun and the replay drew another: weaponIcon.js
+// resolves Item_Weapon_Saiga12_C to the "s12k" sprite, and every row in that
+// table was checked against the CDN. The Origin-12 has its own id
+// (Item_Weapon_OriginS12_C), so "O12" here was never a second name for this gun.
+test("the Saiga12 id is the S12K, the name the replay already draws for it", () => {
+  assert.equal(readableWeaponName("Item_Weapon_Saiga12_C"), "S12K");
+  assert.equal(readableWeaponName("Item_Weapon_OriginS12_C"), "Origin S12");
+});

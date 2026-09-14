@@ -221,6 +221,28 @@ test("an attackId-less hit is not folded onto one line per victim", () => {
   assert.deepEqual(out.ax, [1000, 1100, 1200]);
 });
 
+// The guard one test up is Number.isFinite(Number(ev.attackId)), and
+// Number(null) is 0 -- finite. So an explicit null passes the "there is an
+// attackId" check and every such hit on a victim keys on "null <victim>" and
+// collapses onto one tracer. An absent key survives because Number(undefined)
+// is NaN; throwables.js guards the same field with `== null`.
+test("an explicitly null attackId is treated as no attackId at all", () => {
+  const hit = (t, x) => ({
+    _T: "LogPlayerTakeDamage",
+    damageTypeCategory: "Damage_Gun",
+    attackId: null,
+    at: t,
+    attacker: { accountId: "account.k", location: { x, y: 200000, z: 0 } },
+    victim: { accountId: "account.v", location: { x: 300000, y: 300000, z: 0 } },
+    damage: 30,
+  });
+  const nullClock = { timeOf: (ev) => (typeof ev.at === "number" ? ev.at : null) };
+
+  const out = extractShots([hit(1, 100000), hit(2, 110000), hit(3, 120000)], nullClock);
+
+  assert.equal(out.t.length, 3, "a whole match of fire collapsed onto one line");
+});
+
 test("still dedupes on the pair when an attackId is present", () => {
   const row = (id, victim) => ({
     _T: "LogPlayerTakeDamage",

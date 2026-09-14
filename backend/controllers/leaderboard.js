@@ -1,4 +1,4 @@
-const { param, validationResult } = require("express-validator");
+const { param, query, validationResult } = require("express-validator");
 const MESSAGE = require("../constant/responseMessage");
 const { getLeaderboard, getSeasons } = require("../modules/getLeaderboard");
 const { LEADERBOARD_REGIONS } = require("../modules/leaderboard/regions");
@@ -38,6 +38,15 @@ module.exports.validate = (method) => {
       return [
         param("platform").isIn(LEADERBOARD_REGIONS),
         param("gameMode").isIn(GAME_MODES),
+        // Shaped, not just length-capped: the value is part of the cache key and
+        // of the upstream URL, and every novel one spends a PUBG request from
+        // the key the live site shares -- which can trip the rate-limit cooldown
+        // rank lookups read.
+        query("season")
+          .optional({ nullable: true })
+          .isString()
+          .trim()
+          .matches(/^division\.bro\.official\.[a-z0-9.-]{1,48}$/i),
       ];
     default:
       return [];

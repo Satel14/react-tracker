@@ -78,6 +78,25 @@ test("a well-formed body still passes validation and reaches the handler", async
   }
 });
 
+// The validator is optional({ nullable: true }), so an explicit null is a valid
+// body -- but a destructuring default only fires on undefined, so the null went
+// straight through to shardForMatch, which throws "Invalid shard". A body the
+// validator accepts must not then 500.
+test("an explicitly null shard falls back to the default rather than throwing", async () => {
+  const { server, port } = await startRouteServer();
+  warmCalls = 0;
+  try {
+    const res = await postAggregate(port, { ...validBody, shard: null }, "10.0.5.1");
+    // The catch-all answers 200 with a message rather than data, so the status
+    // alone cannot tell a served aggregate from a swallowed "Invalid shard".
+    assert.equal(res.status, 200);
+    assert.ok(res.body.data, `no aggregate came back: ${JSON.stringify(res.body)}`);
+    assert.equal(warmCalls, 1);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("the pre-existing 400 guards keep their status and never reach the loader", async () => {
   const { server, port } = await startRouteServer();
   warmCalls = 0;

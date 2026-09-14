@@ -88,3 +88,16 @@ test("an earlier failure does not keep the fallback switched on", async () => {
 
   assert.deepEqual(list, [], "the successful read is what counts, and it said empty");
 });
+
+// Health is per store. RP history writes fire and forget on every player
+// lookup, so they fail far more readily than anything else here -- and a shared
+// flag would make a genuinely empty recent list serve last month's committed
+// names instead.
+test("a failure in another store does not switch the fallback on", async () => {
+  recordDbError("rank-point-history", "connection terminated unexpectedly");
+  recentSearches.__setRecentSearchesPool(livePool([]));
+
+  const list = await recentSearches.getRecentSearches(10);
+
+  assert.deepEqual(list, [], "this table answered, and it said empty");
+});

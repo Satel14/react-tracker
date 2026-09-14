@@ -56,7 +56,10 @@ function extractShots(telemetry, clock) {
     // through two bodies), and each is its own line, so the pair is the key.
     // Without an attackId there is nothing to group by, and keying on the
     // coerced "undefined" would collapse a victim's whole match onto one line.
-    const hasAttackId = Number.isFinite(Number(ev.attackId));
+    // `== null` first: Number(null) is 0, which is finite, so the check below
+    // on its own would read an explicit null as a real attackId and fold every
+    // such hit on a victim onto one line. Same guard throwables.js uses.
+    const hasAttackId = ev.attackId != null && Number.isFinite(Number(ev.attackId));
     if (hasAttackId) {
       const key = `${ev.attackId} ${victimId}`;
       if (seen.has(key)) continue;

@@ -32,8 +32,15 @@ module.exports.getPlayerSteamNameByUrl = async (url) => {
     if (!isAllowedSteamUrl(url)) {
       return null;
     }
-    const normalized = url.endsWith("/") ? url : `${url}/`;
-    const body = await doRequest(`${normalized}?xml=1`);
+    // Built through URL rather than by string append: the slash used to go on
+    // the end of the whole string, query and all, and "?xml=1" after that -- so
+    // a URL pasted straight out of the browser asked Steam for a parameter
+    // called l with the value "english/?xml=1" and got HTML back.
+    const target = new URL(url.trim());
+    if (!target.pathname.endsWith("/")) target.pathname += "/";
+    target.hash = "";
+    target.searchParams.set("xml", "1");
+    const body = await doRequest(target.toString());
     const parser = new XMLParser({
       ignoreAttributes: false,
       trimValues: true,

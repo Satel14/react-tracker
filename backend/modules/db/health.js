@@ -11,63 +11,90 @@
 // add load to the very thing it reports on, and /healthz is polled far more
 // often than anything else here. It only remembers what the last real query saw.
 //
+// Health is per store, not per process. Four stores report here and each caller
+// asks about its own: RP history writes fire and forget on every player lookup,
+// so they are much the likeliest to fail, and one shared flag would make the
+// census page answer no-store and rebuild ~12k rows for every visitor -- the
+// transfer blowout its six-hour cache exists to prevent. /healthz still asks
+// about the process, and any failing store answers for it.
+//
 // Order comes from a counter, not from Date.now(): a failure and a recovery can
 // land in the same millisecond, and comparing timestamps would then report
 // whichever way the tie fell rather than what actually happened last.
 let seq = 0;
-let errorSeq = 0;
-let okSeq = 0;
-let lastError = null;
-let lastErrorAt = 0;
-let lastErrorScope = null;
-let lastOkAt = 0;
-let lastOkScope = null;
+const stores = new Map();
+
+const UNKNOWN_SCOPE = "unknown";
+
+function storeFor(scope) {
+  const key = scope || UNKNOWN_SCOPE;
+  let store = stores.get(key);
+  if (!store) {
+    store = { scope: key, errorSeq: 0, okSeq: 0, lastError: null, lastErrorAt: 0, lastOkAt: 0 };
+    stores.set(key, store);
+  }
+  return store;
+}
+
+const failing = (store) => store.errorSeq > store.okSeq;
 
 function recordDbError(scope, message) {
+  const store = storeFor(scope);
   seq += 1;
-  errorSeq = seq;
-  lastError = message ? String(message) : "unknown Postgres failure";
-  lastErrorAt = Date.now();
-  lastErrorScope = scope || null;
+  store.errorSeq = seq;
+  store.lastError = message ? String(message) : "unknown Postgres failure";
+  store.lastErrorAt = Date.now();
 }
 
 function recordDbOk(scope) {
+  const store = storeFor(scope);
   seq += 1;
-  okSeq = seq;
-  lastOkAt = Date.now();
-  lastOkScope = scope || null;
+  store.okSeq = seq;
+  store.lastOkAt = Date.now();
 }
 
-// The last thing that happened was a failure. Not "has ever failed": a store
-// that recovers has to be able to say so, or every fallback keyed on this would
-// stay switched on for the life of the process.
-function isDbFailing() {
-  return errorSeq > okSeq;
+// The last thing that happened to this store was a failure. Not "has ever
+// failed": a store that recovers has to be able to say so, or every fallback
+// keyed on this would stay switched on for the life of the process.
+//
+// With no scope the question is about the process, and any failing store
+// answers it -- that is what /healthz reports.
+function isDbFailing(scope) {
+  if (scope) {
+    const store = stores.get(scope);
+    return store ? failing(store) : false;
+  }
+  return [...stores.values()].some(failing);
 }
 
 function getDbHealth() {
-  if (!errorSeq && !okSeq) return { status: "unknown" };
-  if (isDbFailing()) {
+  if (!stores.size) return { status: "unknown" };
+
+  // The most recent event of its kind, so /healthz names the store that last
+  // had something to say rather than whichever was registered first.
+  const latest = (candidates, key) =>
+    candidates.reduce((best, store) => (!best || store[key] > best[key] ? store : best), null);
+
+  const broken = [...stores.values()].filter(failing);
+  if (broken.length) {
+    const worst = latest(broken, "errorSeq");
     return {
       status: "failing",
-      scope: lastErrorScope,
-      error: lastError,
-      at: new Date(lastErrorAt).toISOString(),
-      lastOkAt: lastOkAt ? new Date(lastOkAt).toISOString() : null,
+      scope: worst.scope,
+      error: worst.lastError,
+      at: new Date(worst.lastErrorAt).toISOString(),
+      lastOkAt: worst.lastOkAt ? new Date(worst.lastOkAt).toISOString() : null,
+      failing: broken.map((store) => store.scope),
     };
   }
-  return { status: "ok", scope: lastOkScope, at: new Date(lastOkAt).toISOString() };
+
+  const healthy = latest([...stores.values()], "okSeq");
+  return { status: "ok", scope: healthy.scope, at: new Date(healthy.lastOkAt).toISOString() };
 }
 
 function __resetDbHealth() {
   seq = 0;
-  errorSeq = 0;
-  okSeq = 0;
-  lastError = null;
-  lastErrorAt = 0;
-  lastErrorScope = null;
-  lastOkAt = 0;
-  lastOkScope = null;
+  stores.clear();
 }
 
 module.exports = { recordDbError, recordDbOk, isDbFailing, getDbHealth, __resetDbHealth };

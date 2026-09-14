@@ -43,6 +43,28 @@ app.get("/healthz", (_req, res) =>
 
 routes(app);
 
+// Everything this API returns is a { status, message } envelope, including its
+// own failures. body-parser and the CORS check both run upstream of every
+// handler, so a malformed body or a rejected origin never reaches one -- and
+// with no error handler registered express answers those with its own HTML
+// page, carrying a stack trace unless NODE_ENV happens to be production.
+//
+// Four parameters because that arity is how express tells an error handler from
+// ordinary middleware. The message is ours rather than the thrower's: a parser
+// saying where it gave up in our input is nobody's business but ours.
+const MESSAGE_FOR = {
+  400: "Malformed request body",
+  403: "Origin not allowed",
+  413: "Request body too large",
+};
+
+app.use((err, _req, res, _next) => {
+  const raw = Number(err?.status ?? err?.statusCode);
+  const status = Number.isInteger(raw) && raw >= 400 && raw < 600 ? raw : 500;
+  console.log(`[HTTP] ${status} ${err?.message || err}`);
+  res.status(status).json({ status, message: MESSAGE_FOR[status] || "Something went wrong" });
+});
+
 app.listen(config.port, () => {
   console.log(`Listening on port ${config.port}`);
   warmRecentSearches();

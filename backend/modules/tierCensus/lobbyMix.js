@@ -1,9 +1,22 @@
 // Who a player of a given tier actually shares a ranked lobby with.
 //
-// Built from the rows readWindow already returns -- one per sampled account,
-// labelled with the lobby it was drawn from -- so this costs no query and no
+// Built from the rows readWindow already returns, so this costs no query and no
 // Neon transfer of its own. It also cannot contradict the published tier
 // shares, because it is a second reading of the same observations.
+//
+// Know what those rows are before trusting a pair drawn from them. readWindow
+// selects DISTINCT ON (account_id): one row per sampled ACCOUNT over the whole
+// window, keeping its most recent day. That is a sample of accounts, not a full
+// lobby roster. An account seen on Monday and again on Friday survives only in
+// Friday's lobby, so the older days of a window lose seats -- and the seats they
+// lose are the repeat-sampled, which is to say the more active, accounts. The
+// shares below are therefore a lower bound on how often a tier meets a tier,
+// worst for the oldest day in the window.
+//
+// Kept that way deliberately. The dedup is what stops tierShare weighting the
+// distribution by how much a person plays, so measuring real rosters means a
+// second ~12k-row read, and the Neon transfer allowance ran out once already
+// (2026-09-10) and took every Postgres-backed feature blank with it for days.
 //
 // The trap this file exists to avoid is the one stats.js warns about, one level
 // deeper. Every pair of players inside a lobby is a pair BECAUSE they were

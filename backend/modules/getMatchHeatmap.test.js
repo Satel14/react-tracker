@@ -122,3 +122,45 @@ test("warmHeatmapMatches caps the batch at 12 matches", async () => {
   );
   assert.equal(calls.length, 12);
 });
+
+// Players land 1-5 times a match (Taego's Comeback BR, redeploy towers) and the
+// stream is not ordered, so "the first landing in the array" is not the drop.
+// replay/landings.js documents exactly this and uses the smallest clock time
+// instead. These points are persisted into the 60-match aggregate the user
+// looks at, so one bad match pollutes the landing heatmap for good.
+test("the drop is the earliest landing, not the first one in the stream", () => {
+  const redeployFirst = [
+    { _T: "LogParachuteLanding", elapsedTime: 900,
+      character: { accountId: "account.me", name: "Me", location: { x: 900000, y: 900000, z: 0 } } },
+    { _T: "LogParachuteLanding", elapsedTime: 60,
+      character: { accountId: "account.me", name: "Me", location: { x: 300000, y: 400000, z: 0 } } },
+  ];
+
+  const drop = extractHeatmapEvents(redeployFirst, { matchStartMs: 0, accountId: "account.me" })
+    .find((e) => e.type === "drop");
+
+  assert.equal(drop.time, 60);
+  assert.equal(drop.x, 3000);
+  assert.equal(drop.y, 4000);
+});
+
+// A bleed-out ships a present-but-blank killerDamageInfo: damageCauserName
+// "None" and distance 0. Taking the first block that exists rather than the
+// first that names a weapon records the kill as an unnamed shot from zero
+// metres -- the rule getMatchReplay and getMatchAnalysis were both fixed away
+// from.
+test("a blank damage block loses to the one that names the weapon", () => {
+  const bleedOut = [
+    { _T: "LogPlayerKillV2", elapsedTime: 120,
+      killer: { accountId: "account.me", name: "Me", location: { x: 500000, y: 500000, z: 0 } },
+      victim: { accountId: "account.foe", name: "Foe", location: { x: 510000, y: 520000, z: 0 } },
+      killerDamageInfo: { damageCauserName: "None", distance: 0 },
+      dBNODamageInfo: { damageCauserName: "WeapHK416_C", distance: 5000 } },
+  ];
+
+  const kill = extractHeatmapEvents(bleedOut, { matchStartMs: 0, accountId: "account.me" })
+    .find((e) => e.type === "kill");
+
+  assert.equal(kill.weapon, "WeapHK416_C");
+  assert.equal(kill.distance, 50);
+});
