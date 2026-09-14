@@ -134,3 +134,29 @@ export const effectiveReadings = (data) => {
   const step = smallest >= 1000 ? 100 : 10;
   return Math.round(smallest / step) * step;
 };
+
+// The committed lobby mix, or null when there is not one worth rendering.
+//
+// The sum check is the load-bearing one. A row is a distribution over the
+// lobby, so its shares add to one by construction; a row that does not is an
+// aggregation that drifted, and drawing it would put a bar chart on the page
+// whose bars mean nothing. Whole-payload refusal rather than per-row, because a
+// build that produced one broken row has no claim to the others.
+//
+// Deliberately NOT folded into usableSnapshot, for the reason rpTable is not: a
+// mix too thin to draw must not blank the tier distribution on /ranks.
+const MIX_SUM_TOLERANCE = 1e-6;
+
+export const lobbyMixRows = (data) => {
+  const rows = data?.lobbyMix;
+  if (!Array.isArray(rows) || !rows.length) return null;
+
+  for (const row of rows) {
+    if (!Array.isArray(row?.mix)) return null;
+    const total = row.mix.reduce((sum, cell) => sum + (Number(cell?.share) || 0), 0);
+    if (Math.abs(total - 1) > MIX_SUM_TOLERANCE) return null;
+  }
+
+  const published = rows.filter((row) => row.publishable);
+  return published.length ? published : null;
+};

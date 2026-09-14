@@ -7,6 +7,7 @@ import {
   rpTable,
   RP_TABLE_LENGTH,
   MIN_POOLED_WINDOWS,
+  lobbyMixRows,
 } from "./censusSnapshot";
 import committed from "../data/tierCensus.json";
 
@@ -292,5 +293,39 @@ describe("the RP table is not part of snapshot usability", () => {
     );
     expect(snap).not.toBeNull();
     expect(rpTable(snap)).toBeNull();
+  });
+});
+
+const row = (tierName, over) => ({
+  tier: tierName,
+  lobbies: over ? 40 : 3,
+  focals: 100,
+  opponents: 300,
+  publishable: Boolean(over),
+  mix: [
+    { tier: "gold", count: 200, share: 2 / 3, low: 0.4, high: 0.8 },
+    { tier: "silver", count: 100, share: 1 / 3, low: 0.2, high: 0.5 },
+  ],
+});
+
+describe("lobbyMixRows", () => {
+  it("keeps only the rows that carry their own sample", () => {
+    const rows = lobbyMixRows({ lobbyMix: [row("gold", true), row("master", false)] });
+    expect(rows.map((r) => r.tier)).toEqual(["gold"]);
+  });
+
+  it("a mix whose shares do not add to one is refused whole", () => {
+    const broken = row("gold", true);
+    broken.mix = [{ tier: "gold", count: 1, share: 0.2, low: 0, high: 1 }];
+    expect(lobbyMixRows({ lobbyMix: [broken] })).toBeNull();
+  });
+
+  it("absence is not emptiness", () => {
+    expect(lobbyMixRows({})).toBeNull();
+    expect(lobbyMixRows(null)).toBeNull();
+  });
+
+  it("no publishable row means nothing to draw", () => {
+    expect(lobbyMixRows({ lobbyMix: [row("master", false)] })).toBeNull();
   });
 });
