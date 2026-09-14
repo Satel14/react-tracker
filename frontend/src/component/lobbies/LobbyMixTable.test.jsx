@@ -79,7 +79,7 @@ test("with nothing publishable it says so instead of drawing an empty grid", () 
 // The gathering snapshot is by definition the last ARCHIVED season, never the
 // one currently being collected, so there is no correct number to print. This
 // payload's seasonId carries "43" precisely so a reintroduced
-// `{ season: seasonNumber(...) }` call would leak it into the fake t()'s
+// `{ season: snapshotSeasonNumber(...) }` call would leak it into the fake t()'s
 // joined output -- with no interpolation, t() gets called with no second
 // argument at all, so nothing but the key renders.
 test("the gathering note carries no season number", () => {
@@ -125,6 +125,26 @@ test("two gated tiers are both named in the same note", () => {
 test("with nothing gated the note is not rendered at all", () => {
   render(<LobbyMixTable t={t} data={payload([goldRow])} />);
   expect(screen.queryByText(/pages\.rankedLobbies\.limits\.gatedLabel\b/)).not.toBeInTheDocument();
+});
+
+// A column exists only because SOME published row named that tier in its
+// mix -- a different published row may never have met it at all.
+const masterMixRow = {
+  tier: "master", lobbies: 300, focals: 900, opponents: 900, publishable: true,
+  mix: [{ tier: "platinum", count: 900, share: 1, low: 0.9, high: 1 }],
+};
+
+// A real share is never 0 -- a cell only exists when its count is at least
+// 1 -- so a tier absent from a row's mix must not render as if it had been
+// measured at a near-zero share.
+test("a tier a row never met renders a dash, not a measured 0.0%", () => {
+  render(<LobbyMixTable t={t} data={payload([goldRow, masterMixRow])} />);
+  const rows = bodyRows();
+  const goldRowText = rows.find((r) => /tier\.gold/.test(r));
+  // goldRow's own mix never named platinum, so that column must be a dash
+  // there, never the joined stub for table.cell with a percent of 0.
+  expect(goldRowText).toContain("—");
+  expect(goldRowText).not.toMatch(/table\.cell 0\b/);
 });
 
 test("the platform label is read from this page's own namespace", () => {

@@ -8,6 +8,7 @@ import {
   RP_TABLE_LENGTH,
   MIN_POOLED_WINDOWS,
   lobbyMixRows,
+  gatedMixRows,
 } from "./censusSnapshot";
 import committed from "../data/tierCensus.json";
 
@@ -368,5 +369,37 @@ describe("lobbyMixRows", () => {
   it("keeps the tiers a fresh reading gated out, for the page to name", () => {
     const rows = lobbyMixRows({ lobbyMix: [row("gold", true), row("master", false)] });
     expect(rows.gated.map((r) => r.tier)).toEqual(["master"]);
+  });
+});
+
+describe("gatedMixRows", () => {
+  it("names the same gated tiers as the .gated property it stands in for", () => {
+    const data = { lobbyMix: [row("gold", true), row("master", false)] };
+    expect(gatedMixRows(data).map((r) => r.tier)).toEqual(["master"]);
+  });
+
+  it("survives a spread of the published rows, unlike the .gated expando", () => {
+    const data = { lobbyMix: [row("gold", true), row("master", false)] };
+    const rows = lobbyMixRows(data);
+    const copied = [...rows];
+    // The expando does not survive the spread -- this is the failure mode
+    // gatedMixRows exists to route around, pinned here so a future change
+    // that makes .gated itself spread-safe does not silently make this
+    // assertion meaningless.
+    expect(copied.gated).toBeUndefined();
+    // gatedMixRows recomputes from the original data rather than reading
+    // .gated off whatever rows array the caller happens to still be holding,
+    // so it is unaffected by the copy above.
+    expect(gatedMixRows(data).map((r) => r.tier)).toEqual(["master"]);
+  });
+
+  it("is an empty array, not null or undefined, when nothing was gated", () => {
+    expect(gatedMixRows({ lobbyMix: [row("gold", true)] })).toEqual([]);
+  });
+
+  it("is an empty array when the payload has no usable mix at all", () => {
+    expect(gatedMixRows({})).toEqual([]);
+    expect(gatedMixRows(null)).toEqual([]);
+    expect(gatedMixRows({ lobbyMix: [row("master", false)] })).toEqual([]);
   });
 });

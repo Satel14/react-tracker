@@ -1,12 +1,7 @@
 import React from "react";
 import { getLanguage } from "react-switch-lang";
 import { RANK_LADDER } from "../../helpers/rankLadder";
-import { lobbyMixRows, UNRANKED } from "../../helpers/censusSnapshot";
-
-// "division.bro.official.pc-2018-43" -> "43". The dictionaries supply the word
-// around it so the sentence reads as Ukrainian in Ukrainian.
-const seasonNumber = (seasonId) =>
-  (typeof seasonId === "string" && seasonId.match(/(\d+)\s*$/)?.[1]) || "";
+import { lobbyMixRows, gatedMixRows, snapshotSeasonNumber, UNRANKED } from "../../helpers/censusSnapshot";
 
 const groupDigits = (value) =>
   new Intl.NumberFormat(getLanguage() === "ua" ? "uk-UA" : "en-US").format(Number(value) || 0);
@@ -46,8 +41,16 @@ const percent = (share) => {
 // own test "a row with no opponents at all is not publishable" pins the
 // second as real, so a sentence that only ever blamed the lobby count would
 // sometimes be false.
-const gatedNote = (t, rows) => {
-  const gated = rows.gated ?? [];
+// English needs "1 lobby" against "12 lobbies"; Ukrainian's "лобі" is an
+// indeclinable loanword and reads the same at every count, so its two keys
+// hold the same word. Resolved from the dictionary rather than hardcoded
+// here, same as every other word on this page.
+const gatedUnit = (t, lobbies) =>
+  Math.abs(Number(lobbies) || 0) === 1
+    ? t("pages.rankedLobbies.limits.gatedUnitOne")
+    : t("pages.rankedLobbies.limits.gatedUnitOther");
+
+const gatedNote = (t, gated) => {
   if (!gated.length) return null;
 
   const entries = gated
@@ -55,6 +58,7 @@ const gatedNote = (t, rows) => {
       t("pages.rankedLobbies.limits.gatedEntry", {
         tier: t(`pages.rankedLobbies.tier.${row.tier}`),
         lobbies: groupDigits(row.lobbies),
+        unit: gatedUnit(t, row.lobbies),
       }),
     )
     .join(", ");
@@ -82,8 +86,11 @@ const LobbyMixTable = ({ t, data }) => {
   const seen = new Set(rows.flatMap((row) => row.mix.map((cell) => cell.tier)));
   const columns = order.filter((tier) => seen.has(tier));
 
-  const shareIn = (row, tier) => row.mix.find((cell) => cell.tier === tier)?.share ?? 0;
-  const gated = gatedNote(t, rows);
+  // null, not 0: a real share is never 0 (a cell only exists when its count
+  // is at least 1), so a tier this row never met is distinguishable from a
+  // tier that measured a genuine near-zero share.
+  const shareIn = (row, tier) => row.mix.find((cell) => cell.tier === tier)?.share ?? null;
+  const gated = gatedNote(t, gatedMixRows(payload));
 
   return (
     <div className="ranked-lobbies__table-wrap">
@@ -107,19 +114,24 @@ const LobbyMixTable = ({ t, data }) => {
           {rows.map((row) => (
             <tr key={row.tier}>
               <th scope="row">{t(`pages.rankedLobbies.tier.${row.tier}`)}</th>
-              {columns.map((tier) => (
-                <td key={tier}>{t("pages.rankedLobbies.table.cell", { percent: percent(shareIn(row, tier)) })}</td>
-              ))}
+              {columns.map((tier) => {
+                const share = shareIn(row, tier);
+                return (
+                  <td key={tier}>
+                    {share === null ? "—" : t("pages.rankedLobbies.table.cell", { percent: percent(share) })}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>
       </table>
 
-      {gated && <p className="ranked-lobbies__note">{gated}</p>}
+      {gated && <p className="ranked-lobbies__gated-note">{gated}</p>}
 
       {payload.current === false && (
         <p className="ranked-lobbies__stale">
-          {t("pages.rankedLobbies.finished", { season: seasonNumber(payload.seasonId) })}
+          {t("pages.rankedLobbies.finished", { season: snapshotSeasonNumber(payload) })}
         </p>
       )}
 

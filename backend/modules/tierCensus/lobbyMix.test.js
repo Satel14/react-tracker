@@ -108,6 +108,21 @@ test("a row with no opponents at all is not publishable", () => {
   assert.equal(gold.publishable, false);
 });
 
+// A lobby that never yielded an opponent for this tier is not a witness to
+// what a gold lobby looks like, so it must not count toward n. Thirty lonely
+// golds plus one shared lobby is one witness, not thirty-one -- and must not
+// clear the publishable gate on the strength of lobbies that saw nothing.
+test("a lobby that yields no opponent for a tier does not count toward its n", () => {
+  const rows = [];
+  for (let i = 1; i <= ROW_MIN_LOBBIES; i += 1) rows.push(...lobby(i, "gold"));
+  rows.push(...lobby(ROW_MIN_LOBBIES + 1, "gold", "silver"));
+  const gold = lobbyMix(rows).find((r) => r.tier === "gold");
+  assert.equal(gold.focals, ROW_MIN_LOBBIES + 1, "every sampled gold still counts as a focal");
+  assert.equal(gold.opponents, 1);
+  assert.equal(gold.lobbies, 1, "only the one lobby that produced an opponent counts toward n");
+  assert.equal(gold.publishable, false, "one witnessing lobby cannot clear the thirty-lobby gate");
+});
+
 // LADDER mirrors RANK_LADDER by hand, and neither side can import the other --
 // this repo is two separate Node projects. Adding a tier to RANK_LADDER
 // without adding it here would make lobbyMix silently drop it from every mix

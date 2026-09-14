@@ -59,11 +59,16 @@ const lobbyMix = (rows) => {
     const inLobby = new Map();
     for (const tier of seats) inLobby.set(tier, (inLobby.get(tier) ?? 0) + 1);
 
+    // A lobby only witnesses what a tier's lobby looks like if it actually
+    // produced an opponent observation for that tier -- a lobby thinned down
+    // to a single sampled seat has nothing to say and must not narrow the
+    // interval as if it had.
+    const witnessed = new Set();
+
     for (const tier of seats) {
       if (tier === UNRANKED) continue;
       const entry = seat(tier);
       entry.focals += 1;
-      entry.lobbies.add(lobbyId);
       for (const [other, count] of inLobby) {
         // An opponent absent from both the ladder and UNRANKED gets no column
         // in the published mix, so it must not get a silent vote in the
@@ -71,9 +76,14 @@ const lobbyMix = (rows) => {
         // deflated by however many of these there were.
         if (other !== UNRANKED && !LADDER.includes(other)) continue;
         const opponents = other === tier ? count - 1 : count;
-        if (opponents > 0) entry.counts.set(other, (entry.counts.get(other) ?? 0) + opponents);
+        if (opponents > 0) {
+          entry.counts.set(other, (entry.counts.get(other) ?? 0) + opponents);
+          witnessed.add(tier);
+        }
       }
     }
+
+    for (const tier of witnessed) seat(tier).lobbies.add(lobbyId);
   }
 
   return LADDER.filter((tier) => tally.has(tier)).map((tier) => {

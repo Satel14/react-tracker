@@ -178,6 +178,22 @@ export const lobbyMixRows = (data) => {
   // RankedLobbies.jsx runs against this function's result is unchanged: the
   // return value is still exactly the array of publishable rows, just one that
   // also remembers what it left out and why.
+  //
+  // An expando on an array, though, is exactly the kind of thing a spread, a
+  // slice, an extra filter, a useMemo copy or a JSON round-trip silently
+  // drops -- and every one of those produces a plain array that still passes
+  // this function's own truthiness check, so nothing would notice the gated
+  // list had vanished. gatedMixRows() below is the property read this file
+  // stands behind; treat this one as an implementation detail.
   published.gated = rows.filter((row) => !row.publishable);
   return published;
+};
+
+// The tiers this reading gated out, as a value that cannot be lost the way
+// the `.gated` expando above can. Recomputes rather than reads `.gated`
+// straight off a rows array a caller may have already copied, so it survives
+// exactly the operations that would silently drop an expando property.
+export const gatedMixRows = (data) => {
+  const rows = lobbyMixRows(data);
+  return rows ? rows.gated ?? [] : [];
 };

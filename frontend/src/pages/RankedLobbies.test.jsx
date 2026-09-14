@@ -2,11 +2,18 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { setTranslations, setDefaultLanguage } from "react-switch-lang";
 import en from "../Language/en.json";
+import ua from "../Language/ua.json";
 import RankedLobbies from "./RankedLobbies";
 
 const published = (tier) => ({
   tier, lobbies: 300, focals: 2003, opponents: 27042, publishable: true,
   mix: [{ tier: "silver", count: 27042, share: 1, low: 0.9, high: 1 }],
+});
+
+// Never a real row: opponents: 0 and mix: [] are exactly what lobbyMix.js
+// emits for a tier gated out for lack of lobbies, not a fixture shortcut.
+const gated = (tier, lobbies) => ({
+  tier, lobbies, focals: lobbies, opponents: 0, publishable: false, mix: [],
 });
 
 const snapshotOf = (seasonId, lobbyMix) => ({
@@ -79,4 +86,41 @@ test("with no committed reading at all the page still renders its prose", () => 
   draw(() => new Promise(() => {}), null);
   expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   expect(screen.queryByRole("table")).not.toBeInTheDocument();
+});
+
+// The tier a gate exists for is precisely the one likeliest to be gated on
+// exactly one lobby, so "1 lobbies" would be the common case rather than an
+// edge case.
+test("a gated tier with exactly one lobby reads as singular in English", () => {
+  draw(
+    () => new Promise(() => {}),
+    snapshotOf("division.bro.official.pc-2018-43", [published("gold"), gated("survivor", 1)]),
+  );
+  expect(screen.getByText(/\(1 lobby\)/)).toBeInTheDocument();
+  expect(screen.queryByText(/\(1 lobbies\)/)).not.toBeInTheDocument();
+});
+
+test("a gated tier with more than one lobby reads as plural in English", () => {
+  draw(
+    () => new Promise(() => {}),
+    snapshotOf("division.bro.official.pc-2018-43", [published("gold"), gated("survivor", 12)]),
+  );
+  expect(screen.getByText(/\(12 lobbies\)/)).toBeInTheDocument();
+});
+
+// "лобі" is an indeclinable loanword in Ukrainian: it reads the same at every
+// count, so this is a check that it was left alone rather than "fixed" to
+// match the English plural rule it does not have.
+test("a gated tier with exactly one lobby reads the same invariant word in Ukrainian", () => {
+  setTranslations({ ua });
+  setDefaultLanguage("ua");
+  render(
+    <MemoryRouter initialEntries={["/ranked-lobbies"]}>
+      <RankedLobbies
+        load={() => new Promise(() => {})}
+        snapshot={snapshotOf("division.bro.official.pc-2018-43", [published("gold"), gated("survivor", 1)])}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText(/\(1 лобі\)/)).toBeInTheDocument();
 });

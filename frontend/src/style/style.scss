@@ -4662,6 +4662,13 @@ body {
 
   &__table-wrap {
     margin-bottom: 28px;
+    // Nine columns (eight ladder tiers, Unranked, plus the row-header column)
+    // cannot fit a phone viewport. Scroll the table inside its own box, the
+    // same idiom the pill tabs use above, rather than letting it drag the
+    // whole document sideways -- this page's only purpose is organic search,
+    // under mobile-first indexing.
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   &__lead {
@@ -4719,6 +4726,17 @@ body {
   // margin in play.
   &__note {
     margin: 10px 0 28px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  // The gated-tiers note: it sits BETWEEN the table and the rest of this
+  // block's 10px-gapped children, not last, so it takes their spacing rather
+  // than &__note's closing 28px. Its own class rather than an addition to
+  // &__note, whose comment above is specifically about being the last thing
+  // rendered.
+  &__gated-note {
+    margin: 10px 0;
     font-size: 14px;
     color: var(--text-muted);
   }

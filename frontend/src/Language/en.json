@@ -741,9 +741,11 @@
         "p2": "PUBG lobbies hold roughly sixty players, and only about fifteen of them turn up as sampled readings. The table describes who showed up among those readings, not everyone who was actually in the match.",
         "p3": "Solo, duos and squads are separate matchmaking queues, and a squad's rating does not work the same way a solo player's does. This reading pools all three without separating them, so a row blends lobbies from every queue size.",
         "p4": "A player who turns up on more than one day of the window is counted once, from their most recent lobby only, so the lobbies behind this table run a little thinner than fifteen readings. That costs sample size, not balance — it does not favor one tier's numbers over another's.",
-        "p5": "Some tiers turn up in too few lobbies to publish a row of their own. When that happens they still appear as columns: sitting across from one of them is a real part of someone else's measured lobby, even where we cannot measure that tier's own lobby from the inside.",
+        "p5": "Some tiers turn up in too few lobbies to publish a row of their own. When one of them turns up in a published tier's lobby, it still appears there as a column, even though we cannot measure that tier's own lobby from the inside. A tier that never turns up in any published tier's lobby has no column at all.",
         "gatedLabel": "Not shown as rows:",
-        "gatedEntry": "{tier} ({lobbies} lobbies)",
+        "gatedEntry": "{tier} ({lobbies} {unit})",
+        "gatedUnitOne": "lobby",
+        "gatedUnitOther": "lobbies",
         "gatedRule": "A tier needs enough distinct lobbies of its own, and at least one other sampled player among them, before it publishes a row."
       },
       "seeRanks": "How the ranked system works: tiers, RP and Survivor",
