@@ -22,14 +22,16 @@ const RankPointsTable = ({ t, data }) => {
   const table = rpTable(payload);
 
   // The empty state is the launch state, so it is a first-class branch: the
-  // prose around this component still answers the question, and a named wait
-  // reads as a calendar event rather than as a broken page.
+  // prose around this component still answers the question.
+  //
+  // It names no season, and cannot: the payload that reaches this branch is by
+  // definition the ARCHIVED reading -- the last season with enough days behind
+  // it -- never the one being collected. Production shipped the other way round
+  // and read "Collection for Season 42 has only just started" five days after
+  // season 42 ended. `finished` below keeps its season, because it renders
+  // beside that season's own table.
   if (!table) {
-    return (
-      <p className="rank-points__note">
-        {t("pages.rankPoints.gathering", { season: seasonNumber(payload.seasonId) })}
-      </p>
-    );
+    return <p className="rank-points__note">{t("pages.rankPoints.gathering")}</p>;
   }
 
   return (

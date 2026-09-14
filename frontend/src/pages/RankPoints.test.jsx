@@ -73,26 +73,37 @@ describe("RankPoints", () => {
   // there was never a table to protect -- and setData(null) then wipes out
   // the season number the snapshot did carry, leaving "Season  has only just
   // started" with a blank where the number belongs.
-  it("does not blank the season when neither the snapshot nor the live read has a table", async () => {
+  // Until 2026-09-14 the observable here was a season number, and the bug this
+  // caught was "Season  has only just started" with a blank where the number
+  // belonged. The line names no season at all now -- it cannot, because the
+  // payload reaching this branch is the ARCHIVED reading -- so a wipe is no
+  // longer visible in this state, and what is worth pinning is the absence:
+  // reintroduce {season} and the page goes back to calling a finished season
+  // the one being collected, which is what production shipped.
+  it("names no season while it waits, whatever the live read does", async () => {
     at("/rank-points", <RankPoints
-      snapshot={payload({ rpPercentiles: null })}
+      snapshot={payload({ rpPercentiles: null, current: false, seasonId: "division.bro.official.pc-2018-42" })}
       load={() => Promise.resolve({ status: 200, message: "no data" })}
     />);
     await waitFor(() =>
-      expect(screen.getByText(/Collection for Season 43 has only just started/)).toBeInTheDocument());
-    expect(screen.queryByText(/Season\s{2,}has only just started/)).toBeNull();
+      expect(screen.getByText(/has only just started/)).toBeInTheDocument());
+    expect(screen.getByText(/has only just started/).textContent).not.toMatch(/\d/);
   });
 
   // Unless it names a different season, in which case the committed reading is
   // the stale one and has to give way even though it is the fuller one.
+  // Observed through the table rather than through a season number: the
+  // snapshot has one, the live read for the new season does not, and the stale
+  // table has to go anyway.
   it("gives way to a new season even with nothing to show for it", async () => {
     at("/rank-points", <RankPoints
       snapshot={payload()}
       load={() => Promise.resolve({ data: payload({
         seasonId: "division.bro.official.pc-2018-44", rpPercentiles: null }) })}
     />);
-    await waitFor(() =>
-      expect(screen.getByText(/Collection for Season 44 has only just started/)).toBeInTheDocument());
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("table")).toBeNull());
+    expect(screen.getByText(/has only just started/)).toBeInTheDocument();
   });
 
   it("links to the article and the leaderboards", () => {
