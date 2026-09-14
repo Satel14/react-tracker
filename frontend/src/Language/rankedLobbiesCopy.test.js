@@ -33,6 +33,7 @@ const REQUIRED = [
   "gathering", "finished", "sample", "platform",
   "method.heading", "method.p1", "method.p2",
   "limits.heading", "limits.p1", "limits.p2", "limits.p3", "limits.p4", "limits.p5",
+  "limits.gatedLabel", "limits.gatedEntry", "limits.gatedRule",
   "seeRanks", "seeRankPoints",
 ];
 
@@ -84,6 +85,9 @@ describe("the ranked lobbies page copy", () => {
     expect(page.finished, `${locale} finished`).toContain("{season}");
     for (const token of ["{accounts}", "{matches}", "{platform}", "{from}", "{to}"]) {
       expect(page.sample, `${locale} sample ${token}`).toContain(token);
+    }
+    for (const token of ["{tier}", "{lobbies}"]) {
+      expect(page.limits.gatedEntry, `${locale} limits.gatedEntry ${token}`).toContain(token);
     }
   });
 

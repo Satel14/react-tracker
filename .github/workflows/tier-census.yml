@@ -215,19 +215,36 @@ jobs:
           # -S on both sides, so key order cannot make two equal readings differ.
           fresh=$(printf '%s' "$body" | jq -S -f "$RUNNER_TEMP/reading.jq")
 
+          # Hoisted above the splice below, which needs both: the held mix may
+          # only stand in for a missing fresh one when the two name the same
+          # season, and this is also the season-rollover check further down.
+          was=$(jq -r '.seasonId // ""' "$SNAPSHOT" 2>/dev/null || echo "")
+          now_season=$(printf '%s' "$body" | jq -r '.data.seasonId // ""')
+
           # The tier gate above says nothing about lobbyMix: the controller
           # builds it from a separate aggregator and answers with null when
           # that one throws, which must not freeze a good tier table -- but
           # committing that null over a good table is exactly what wiped it.
           # When the fresh reading has no usable mix, splice the held one back
-          # in before anything else in this run reads or writes `fresh`.
+          # in before anything else in this run reads or writes `fresh`. Only
+          # when it is the SAME season, though: the two tables ride in one
+          # file so they cannot name different seasons, and splicing a held
+          # mix from a season that has since rolled over would do exactly
+          # that -- last season's lobby mix under the new season's dates. When
+          # the seasons disagree there is nothing safe to show, so it goes in
+          # null instead.
           mix_usable=$(printf '%s' "$body" | jq -r \
             '((.data.lobbyMix // []) | type) == "array" and ((.data.lobbyMix // []) | length > 0)' \
             2>/dev/null || echo false)
           if [ "$mix_usable" != "true" ]; then
-            held_mix=$(jq -c '.lobbyMix // null' "$SNAPSHOT" 2>/dev/null || echo null)
-            fresh=$(printf '%s' "$fresh" | jq -S --argjson heldMix "$held_mix" '.lobbyMix = $heldMix')
-            echo "::warning::the fresh reading has no usable lobby mix; keeping the committed one"
+            if [ -n "$was" ] && [ "$was" = "$now_season" ]; then
+              held_mix=$(jq -c '.lobbyMix // null' "$SNAPSHOT" 2>/dev/null || echo null)
+              fresh=$(printf '%s' "$fresh" | jq -S --argjson heldMix "$held_mix" '.lobbyMix = $heldMix')
+              echo "::warning::the fresh reading has no usable lobby mix; keeping the committed one"
+            else
+              fresh=$(printf '%s' "$fresh" | jq -S '.lobbyMix = null')
+              echo "::warning::the fresh reading has no usable lobby mix, and the held snapshot is season $was against $now_season; writing null rather than misdating it"
+            fi
           fi
 
           held=$(jq -S 'del(.capturedAt)' "$SNAPSHOT" 2>/dev/null || echo null)
@@ -236,8 +253,6 @@ jobs:
             exit 0
           fi
 
-          was=$(jq -r '.seasonId // ""' "$SNAPSHOT" 2>/dev/null || echo "")
-          now_season=$(printf '%s' "$body" | jq -r '.data.seasonId // ""')
           if [ -n "$was" ] && [ "$was" != "$now_season" ]; then
             # Ask the question articleSeason.test.js asks, which is not "did the
             # season move". The prose is allowed to be AHEAD of the table and

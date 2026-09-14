@@ -104,14 +104,27 @@ const masterRow = {
 
 test("a gated tier is named beneath the table with its lobby count", () => {
   render(<LobbyMixTable t={t} data={payload([goldRow, masterRow])} />);
-  const note = screen.getByText(/pages\.rankedLobbies\.limits\.gated\b/);
+  const note = screen.getByText(/pages\.rankedLobbies\.limits\.gatedLabel\b/);
   expect(note.textContent).toMatch(/tier\.master/);
   expect(note.textContent).toMatch(/\b12\b/);
+  expect(note.textContent).toMatch(/pages\.rankedLobbies\.limits\.gatedRule\b/);
+});
+
+// Two gated tiers must read as a list, not just one -- the whole point of the
+// label-plus-list shape is that it does not need a plural form of anything.
+test("two gated tiers are both named in the same note", () => {
+  const survivorRow = { tier: "survivor", lobbies: 3, focals: 9, opponents: 0, publishable: false, mix: [] };
+  render(<LobbyMixTable t={t} data={payload([goldRow, masterRow, survivorRow])} />);
+  const note = screen.getByText(/pages\.rankedLobbies\.limits\.gatedLabel\b/);
+  expect(note.textContent).toMatch(/tier\.master/);
+  expect(note.textContent).toMatch(/\b12\b/);
+  expect(note.textContent).toMatch(/tier\.survivor/);
+  expect(note.textContent).toMatch(/\b3\b/);
 });
 
 test("with nothing gated the note is not rendered at all", () => {
   render(<LobbyMixTable t={t} data={payload([goldRow])} />);
-  expect(screen.queryByText(/pages\.rankedLobbies\.limits\.gated\b/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/pages\.rankedLobbies\.limits\.gatedLabel\b/)).not.toBeInTheDocument();
 });
 
 test("the platform label is read from this page's own namespace", () => {

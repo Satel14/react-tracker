@@ -36,22 +36,30 @@ const percent = (share) => {
 // ROW_MIN_LOBBIES shifts with the sample (a Master row appeared the very first
 // week this shipped). Null when nothing was gated, so the caller renders no
 // line rather than an empty sentence.
+//
+// A label-plus-list rather than a single sentence built around the tier
+// names: "Master (12 lobbies) rest/rests on..." cannot agree with both one
+// gated tier and several without a plural check no other copy in this file
+// carries. The label sidesteps that, and the rule that follows names BOTH
+// gate conditions (enough lobbies, and at least one other sampled player in
+// them) rather than picking one -- a tier can fail either, and lobbyMix.js's
+// own test "a row with no opponents at all is not publishable" pins the
+// second as real, so a sentence that only ever blamed the lobby count would
+// sometimes be false.
 const gatedNote = (t, rows) => {
   const gated = rows.gated ?? [];
   if (!gated.length) return null;
 
-  const entries = gated.map((row) =>
-    t("pages.rankedLobbies.limits.gatedEntry", {
-      tier: t(`pages.rankedLobbies.tier.${row.tier}`),
-      lobbies: groupDigits(row.lobbies),
-    }),
-  );
-  const tiers = new Intl.ListFormat(getLanguage() === "ua" ? "uk-UA" : "en-US", {
-    style: "long",
-    type: "conjunction",
-  }).format(entries);
+  const entries = gated
+    .map((row) =>
+      t("pages.rankedLobbies.limits.gatedEntry", {
+        tier: t(`pages.rankedLobbies.tier.${row.tier}`),
+        lobbies: groupDigits(row.lobbies),
+      }),
+    )
+    .join(", ");
 
-  return t("pages.rankedLobbies.limits.gated", { tiers });
+  return `${t("pages.rankedLobbies.limits.gatedLabel")} ${entries}. ${t("pages.rankedLobbies.limits.gatedRule")}`;
 };
 
 const LobbyMixTable = ({ t, data }) => {

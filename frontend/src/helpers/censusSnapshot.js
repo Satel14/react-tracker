@@ -142,9 +142,14 @@ export const effectiveReadings = (data) => {
 // aggregation that drifted, and drawing it would put a bar chart on the page
 // whose bars mean nothing. Whole-payload refusal rather than per-row, because a
 // build that produced one broken row has no claim to the others. An EMPTY mix
-// is exempt from the sum check rather than failing it: lobbyMix.js emits one
-// for a tier whose lobbies held no other sampled player at all, and zero
-// summing to zero is the correct reading of that, not drift.
+// is exempt from the sum check rather than failing it, but only for a row
+// that is NOT publishable: lobbyMix.js emits one for a tier whose lobbies
+// held no other sampled player at all, and zero summing to zero is the
+// correct reading of that, not drift. That same aggregator can never mark
+// such a row publishable (it requires opponents > 0), so a publishable row
+// with an empty mix is a shape the real pipeline cannot produce -- drawing it
+// would render a row of all-0% cells, so it is refused like any other
+// malformed row.
 //
 // Deliberately NOT folded into usableSnapshot, for the reason rpTable is not: a
 // mix too thin to draw must not blank the tier distribution on /ranks.
@@ -156,7 +161,10 @@ export const lobbyMixRows = (data) => {
 
   for (const row of rows) {
     if (!Array.isArray(row?.mix)) return null;
-    if (!row.mix.length) continue;
+    if (!row.mix.length) {
+      if (row.publishable) return null;
+      continue;
+    }
     // A coercible value like null or "" is not a number; only real finite numbers count.
     if (!row.mix.every((cell) => typeof cell?.share === "number" && Number.isFinite(cell.share))) return null;
     const total = row.mix.reduce((sum, cell) => sum + cell.share, 0);

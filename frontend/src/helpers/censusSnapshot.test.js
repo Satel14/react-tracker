@@ -341,15 +341,28 @@ describe("lobbyMixRows", () => {
 
   // lobbyMix.js legitimately emits mix: [] for a tier whose lobbies held no
   // other sampled player (its own test "a lobby with one sampled player
-  // contributes no pairs" pins that). An empty mix sums to zero, and the old
-  // check refused the WHOLE payload for it -- one such row blanked a perfectly
-  // good day of data for every other tier too.
-  it("a publishable row with an empty mix does not blank the rest of the payload", () => {
-    const emptyMix = row("survivor", true);
+  // contributes no pairs" pins that) -- and that same aggregator never marks
+  // such a row publishable (it requires opponents > 0). An empty,
+  // UNPUBLISHABLE mix sums to zero, and the old check refused the WHOLE
+  // payload for it -- one such row blanked a perfectly good day of data for
+  // every other tier too.
+  it("an unpublishable row with an empty mix does not blank the rest of the payload", () => {
+    const emptyMix = row("survivor", false);
     emptyMix.mix = [];
     const rows = lobbyMixRows({ lobbyMix: [row("gold", true), emptyMix] });
     expect(rows).not.toBeNull();
-    expect(rows.map((r) => r.tier).sort()).toEqual(["gold", "survivor"]);
+    expect(rows.map((r) => r.tier)).toEqual(["gold"]);
+    expect(rows.gated.map((r) => r.tier)).toEqual(["survivor"]);
+  });
+
+  // The aggregator cannot produce a PUBLISHABLE row with an empty mix
+  // (publishable requires opponents > 0, and an empty mix has none), so this
+  // shape is not real data but a malformed payload -- it must not sail through
+  // and render as a row of all-0% cells.
+  it("a publishable row claiming an empty mix is refused as malformed", () => {
+    const impossible = row("survivor", true);
+    impossible.mix = [];
+    expect(lobbyMixRows({ lobbyMix: [row("gold", true), impossible] })).toBeNull();
   });
 
   it("keeps the tiers a fresh reading gated out, for the page to name", () => {
