@@ -4550,7 +4550,18 @@ body {
     }
   }
 
-  &__note,
+  // Always the last thing this component renders -- alone in the gathering
+  // state, or as the sample line closing a real table -- so its own bottom
+  // margin is what separates it from whatever the page puts next. 28px matches
+  // &__table-wrap's: inside a wrap it collapses through and changes nothing,
+  // but standalone it is the only margin in play, and without it the next
+  // section's h2 sat directly on the gathering line.
+  &__note {
+    margin: 10px 0 28px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
   &__stale {
     margin: 10px 0 0;
     font-size: 14px;

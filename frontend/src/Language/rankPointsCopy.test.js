@@ -92,7 +92,6 @@ describe("the rank points page copy", () => {
     const page = dict.pages.rankPoints;
     expect(page.lead).toContain("{rp}");
     expect(page.table.above).toContain("{percent}");
-    expect(page.gathering).toContain("{season}");
     expect(page.finished).toContain("{season}");
     expect(page.lookup.result).toContain("{rp}");
     expect(page.lookup.result).toContain("{n}");
@@ -100,5 +99,16 @@ describe("the rank points page copy", () => {
     for (const token of ["{accounts}", "{matches}", "{platform}", "{from}", "{to}"]) {
       expect(page.sample, `${locale} sample ${token}`).toContain(token);
     }
+  });
+
+  // In the gathering state the snapshot on the page is by definition the
+  // ARCHIVED season -- the last one with enough days behind it -- never the one
+  // being collected. So no correct season number exists to print there, and the
+  // sentence must not name one. `finished` is the opposite case and keeps its
+  // season: it only renders beside that season's own table.
+  it.each([["en", en], ["ua", ua]])("%s never names a season in the gathering copy", (locale, dict) => {
+    const text = dict.pages.rankPoints.gathering;
+    expect(text, `${locale} gathering`).not.toContain("{season}");
+    expect(text, `${locale} gathering`).not.toMatch(/\d/);
   });
 });
