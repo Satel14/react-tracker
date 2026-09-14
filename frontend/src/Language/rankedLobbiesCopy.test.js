@@ -81,10 +81,21 @@ describe("the ranked lobbies page copy", () => {
   it.each([["en", en], ["ua", ua]])("%s keeps every interpolation", (locale, dict) => {
     const page = dict.pages.rankedLobbies;
     expect(page.table.cell, `${locale} table.cell`).toContain("{percent}");
-    expect(page.gathering, `${locale} gathering`).toContain("{season}");
     expect(page.finished, `${locale} finished`).toContain("{season}");
     for (const token of ["{accounts}", "{matches}", "{platform}", "{from}", "{to}"]) {
       expect(page.sample, `${locale} sample ${token}`).toContain(token);
     }
+  });
+
+  // The gathering copy describes the state before the ARCHIVED-season snapshot
+  // this component reads ever names a season under collection -- there is no
+  // correct number to print, so the string must never grow that placeholder
+  // back. LobbyMixTable.jsx no longer passes a `season` variable into it either;
+  // this guards the copy side of that so a reintroduced `{season}` fails here
+  // even if nobody restores the component-side interpolation.
+  it.each([["en", en], ["ua", ua]])("%s never names a season in the gathering copy", (locale, dict) => {
+    const text = dict.pages.rankedLobbies.gathering;
+    expect(text, `${locale} gathering`).not.toContain("{season}");
+    expect(text, `${locale} gathering`).not.toMatch(/\d/);
   });
 });

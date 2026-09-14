@@ -39,11 +39,10 @@ const LobbyMixTable = ({ t, data }) => {
   // rollover, so it is a first-class branch rather than a fallback: the prose
   // around this component still answers the question.
   if (!rows) {
-    return (
-      <p className="ranked-lobbies__note">
-        {t("pages.rankedLobbies.gathering", { season: seasonNumber(payload.seasonId) })}
-      </p>
-    );
+    // No season number here on purpose: this snapshot is by definition the
+    // last ARCHIVED season (the one with enough windows behind it), never the
+    // one currently being collected, so there is no correct number to print.
+    return <p className="ranked-lobbies__note">{t("pages.rankedLobbies.gathering")}</p>;
   }
 
   // Ladder order, and only the buckets some published row actually reports --

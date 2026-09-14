@@ -348,7 +348,7 @@ describe("the ranked lobbies pages", () => {
     const html = decode(page("/ranked-lobbies"));
     expect(html).toContain(en.pages.rankedLobbies.title);
     expect(html).toContain(en.pages.rankedLobbies.intro.slice(0, 40));
-    expect(html).toContain("Collection for Season");
+    expect(html).toContain(en.pages.rankedLobbies.gathering);
     expect(html).not.toContain(en.pages.ranks.distribution.loading);
   });
 });

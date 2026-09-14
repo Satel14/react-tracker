@@ -76,6 +76,19 @@ test("with nothing publishable it says so instead of drawing an empty grid", () 
   expect(screen.queryByRole("table")).not.toBeInTheDocument();
 });
 
+// The gathering snapshot is by definition the last ARCHIVED season, never the
+// one currently being collected, so there is no correct number to print. This
+// payload's seasonId carries "43" precisely so a reintroduced
+// `{ season: seasonNumber(...) }` call would leak it into the fake t()'s
+// joined output -- with no interpolation, t() gets called with no second
+// argument at all, so nothing but the key renders.
+test("the gathering note carries no season number", () => {
+  render(<LobbyMixTable t={t} data={payload([])} />);
+  const note = screen.getByText(/gathering/);
+  expect(note.textContent).toBe("pages.rankedLobbies.gathering");
+  expect(note.textContent).not.toMatch(/\d/);
+});
+
 test("the sample line names the window and the platform", () => {
   render(<LobbyMixTable t={t} data={payload([goldRow])} />);
   expect(screen.getByText(/2026-09-11/)).toBeInTheDocument();
