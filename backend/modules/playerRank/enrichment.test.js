@@ -397,6 +397,28 @@ test("a mapped match carries the kill rank and the size of the lobby behind it",
   assert.equal(extras.matches.items[0].lobbySize, 3);
 });
 
+// Same trap as killPlace one test down, on the field beside it: the roster is
+// missing and the participant has no winPlace, so toInteger(undefined, null)
+// rounds null to 0 and the card renders the placement as #0.
+test("a match with no placement anywhere says null rather than a zeroth place", async () => {
+  const withoutPlace = (id) => {
+    const payload = matchWithLobby(id, { winPlace: undefined });
+    payload.included = payload.included.filter((entry) => entry.type !== "roster");
+    return payload;
+  };
+  const { doRequest } = createFakeDoRequest([
+    [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(1) }],
+    ["/matches/", (url) => ({ ok: true, json: async () => withoutPlace(url.split("/matches/")[1]) })],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  const extras = await service.getMatchExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo", playerRecord: null,
+  });
+
+  assert.equal(extras.matches.items[0].placement, null);
+});
+
 test("a match record with no kill place says null rather than a first place", async () => {
   // toInteger(x, null) rounds a missing value to 0, and 0 would read as a rank.
   const { doRequest } = createFakeDoRequest([
@@ -663,6 +685,23 @@ const partyRoutes = (matchMates, records) => [
     return { ok: true, json: async () => matchWithMates(id, matchMates[id] || []) };
   }],
 ];
+
+// The party leg and the region leg both start from the same eight match ids and
+// both run inside one Promise.allSettled. getMatch only writes its cache after
+// the response lands, so started together on a cold cache neither sees the
+// other's writes and /api/player/extras spends sixteen match requests for eight
+// matches -- against a key measured at 100 calls a minute and shared with the
+// live site.
+test("the party and region legs do not each fetch the same match", async () => {
+  const { doRequest, calls } = createFakeDoRequest(partyRoutes({ m0: [mateId(1)] }, []));
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  await service.getMasteryExtras({ shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo" });
+
+  const matchCalls = calls.filter((url) => url.includes("/matches/"));
+  const distinct = new Set(matchCalls);
+  assert.equal(matchCalls.length, distinct.size, `${matchCalls.length} requests for ${distinct.size} matches`);
+});
 
 test("getMasteryExtras measures party overlap from each mate's own history", async () => {
   // The regular shares 40 of their 50 matches with this player; the fill shares

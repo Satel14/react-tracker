@@ -586,3 +586,38 @@ test("mapPubgStatsToFrontend combined season stats reflect both normal and ranke
   assert.equal(data.season.stats.top10s.value, 10); // 5 normal + 5 derived ranked
   assert.equal(data.season.stats.kills.value, 30);
 });
+
+// parsePlayerRank leaves seasonData null when the season-stats response comes
+// back 200 without data.attributes, and then still runs the ranked request --
+// which can succeed. Requiring seasonData dropped the whole block: no rank
+// badge, no rankedInfo, and refreshRankPointReading no-ops for that player for
+// good, because it reads payload.data.season.rankedInfo.
+test("ranked stats still make a season when the normal season block is missing", () => {
+  const { data } = mapPubgStatsToFrontend(
+    { gameModeStats: {} },
+    "Satel14",
+    "account.satel",
+    null,
+    { id: "division.bro.official.pc-2018-37", attributes: { rankedGameModeStats: liveRankedGameModeStats } },
+    null,
+    "division.bro.official.pc-2018-37",
+    "steam",
+    null,
+    null,
+  );
+
+  assert.ok(data.season, "a season the player demonstrably played must not be dropped");
+  assert.equal(data.season.id, "division.bro.official.pc-2018-37");
+  assert.equal(data.season.includesRanked, true);
+  assert.ok(data.season.rankedInfo, "rankedInfo is what the rank badge and RP history read");
+  assert.equal(data.season.stats.kills.value, 334);
+});
+
+// Two shapes for the same "no matches" answer: one with only `total`, one with
+// the averages the card reads. A consumer asking for avgKills got undefined
+// down one path and 0 down the other.
+test("an absent match list has the same shape wherever it is filled in", () => {
+  const { data } = mapPubgStatsToFrontend({ gameModeStats: {} }, "Tester", "account.1");
+  assert.deepEqual(Object.keys(data.matches.summary).sort(), ["avgDamage", "avgKills", "top10s", "total", "wins"]);
+  assert.equal(data.matches.summary.avgKills, 0);
+});

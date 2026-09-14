@@ -1,26 +1,60 @@
-const playerCache = new Map();
-const playerNameCache = new Map();
-const statsCache = new Map();
-const lifetimeStatsCache = new Map();
+// A Map with a ceiling.
+//
+// Every cache below is swept only on a read of the SAME key -- get() checks the
+// timestamp and deletes an expired entry -- so an entry for a player nobody
+// looks up again is never collected at all. A long-lived process serving a
+// stream of distinct players grows until it is restarted, and a statsCache
+// payload is a mapped season plus lifetime plus eight matches, so the failure
+// is an OOM on a small instance rather than a wrong answer.
+//
+// Oldest-in first, which is the policy enrichment already used for
+// matchRegionCache. Map preserves insertion order and re-setting a key does not
+// move it, so a hot key can still age out -- acceptable for a bound whose job
+// is the heap, not the hit rate.
+class BoundedMap extends Map {
+  constructor(limit) {
+    super();
+    this.limit = limit;
+  }
+
+  set(key, value) {
+    super.set(key, value);
+    while (this.size > this.limit) super.delete(this.keys().next().value);
+    return this;
+  }
+}
+
+// Whole mapped payloads: the most expensive entries here by an order of
+// magnitude, and the ones worth the tightest ceiling.
+const PAYLOAD_LIMIT = 500;
+// Per-resource fragments -- a clan, a mastery block, eight match summaries.
+const FRAGMENT_LIMIT = 2000;
+// Strings and timestamps. Cheap enough that the ceiling is only a backstop.
+const LOOKUP_LIMIT = 20000;
+
+const playerCache = new BoundedMap(LOOKUP_LIMIT);
+const playerNameCache = new BoundedMap(LOOKUP_LIMIT);
+const statsCache = new BoundedMap(PAYLOAD_LIMIT);
+const lifetimeStatsCache = new BoundedMap(FRAGMENT_LIMIT);
 const seasonCatalogCache = new Map();
-const steamAvatarCache = new Map();
-const playerProfileCache = new Map();
-const clanCache = new Map();
-const masteryCache = new Map();
-const matchSummaryCache = new Map();
+const steamAvatarCache = new BoundedMap(LOOKUP_LIMIT);
+const playerProfileCache = new BoundedMap(FRAGMENT_LIMIT);
+const clanCache = new BoundedMap(FRAGMENT_LIMIT);
+const masteryCache = new BoundedMap(FRAGMENT_LIMIT);
+const matchSummaryCache = new BoundedMap(FRAGMENT_LIMIT);
 // matchId -> server region. A played match's region never changes, so this is
 // not a TTL cache; enrichment caps its size instead.
 const matchRegionCache = new Map();
 const inFlightRankRequests = new Map();
-const stalePlayerDataCache = new Map();
-const leaderboardCache = new Map();
-const extrasCache = new Map();
+const stalePlayerDataCache = new BoundedMap(PAYLOAD_LIMIT);
+const leaderboardCache = new BoundedMap(FRAGMENT_LIMIT);
+const extrasCache = new BoundedMap(PAYLOAD_LIMIT);
 const inFlightExtrasRequests = new Map();
 const inFlightResolveRequests = new Map();
 const inFlightSeasonCatalogRequests = new Map();
 // `shard:accountId:seasonId` -> when a rank-point reading was last taken, from
 // either a fresh fetch or a cache-hit refresh.
-const rankPointReadingCache = new Map();
+const rankPointReadingCache = new BoundedMap(LOOKUP_LIMIT);
 
 // 30 min matches PUBG's guidance: a match lasts 20-30 min and new data takes
 // 5-15 min to reach the API, so a shorter TTL mostly refetches unchanged stats.
@@ -101,6 +135,7 @@ module.exports = {
   matchSummaryCache,
   matchRegionCache,
   playerProfileCache,
+  playerCache,
   playerNameCache,
   PLAYER_NAME_CACHE_DURATION,
   getCachedAccountId,
@@ -113,6 +148,7 @@ module.exports = {
   isRateLimited,
   getStalePlayerData,
   setStalePlayerData,
+  stalePlayerDataCache,
   leaderboardCache,
   LEADERBOARD_CACHE_DURATION,
   extrasCache,

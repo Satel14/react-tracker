@@ -173,7 +173,7 @@ function mapMatch(matchPayload, accountId, playerName) {
 
   const stats = participant?.attributes?.stats || {};
   const rosterStats = roster?.attributes?.stats || {};
-  const teamRank = toInteger(rosterStats.rank || stats.winPlace, null);
+  const teamRank = toPlaceOrNull(rosterStats.rank || stats.winPlace);
   const damage = toNumber(stats.damageDealt);
   const kills = toInteger(stats.kills);
   const createdAt = normalizeString(attributes.createdAt);
@@ -406,6 +406,14 @@ function createPlayerEnrichmentService({
     return weapons;
   }
 
+  // The cache is only written once a response lands, so two callers that start
+  // together both miss it. getMasteryExtras starts exactly that way: the party
+  // leg and the region leg walk the same eight match ids inside one
+  // Promise.allSettled, and a cold extras call used to spend sixteen requests
+  // for eight matches against a key measured at 100 calls a minute and shared
+  // with the live site.
+  const inFlightMatches = new Map();
+
   async function getMatch(shard, matchId, accountId, playerName) {
     const matchShard = shard === "psn" || shard === "xbox" ? "console" : shard;
     const cacheKey = `${matchShard}:${matchId}:${accountId}`;
@@ -414,21 +422,35 @@ function createPlayerEnrichmentService({
       return cached.data;
     }
 
-    const matchUrl = `https://api.pubg.com/shards/${matchShard}/matches/${encodeURIComponent(matchId)}`;
-    const matchPayload = await doRequest(matchUrl);
-    const match = mapMatch(matchPayload, accountId, playerName);
+    const inFlight = inFlightMatches.get(cacheKey);
+    if (inFlight) return inFlight;
 
-    if (match) {
-      matchSummaryCache.set(cacheKey, {
-        data: match,
-        // Kept beside the mapped match rather than inside it: the region leg
-        // needs this URL later, and the client has no use for it.
-        telemetryUrl: findTelemetryUrl(matchPayload),
-        timestamp: Date.now(),
-      });
-    }
+    // Deferred to a microtask for the same reason as the in-flight maps in
+    // parsePlayerRank: the entry has to be in place before anything that could
+    // throw synchronously runs, or the delete below would fire first and leave
+    // a rejected promise wedged in the map.
+    const request = Promise.resolve()
+      .then(async () => {
+        const matchUrl = `https://api.pubg.com/shards/${matchShard}/matches/${encodeURIComponent(matchId)}`;
+        const matchPayload = await doRequest(matchUrl);
+        const match = mapMatch(matchPayload, accountId, playerName);
 
-    return match;
+        if (match) {
+          matchSummaryCache.set(cacheKey, {
+            data: match,
+            // Kept beside the mapped match rather than inside it: the region leg
+            // needs this URL later, and the client has no use for it.
+            telemetryUrl: findTelemetryUrl(matchPayload),
+            timestamp: Date.now(),
+          });
+        }
+
+        return match;
+      })
+      .finally(() => inFlightMatches.delete(cacheKey));
+
+    inFlightMatches.set(cacheKey, request);
+    return request;
   }
 
   function cachedTelemetryUrl(shard, matchId, accountId) {
