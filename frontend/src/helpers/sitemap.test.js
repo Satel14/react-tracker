@@ -60,7 +60,14 @@ describe("lastmod", () => {
   // rest carry none. Google drops a lastmod it decides is unreliable, and one
   // invented date is enough to earn that for the whole file.
   it("dates the pages whose content the census moves", () => {
-    expect(CENSUS_PAGES).toEqual(["/ranks", "/ua/ranks", "/rank-points", "/ua/rank-points"]);
+    expect(CENSUS_PAGES).toEqual([
+      "/ranks",
+      "/ua/ranks",
+      "/rank-points",
+      "/ua/rank-points",
+      "/ranked-lobbies",
+      "/ua/ranked-lobbies",
+    ]);
     for (const path of CENSUS_PAGES) {
       expect(lastmodFor(path)).toBe(CENSUS_SNAPSHOT.capturedAt);
     }
@@ -78,11 +85,9 @@ describe("lastmod", () => {
       expect(lastmodFor(path), path).toBeNull();
     }
     const undated = entriesIn(xml()).filter((entry) => !entry.includes("<lastmod>"));
-    // /, /help, /leaderboards, plus the two ranked-lobbies pages: they read the
-    // same committed snapshot as /ranks and /rank-points but are not in
-    // CENSUS_PAGES, because the number that page publishes -- the lobby mix --
-    // is not in the snapshot yet.
-    expect(undated).toHaveLength(5);
+    // /, /help, /leaderboards: the only three routes whose content changes
+    // only when someone deploys, not when the daily census commits a reading.
+    expect(undated).toHaveLength(3);
   });
 
   it("writes a date Google will parse", () => {

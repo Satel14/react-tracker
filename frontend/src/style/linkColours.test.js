@@ -75,6 +75,7 @@ const BLOCKS_WITH_PROSE_LINKS = [
   ".prerender__nav",
   ".home-intro",
   ".home-guide-links",
+  ".player-rank-percentile__lobby",
 ];
 
 // `[parent, child]` pairs rather than bare child selectors, so a lookup can
@@ -86,6 +87,7 @@ const BLOCKS_WITH_PROSE_LINKS = [
 const NESTED_ANCHOR_LINKS = [
   [".ranks-page", "&__outro"],
   [".rank-points", "&__outro"],
+  [".ranked-lobbies", "&__outro"],
 ];
 
 // Links that carry their own class, so the colour sits on the block's own
@@ -95,6 +97,7 @@ const NESTED_ANCHOR_LINKS = [
 const OWN_COLOUR_LINKS = [
   [".ranks-page", "&__lang"],
   [".rank-points", "&__lang"],
+  [".ranked-lobbies", "&__lang"],
 ];
 
 describe("prose links state their own colour", () => {
