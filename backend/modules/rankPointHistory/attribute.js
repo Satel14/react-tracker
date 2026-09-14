@@ -166,15 +166,20 @@ function attributeRankPoints({ series: raw, matches }) {
     });
   });
 
-  const { solutions, slackUsed, exhausted } = enumerateAssignments({
-    order,
-    windows,
-    dRounds,
-    orderPairs,
-    slackAllowed,
-    voidable: voidCandidates(items, order),
-    n,
-  });
+  const voidable = voidCandidates(items, order);
+  const solve = (slack) =>
+    enumerateAssignments({ order, windows, dRounds, orderPairs, slackAllowed: slack, voidable, n });
+
+  let { solutions, slackUsed, exhausted } = solve(slackAllowed);
+
+  // PUBG can report a mode's rounds days after they were played: season 43 saw a
+  // whole squad-fpp key surface at once, three days late, dropping seven rounds
+  // into an interval that could show three. Neither unseen-rounds allowance
+  // reaches an interval that old, so nothing was feasible and every row went
+  // blank -- including the ones sitting in an interval that adds up exactly.
+  // Reopening the allowance everywhere costs those intervals their exacts, which
+  // is what slackUsed already withholds, and keeps the rest of the card.
+  if (!exhausted && !solutions.length) ({ solutions, slackUsed, exhausted } = solve(() => true));
 
   const rowsAt = new Map();
   const exactRows = new Set();
