@@ -161,7 +161,21 @@ function ensureTable() {
     ensureTablePromise = getPool()
       .query(CREATE_TABLE_SQL)
       .then(() => getPool().query(CREATE_INDEX_SQL))
-      .then(() => getPool().query(ADD_GAME_MODE_SQL))
+      // Its own catch, and deliberately a silent one. Unlike CREATE TABLE IF NOT
+      // EXISTS, which short-circuits on an existing relation, ADD COLUMN IF NOT
+      // EXISTS checks ownership first and takes an AccessExclusiveLock even when
+      // the column is already there -- so it can fail where the two statements
+      // above cannot. What it costs when it does is one column on a legacy
+      // table; chained under the shared catch it cost every census read, and
+      // made isWindowCollected answer "not collected" and re-spend ~1900
+      // metered PUBG calls on a day already in the store.
+      .then(() =>
+        getPool()
+          .query(ADD_GAME_MODE_SQL)
+          .catch((error) => {
+            console.log(`[census] game_mode column unavailable: ${error.message}`);
+          }),
+      )
       .catch((error) => {
         ensureTablePromise = null;
         throw error;
@@ -189,6 +203,10 @@ async function recordObservations(observations) {
       rows.map((r) => r.gameMode ?? null),
     ];
     const result = await getPool().query(INSERT_SQL, columns);
+    // A write proves the database is answering just as well as a read does, and
+    // a collection can run on a day nobody opens /ranks -- without this the run
+    // could only ever push /healthz towards "failing" and never clear it.
+    recordDbOk("census");
     return result?.rowCount ?? 0;
   } catch (error) {
     // A census is not worth an outage. Same posture as every other store here.

@@ -296,7 +296,7 @@ const createCensusController = ({
         // result, it is the absence of one. Holding it for half an hour would
         // keep serving zeroes for half an hour after the database came back,
         // and telling a CDN to store it would outlive even that.
-        const failing = isDbFailing();
+        const failing = isDbFailing("census");
         const entry = {
           body,
           timestamp: Date.now(),
@@ -317,7 +317,11 @@ const createCensusController = ({
   }
 
   const getDistribution = async (req, res) => {
-    const days = Math.min(90, Math.max(1, Number(req.query?.days) || DEFAULT_DAYS));
+    // Rounded, not just clamped: all three census queries bind this to $3::int,
+    // so a fraction reaches Postgres as "1.5", fails the cast and is recorded as
+    // a database failure -- which an unauthenticated query string must not be
+    // able to do.
+    const days = Math.min(90, Math.max(1, Math.round(Number(req.query?.days)) || DEFAULT_DAYS));
 
     const cached = distributionCache.get(days);
     if (cached && Date.now() - cached.timestamp < cached.maxAge) {

@@ -1,6 +1,7 @@
 const { test, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
 const { __setPool } = require("../db/pool");
+const { isDbFailing, recordDbError, __resetDbHealth } = require("../db/health");
 const {
   recordObservations,
   readWindow,
@@ -365,4 +366,50 @@ test("reads nothing when there is no database", async () => {
 test("reads nothing when the query fails", async () => {
   __setPool(fakePool(() => { throw new Error("connection terminated unexpectedly"); }));
   assert.deepEqual(await readRankPoints({ shard: "steam", seasonId: "s", days: 7 }), []);
+});
+
+// Every read here reports a success; the write only ever reported failures. A
+// nightly collection on a day nobody opens /ranks could therefore only push
+// /healthz towards "failing" and never clear it again.
+test("a successful write clears a failure the same way a read does", async () => {
+  __resetDbHealth();
+  recordDbError("census", "neon was asleep");
+  __setPool(fakePool());
+
+  await recordObservations([observation()]);
+
+  assert.equal(isDbFailing("census"), false, "the write proved the database is answering");
+});
+
+// The ALTER is the one statement here that needs ownership of the table, and it
+// takes an AccessExclusiveLock even when the column is already there. Chained
+// under the shared catch it would take every census read down with it -- and
+// make isWindowCollected answer "not collected", re-spending ~1900 metered PUBG
+// calls on a day already in the store.
+test("a failing ALTER does not take the reads down with it", async () => {
+  __setPool(
+    fakePool((text) => {
+      if (/ALTER TABLE/.test(text)) throw new Error("must be owner of table tier_census_observations");
+      if (/SELECT dense_rank/.test(text)) return { rows: [{ match_cluster: 1, tier: "gold" }] };
+      return { rows: [] };
+    }),
+  );
+
+  const rows = await readWindow({ shard: "steam", seasonId: "s", days: 7 });
+
+  assert.deepEqual(rows, [{ matchId: 1, tier: "gold" }]);
+});
+
+test("a failing ALTER still lets a window be recognised as collected", async () => {
+  __setPool(
+    fakePool((text) => {
+      if (/ALTER TABLE/.test(text)) throw new Error("must be owner of table tier_census_observations");
+      if (/AS collected/.test(text)) return { rows: [{ collected: true }] };
+      return { rows: [] };
+    }),
+  );
+
+  const collected = await isWindowCollected({ shard: "steam", seasonId: "s", windowDate: "2026-08-30" });
+
+  assert.equal(collected, true, "a day already in the store must not be collected twice");
 });

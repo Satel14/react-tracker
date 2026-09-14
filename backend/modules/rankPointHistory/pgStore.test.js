@@ -2,6 +2,7 @@ const { test, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
 const { __setPool } = require("../db/pool");
 const { loadSeries, recordReading, warm, SNAPSHOT_LIMIT, __resetRankPointStore } = require("./pgStore");
+const { isDbFailing, __resetDbHealth } = require("../db/health");
 
 afterEach(() => {
   __setPool(null);
@@ -168,4 +169,19 @@ test("a late touch never drags last_seen_at backwards", async () => {
   const touch = pool.calls.find((call) => call.text.includes("UPDATE rank_point_snapshots"));
   assert.ok(touch, "the unchanged reading is recorded as a touch");
   assert.match(touch.text, /GREATEST/, "the touch keeps the later of the two timestamps");
+});
+
+// The read side is the one failure mode this feature actually has in
+// production -- a Neon outage or the three-second timeout in index.js -- and it
+// was the one thing /healthz could not see. annotate() catches the rejection
+// and only logs, so a store that never reports the error leaves the RP card
+// blank with the database reporting "ok".
+test("a failed read is reported to the health of its own store", async () => {
+  __resetDbHealth();
+  __setPool(createFakePool(async () => { throw new Error("data transfer quota exceeded"); }));
+
+  await assert.rejects(() => loadSeries(KEY));
+
+  assert.equal(isDbFailing("rank-point-history"), true);
+  assert.equal(isDbFailing("census"), false, "one store's outage is not another's");
 });

@@ -704,6 +704,33 @@ test("each window width is cached on its own", async () => {
   assert.deepEqual(asked, [7, 14], "the repeat of 7 is the only one served from cache");
 });
 
+// All three census queries bind days to $3::int. A fraction reaches Postgres as
+// "1.5", fails the cast, and is recorded as a database failure -- so an
+// unauthenticated query string could make /healthz report the database down and
+// drop recent searches to the committed JSON.
+test("a fractional day count is rounded rather than handed to Postgres", async () => {
+  const asked = [];
+  const controller = build({
+    readWindow: async ({ days }) => { asked.push(days); return []; },
+  });
+
+  await controller.getDistribution({ query: { days: "1.5" } }, makeRes());
+
+  assert.deepEqual(asked, [2], "the window has to be a whole number of days");
+});
+
+test("a day count that is not a number falls back to the default", async () => {
+  const asked = [];
+  const controller = build({
+    readWindow: async ({ days }) => { asked.push(days); return []; },
+  });
+
+  await controller.getDistribution({ query: { days: "; DROP TABLE" } }, makeRes());
+  await controller.getDistribution({ query: { days: ["3", "9"] } }, makeRes());
+
+  assert.ok(asked.every(Number.isInteger), `got ${asked.join(", ")}`);
+});
+
 // Zeroes assembled while Postgres was unreachable are not the published result,
 // they are the absence of one -- caching them anywhere would outlive the outage.
 test("a payload built while the database is failing is not cacheable downstream", async () => {
@@ -716,6 +743,20 @@ test("a payload built while the database is failing is not cacheable downstream"
 
   assert.equal(res.headers["Cache-Control"], "no-store");
   assert.equal(res.body.data.accounts, 0);
+});
+
+// The census tables answered; something else did not. Treating that as a census
+// outage costs every visitor a fresh ~12k-row rebuild -- roughly a megabyte of
+// Neon transfer a minute, which is the blowout the six-hour cache prevents.
+test("a failure in an unrelated store does not make the census uncacheable", async () => {
+  const controller = build({
+    readWindow: async () => { recordDbError("rank-point-history", "connection terminated"); return []; },
+  });
+
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+
+  assert.match(res.headers["Cache-Control"], /^public, max-age=/);
 });
 
 test("a finished run drops the cached result rather than waiting out its TTL", async () => {

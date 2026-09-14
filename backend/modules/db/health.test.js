@@ -49,3 +49,53 @@ test("an error with no message still reads as a failure", () => {
   assert.equal(isDbFailing(), true);
   assert.equal(getDbHealth().error, "unknown Postgres failure");
 });
+
+// Four stores share this module, and each caller asks about its own. RP history
+// writes fire and forget on every player lookup, so they are by far the likeliest
+// to fail -- and one flag for all of them would make the census page answer
+// no-store and rebuild ~12k rows for every visitor, which is the transfer
+// blowout its six-hour cache exists to prevent.
+test("a failure in one store does not condemn another", () => {
+  recordDbError("rank-point-history", "connection terminated unexpectedly");
+  recordDbOk("census");
+
+  assert.equal(isDbFailing("census"), false);
+  assert.equal(isDbFailing("rank-point-history"), true);
+});
+
+test("a store nobody has queried yet is not failing", () => {
+  recordDbError("rank-point-history", "boom");
+
+  assert.equal(isDbFailing("recent-searches"), false);
+});
+
+// /healthz asks about the process, not about one table: a store that is down
+// while another is up is exactly the silent outage this module exists to catch.
+test("asked about the process as a whole, any failing store counts", () => {
+  recordDbError("rank-point-history", "quota");
+  recordDbOk("census");
+
+  assert.equal(isDbFailing(), true);
+  const health = getDbHealth();
+  assert.equal(health.status, "failing");
+  assert.equal(health.scope, "rank-point-history");
+  assert.equal(health.error, "quota");
+});
+
+test("every store healthy reads as ok", () => {
+  recordDbOk("census");
+  recordDbOk("recent-searches");
+
+  assert.equal(isDbFailing(), false);
+  assert.equal(getDbHealth().status, "ok");
+});
+
+test("a store recovers on its own without waiting for the others", () => {
+  recordDbError("census", "boom");
+  recordDbOk("recent-searches");
+  assert.equal(isDbFailing(), true);
+
+  recordDbOk("census");
+  assert.equal(isDbFailing(), false);
+  assert.equal(isDbFailing("census"), false);
+});

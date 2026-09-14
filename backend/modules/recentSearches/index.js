@@ -31,7 +31,7 @@ function getStore() {
 async function readWithFallback(limit) {
   const store = getStore();
   const data = await store.getRecentSearches(limit);
-  if (data.length || store !== pgStore || !isDbFailing()) return data;
+  if (data.length || store !== pgStore || !isDbFailing("recent-searches")) return data;
 
   const fallback = await fileStore.getRecentSearches(limit);
   if (fallback.length) {
