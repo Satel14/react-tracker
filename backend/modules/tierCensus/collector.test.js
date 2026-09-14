@@ -8,7 +8,7 @@ const account = (i) => `account.${String(i).padStart(32, "0")}`;
 // A fake PUBG that answers from a script, records what was asked, and never
 // sleeps -- the pacer's delays are handed to an injected sleep.
 const fakeApi = (options = {}) => {
-  const { matchTypes = [], ranked = () => "gold", fail = () => null } = options;
+  const { matchTypes = [], ranked = () => "gold", fail = () => null, rankedStats } = options;
   // A destructuring default fires on `undefined` whether or not the key was
   // passed at all, so `gameMode: undefined` (used to simulate a match payload
   // with no game mode) would otherwise be silently coerced back to "squad".
@@ -53,18 +53,15 @@ const fakeApi = (options = {}) => {
 
       // ranked lookup
       const tier = ranked(url);
+      const stats = rankedStats
+        ? rankedStats(url)
+        : tier
+        ? { squad: { roundsPlayed: 20, currentTier: { tier, subTier: "2" }, currentRankPoint: 2400 } }
+        : {};
       return {
         status: 200,
         headers: new Map([["x-ratelimit-remaining", "90"], ["x-ratelimit-reset", "9999999999"]]),
-        json: async () => ({
-          data: {
-            attributes: {
-              rankedGameModeStats: tier
-                ? { squad: { currentTier: { tier, subTier: "2" }, currentRankPoint: 2400 } }
-                : {},
-            },
-          },
-        }),
+        json: async () => ({ data: { attributes: { rankedGameModeStats: stats } } }),
       };
     },
   };
@@ -455,4 +452,130 @@ test("a guard that throws lets the run go ahead", async () => {
 
   assert.equal(result.skipped, false);
   assert.equal(result.observations.length, 30);
+});
+
+// PUBG lists every ranked mode, including ones the player never queued, and the
+// order is its own. Reading whichever came first files a Diamond player as
+// unranked -- and /samples only serves recent days, so it cannot be repaired.
+test("reads the tier from a mode that was played, not from whichever came first", async () => {
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    rankedStats: () => ({
+      "solo-fpp": { roundsPlayed: 0, currentTier: { tier: "", subTier: "" }, currentRankPoint: 0 },
+      "squad-fpp": { roundsPlayed: 31, currentTier: { tier: "Diamond", subTier: "3" }, currentRankPoint: 3900 },
+    }),
+  });
+  const result = await run(api);
+
+  assert.equal(result.observations[0].tier, "diamond");
+  assert.equal(result.observations[0].subTier, 3);
+  assert.equal(result.observations[0].rankPoint, 3900);
+});
+
+test("falls back to a mode that carries a tier when no mode reports rounds", async () => {
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    rankedStats: () => ({
+      "solo-fpp": { currentTier: { tier: "", subTier: "" }, currentRankPoint: 0 },
+      "squad-fpp": { currentTier: { tier: "Master", subTier: "1" }, currentRankPoint: 4600 },
+    }),
+  });
+  const result = await run(api);
+
+  assert.equal(result.observations[0].tier, "master");
+});
+
+test("a player whose every mode is an empty shell keeps a null tier", async () => {
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    rankedStats: () => ({
+      "solo-fpp": { roundsPlayed: 0, currentTier: { tier: "", subTier: "" }, currentRankPoint: 0 },
+      "duo-fpp": { roundsPlayed: 0, currentTier: { tier: "", subTier: "" }, currentRankPoint: 0 },
+    }),
+  });
+  const result = await run(api);
+
+  assert.equal(result.observations[0].tier, null);
+  assert.equal(result.observations.length, 15);
+});
+
+// Node's fetch REJECTS on a socket or DNS error rather than answering non-200,
+// so an unguarded call throws out of the run and discards the hour of quota
+// that produced everything before it.
+test("a player lookup that rejects once is retried rather than lost", async () => {
+  let thrown = false;
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    fail: (url) => {
+      if (!url.includes("/ranked") || thrown) return null;
+      thrown = true;
+      throw new TypeError("fetch failed");
+    },
+  });
+  const result = await run(api);
+
+  assert.equal(result.playersFailed, 0);
+  assert.equal(result.observations.length, 15);
+});
+
+test("a player lookup that keeps rejecting is counted, not fatal", async () => {
+  let doomed = null;
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    fail: (url) => {
+      if (!url.includes("/ranked")) return null;
+      if (doomed === null) doomed = url;
+      if (url !== doomed) return null;
+      throw new TypeError("fetch failed");
+    },
+  });
+  const result = await run(api);
+
+  assert.equal(result.playersFailed, 1);
+  assert.equal(result.observations.length, 14);
+});
+
+test("a match classification that rejects is counted, not fatal", async () => {
+  const api = fakeApi({
+    matchTypes: ["competitive", "competitive"],
+    fail: (url) => {
+      if (!url.includes("match-0")) return null;
+      throw new TypeError("fetch failed");
+    },
+  });
+  const result = await run(api);
+
+  assert.equal(result.matchesSeen, 2);
+  assert.equal(result.matchesFailed, 1);
+  assert.equal(result.rankedMatches, 1);
+});
+
+test("a body that will not parse is counted, not fatal", async () => {
+  let thrown = false;
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    fail: (url) => {
+      if (!url.includes("/ranked") || thrown) return null;
+      thrown = true;
+      return { status: 200, headers: new Map(), json: async () => { throw new SyntaxError("Unexpected token <"); } };
+    },
+  });
+  const result = await run(api);
+
+  assert.equal(result.playersFailed, 1);
+  assert.equal(result.observations.length, 14);
+});
+
+test("a sample that rejects ends the run cleanly rather than throwing", async () => {
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    fail: (url) => {
+      if (!url.includes("/samples")) return null;
+      throw new TypeError("fetch failed");
+    },
+  });
+  const result = await run(api);
+
+  assert.equal(result.matchesFailed, 1);
+  assert.equal(result.observations.length, 0);
 });

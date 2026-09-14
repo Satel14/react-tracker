@@ -55,9 +55,17 @@ const createPacer = ({ now = Date.now } = {}) => {
 
       // The upstream counter says the window is nearly spent -- wait it out
       // rather than take the calls a visitor might need.
-      if (remaining <= reserve) {
-        return windowResetAt > at ? windowResetAt - at : WINDOW_MS;
-      }
+      //
+      // Only while the reset is still ahead of us. `remaining` only ever falls
+      // here: record() decrements it, a 429 zeroes it, and nothing but a
+      // response header puts it back -- and header() returns undefined for a
+      // header PUBG did not send. Gating on a reset that has already passed
+      // would answer a whole window before every call for the rest of the run,
+      // and shouldAbort could not see it because it measures against LIMIT
+      // rather than the rate actually achieved. A stale counter is not
+      // knowledge; the local ceiling below already holds CEILING - LIMIT back
+      // for the live site, so falling through to it is the safe reading.
+      if (windowResetAt > at && remaining <= reserve) return windowResetAt - at;
 
       // Our own ceiling: the oldest call in the window has to age out first.
       if (recent.length >= LIMIT) return recent[0] + WINDOW_MS - at;

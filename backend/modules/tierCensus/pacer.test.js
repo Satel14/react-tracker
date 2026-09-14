@@ -87,6 +87,45 @@ test("does not give up when there is nothing left to do", () => {
   assert.equal(pacer().shouldAbort({ remainingCalls: 0, msLeft: 0 }), false);
 });
 
+// `remaining` only ever falls: record() decrements it and a 429 zeroes it. Only
+// a response header puts it back, and header() returns undefined for a header
+// PUBG did not send. Without a rollover the pacer sits below the reserve with a
+// reset already in the past and answers a whole window before EVERY call -- one
+// observation a minute for the rest of the hour, while shouldAbort measures
+// against LIMIT and so never notices.
+test("does not stay blocked once the reset it was told about has passed", () => {
+  const p = pacer();
+  p.rateLimited({ resetAt: 60 });
+  assert.equal(p.delayBefore(61_000), 0);
+});
+
+test("keeps going when responses stop carrying a rate-limit header", () => {
+  const p = pacer();
+  for (let i = 0; i < 80; i += 1) {
+    const at = i * 1_100;
+    p.delayBefore(at);
+    p.record(at);
+    p.observe({ remaining: undefined, resetAt: undefined });
+  }
+  assert.equal(p.delayBefore(90_000), 0);
+});
+
+// Recovering the estimate must not become a way round the ceiling that holds
+// CEILING - LIMIT back for the live site.
+test("its own ceiling still binds after the window has rolled over", () => {
+  const p = pacer();
+  p.rateLimited({ resetAt: 60 });
+  for (let i = 0; i < LIMIT; i += 1) p.record(61_000);
+  assert.ok(p.delayBefore(61_000) > 0, "spent more than its own ceiling in one window");
+});
+
+// A reset still in the future is real information and must still be obeyed.
+test("still waits out a reset that has not arrived yet", () => {
+  const p = pacer();
+  p.observe({ remaining: 0, resetAt: 120 });
+  assert.ok(p.delayBefore(60_000) > 0);
+});
+
 test("reports what it did so a run can be judged", () => {
   const p = pacer();
   p.record(0);
