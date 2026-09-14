@@ -44,3 +44,13 @@ test("createCorsOptions rejects an origin that is not whitelisted", () => {
   assert.match(result.err.message, /not allowed by CORS/);
   assert.notEqual(result.allowed, true);
 });
+
+// The error goes to express's error handler, which reads `status` off it. An
+// untagged error is a 500, and a caller told "something went wrong" has no way
+// to tell a server fault from an origin it was never going to be allowed from.
+test("a rejected origin is tagged as a 403, not left to read as a server fault", () => {
+  const { origin } = createCorsOptions("https://a.com");
+  let result;
+  origin("https://evil.com", (err) => { result = err; });
+  assert.equal(result.status, 403);
+});

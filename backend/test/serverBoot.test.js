@@ -44,11 +44,22 @@ const waitForHealthz = async (port, deadlineMs = 15000) => {
   return null;
 };
 
-// The one thing no other test covers: that server.js itself -- its own module
-// scope, its listen call -- comes up. optionalCredentials.test.js stops at
-// routes(app) because it must not bind a port, and requireResolution.test.js
-// never executes a module at all.
-test("server.js comes up and serves /healthz", async (t) => {
+const post = (port, path, body, headers = {}) =>
+  new Promise((resolve) => {
+    const req = http.request(
+      { port, host: "127.0.0.1", path, method: "POST", headers: { "Content-Type": "application/json", ...headers } },
+      (res) => {
+        let payload = "";
+        res.on("data", (chunk) => { payload += chunk; });
+        res.on("end", () => resolve({ code: res.statusCode, type: res.headers["content-type"], body: payload }));
+      },
+    );
+    req.on("error", () => resolve(null));
+    req.setTimeout(2000, () => { req.destroy(); resolve(null); });
+    req.end(body);
+  });
+
+const startServer = async (t) => {
   const port = await freePort();
   const env = { ...process.env, NODE_ENV: "production", PORT: String(port) };
   // Set deliberately. server.js used to answer CI by calling process.exit(0)
@@ -66,7 +77,16 @@ test("server.js comes up and serves /healthz", async (t) => {
   t.after(() => child.kill());
 
   const answer = await waitForHealthz(port);
-  assert.equal(answer?.code, 200, `/healthz never answered on port ${port}. stderr:\n${stderr}`);
+  return { port, answer, stderr: () => stderr };
+};
+
+// The one thing no other test covers: that server.js itself -- its own module
+// scope, its listen call -- comes up. optionalCredentials.test.js stops at
+// routes(app) because it must not bind a port, and requireResolution.test.js
+// never executes a module at all.
+test("server.js comes up and serves /healthz", async (t) => {
+  const { port, answer, stderr } = await startServer(t);
+  assert.equal(answer?.code, 200, `/healthz never answered on port ${port}. stderr:\n${stderr()}`);
 
   // Every Postgres-backed store answers a failure with an empty list, so an
   // outage shows up nowhere a person looks. This is where it shows up. With no
@@ -78,4 +98,35 @@ test("server.js comes up and serves /healthz", async (t) => {
     ["unknown", "ok", "failing"].includes(payload.db.status),
     `unexpected db status: ${JSON.stringify(payload.db)}`,
   );
+});
+
+// Every route in this API answers with a { status, message } envelope, including
+// its own errors. body-parser is the one thing upstream of them all: a malformed
+// body rejects before any handler runs, and with no error handler registered
+// express falls back to its own, which answers HTML -- with a stack trace unless
+// NODE_ENV happens to be production.
+test("a malformed body is answered in the API's own envelope", async (t) => {
+  const { port, answer, stderr } = await startServer(t);
+  assert.equal(answer?.code, 200, `server never came up. stderr:\n${stderr()}`);
+
+  const res = await post(port, "/api/player/rank", "{not json");
+
+  assert.equal(res?.code, 400);
+  assert.match(res.type, /application\/json/, `answered ${res.type} with: ${res.body}`);
+  const payload = JSON.parse(res.body);
+  assert.equal(payload.status, 400);
+  assert.equal(typeof payload.message, "string");
+});
+
+// The message is written for a person reading a response, not copied from the
+// parser: "Unexpected token n in JSON at position 1" tells a caller where our
+// parser is in its input, which is nobody's business but ours.
+test("the malformed-body answer does not leak a stack trace", async (t) => {
+  const { port, answer, stderr } = await startServer(t);
+  assert.equal(answer?.code, 200, `server never came up. stderr:\n${stderr()}`);
+
+  const res = await post(port, "/api/player/rank", "{not json");
+
+  assert.doesNotMatch(res.body, /at \w+.*\(/, "a stack frame reached the client");
+  assert.doesNotMatch(res.body, /node_modules/);
 });
