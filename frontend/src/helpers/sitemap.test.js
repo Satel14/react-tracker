@@ -12,15 +12,17 @@ describe("what the sitemap lists", () => {
   // a route's `sitemap` flag would change both sides and pass. This list is the
   // independent statement of what we submit, so changing that set has to be
   // deliberate enough to edit a test.
-  it("is exactly these seven URLs", () => {
+  it("is exactly these nine URLs", () => {
     expect(locsIn(xml())).toEqual([
       "https://www.pubgtracker.top/",
       "https://www.pubgtracker.top/leaderboards",
       "https://www.pubgtracker.top/help",
       "https://www.pubgtracker.top/ranks",
       "https://www.pubgtracker.top/rank-points",
+      "https://www.pubgtracker.top/ranked-lobbies",
       "https://www.pubgtracker.top/ua/ranks",
       "https://www.pubgtracker.top/ua/rank-points",
+      "https://www.pubgtracker.top/ua/ranked-lobbies",
     ]);
   });
 
@@ -76,7 +78,11 @@ describe("lastmod", () => {
       expect(lastmodFor(path), path).toBeNull();
     }
     const undated = entriesIn(xml()).filter((entry) => !entry.includes("<lastmod>"));
-    expect(undated).toHaveLength(3);
+    // /, /help, /leaderboards, plus the two ranked-lobbies pages: they read the
+    // same committed snapshot as /ranks and /rank-points but are not in
+    // CENSUS_PAGES, because the number that page publishes -- the lobby mix --
+    // is not in the snapshot yet.
+    expect(undated).toHaveLength(5);
   });
 
   it("writes a date Google will parse", () => {

@@ -225,6 +225,12 @@ it("sends a reader from the tier shares to the rank point standings", () => {
     .toHaveAttribute("href", "/rank-points");
 });
 
+it("sends a reader from the tier shares to the ranked lobby mix", () => {
+  renderPage();
+  expect(screen.getByRole("link", { name: en.pages.ranks.distribution.seeRankedLobbies }))
+    .toHaveAttribute("href", "/ranked-lobbies");
+});
+
 test("renders the committed census reading rather than a loading line", () => {
   const { container } = renderPage();
   const section = container.querySelector("#distribution");

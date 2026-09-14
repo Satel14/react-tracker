@@ -70,23 +70,33 @@ const RankPercentile = ({ t, rankPoint, seasonId, load = getRankDistribution, da
   });
 
   return (
-    <p className="player-rank-percentile">
-      {/* The visible line answers the one question the reader arrived with, and
-          /rank-points is the page that answers it at length. It used to point
-          at /ranks#distribution, which answers the neighbouring question about
-          tier shares. */}
-      <Link to="/rank-points" title={detail}>
-        {t("pages.player.percentile.line", { n: below })}
-        {/* The same measurement from the other end, for readers who already
-            think in "top n%". Second, and quieter: it is the framing that
-            needs inverting before it means anything. */}
-        {at <= BADGE_UP_TO && (
-          <span className="player-rank-percentile__top">
-            {t("pages.player.percentile.top", { percent: at })}
-          </span>
-        )}
-      </Link>
-    </p>
+    <>
+      <p className="player-rank-percentile">
+        {/* The visible line answers the one question the reader arrived with, and
+            /rank-points is the page that answers it at length. It used to point
+            at /ranks#distribution, which answers the neighbouring question about
+            tier shares. */}
+        <Link to="/rank-points" title={detail}>
+          {t("pages.player.percentile.line", { n: below })}
+          {/* The same measurement from the other end, for readers who already
+              think in "top n%". Second, and quieter: it is the framing that
+              needs inverting before it means anything. */}
+          {at <= BADGE_UP_TO && (
+            <span className="player-rank-percentile__top">
+              {t("pages.player.percentile.top", { percent: at })}
+            </span>
+          )}
+        </Link>
+      </p>
+      {/* A second, quieter footnote rather than a second sentence bolted onto
+          the first: the standing above is the one question a reader arrived
+          with, and this is the neighbouring one. The player page is
+          noindex, so this is also how the ranked-lobbies page picks up
+          equity from every profile that renders it. */}
+      <p className="player-rank-percentile__lobby">
+        <Link to="/ranked-lobbies">{t("pages.player.percentile.lobbyLink")}</Link>
+      </p>
+    </>
   );
 };
 

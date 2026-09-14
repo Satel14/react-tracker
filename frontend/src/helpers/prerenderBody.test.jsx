@@ -12,7 +12,8 @@ describe("which routes ship their article", () => {
   // prose in it would become duplicate copy across an unbounded set of them.
   it("renders the article, the homepage body, the FAQ and the leaderboard prose", () => {
     expect(PRERENDERED_ROUTES).toEqual([
-      "/ranks", "/ua/ranks", "/rank-points", "/ua/rank-points", "/", "/help", "/leaderboards",
+      "/ranks", "/ua/ranks", "/rank-points", "/ua/rank-points",
+      "/ranked-lobbies", "/ua/ranked-lobbies", "/", "/help", "/leaderboards",
     ]);
   });
 
@@ -302,6 +303,53 @@ describe("the rank points pages", () => {
       expect(page(path), path).toContain('href="/ranks"');
       expect(page(path), path).toContain('href="/leaderboards"');
     }
+  });
+});
+
+describe("the ranked lobbies pages", () => {
+  const page = (path) => prerenderBody(path);
+
+  it("renders a body rather than a stub, in both languages", () => {
+    for (const path of ["/ranked-lobbies", "/ua/ranked-lobbies"]) {
+      const words = page(path).replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean);
+      expect(words.length, path).toBeGreaterThan(250);
+    }
+  });
+
+  it("carries exactly one h1 on each", () => {
+    for (const path of ["/ranked-lobbies", "/ua/ranked-lobbies"]) {
+      expect((page(path).match(/<h1[ >]/g) || []).length, path).toBe(1);
+    }
+  });
+
+  it("reads each language from its own dictionary", () => {
+    expect(decode(page("/ranked-lobbies"))).toContain(en.pages.rankedLobbies.title);
+    expect(page("/ua/ranked-lobbies")).toContain("Хто насправді сидить у твоєму рейтинговому лобі PUBG?");
+  });
+
+  it("links the article and the rank points page from both", () => {
+    for (const path of ["/ranked-lobbies", "/ua/ranked-lobbies"]) {
+      expect(page(path), path).toContain('href="/ranks"');
+      expect(page(path), path).toContain('href="/rank-points"');
+    }
+  });
+
+  // The committed tierCensus.json snapshot carries neither `lobbyMix` nor
+  // `rpPercentiles` yet -- the nightly census job only adds a projection's key
+  // the first time it runs after the backend that produces it deploys. So at
+  // merge time this page is correctly in its "still collecting" state, and
+  // there are no percentages anywhere in the file to find. Asserting a "%"
+  // here would fail for a reason that has nothing to do with this page being
+  // broken. The follow-up -- asserting the real digits -- belongs to the day
+  // the projection lands in the committed snapshot, the same sequence
+  // /rank-points went through for `rpPercentiles` (see the "states what it
+  // refuses to publish" test above, which shipped before its own numbers did).
+  it("renders the gathering state, not a loading line, until the lobby mix ships", () => {
+    const html = decode(page("/ranked-lobbies"));
+    expect(html).toContain(en.pages.rankedLobbies.title);
+    expect(html).toContain(en.pages.rankedLobbies.intro.slice(0, 40));
+    expect(html).toContain("Collection for Season");
+    expect(html).not.toContain(en.pages.ranks.distribution.loading);
   });
 });
 

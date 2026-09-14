@@ -95,6 +95,22 @@ export const ROUTE_META = [
     sitemap: true,
     body: true,
   },
+  // No season number in this head either, for the same reason as above: the
+  // page dates itself from the snapshot rather than from a title that would
+  // need editing every rollover. No `nav` key: the header has no room for a
+  // third item (see NAV_ORDER's comment below).
+  {
+    path: "/ranked-lobbies",
+    file: "ranked-lobbies.html",
+    title: "Who Shares Your PUBG Ranked Lobby? Measured Tier Mix",
+    description:
+      "Which tiers actually share a PUBG ranked lobby with yours, measured from a daily sample across all eight tiers of the ladder.",
+    h1: "Who's really in your PUBG ranked lobby?",
+    intro:
+      "PUBG puts ranked players into lobbies by rating, but it never says how wide that net is cast. This page reads it off a measured sample: for a player sitting in a given tier, the tiers of the other players who turned up in the same lobby.",
+    sitemap: true,
+    body: true,
+  },
   // The same article, rendered from the ua dictionary. `translationOf` is what
   // pairs the two: it drives the hreflang set, the language switch and the
   // sitemap entry, so a twin cannot exist half-wired.
@@ -127,6 +143,23 @@ export const ROUTE_META = [
     h1: "Чи добре твоє RP у PUBG?",
     intro:
       "Скільки RP на кожному зрізі ладдера, виміряно з добової вибірки рейтингових лобі — і куди серед них потрапляє конкретне число.",
+    sitemap: true,
+    body: true,
+  },
+  // No season number in this head either, and no `nav` key: the header has no
+  // room for a third item (see NAV_ORDER's comment below).
+  {
+    path: "/ua/ranked-lobbies",
+    file: "ua/ranked-lobbies.html",
+    lang: "uk",
+    translations: "ua",
+    translationOf: "/ranked-lobbies",
+    title: "Хто насправді в рейтинговому лобі PUBG? Склад тірів",
+    description:
+      "Які тіри насправді ділять рейтингове лобі з твоїм, виміряно з добової вибірки матчів по всіх восьми тірах драбини.",
+    h1: "Хто насправді сидить у твоєму рейтинговому лобі PUBG?",
+    intro:
+      "PUBG розподіляє рейтингових гравців по лобі за рейтингом, але ніде не каже, наскільки широко закинуто цю сітку. Ця сторінка читає це з виміряної вибірки: для гравця з певного тіру — тіри інших гравців, які опинилися з ним в одному лобі.",
     sitemap: true,
     body: true,
   },
@@ -202,6 +235,9 @@ export const ROUTE_META = [
 // 194px. The route keeps its `nav` label for the day the header is rebuilt.
 // Until then the page is reached from the /ranks distribution section, from
 // every player page's percentile line, and from the sitemap.
+// /ranked-lobbies is absent for the same reason, and does not even keep a
+// `nav` label -- it was never in the running for the header, so there is no
+// day it is waiting for. It is reached from /ranks and from RankPercentile.jsx.
 const NAV_ORDER = ["/", "/leaderboards", "/ranks", "/help"];
 
 export const NAV_ROUTES = NAV_ORDER.map((path) => {

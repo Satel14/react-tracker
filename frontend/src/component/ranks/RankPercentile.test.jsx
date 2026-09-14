@@ -53,7 +53,7 @@ const sentence = () => {
 // reader invert it themselves to see that it is good -- and most do not.
 test("tells the player how many out of a hundred they are above", async () => {
   show();
-  const note = await screen.findByRole("link");
+  const note = await screen.findByRole("link", { name: /Better than/ });
 
   // The line says "better than n out of 100 players", and /rank-points is the
   // page that answers that sentence. /ranks#distribution answers the
@@ -74,7 +74,7 @@ test("the badge and the sentence never disagree", async () => {
   for (const at of [1, 16, 50]) {
     document.body.innerHTML = "";
     show({ rankPoint: thresholds[at] });
-    await screen.findByRole("link");
+    await screen.findByRole("link", { name: /Better than/ });
 
     const above = Number(sentence().match(/\d+/)[0]);
     const percentile = Number(badge().textContent.match(/\d+/)[0]);
@@ -96,7 +96,7 @@ test("counts the same way at the top and at the bottom", async () => {
   for (const [rankPoint, expected] of readings) {
     document.body.innerHTML = "";
     show({ rankPoint });
-    await screen.findByRole("link");
+    await screen.findByRole("link", { name: /Better than/ });
     expect(line().textContent, `${rankPoint} RP`).toMatch(new RegExp(`\\b${expected}\\b`));
   }
 });
@@ -104,6 +104,17 @@ test("counts the same way at the top and at the bottom", async () => {
 test("says nothing until the sample has arrived", () => {
   show({ load: () => new Promise(() => {}) });
   expect(line()).toBeNull();
+});
+
+// The player page is noindex, follow -- this footnote is how it passes
+// equity to /ranked-lobbies, which answers the neighbouring question about
+// who actually shares a lobby with this tier.
+test("links to the ranked lobby mix beside the standing", async () => {
+  show();
+  await screen.findByRole("link", { name: /Better than/ });
+
+  const lobbyLink = screen.getByRole("link", { name: en.pages.player.percentile.lobbyLink });
+  expect(lobbyLink).toHaveAttribute("href", "/ranked-lobbies");
 });
 
 // The page can be showing any season. A standing has to be measured against
@@ -142,7 +153,7 @@ test("says nothing when the census cannot be reached", async () => {
 // the link already points at.
 test("keeps the methodology out of the visible line", async () => {
   show();
-  const link = await screen.findByRole("link");
+  const link = await screen.findByRole("link", { name: /Better than/ });
 
   expect(line().textContent).not.toContain("4,430");
   expect(line().textContent).not.toMatch(/7 days|sampled/i);
@@ -152,7 +163,7 @@ test("keeps the methodology out of the visible line", async () => {
 
 test("keeps the plain sentence short", async () => {
   show();
-  await screen.findByRole("link");
+  await screen.findByRole("link", { name: /Better than/ });
   expect(sentence().length).toBeLessThan(45);
 });
 
@@ -164,7 +175,7 @@ test("drops the badge once top-n%% stops being a phrase", async () => {
   for (const [at, expected] of [[50, true], [51, false], [78, false], [97, false]]) {
     document.body.innerHTML = "";
     show({ rankPoint: thresholds[at] });
-    await screen.findByRole("link");
+    await screen.findByRole("link", { name: /Better than/ });
 
     expect(Boolean(badge()), `percentile ${at}`).toBe(expected);
     // The sentence itself never goes away, at any level.
