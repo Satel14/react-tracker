@@ -703,6 +703,46 @@
       },
       "seeRanks": "How the ranked system works: tiers, RP and Survivor",
       "seeLeaderboards": "See who is at the top of each region right now"
+    },
+    "rankedLobbies": {
+      "title": "Who's really in your PUBG ranked lobby?",
+      "intro": "PUBG puts ranked players into lobbies by rating, but it never says how wide that net is cast. This page reads it off a measured sample: for a player sitting in a given tier, the tiers of the other players who turned up in the same lobby.",
+      "lead": "Each row is one tier's lobby: the share of players from every other tier who turned up alongside it in the same match.",
+      "table": {
+        "heading": "Who shares a lobby with each tier",
+        "tierHeader": "Tier",
+        "cell": "{percent}%"
+      },
+      "tier": {
+        "bronze": "Bronze",
+        "silver": "Silver",
+        "gold": "Gold",
+        "platinum": "Platinum",
+        "crystal": "Crystal",
+        "diamond": "Diamond",
+        "master": "Master",
+        "survivor": "Survivor",
+        "unranked": "Unranked"
+      },
+      "gathering": "Collection for Season {season} has only just started, so there is no lobby table to publish yet. It appears here once the sample has enough days behind it.",
+      "finished": "Season {season} has ended, so these are its final readings. Ranked resets with every season, and the table switches over once the new one has enough days behind it.",
+      "sample": "Measured from {accounts} accounts across {matches} ranked matches on {platform}, {from} to {to}.",
+      "platform": "PC (Steam)",
+      "method": {
+        "heading": "How this is measured",
+        "p1": "Once a day we ask PUBG for a random sample of finished ranked matches. From each one we pick a player at random as the focal player, note their tier, and read the tiers of the other sampled players who shared that lobby with them. Pooled over the last seven days.",
+        "p2": "Each table row is that tier's pool turned into a share: of everyone sampled in a lobby alongside that tier's players, what fraction sat in every other tier. It describes who showed up alongside that tier in the sample, not a matchmaking rule PUBG enforces or a promise about any lobby still to come."
+      },
+      "limits": {
+        "heading": "What this cannot tell you",
+        "p1": "This is the Steam shard only. Console and Kakao run their own ladders and we measure neither.",
+        "p2": "PUBG lobbies hold roughly sixty players, and only about fifteen of them turn up as sampled readings. The table describes who showed up among those readings, not everyone who was actually in the match.",
+        "p3": "Solo, duos and squads are separate matchmaking queues, and a squad's rating does not work the same way a solo player's does. This reading pools all three without separating them, so a row blends lobbies from every queue size.",
+        "p4": "A player who turns up on more than one day of the window is counted once, from their most recent lobby only, so the lobbies behind this table run a little thinner than fifteen readings. That costs sample size, not balance — it does not favor one tier's numbers over another's.",
+        "p5": "Master and Survivor are rare enough that we do not have enough sampled focal players in either tier to publish a row of its own. They still appear as columns, though: sitting across from a Master or a Survivor is a real part of another tier's lobby, even where we cannot measure that tier's own lobby from the inside."
+      },
+      "seeRanks": "How the ranked system works: tiers, RP and Survivor",
+      "seeRankPoints": "Is your PUBG RP good? Find out where it stands"
     }
   },
   "footer": {
