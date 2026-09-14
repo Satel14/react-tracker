@@ -15,7 +15,7 @@ const groupDigits = (value) =>
 // shard = "steam", so anything else prints its own name rather than a
 // translation nobody wrote.
 const platformLabel = (t, shard) =>
-  shard === "steam" ? t("pages.rankPoints.platform") : shard || "";
+  shard === "steam" ? t("pages.rankedLobbies.platform") : shard || "";
 
 // One decimal below ten percent or above ninety, none in between. A tier at
 // 0.4% rounds to "0" at zero decimals, which reads as absent rather than

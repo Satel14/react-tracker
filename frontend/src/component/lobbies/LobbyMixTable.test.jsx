@@ -81,3 +81,12 @@ test("the sample line names the window and the platform", () => {
   expect(screen.getByText(/2026-09-11/)).toBeInTheDocument();
   expect(screen.getByText(/2026-09-13/)).toBeInTheDocument();
 });
+
+// The platform label must come from this page's own dictionary namespace, not
+// borrowed from rank-points's -- otherwise a rewording of that page's label
+// silently rewords this one too, and this page's own key ships unread.
+test("the platform label is read from this page's own namespace", () => {
+  render(<LobbyMixTable t={t} data={payload([goldRow])} />);
+  expect(screen.getByText(/pages\.rankedLobbies\.platform\b/)).toBeInTheDocument();
+  expect(screen.queryByText(/pages\.rankPoints\.platform/)).not.toBeInTheDocument();
+});
