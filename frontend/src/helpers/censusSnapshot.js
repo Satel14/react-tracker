@@ -153,7 +153,9 @@ export const lobbyMixRows = (data) => {
 
   for (const row of rows) {
     if (!Array.isArray(row?.mix)) return null;
-    const total = row.mix.reduce((sum, cell) => sum + (Number(cell?.share) || 0), 0);
+    // A coercible value like null or "" is not a number; only real finite numbers count.
+    if (!row.mix.every((cell) => typeof cell?.share === "number" && Number.isFinite(cell.share))) return null;
+    const total = row.mix.reduce((sum, cell) => sum + cell.share, 0);
     if (Math.abs(total - 1) > MIX_SUM_TOLERANCE) return null;
   }
 

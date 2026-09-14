@@ -328,4 +328,14 @@ describe("lobbyMixRows", () => {
   it("no publishable row means nothing to draw", () => {
     expect(lobbyMixRows({ lobbyMix: [row("master", false)] })).toBeNull();
   });
+
+  it("a mix with a coerced share (not a real number) is refused whole", () => {
+    const corrupted = row("gold", true);
+    corrupted.mix = [
+      { tier: "gold", count: 200, share: 0.7, low: 0.4, high: 0.8 },
+      { tier: "silver", count: 100, share: null, low: 0.2, high: 0.5 },
+      { tier: "bronze", count: 0, share: 0.3, low: 0.1, high: 0.4 },
+    ];
+    expect(lobbyMixRows({ lobbyMix: [corrupted] })).toBeNull();
+  });
 });
