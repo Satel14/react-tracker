@@ -7,6 +7,8 @@ import {
   rpTable,
   RP_TABLE_LENGTH,
   MIN_POOLED_WINDOWS,
+  lobbyMixRows,
+  gatedMixRows,
 } from "./censusSnapshot";
 import committed from "../data/tierCensus.json";
 
@@ -292,5 +294,112 @@ describe("the RP table is not part of snapshot usability", () => {
     );
     expect(snap).not.toBeNull();
     expect(rpTable(snap)).toBeNull();
+  });
+});
+
+const row = (tierName, over) => ({
+  tier: tierName,
+  lobbies: over ? 40 : 3,
+  focals: 100,
+  opponents: 300,
+  publishable: Boolean(over),
+  mix: [
+    { tier: "gold", count: 200, share: 2 / 3, low: 0.4, high: 0.8 },
+    { tier: "silver", count: 100, share: 1 / 3, low: 0.2, high: 0.5 },
+  ],
+});
+
+describe("lobbyMixRows", () => {
+  it("keeps only the rows that carry their own sample", () => {
+    const rows = lobbyMixRows({ lobbyMix: [row("gold", true), row("master", false)] });
+    expect(rows.map((r) => r.tier)).toEqual(["gold"]);
+  });
+
+  it("a mix whose shares do not add to one is refused whole", () => {
+    const broken = row("gold", true);
+    broken.mix = [{ tier: "gold", count: 1, share: 0.2, low: 0, high: 1 }];
+    expect(lobbyMixRows({ lobbyMix: [broken] })).toBeNull();
+  });
+
+  it("absence is not emptiness", () => {
+    expect(lobbyMixRows({})).toBeNull();
+    expect(lobbyMixRows(null)).toBeNull();
+  });
+
+  it("no publishable row means nothing to draw", () => {
+    expect(lobbyMixRows({ lobbyMix: [row("master", false)] })).toBeNull();
+  });
+
+  it("a mix with a coerced share (not a real number) is refused whole", () => {
+    const corrupted = row("gold", true);
+    corrupted.mix = [
+      { tier: "gold", count: 200, share: 0.7, low: 0.4, high: 0.8 },
+      { tier: "silver", count: 100, share: null, low: 0.2, high: 0.5 },
+      { tier: "bronze", count: 0, share: 0.3, low: 0.1, high: 0.4 },
+    ];
+    expect(lobbyMixRows({ lobbyMix: [corrupted] })).toBeNull();
+  });
+
+  // lobbyMix.js legitimately emits mix: [] for a tier whose lobbies held no
+  // other sampled player (its own test "a lobby with one sampled player
+  // contributes no pairs" pins that) -- and that same aggregator never marks
+  // such a row publishable (it requires opponents > 0). An empty,
+  // UNPUBLISHABLE mix sums to zero, and the old check refused the WHOLE
+  // payload for it -- one such row blanked a perfectly good day of data for
+  // every other tier too.
+  it("an unpublishable row with an empty mix does not blank the rest of the payload", () => {
+    const emptyMix = row("survivor", false);
+    emptyMix.mix = [];
+    const rows = lobbyMixRows({ lobbyMix: [row("gold", true), emptyMix] });
+    expect(rows).not.toBeNull();
+    expect(rows.map((r) => r.tier)).toEqual(["gold"]);
+    expect(rows.gated.map((r) => r.tier)).toEqual(["survivor"]);
+  });
+
+  // The aggregator cannot produce a PUBLISHABLE row with an empty mix
+  // (publishable requires opponents > 0, and an empty mix has none), so this
+  // shape is not real data but a malformed payload -- it must not sail through
+  // and render as a row of all-0% cells.
+  it("a publishable row claiming an empty mix is refused as malformed", () => {
+    const impossible = row("survivor", true);
+    impossible.mix = [];
+    expect(lobbyMixRows({ lobbyMix: [row("gold", true), impossible] })).toBeNull();
+  });
+
+  it("keeps the tiers a fresh reading gated out, for the page to name", () => {
+    const rows = lobbyMixRows({ lobbyMix: [row("gold", true), row("master", false)] });
+    expect(rows.gated.map((r) => r.tier)).toEqual(["master"]);
+  });
+});
+
+describe("gatedMixRows", () => {
+  it("names the same gated tiers as the .gated property it stands in for", () => {
+    const data = { lobbyMix: [row("gold", true), row("master", false)] };
+    expect(gatedMixRows(data).map((r) => r.tier)).toEqual(["master"]);
+  });
+
+  it("survives a spread of the published rows, unlike the .gated expando", () => {
+    const data = { lobbyMix: [row("gold", true), row("master", false)] };
+    const rows = lobbyMixRows(data);
+    const copied = [...rows];
+    // The expando does not survive the spread -- this is the failure mode
+    // gatedMixRows exists to route around, pinned here so a future change
+    // that makes .gated itself spread-safe does not silently make this
+    // assertion meaningless.
+    expect(copied.gated).toBeUndefined();
+    // gatedMixRows recomputes from the original data rather than reading
+    // .gated off whatever rows array the caller happens to still be holding,
+    // so it is unaffected by the copy above.
+    expect(gatedMixRows(data).map((r) => r.tier)).toEqual(["master"]);
+  });
+
+  it("is an empty array, not null or undefined, when nothing was gated", () => {
+    expect(gatedMixRows({ lobbyMix: [row("gold", true)] })).toEqual([]);
+  });
+
+  it("is an empty array when the payload has no usable mix at all", () => {
+    expect(gatedMixRows({})).toEqual([]);
+    expect(gatedMixRows(null)).toEqual([]);
+    expect(gatedMixRows({ lobbyMix: [row("master", false)] })).toEqual([]);
   });
 });

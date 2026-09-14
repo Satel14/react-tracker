@@ -19,7 +19,14 @@ import { CENSUS_SNAPSHOT } from "./censusSnapshot.js";
 // The pages whose text the census moves. Their <lastmod> is the moment the
 // reading behind them was taken, which is the moment their content changed --
 // and since the daily job commits that reading, the date maintains itself.
-export const CENSUS_PAGES = ["/ranks", "/ua/ranks", "/rank-points", "/ua/rank-points"];
+export const CENSUS_PAGES = [
+  "/ranks",
+  "/ua/ranks",
+  "/rank-points",
+  "/ua/rank-points",
+  "/ranked-lobbies",
+  "/ua/ranked-lobbies",
+];
 
 // A date for a page we can date, and null for one we cannot.
 //

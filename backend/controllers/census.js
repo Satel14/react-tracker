@@ -9,6 +9,7 @@ const { getCurrentSeasonId, getSeasonCatalog } = require("../modules/getSeasonCa
 const { seasonForWindow, previousSeasonId, seasonStartDate } = require("../modules/tierCensus/seasonWindow");
 const { estimateIcc, PER_MATCH } = require("../modules/tierCensus/sampling");
 const { tierShare, rpThresholds } = require("../modules/tierCensus/stats");
+const { lobbyMix } = require("../modules/tierCensus/lobbyMix");
 const { isDbFailing } = require("../modules/db/health");
 
 const SHARD = "steam";
@@ -226,6 +227,16 @@ const createCensusController = ({
       console.log(`[census] could not build the RP table: ${error.message}`);
     }
 
+    // An extra, like the RP table: built from `rows`, which are already in
+    // hand, so it costs no query -- but a throw here must not cost the page its
+    // tier bars.
+    let mix = null;
+    try {
+      mix = lobbyMix(rows);
+    } catch (error) {
+      console.log(`[census] could not build the lobby mix: ${error.message}`);
+    }
+
     // Tiers come from what was measured, including the untiered bucket -- a
     // player who has not queued ranked this season is a real part of the
     // denominator, not a gap to be quietly dropped.
@@ -264,6 +275,7 @@ const createCensusController = ({
         // ladder. Lets a player page place a visitor without a query of its
         // own. Null when the sample is too thin to cut.
         rpPercentiles,
+        lobbyMix: mix,
         tiers,
       },
     };

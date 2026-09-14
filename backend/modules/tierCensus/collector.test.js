@@ -7,7 +7,12 @@ const account = (i) => `account.${String(i).padStart(32, "0")}`;
 
 // A fake PUBG that answers from a script, records what was asked, and never
 // sleeps -- the pacer's delays are handed to an injected sleep.
-const fakeApi = ({ matchTypes = [], ranked = () => "gold", fail = () => null } = {}) => {
+const fakeApi = (options = {}) => {
+  const { matchTypes = [], ranked = () => "gold", fail = () => null } = options;
+  // A destructuring default fires on `undefined` whether or not the key was
+  // passed at all, so `gameMode: undefined` (used to simulate a match payload
+  // with no game mode) would otherwise be silently coerced back to "squad".
+  const gameMode = "gameMode" in options ? options.gameMode : "squad";
   const asked = [];
   const ids = matchTypes.map((_, i) => `match-${i}`);
   return {
@@ -37,7 +42,7 @@ const fakeApi = ({ matchTypes = [], ranked = () => "gold", fail = () => null } =
           status: 200,
           headers: new Map(),
           json: async () => ({
-            data: { id: ids[index], attributes: { matchType: matchTypes[index], gameMode: "squad" } },
+            data: { id: ids[index], attributes: { matchType: matchTypes[index], gameMode } },
             included: Array.from({ length: 60 }, (_, p) => ({
               type: "participant",
               attributes: { stats: { playerId: account(index * 100 + p) } },
@@ -126,6 +131,21 @@ test("keeps a player who has no ranked stats, with no tier", async () => {
   const untiered = result.observations.filter((r) => r.tier === null);
   assert.ok(untiered.length <= 1);
   assert.equal(result.observations.length, 15, "an untiered player is still an observation");
+});
+
+// Matchmaking queues are separate per mode and the pooled reading mixes them;
+// a window collected without this can never be split retroactively.
+test("carries the match's game mode onto every observation drawn from it", async () => {
+  const api = fakeApi({ matchTypes: ["competitive"], gameMode: "duo" });
+  const result = await run(api);
+  assert.ok(result.observations.length > 0);
+  assert.ok(result.observations.every((o) => o.gameMode === "duo"));
+});
+
+test("a match payload with no game mode records null rather than a guess", async () => {
+  const api = fakeApi({ matchTypes: ["competitive"], gameMode: undefined });
+  const result = await run(api);
+  assert.ok(result.observations.every((o) => o.gameMode === null));
 });
 
 test("normalises the tier to lower case so it joins the ladder", async () => {

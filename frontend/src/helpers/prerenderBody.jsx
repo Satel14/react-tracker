@@ -19,6 +19,7 @@ import { StaticRouter } from "react-router-dom/server.mjs";
 import { setTranslations, setDefaultLanguage, setLanguage } from "react-switch-lang";
 import Ranks from "../pages/Ranks.jsx";
 import RankPoints from "../pages/RankPoints.jsx";
+import RankedLobbies from "../pages/RankedLobbies.jsx";
 import HomeIntro from "../component/home/HomeIntro.jsx";
 import HomeHeading from "../component/home/HomeHeading.jsx";
 import HomeGuideLinks from "../component/home/HomeGuideLinks.jsx";
@@ -59,6 +60,8 @@ const PAGES = {
   "/ua/ranks": { Page: Ranks, language: "ua" },
   "/rank-points": { Page: RankPoints, language: "en" },
   "/ua/rank-points": { Page: RankPoints, language: "ua" },
+  "/ranked-lobbies": { Page: RankedLobbies, language: "en" },
+  "/ua/ranked-lobbies": { Page: RankedLobbies, language: "ua" },
   "/": { Page: HomeStatic, language: "en" },
   "/help": { Page: Help, language: "en" },
   "/leaderboards": { Page: LeaderboardStatic, language: "en" },

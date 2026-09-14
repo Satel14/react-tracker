@@ -802,6 +802,26 @@ body {
         }
       }
 
+      // A second, quieter footnote below the standing above -- same treatment
+      // as .player-rank-percentile, so the two read as one family rather than
+      // one styled link and one taking the browser's own visited-purple.
+      .player-rank-percentile__lobby {
+        margin: 2px 0 0;
+        font-size: 12px;
+        line-height: 1.5;
+        text-align: center;
+
+        a {
+          color: var(--text-muted);
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
+
+        a:hover {
+          color: var(--text);
+        }
+      }
+
       .player-rank-progress__path {
         color: #a8a7a0;
         font-size: 11px;
@@ -4578,6 +4598,151 @@ body {
   // framing that needs inverting before it means anything.
   &__lookup-top {
     margin-left: 8px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  &__section {
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 24px;
+      color: var(--text-strong);
+    }
+
+    p {
+      margin: 0 0 10px;
+      color: var(--text);
+    }
+  }
+
+  &__outro {
+    margin: 0 0 8px;
+
+    a {
+      color: var(--accent);
+
+      &:hover {
+        color: var(--text-strong);
+      }
+    }
+  }
+}
+
+// Tokens only, no literals: same reasoning as .rank-points above.
+.ranked-lobbies {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 0 8px;
+  color: var(--text);
+
+  &__hero {
+    margin-bottom: 28px;
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 34px;
+      color: var(--text-strong);
+    }
+
+    p {
+      margin: 0 0 10px;
+      color: var(--text-muted);
+    }
+  }
+
+  &__lang {
+    color: var(--accent);
+
+    &:hover {
+      color: var(--text-strong);
+    }
+  }
+
+  &__table-wrap {
+    margin-bottom: 28px;
+    // Nine columns (eight ladder tiers, Unranked, plus the row-header column)
+    // cannot fit a phone viewport. Scroll the table inside its own box, the
+    // same idiom the pill tabs use above, rather than letting it drag the
+    // whole document sideways -- this page's only purpose is organic search,
+    // under mobile-first indexing.
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  &__lead {
+    margin: 0 0 16px;
+    font-size: 22px;
+    color: var(--text-strong);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+
+    caption {
+      margin-bottom: 8px;
+      text-align: left;
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+
+    th,
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      color: var(--text);
+    }
+
+    thead th {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-faint);
+    }
+
+    // The reading, not its label: right-aligned and tabular so a column of
+    // percentages lines up on its own decimal column.
+    tbody td {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      color: var(--text-strong);
+    }
+
+    tbody th {
+      font-weight: 400;
+      color: var(--text);
+    }
+  }
+
+  // Always the last thing this component renders -- alone in the gathering
+  // state, or as the sample line closing a real table -- so its own bottom
+  // margin is what separates the page from the next section's h2 either way.
+  // 28px matches &__table-wrap's margin-bottom: inside a wrap this collapses
+  // through and changes nothing, but standalone (gathering) it is the only
+  // margin in play.
+  &__note {
+    margin: 10px 0 28px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  // The gated-tiers note: it sits BETWEEN the table and the rest of this
+  // block's 10px-gapped children, not last, so it takes their spacing rather
+  // than &__note's closing 28px. Its own class rather than an addition to
+  // &__note, whose comment above is specifically about being the last thing
+  // rendered.
+  &__gated-note {
+    margin: 10px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  &__stale {
+    margin: 10px 0 0;
     font-size: 14px;
     color: var(--text-muted);
   }

@@ -13,6 +13,7 @@ const MatchReplayPage = lazy(() => import("../pages/MatchReplayPage"));
 const Leaderboard = lazy(() => import("../pages/Leaderboard"));
 const Ranks = lazy(() => import("../pages/Ranks"));
 const RankPoints = lazy(() => import("../pages/RankPoints"));
+const RankedLobbies = lazy(() => import("../pages/RankedLobbies"));
 
 const routes = [
   {
@@ -72,6 +73,18 @@ const routes = [
   {
     path: "/ua/rank-points",
     component: RankPoints,
+    exact: true,
+  },
+  {
+    path: "/ranked-lobbies",
+    component: RankedLobbies,
+    exact: true,
+  },
+  // Same component, read from the ua dictionary. The language comes from the
+  // URL rather than from localStorage -- see languageForPath in routeMeta.
+  {
+    path: "/ua/ranked-lobbies",
+    component: RankedLobbies,
     exact: true,
   },
   {

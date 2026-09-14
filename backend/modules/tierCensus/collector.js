@@ -165,19 +165,25 @@ const collect = async ({
     const payload = await response.json();
     if (payload?.data?.attributes?.matchType !== RANKED_MATCH_TYPE) continue;
     rankedMatches += 1;
-    ranked.push({ id, accounts: pickParticipants(accountsFromMatch(payload), Math.random, perMatch) });
+    ranked.push({
+      id,
+      gameMode: payload?.data?.attributes?.gameMode ?? null,
+      accounts: pickParticipants(accountsFromMatch(payload), Math.random, perMatch),
+    });
     report();
   }
 
   // 3. Read a tier for each drawn player. Metered, one call each.
-  const queue = ranked.flatMap((match) => match.accounts.map((accountId) => ({ matchId: match.id, accountId })));
+  const queue = ranked.flatMap((match) =>
+    match.accounts.map((accountId) => ({ matchId: match.id, gameMode: match.gameMode, accountId })),
+  );
   for (let i = 0; i < queue.length; i += 1) {
     if (pacer.shouldAbort({ remainingCalls: queue.length - i, msLeft: msLeft() })) {
       aborted = true;
       break;
     }
 
-    const { matchId, accountId } = queue[i];
+    const { matchId, gameMode, accountId } = queue[i];
     const response = await metered(
       `${BASE}/${shard}/players/${accountId}/seasons/${season}/ranked`,
     );
@@ -197,6 +203,7 @@ const collect = async ({
       seasonId: season,
       windowDate,
       matchId,
+      gameMode,
       accountId,
       tier: first?.currentTier?.tier ? String(first.currentTier.tier).toLowerCase() : null,
       subTier: Number(first?.currentTier?.subTier) || null,

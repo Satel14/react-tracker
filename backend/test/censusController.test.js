@@ -6,6 +6,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 const { createCensusController } = require("../controllers/census");
 const { recordDbError, __resetDbHealth } = require("../modules/db/health");
+const { ROW_MIN_LOBBIES } = require("../modules/tierCensus/lobbyMix");
 
 const TOKEN = "a-census-token";
 
@@ -55,6 +56,45 @@ const build = (over = {}) => createCensusController({
 });
 
 const authed = { headers: { authorization: `Bearer ${TOKEN}` } };
+
+// Thirty distinct lobbies (ROW_MIN_LOBBIES), each with the same composition,
+// so every tier's row clears the publishability gate and the pooled mix
+// is a clean, predictable reading of the same rows the tier bars use.
+const windowRows = () => {
+  const rows = [];
+  const seats = [
+    "bronze", "bronze", "silver", "silver", "gold", "gold",
+    "platinum", "platinum", "diamond", null,
+  ];
+  for (let i = 1; i <= ROW_MIN_LOBBIES; i += 1) {
+    const matchId = `lobby-${i}`;
+    for (const tier of seats) rows.push({ matchId, tier });
+  }
+  return rows;
+};
+
+// A tier value whose string conversion throws, so lobbyMix's `String(tier)`
+// blows up while the tier-bucketing code beside it -- which only ever
+// compares tiers with `===` or `??`, never converts them -- does not.
+// This is the only way to make the real (unmockable) lobbyMix throw without
+// also taking the tier shares down with it.
+const poisonedTier = {
+  toString() { throw new Error("malformed tier"); },
+  valueOf() { throw new Error("malformed tier"); },
+};
+const brokenRows = [{ matchId: "broken-1", tier: poisonedTier }];
+
+const distributionFor = async (rows) => {
+  const controller = build({
+    readWindow: async () => rows ?? brokenRows,
+    readCoverage: async () => coverage({
+      windows: 10, matches: ROW_MIN_LOBBIES, firstDate: "2026-08-01", lastDate: "2026-08-30",
+    }),
+  });
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+  return res.body;
+};
 
 // The health signal is module state, and the distribution cache keys its TTL off
 // it, so a test that left it failing would change what the next one caches.
@@ -693,4 +733,54 @@ test("a finished run drops the cached result rather than waiting out its TTL", a
 
   await controller.getDistribution({ query: {} }, makeRes());
   assert.equal(reads, 2, "new observations mean the published figure moved");
+});
+
+// --- the lobby mix ---
+
+test("the distribution carries the lobby mix built from the same rows", async () => {
+  const body = await distributionFor(windowRows());
+  assert.ok(Array.isArray(body.data.lobbyMix));
+  const gold = body.data.lobbyMix.find((r) => r.tier === "gold");
+  assert.ok(gold, "expected a gold row from the fixture");
+  assert.ok(gold.mix.length > 0);
+});
+
+// The tier bars are the point of this endpoint; the mix is an extra, exactly
+// like rpPercentiles. An aggregator that throws must not take the page down.
+test("a failing lobby mix leaves the tier shares intact", async () => {
+  const body = await distributionFor(null);
+  assert.equal(body.data.lobbyMix, null);
+  assert.ok(Array.isArray(body.data.tiers));
+});
+
+// The two tables are two readings of one set of rows, so they must agree --
+// but NOT exactly. Pooling every row counts each sampled player once per other
+// player in their lobby, so the marginal is weighted by lobby size; it would
+// equal the tier shares only if every lobby carried the same number of sampled
+// players, and the DISTINCT ON dedupe guarantees they do not.
+//
+// TOLERANCE is a hand-typed literal on purpose. Deriving it from either side
+// would make this guard move with the thing it guards, and it could then only
+// ever pass -- the failure mode that turned a sitemap guard tautological here
+// once already.
+const TOLERANCE = 0.05;
+
+test("the pooled mix tracks the published tier shares", async () => {
+  const body = await distributionFor(windowRows());
+  const pooled = new Map();
+  let total = 0;
+  for (const row of body.data.lobbyMix) {
+    for (const cell of row.mix) {
+      pooled.set(cell.tier, (pooled.get(cell.tier) ?? 0) + cell.count);
+      total += cell.count;
+    }
+  }
+
+  for (const tier of body.data.tiers) {
+    const mine = (pooled.get(tier.tier) ?? 0) / total;
+    assert.ok(
+      Math.abs(mine - tier.share) < TOLERANCE,
+      `${tier.tier}: mix says ${mine}, tier shares say ${tier.share}`,
+    );
+  }
 });

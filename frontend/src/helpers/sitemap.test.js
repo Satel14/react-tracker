@@ -12,15 +12,17 @@ describe("what the sitemap lists", () => {
   // a route's `sitemap` flag would change both sides and pass. This list is the
   // independent statement of what we submit, so changing that set has to be
   // deliberate enough to edit a test.
-  it("is exactly these seven URLs", () => {
+  it("is exactly these nine URLs", () => {
     expect(locsIn(xml())).toEqual([
       "https://www.pubgtracker.top/",
       "https://www.pubgtracker.top/leaderboards",
       "https://www.pubgtracker.top/help",
       "https://www.pubgtracker.top/ranks",
       "https://www.pubgtracker.top/rank-points",
+      "https://www.pubgtracker.top/ranked-lobbies",
       "https://www.pubgtracker.top/ua/ranks",
       "https://www.pubgtracker.top/ua/rank-points",
+      "https://www.pubgtracker.top/ua/ranked-lobbies",
     ]);
   });
 
@@ -58,7 +60,14 @@ describe("lastmod", () => {
   // rest carry none. Google drops a lastmod it decides is unreliable, and one
   // invented date is enough to earn that for the whole file.
   it("dates the pages whose content the census moves", () => {
-    expect(CENSUS_PAGES).toEqual(["/ranks", "/ua/ranks", "/rank-points", "/ua/rank-points"]);
+    expect(CENSUS_PAGES).toEqual([
+      "/ranks",
+      "/ua/ranks",
+      "/rank-points",
+      "/ua/rank-points",
+      "/ranked-lobbies",
+      "/ua/ranked-lobbies",
+    ]);
     for (const path of CENSUS_PAGES) {
       expect(lastmodFor(path)).toBe(CENSUS_SNAPSHOT.capturedAt);
     }
@@ -76,6 +85,8 @@ describe("lastmod", () => {
       expect(lastmodFor(path), path).toBeNull();
     }
     const undated = entriesIn(xml()).filter((entry) => !entry.includes("<lastmod>"));
+    // /, /help, /leaderboards: the only three routes whose content changes
+    // only when someone deploys, not when the daily census commits a reading.
     expect(undated).toHaveLength(3);
   });
 

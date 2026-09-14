@@ -206,23 +206,75 @@ jobs:
             lastDate: .data.lastDate,
             perMatch: .data.perMatch,
             rpPercentiles: .data.rpPercentiles,
+            lobbyMix: .data.lobbyMix,
             tiers: [.data.tiers[] | {tier, count, share, low, high, n, effectiveN, designEffect, publishable}]
           }
           JQ
-          { printf '{capturedAt: (now | todate)} + (\n'; cat "$RUNNER_TEMP/reading.jq"; printf ')\n'; } > "$RUNNER_TEMP/snapshot.jq"
-
           # capturedAt moves every run, so it is excluded from the comparison:
           # a commit a day that says nothing new is a deploy a day for nothing.
-          # -S on both sides, so key order cannot make two equal readings differ.
-          fresh=$(printf '%s' "$body" | jq -S -f "$RUNNER_TEMP/reading.jq")
+          #
+          # Not -S here: $fresh is the value that ends up on disk, and it
+          # should keep the order the projection above declares rather than an
+          # alphabetised one -- a commit whose only change is every key moving
+          # would still say "refresh the published tier distribution". -S is
+          # applied further down, but only to a throwaway copy made for the
+          # fresh/held comparison, so key order still cannot make two equal
+          # readings differ there.
+          fresh=$(printf '%s' "$body" | jq -f "$RUNNER_TEMP/reading.jq")
+
+          # Hoisted above the splice below, which needs both: the held mix may
+          # only stand in for a missing fresh one when the two name the same
+          # season, and this is also the season-rollover check further down.
+          was=$(jq -r '.seasonId // ""' "$SNAPSHOT" 2>/dev/null || echo "")
+          now_season=$(printf '%s' "$body" | jq -r '.data.seasonId // ""')
+
+          # The tier gate above says nothing about lobbyMix: the controller
+          # builds it from a separate aggregator and answers with null when
+          # that one throws, which must not freeze a good tier table -- but
+          # committing that null over a good table is exactly what wiped it.
+          # When the fresh reading has no usable mix, splice the held one back
+          # in before anything else in this run reads or writes `fresh`. Only
+          # when it is the SAME season, though: the two tables ride in one
+          # file so they cannot name different seasons, and splicing a held
+          # mix from a season that has since rolled over would do exactly
+          # that -- last season's lobby mix under the new season's dates. When
+          # the seasons disagree there is nothing safe to show, so it goes in
+          # null instead.
+          #
+          # Being a non-empty array is not enough: frontend/src/helpers/
+          # censusSnapshot.js's lobbyMixRows() additionally refuses a payload
+          # with nothing publishable in it, same spirit as the tier gate above
+          # (mirrors publishableReading there). A reading that is structurally
+          # an array but has no row a reader can see must be treated exactly
+          # like no reading at all, or this gate would report success while
+          # spending the held mix's place on nothing and dropping the page to
+          # its "still collecting" state.
+          mix_usable=$(printf '%s' "$body" | jq -r \
+            '((.data.lobbyMix // []) | type) == "array"
+             and ((.data.lobbyMix // []) | length > 0)
+             and ((.data.lobbyMix // []) | map(select(.publishable == true)) | length > 0)' \
+            2>/dev/null || echo false)
+          if [ "$mix_usable" != "true" ]; then
+            if [ -n "$was" ] && [ "$was" = "$now_season" ]; then
+              held_mix=$(jq -c '.lobbyMix // null' "$SNAPSHOT" 2>/dev/null || echo null)
+              fresh=$(printf '%s' "$fresh" | jq --argjson heldMix "$held_mix" '.lobbyMix = $heldMix')
+              echo "::warning::the fresh reading has no usable lobby mix; keeping the committed one"
+            else
+              fresh=$(printf '%s' "$fresh" | jq '.lobbyMix = null')
+              echo "::warning::the fresh reading has no usable lobby mix, and the held snapshot is season $was against $now_season; writing null rather than misdating it"
+            fi
+          fi
+
+          # -S on both sides here, purely for the comparison: key order must
+          # not make two equal readings look different. $fresh itself stays in
+          # the projection's own order for the write further down.
           held=$(jq -S 'del(.capturedAt)' "$SNAPSHOT" 2>/dev/null || echo null)
-          if [ "$fresh" = "$held" ]; then
+          fresh_cmp=$(printf '%s' "$fresh" | jq -S .)
+          if [ "$fresh_cmp" = "$held" ]; then
             echo "::notice::the reading has not changed; nothing to commit"
             exit 0
           fi
 
-          was=$(jq -r '.seasonId // ""' "$SNAPSHOT" 2>/dev/null || echo "")
-          now_season=$(printf '%s' "$body" | jq -r '.data.seasonId // ""')
           if [ -n "$was" ] && [ "$was" != "$now_season" ]; then
             # Ask the question articleSeason.test.js asks, which is not "did the
             # season move". The prose is allowed to be AHEAD of the table and
@@ -247,7 +299,10 @@ jobs:
             fi
           fi
 
-          printf '%s' "$body" | jq -f "$RUNNER_TEMP/snapshot.jq" > "$SNAPSHOT"
+          # Not -S: this is the file the frontend and the public data files are
+          # built from, and it should read in the projection's own order, not
+          # an alphabetised one.
+          printf '%s' "$fresh" | jq '{capturedAt: (now | todate)} + .' > "$SNAPSHOT"
 
           git config user.name "tier-census"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

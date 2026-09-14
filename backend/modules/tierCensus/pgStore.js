@@ -23,6 +23,7 @@ const CREATE_TABLE_SQL = `
     tier         TEXT,
     sub_tier     INTEGER,
     rank_point   INTEGER,
+    game_mode    TEXT,
     observed_at  BIGINT  NOT NULL,
     UNIQUE (shard, season_id, window_date, account_id)
   )
@@ -33,15 +34,24 @@ const CREATE_INDEX_SQL = `
   ON tier_census_observations (shard, season_id, window_date DESC)
 `;
 
+// CREATE TABLE IF NOT EXISTS is a no-op against a table that already exists, so
+// the live database would never gain this column from the DDL above. Recorded
+// from 2026-09-14 onward only: a window already collected cannot be told which
+// mode it was, and PUBG's /samples serves recent matches only.
+const ADD_GAME_MODE_SQL = `
+  ALTER TABLE tier_census_observations
+  ADD COLUMN IF NOT EXISTS game_mode TEXT
+`;
+
 // One statement for the whole batch. ON CONFLICT keeps the account's first
 // sighting of the day rather than churning the row for every lobby it turns up
 // in -- a person who plays twenty games is one account, not twenty.
 const INSERT_SQL = `
   INSERT INTO tier_census_observations
-    (shard, season_id, window_date, match_id, account_id, tier, sub_tier, rank_point, observed_at)
+    (shard, season_id, window_date, match_id, account_id, tier, sub_tier, rank_point, observed_at, game_mode)
   SELECT * FROM UNNEST(
     $1::text[], $2::text[], $3::date[], $4::text[], $5::text[],
-    $6::text[], $7::int[], $8::int[], $9::bigint[]
+    $6::text[], $7::int[], $8::int[], $9::bigint[], $10::text[]
   )
   ON CONFLICT (shard, season_id, window_date, account_id) DO NOTHING
 `;
@@ -151,6 +161,7 @@ function ensureTable() {
     ensureTablePromise = getPool()
       .query(CREATE_TABLE_SQL)
       .then(() => getPool().query(CREATE_INDEX_SQL))
+      .then(() => getPool().query(ADD_GAME_MODE_SQL))
       .catch((error) => {
         ensureTablePromise = null;
         throw error;
@@ -175,6 +186,7 @@ async function recordObservations(observations) {
       rows.map((r) => (Number.isFinite(r.subTier) ? r.subTier : null)),
       rows.map((r) => (Number.isFinite(r.rankPoint) ? r.rankPoint : null)),
       rows.map((r) => r.observedAt),
+      rows.map((r) => r.gameMode ?? null),
     ];
     const result = await getPool().query(INSERT_SQL, columns);
     return result?.rowCount ?? 0;

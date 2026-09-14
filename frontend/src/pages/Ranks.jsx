@@ -189,6 +189,11 @@ const Ranks = ({ t }) => (
                 <Link to="/rank-points">{t("pages.ranks.distribution.seeRankPoints")}</Link>
               </p>
             )}
+            {section.distribution && (
+              <p className="ranks-page__outro">
+                <Link to="/ranked-lobbies">{t("pages.ranks.distribution.seeRankedLobbies")}</Link>
+              </p>
+            )}
             {/* After the prose, not before it: p4 is the sentence that hands
                 over the numbers the table then draws. */}
             {section.slots && <SurvivorSlots t={t} />}

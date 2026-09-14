@@ -134,3 +134,66 @@ export const effectiveReadings = (data) => {
   const step = smallest >= 1000 ? 100 : 10;
   return Math.round(smallest / step) * step;
 };
+
+// The committed lobby mix, or null when there is not one worth rendering.
+//
+// The sum check is the load-bearing one. A row is a distribution over the
+// lobby, so its shares add to one by construction; a row that does not is an
+// aggregation that drifted, and drawing it would put a bar chart on the page
+// whose bars mean nothing. Whole-payload refusal rather than per-row, because a
+// build that produced one broken row has no claim to the others. An EMPTY mix
+// is exempt from the sum check rather than failing it, but only for a row
+// that is NOT publishable: lobbyMix.js emits one for a tier whose lobbies
+// held no other sampled player at all, and zero summing to zero is the
+// correct reading of that, not drift. That same aggregator can never mark
+// such a row publishable (it requires opponents > 0), so a publishable row
+// with an empty mix is a shape the real pipeline cannot produce -- drawing it
+// would render a row of all-0% cells, so it is refused like any other
+// malformed row.
+//
+// Deliberately NOT folded into usableSnapshot, for the reason rpTable is not: a
+// mix too thin to draw must not blank the tier distribution on /ranks.
+const MIX_SUM_TOLERANCE = 1e-6;
+
+export const lobbyMixRows = (data) => {
+  const rows = data?.lobbyMix;
+  if (!Array.isArray(rows) || !rows.length) return null;
+
+  for (const row of rows) {
+    if (!Array.isArray(row?.mix)) return null;
+    if (!row.mix.length) {
+      if (row.publishable) return null;
+      continue;
+    }
+    // A coercible value like null or "" is not a number; only real finite numbers count.
+    if (!row.mix.every((cell) => typeof cell?.share === "number" && Number.isFinite(cell.share))) return null;
+    const total = row.mix.reduce((sum, cell) => sum + cell.share, 0);
+    if (Math.abs(total - 1) > MIX_SUM_TOLERANCE) return null;
+  }
+
+  const published = rows.filter((row) => row.publishable);
+  if (!published.length) return null;
+
+  // Attached rather than returned alongside, so the truthiness check
+  // RankedLobbies.jsx runs against this function's result is unchanged: the
+  // return value is still exactly the array of publishable rows, just one that
+  // also remembers what it left out and why.
+  //
+  // An expando on an array, though, is exactly the kind of thing a spread, a
+  // slice, an extra filter, a useMemo copy or a JSON round-trip silently
+  // drops -- and every one of those produces a plain array that still passes
+  // this function's own truthiness check, so nothing would notice the gated
+  // list had vanished. gatedMixRows() below is the property read this file
+  // stands behind; treat this one as an implementation detail.
+  published.gated = rows.filter((row) => !row.publishable);
+  return published;
+};
+
+// The tiers this reading gated out, as a value that cannot be lost the way
+// the `.gated` expando above can. Recomputes rather than reads `.gated`
+// straight off a rows array a caller may have already copied, so it survives
+// exactly the operations that would silently drop an expando property.
+export const gatedMixRows = (data) => {
+  const rows = lobbyMixRows(data);
+  return rows ? rows.gated ?? [] : [];
+};
