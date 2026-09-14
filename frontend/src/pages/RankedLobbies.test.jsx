@@ -1,5 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { setTranslations, setDefaultLanguage } from "react-switch-lang";
+import en from "../Language/en.json";
 import RankedLobbies from "./RankedLobbies";
 
 const published = (tier) => ({
@@ -14,19 +16,43 @@ const snapshotOf = (seasonId, lobbyMix) => ({
 
 const committed = snapshotOf("division.bro.official.pc-2018-43", [published("gold")]);
 
-const draw = (load, snapshot = committed) =>
-  render(
+const draw = (load, snapshot = committed) => {
+  setTranslations({ en });
+  setDefaultLanguage("en");
+  return render(
     <MemoryRouter initialEntries={["/ranked-lobbies"]}>
       <RankedLobbies load={load} snapshot={snapshot} />
     </MemoryRouter>,
   );
+};
+
+// react-switch-lang's translate() overrides a passed `t` prop and its own
+// translator returns the key when no dictionary is registered, so a test that
+// never calls setTranslations would pass even against a component wired to no
+// dictionary at all -- the tier slugs ("gold", "platinum") are substrings of
+// their own untranslated keys ("pages.rankedLobbies.tier.gold"). Registering
+// the real dictionary here and resetting after each test, the way
+// RankPoints.test.jsx does, is what makes these assertions about real copy.
+afterEach(() => {
+  setTranslations({});
+  setDefaultLanguage("en");
+});
 
 const rowNames = () =>
   screen.getAllByRole("row").map((row) => row.textContent);
 
 test("renders the page heading", () => {
   draw(() => new Promise(() => {}));
-  expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(en.pages.rankedLobbies.title);
+});
+
+// A component that stopped reading the dictionary would render the raw key
+// and no numbers at all, not a sentence with these figures interpolated in.
+test("the sample line carries the real numbers, not the translation key", () => {
+  draw(() => new Promise(() => {}));
+  expect(screen.getByText(/Measured from 5,040 accounts across 338 ranked matches/))
+    .toBeInTheDocument();
+  expect(screen.queryByText(/pages\.rankedLobbies/)).not.toBeInTheDocument();
 });
 
 test("a live read with no mix does not replace the committed one", async () => {

@@ -4612,6 +4612,34 @@ body {
 
 // Tokens only, no literals: same reasoning as .rank-points above.
 .ranked-lobbies {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 0 8px;
+  color: var(--text);
+
+  &__hero {
+    margin-bottom: 28px;
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 34px;
+      color: var(--text-strong);
+    }
+
+    p {
+      margin: 0 0 10px;
+      color: var(--text-muted);
+    }
+  }
+
+  &__lang {
+    color: var(--accent);
+
+    &:hover {
+      color: var(--text-strong);
+    }
+  }
+
   &__table-wrap {
     margin-bottom: 28px;
   }
@@ -4668,6 +4696,33 @@ body {
     margin: 10px 0 0;
     font-size: 14px;
     color: var(--text-muted);
+  }
+
+  &__section {
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 24px;
+      color: var(--text-strong);
+    }
+
+    p {
+      margin: 0 0 10px;
+      color: var(--text);
+    }
+  }
+
+  &__outro {
+    margin: 0 0 8px;
+
+    a {
+      color: var(--accent);
+
+      &:hover {
+        color: var(--text-strong);
+      }
+    }
   }
 }
 

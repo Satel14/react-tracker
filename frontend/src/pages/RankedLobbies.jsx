@@ -23,11 +23,11 @@ const paragraphKeys = (count) => Array.from({ length: count }, (_, i) => `p${i +
 const OtherLanguage = () => {
   const { pathname } = useLocation();
   return pathname === "/ua/ranked-lobbies" ? (
-    <Link className="rank-points__lang" to="/ranked-lobbies" lang="en">
+    <Link className="ranked-lobbies__lang" to="/ranked-lobbies" lang="en">
       Read in English
     </Link>
   ) : (
-    <Link className="rank-points__lang" to="/ua/ranked-lobbies" lang="uk">
+    <Link className="ranked-lobbies__lang" to="/ua/ranked-lobbies" lang="uk">
       Читати українською
     </Link>
   );
@@ -77,8 +77,8 @@ const RankedLobbies = ({ t, load = getRankDistribution, days = 7, snapshot = CEN
   }, [load, days, snapshot]);
 
   return (
-    <div className="content rank-points">
-      <div className="rank-points__hero">
+    <div className="content ranked-lobbies">
+      <div className="ranked-lobbies__hero">
         {/* Matches the heading the prerendered shell puts in #root, so the text
             a crawler reads and the text React renders are the same sentence. */}
         <h1>{t("pages.rankedLobbies.title")}</h1>
@@ -89,7 +89,7 @@ const RankedLobbies = ({ t, load = getRankDistribution, days = 7, snapshot = CEN
       <LobbyMixTable t={t} data={data} />
 
       {SECTIONS.map((section) => (
-        <section className="rank-points__section" id={section.key} key={section.key}>
+        <section className="ranked-lobbies__section" id={section.key} key={section.key}>
           <h2>{t(`pages.rankedLobbies.${section.key}.heading`)}</h2>
           {paragraphKeys(section.paragraphs).map((paragraph) => (
             <p key={paragraph}>{t(`pages.rankedLobbies.${section.key}.${paragraph}`)}</p>
@@ -97,10 +97,10 @@ const RankedLobbies = ({ t, load = getRankDistribution, days = 7, snapshot = CEN
         </section>
       ))}
 
-      <p className="rank-points__outro">
+      <p className="ranked-lobbies__outro">
         <Link to="/ranks">{t("pages.rankedLobbies.seeRanks")}</Link>
       </p>
-      <p className="rank-points__outro">
+      <p className="ranked-lobbies__outro">
         <Link to="/rank-points">{t("pages.rankedLobbies.seeRankPoints")}</Link>
       </p>
     </div>
