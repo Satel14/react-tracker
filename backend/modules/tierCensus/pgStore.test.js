@@ -83,6 +83,26 @@ test("keeps one row per account per day", async () => {
   assert.match(insert.text, /shard, season_id, window_date, account_id/);
 });
 
+// CREATE TABLE IF NOT EXISTS is a no-op against a table that already exists,
+// so a database created before this column shipped needs its own statement.
+test("adds game_mode to a table that predates it", async () => {
+  const pool = fakePool();
+  __setPool(pool);
+  await recordObservations([observation()]);
+  const altered = pool.calls.find((c) => /ALTER TABLE tier_census_observations/.test(c.text));
+  assert.ok(altered, "expected an ALTER for databases created before game_mode");
+  assert.match(altered.text, /ADD COLUMN IF NOT EXISTS game_mode TEXT/);
+});
+
+test("writes the game mode it was given", async () => {
+  const pool = fakePool();
+  __setPool(pool);
+  await recordObservations([observation({ gameMode: "squad" })]);
+  const insert = pool.calls.find((c) => /INSERT INTO tier_census_observations/.test(c.text));
+  assert.match(insert.text, /game_mode/);
+  assert.deepEqual(insert.params[9], ["squad"]);
+});
+
 test("swallows a storage failure rather than killing the run", async () => {
   __setPool(fakePool(() => { throw new Error("neon is asleep"); }));
   assert.equal(await recordObservations([observation()]), 0);
@@ -194,7 +214,7 @@ test("reports a window that already has rows as collected", async () => {
     await isWindowCollected({ shard: "steam", seasonId: "s", windowDate: "2026-08-30" }),
     true,
   );
-  const asked = pool.calls.find((c) => /tier_census_observations/.test(c.text) && !/CREATE/.test(c.text));
+  const asked = pool.calls.find((c) => /tier_census_observations/.test(c.text) && !/CREATE|ALTER/.test(c.text));
   assert.ok(asked, "no question was asked");
   assert.deepEqual(asked.params, ["steam", "s", "2026-08-30"]);
 });
@@ -243,7 +263,7 @@ test("names the most recent season that has something to say", async () => {
 
   assert.equal(latest, "division.bro.official.pc-2018-42");
   const asked = pool.calls.find(
-    (call) => /tier_census_observations/.test(call.text) && !/CREATE/.test(call.text)
+    (call) => /tier_census_observations/.test(call.text) && !/CREATE|ALTER/.test(call.text)
   );
   assert.ok(asked, "no question was asked");
   assert.deepEqual(asked.params, ["steam", "division.bro.official.pc-2018-43", 3]);
