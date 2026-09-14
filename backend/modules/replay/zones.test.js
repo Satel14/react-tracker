@@ -130,6 +130,43 @@ test("the radius is metres and the last reading in the group wins", () => {
   assert.equal(extractSpecialZones([zone(10, { uid: 1, r: 50000 })], clock)[0].r, 500);
 });
 
+// t0/t1 are computed as min/max precisely because arrival order is not time
+// order -- and then the path was built in arrival order anyway. The frontend
+// binary-searches that array by time (replayLayers.js), so an out-of-order
+// sandstorm is parked at the wrong position or interpolated across a negative
+// span.
+test("a path is ordered by time, not by the order the events arrived", () => {
+  const events = [
+    zone(30, { uid: 1, type: "SandStorm", x: 300000, y: 0 }),
+    zone(10, { uid: 1, type: "SandStorm", x: 100000, y: 0 }),
+    zone(20, { uid: 1, type: "SandStorm", x: 200000, y: 0 }),
+  ];
+
+  const [z] = extractSpecialZones(events, clock);
+  assert.deepEqual(z.path.map((p) => p.t), [10, 20, 30]);
+  assert.deepEqual(z.path.map((p) => p.x), [1000, 2000, 3000]);
+});
+
+test("the radius is the newest reading in time, not the last one in the file", () => {
+  const events = [
+    zone(30, { uid: 1, r: 43649 }),
+    zone(10, { uid: 1, r: 50000 }),
+  ];
+
+  assert.equal(extractSpecialZones(events, clock)[0].r, 436);
+});
+
+test("a repeat that is only a repeat once sorted still collapses", () => {
+  const events = [
+    zone(30, { uid: 1, type: "SandStorm", x: 200000, y: 0 }),
+    zone(10, { uid: 1, type: "SandStorm", x: 100000, y: 0 }),
+    zone(20, { uid: 1, type: "SandStorm", x: 100000, y: 0 }),
+  ];
+
+  const [z] = extractSpecialZones(events, clock);
+  assert.deepEqual(z.path.map((p) => p.x), [1000, 2000]);
+});
+
 test("t0 and t1 are the extremes of the group whatever the arrival order", () => {
   const events = [
     zone(220, { uid: 4 }),

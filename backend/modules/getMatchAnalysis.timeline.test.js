@@ -87,10 +87,10 @@ const shotgunTimeline = [
 
 test("parseTimeline clamps per-weapon accuracy at 100% for shotgun pellet spread", () => {
   const tl = parseTimeline(shotgunTimeline, { matchStartMs: 0, accountId: "account.me" });
-  const o12 = tl.accuracy.find((a) => a.weapon === "O12");
-  assert.equal(o12.shots, 1);
-  assert.equal(o12.hits, 9);
-  assert.equal(o12.pct, 100); // clamped from 900
+  const s12k = tl.accuracy.find((a) => a.weapon === "S12K");
+  assert.equal(s12k.shots, 1);
+  assert.equal(s12k.hits, 9);
+  assert.equal(s12k.pct, 100); // clamped from 900
 });
 
 function attack(itemId, elapsedTime, fireWeaponStackCount) {
