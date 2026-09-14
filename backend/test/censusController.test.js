@@ -776,6 +776,35 @@ test("a finished run drops the cached result rather than waiting out its TTL", a
   assert.equal(reads, 2, "new observations mean the published figure moved");
 });
 
+// The clear races the build. A distribution already in flight when the run
+// lands writes its entry AFTER the clear, so numbers assembled before the
+// collection are cached as the published result for the full six-hour TTL --
+// and the clear the run performed did nothing.
+test("a distribution already in flight when a run lands is not cached over the new data", async () => {
+  let reads = 0;
+  let release = null;
+  const held = new Promise((resolve) => { release = resolve; });
+  const controller = build({
+    readWindow: async () => {
+      reads += 1;
+      if (reads === 1) await held;
+      return [];
+    },
+    collect: async () => collected(),
+  });
+
+  const inFlight = controller.getDistribution({ query: {} }, makeRes());
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+  release();
+  await inFlight;
+  assert.equal(reads, 1);
+
+  await controller.getDistribution({ query: {} }, makeRes());
+
+  assert.equal(reads, 2, "the pre-collection payload was cached over the new data");
+});
+
 // --- the lobby mix ---
 
 test("the distribution carries the lobby mix built from the same rows", async () => {

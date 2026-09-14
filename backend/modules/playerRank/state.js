@@ -1,28 +1,4 @@
-// A Map with a ceiling.
-//
-// Every cache below is swept only on a read of the SAME key -- get() checks the
-// timestamp and deletes an expired entry -- so an entry for a player nobody
-// looks up again is never collected at all. A long-lived process serving a
-// stream of distinct players grows until it is restarted, and a statsCache
-// payload is a mapped season plus lifetime plus eight matches, so the failure
-// is an OOM on a small instance rather than a wrong answer.
-//
-// Oldest-in first, which is the policy enrichment already used for
-// matchRegionCache. Map preserves insertion order and re-setting a key does not
-// move it, so a hot key can still age out -- acceptable for a bound whose job
-// is the heap, not the hit rate.
-class BoundedMap extends Map {
-  constructor(limit) {
-    super();
-    this.limit = limit;
-  }
-
-  set(key, value) {
-    super.set(key, value);
-    while (this.size > this.limit) super.delete(this.keys().next().value);
-    return this;
-  }
-}
+const { BoundedMap } = require("../boundedMap");
 
 // Whole mapped payloads: the most expensive entries here by an order of
 // magnitude, and the ones worth the tightest ceiling.

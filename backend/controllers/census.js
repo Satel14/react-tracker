@@ -167,7 +167,7 @@ const createCensusController = ({
 
     // A finished run is new data, so the published result stops being current
     // the moment it lands -- clear rather than wait out the TTL.
-    if (started.done) inFlight = started.done.finally(() => distributionCache.clear());
+    if (started.done) inFlight = started.done.finally(() => invalidateDistribution());
 
     return res.status(200).json({
       status: 200,
@@ -283,12 +283,20 @@ const createCensusController = ({
 
   const distributionCache = new Map();
   const inFlightDistribution = new Map();
+  // Bumped on every invalidation, so a build that started before one can tell
+  // that its result is already out of date by the time it lands.
+  let cacheGeneration = 0;
+  const invalidateDistribution = () => {
+    cacheGeneration += 1;
+    distributionCache.clear();
+  };
 
   function startDistribution(days) {
     // Deferred to a microtask for the same reason as the in-flight maps in
     // parsePlayerRank: the entry has to be in place before anything that could
     // throw synchronously runs, or the finally below would delete it first and
     // leave a rejected promise wedged in the map.
+    const generation = cacheGeneration;
     const run = Promise.resolve().then(async () => {
       try {
         const body = await buildDistribution(days);
@@ -305,7 +313,11 @@ const createCensusController = ({
             ? "no-store"
             : `public, max-age=${DISTRIBUTION_HTTP_MAX_AGE_S}, stale-while-revalidate=3600`,
         };
-        distributionCache.set(days, entry);
+        // Only if nothing invalidated the cache while this was building. A run
+        // that lands mid-build clears the cache, and without this check the
+        // pre-collection payload would be written straight back over it and
+        // published for the full TTL -- making the clear a no-op.
+        if (generation === cacheGeneration) distributionCache.set(days, entry);
         return entry;
       } finally {
         inFlightDistribution.delete(days);

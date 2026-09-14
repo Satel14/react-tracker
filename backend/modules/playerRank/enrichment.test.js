@@ -807,3 +807,28 @@ test("a player with no matches at all has a complete, empty history", async () =
   assert.equal(extras.matches.complete, true);
   assert.ok(Number.isFinite(extras.matches.fetchedAt));
 });
+
+// The guard lives in the caller, not here: every accountId that reaches these
+// functions today has passed isStrictAccountId or came out of a PUBG record. The
+// URLs in parsePlayerRank all go through encodeSegment; these did not, so one
+// new caller passing a user-supplied handle would turn into path traversal
+// against api.pubg.com. Cheap to hold at the point of use.
+test("an enrichment URL escapes its path segments", async () => {
+  const traversal = "account.a/../../../seasons";
+  const { doRequest, calls } = createFakeDoRequest([
+    ["/players/", { ok: true, json: async () => profileWithMatches(0) }],
+    ["/survival_mastery", { ok: true, json: async () => ({ data: { attributes: {} } }) }],
+    ["/weapon_mastery", { ok: true, json: async () => ({ data: { attributes: { weaponSummaries: {} } } }) }],
+  ]);
+  const service = createService(async (url) => (await doRequest(url)).json());
+
+  await service.getMasteryExtras({ shard: "steam", accountId: traversal, playerName: "Traversal" });
+
+  assert.ok(calls.length > 0, "no request was made at all");
+  // Asserted on the raw string, not on new URL(...).pathname: the URL parser
+  // resolves "/../" away, so parsing first would hide exactly what is being
+  // checked.
+  calls.forEach((url) => {
+    assert.ok(!url.includes("/../"), `a raw path segment reached the URL: ${url}`);
+  });
+});

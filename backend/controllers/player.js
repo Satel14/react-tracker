@@ -173,6 +173,10 @@ module.exports.resolvePlayers = async (req, res) => {
 
 module.exports.getPlayerCard = async (req, res) => {
   try {
+    const error = validationResult(req);
+    if (!error.isEmpty()) {
+      return res.status(422).send(MESSAGE.VALIDATOR.ERROR);
+    }
     const { platform, gameId } = req.params || {};
     if (!platform || !gameId) {
       return res.status(400).send("platform and gameId are required");
@@ -186,7 +190,10 @@ module.exports.getPlayerCard = async (req, res) => {
     });
     return res.status(200).send(buffer);
   } catch (e) {
-    return res.status(500).send(`Card unavailable: ${e.message}`);
+    // The message stays in the log. "API Key Invalid" and "Rate Limit Reached"
+    // are what parsePlayerRank throws, and neither is a caller's business.
+    console.log(`[CARD] ${req.params?.platform}/${req.params?.gameId}: ${e.message}`);
+    return res.status(500).send("Card unavailable");
   }
 };
 
@@ -242,7 +249,12 @@ module.exports.getPlayerHeatmapAggregate = async (req, res) => {
     if (!error.isEmpty()) {
       return res.status(422).json({ status: 422, message: MESSAGE.VALIDATOR.ERROR });
     }
-    const { shard = "steam", accountId = null, playerName = null, map = null, matchIds = [] } = req.body || {};
+    // `?? "steam"` rather than a destructuring default: the validator is
+    // optional({ nullable: true }), so an explicit null is a body it accepts,
+    // and a default only fires on undefined -- the null went straight through
+    // to shardForMatch, which throws "Invalid shard".
+    const { accountId = null, playerName = null, map = null, matchIds = [] } = req.body || {};
+    const shard = req.body?.shard ?? "steam";
     if (!accountId && !playerName) {
       return res.status(400).json({ status: 400, message: "accountId or playerName is required" });
     }
@@ -307,6 +319,12 @@ module.exports.validate = (method) => {
         body("map").optional({ nullable: true }).isString().trim().isLength({ max: 64 }),
         body("matchIds").optional({ nullable: true }).isArray({ max: 12 }),
         body("matchIds.*").isString().trim().isLength({ min: 1, max: 64 }),
+      ];
+    }
+    case "getPlayerCard": {
+      return [
+        param("platform").exists().isIn(ANY_CONFIG.PLATFORMS),
+        param("gameId").exists().isString().trim().isLength({ min: 1, max: 64 }),
       ];
     }
     case "getMatchReplay":

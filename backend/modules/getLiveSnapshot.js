@@ -167,7 +167,19 @@ async function fetchCurrentSeason() {
 }
 
 async function buildLiveSnapshot() {
-  const [playersOnline, season] = await Promise.all([fetchPlayersOnline(), fetchCurrentSeason()]);
+  // Two readings from two unrelated hosts. Promise.all rejects as soon as
+  // either does, so a 429 on PUBG used to blank the Steam player count and a
+  // Steam outage used to blank the season countdown -- neither has anything to
+  // say about the other.
+  const [online, current] = await Promise.allSettled([fetchPlayersOnline(), fetchCurrentSeason()]);
+  if (online.status === "rejected") {
+    console.log(`[LIVE] Steam player count unavailable: ${online.reason?.message}`);
+  }
+  if (current.status === "rejected") {
+    console.log(`[LIVE] Season lookup unavailable: ${current.reason?.message}`);
+  }
+  const playersOnline = online.status === "fulfilled" ? online.value : null;
+  const season = current.status === "fulfilled" ? current.value : { id: null, label: null, number: null };
   const seasonOverride = getSeasonOverride(season);
   const seasonStartDateFromApi = parseDateSafe(season?.startDate);
   const seasonEndDateFromApi = parseDateSafe(season?.endDate);
@@ -175,13 +187,16 @@ async function buildLiveSnapshot() {
   const seasonEndDateFromManual = seasonOverride?.endDate || null;
   const seasonEndDateFromEnv = parseSeasonEndDate();
   const seasonStartDate = seasonStartDateFromApi || seasonStartDateFromManual;
-  const seasonEndDate = seasonEndDateFromApi || seasonEndDateFromManual || seasonEndDateFromEnv;
-  const countdownSource = seasonEndDateFromApi
+  // The env var first, because it is documented as an override and an override
+  // that sits behind both other sources can only ever apply when there is
+  // nothing to override.
+  const seasonEndDate = seasonEndDateFromEnv || seasonEndDateFromApi || seasonEndDateFromManual;
+  const countdownSource = seasonEndDateFromEnv
+    ? "env"
+    : seasonEndDateFromApi
     ? "pubg-api"
     : seasonEndDateFromManual
     ? seasonOverride?.source || "manual-json"
-    : seasonEndDateFromEnv
-    ? "env"
     : "unavailable";
   const isEstimated =
     countdownSource === "pubg-api" || countdownSource === "env"

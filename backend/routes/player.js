@@ -1,5 +1,6 @@
 const PlayerController = require("../controllers/player");
 const { heatmapAggregateLimiter } = require("../modules/heatmapAggregateRateLimiter");
+const { playerCardLimiter } = require("../modules/playerCardRateLimiter");
 
 module.exports = (router) => {
   router.post(
@@ -45,6 +46,8 @@ module.exports = (router) => {
   );
   router.get(
     "/api/player/:platform/:gameId/card.png",
+    playerCardLimiter,
+    PlayerController.validate("getPlayerCard"),
     PlayerController.getPlayerCard
   );
 };

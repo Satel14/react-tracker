@@ -7,6 +7,7 @@ const { isAccountIdentifier } = require("../playerIdentity");
 const { fetchTelemetryHead, findTelemetryUrl } = require("../pubgTelemetry");
 const { readRegionFromTelemetryHead } = require("../matchContext");
 const { buildPartyOverlap } = require("./party");
+const { encodeSegment } = require("../pubgUrlSafety");
 
 const MAX_MATCH_HISTORY = 8;
 const MATCH_CACHE_DURATION = 6 * 60 * 60 * 1000;
@@ -333,7 +334,7 @@ function createPlayerEnrichmentService({
       return cached.data;
     }
 
-    const profileUrl = `https://api.pubg.com/shards/${shard}/players/${accountId}`;
+    const profileUrl = `https://api.pubg.com/shards/${encodeSegment(shard)}/players/${encodeSegment(accountId)}`;
     const profile = await doRequest(profileUrl);
     const data = profile?.data || null;
 
@@ -356,7 +357,7 @@ function createPlayerEnrichmentService({
       return cached.data;
     }
 
-    const clanUrl = `https://api.pubg.com/shards/${shard}/clans/${encodeURIComponent(clanId)}`;
+    const clanUrl = `https://api.pubg.com/shards/${encodeSegment(shard)}/clans/${encodeSegment(clanId)}`;
     const clanPayload = await doRequest(clanUrl);
     const clan = mapClan(clanPayload, clanId);
 
@@ -375,7 +376,7 @@ function createPlayerEnrichmentService({
       return cached.data;
     }
 
-    const masteryUrl = `https://api.pubg.com/shards/${shard}/players/${accountId}/survival_mastery`;
+    const masteryUrl = `https://api.pubg.com/shards/${encodeSegment(shard)}/players/${encodeSegment(accountId)}/survival_mastery`;
     const masteryPayload = await doRequest(masteryUrl);
     const mastery = mapSurvivalMastery(masteryPayload);
 
@@ -394,7 +395,7 @@ function createPlayerEnrichmentService({
       return cached.data;
     }
 
-    const url = `https://api.pubg.com/shards/${shard}/players/${accountId}/weapon_mastery`;
+    const url = `https://api.pubg.com/shards/${encodeSegment(shard)}/players/${encodeSegment(accountId)}/weapon_mastery`;
     const payload = await doRequest(url);
     const weapons = mapWeaponMastery(payload);
 
@@ -431,7 +432,7 @@ function createPlayerEnrichmentService({
     // a rejected promise wedged in the map.
     const request = Promise.resolve()
       .then(async () => {
-        const matchUrl = `https://api.pubg.com/shards/${matchShard}/matches/${encodeURIComponent(matchId)}`;
+        const matchUrl = `https://api.pubg.com/shards/${encodeSegment(matchShard)}/matches/${encodeSegment(matchId)}`;
         const matchPayload = await doRequest(matchUrl);
         const match = mapMatch(matchPayload, accountId, playerName);
 
@@ -520,7 +521,7 @@ function createPlayerEnrichmentService({
 
     for (let at = 0; at < candidates.length; at += PARTY_BATCH_SIZE) {
       const chunk = candidates.slice(at, at + PARTY_BATCH_SIZE);
-      const url = `https://api.pubg.com/shards/${shard}/players?filter[playerIds]=${chunk
+      const url = `https://api.pubg.com/shards/${encodeSegment(shard)}/players?filter[playerIds]=${chunk
         .map((candidate) => encodeURIComponent(candidate.accountId))
         .join(",")}`;
       const payload = await doRequest(url);

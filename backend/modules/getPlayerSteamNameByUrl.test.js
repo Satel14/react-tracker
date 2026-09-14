@@ -59,3 +59,35 @@ test("getPlayerSteamNameByUrl fetches and parses an allowed steamcommunity.com U
   assert.equal(result, "coolname");
   assert.match(calls[0], /^https:\/\/steamcommunity\.com\/id\/coolname\/\?xml=1$/);
 });
+
+// The trailing slash was appended to the whole string, query included, and then
+// "?xml=1" after that -- so a URL a person pasted straight out of the browser
+// asked Steam for l=english/?xml=1 and got HTML back, which parses to nothing.
+test("a URL that already carries a query still asks Steam for XML", async () => {
+  const calls = [];
+  global.fetch = async (u) => {
+    calls.push(u);
+    return { ok: true, status: 200, text: async () => "<profile><customURL>coolname</customURL></profile>" };
+  };
+
+  const result = await getPlayerSteamNameByUrl("https://steamcommunity.com/id/coolname?l=english");
+
+  assert.equal(result, "coolname");
+  const asked = new URL(calls[0]);
+  assert.equal(asked.searchParams.get("xml"), "1");
+  assert.equal(asked.pathname, "/id/coolname/");
+});
+
+test("a fragment does not end up inside the path either", async () => {
+  const calls = [];
+  global.fetch = async (u) => {
+    calls.push(u);
+    return { ok: true, status: 200, text: async () => "<profile><customURL>coolname</customURL></profile>" };
+  };
+
+  await getPlayerSteamNameByUrl("https://steamcommunity.com/id/coolname#about");
+
+  const asked = new URL(calls[0]);
+  assert.equal(asked.pathname, "/id/coolname/");
+  assert.equal(asked.searchParams.get("xml"), "1");
+});

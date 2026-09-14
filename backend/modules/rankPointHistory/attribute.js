@@ -7,7 +7,12 @@ const {
   VOID,
 } = require("./assignment");
 
-// Decay applies from Diamond up; keep in step with the ladder in playerRank/ranked.js.
+// Deliberately wider than the ladder in playerRank/ranked.js, and wider than
+// "from Diamond up": it holds crystal, which that ladder scores BELOW diamond,
+// and grandmaster/top500, which are not on it at all. Being on this list only
+// makes a long gap read as `unattributed` instead of as a delta, so a tier that
+// does not decay costs a suppressed number while a tier wrongly left off would
+// cost a wrong one. Do not trim it to match the ladder.
 const DECAY_TIERS = new Set(["diamond", "crystal", "master", "grandmaster", "survivor", "top500"]);
 const DECAY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 

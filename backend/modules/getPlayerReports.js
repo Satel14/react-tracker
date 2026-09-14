@@ -1,6 +1,10 @@
 const PUBG_REPORT_API_BASE = "https://api.pubg.report";
 
-const reportsCache = new Map();
+const { BoundedMap } = require("./boundedMap");
+
+// Swept only on a read of the same key, so an entry for a player nobody looks
+// up again is never collected. Each one holds up to MAX_ENCOUNTERS rows.
+const reportsCache = new BoundedMap(1000);
 const REPORTS_CACHE_DURATION = 3 * 60 * 1000;
 const MAX_ENCOUNTERS = 120;
 
