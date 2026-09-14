@@ -399,6 +399,10 @@ const INITIAL_SESSION = {
 };
 const REPLAY_HOVER_DELAY_MS = 150;
 
+// The backend records at most one rank reading a minute per player, so a faster
+// return trip asks PUBG for something nobody can store.
+const REFRESH_ON_RETURN_MS = 60 * 1000;
+
 function sessionReducer(state, action) {
   switch (action.type) {
     case "reset": return INITIAL_SESSION;
@@ -422,6 +426,7 @@ const PlayerPage = ({ t }) => {
   const { activeTabKey, selectedSeasonId, isFavorited, favoriteLoading } = session;
   const reportsRequestKeyRef = useRef(null);
   const dataRequestKeyRef = useRef(null);
+  const lastFetchRef = useRef({ seasonId: null, at: 0 });
   const replayWarmTimerRef = useRef(null);
   const { platform, gameId } = useParams();
   const navigate = useNavigate();
@@ -472,11 +477,16 @@ const PlayerPage = ({ t }) => {
     sessionDispatch({ type: "reset" });
   }
 
-  const fetchData = useCallback(async (seasonId = null) => {
+  const fetchData = useCallback(async (seasonId = null, { silent = false } = {}) => {
     const requestKey = `${platform}|${gameId}|${seasonId || ""}`;
     dataRequestKeyRef.current = requestKey;
-    setLoading(true);
-    setError(null);
+    // Stamped before the request, not after, so a slow one cannot be joined by a
+    // second return trip while it is still in the air.
+    lastFetchRef.current = { seasonId, at: Date.now() };
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const response = await getPlayerData(platform, gameId, seasonId);
       if (dataRequestKeyRef.current !== requestKey) return;
@@ -487,11 +497,15 @@ const PlayerPage = ({ t }) => {
       } else if (response && response.data) {
         setData(response.data);
         sessionDispatch({ type: "setSeason", id: response.data?.selectedSeasonId || response.data?.season?.id || seasonId || null });
-      } else {
+      } else if (!silent) {
         setError(classifyPlayerError(response?.message));
       }
     } catch (err) {
       if (dataRequestKeyRef.current !== requestKey) return;
+      // A background refresh that fails leaves the page it was refreshing alone:
+      // the data on screen is still the data we had, and an error page in its
+      // place would be a worse answer than a slightly older one.
+      if (silent) return;
       if (err?.status === 422) {
         setError({ code: "not_found", message: err?.message || null });
       } else {
@@ -564,6 +578,22 @@ const PlayerPage = ({ t }) => {
       fetchData(null);
     }
   }, [platform, gameId, fetchData]);
+
+  // A player leaves this page open, plays a match and switches back to it.
+  // Nothing asked the API in between, so no rank reading was stored and the
+  // match can never get a delta of its own -- it lands in a group with whatever
+  // else was played. Refetching on return closes that gap, silently: the page
+  // keeps what it is showing instead of blinking through the skeleton.
+  useEffect(() => {
+    const onReturn = () => {
+      if (document.visibilityState !== "visible") return;
+      if (error) return;
+      if (Date.now() - lastFetchRef.current.at < REFRESH_ON_RETURN_MS) return;
+      fetchData(lastFetchRef.current.seasonId, { silent: true });
+    };
+    document.addEventListener("visibilitychange", onReturn);
+    return () => document.removeEventListener("visibilitychange", onReturn);
+  }, [error, fetchData]);
 
   useEffect(() => {
     const accountId = data?.platformInfo?.platformUserId || null;

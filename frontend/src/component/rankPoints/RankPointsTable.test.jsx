@@ -71,8 +71,23 @@ describe("RankPointsTable", () => {
   // and season 43's does not exist until the census has three windows.
   it("names the wait instead of a table when there is no table", () => {
     render(<RankPointsTable t={t} data={payload({ rpPercentiles: null })} />);
-    expect(screen.getByText(/Collection for Season 43 has only just started/)).toBeInTheDocument();
+    expect(screen.getByText(/has only just started/)).toBeInTheDocument();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  // The payload reaching this branch carries the ARCHIVED season -- the last one
+  // with enough days behind it -- so any season it named would be the finished
+  // one, and "collection for it has only just started" would be false twice
+  // over. Production shipped exactly that: "Collection for Season 42 has only
+  // just started", five days after season 42 ended.
+  it("names no season while it waits", () => {
+    render(
+      <RankPointsTable
+        t={t}
+        data={payload({ rpPercentiles: null, current: false, seasonId: "division.bro.official.pc-2018-42" })}
+      />,
+    );
+    expect(screen.getByText(/has only just started/).textContent).not.toMatch(/\d/);
   });
 
   it("treats a malformed table as no table", () => {

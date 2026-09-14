@@ -678,7 +678,7 @@
         "rpHeader": "Rank points",
         "above": "above {percent}% of players"
       },
-      "gathering": "Collection for Season {season} has only just started, so there is no rank point table to publish yet. It appears here once the sample has enough days behind it.",
+      "gathering": "Collection for the new season has only just started, so there is no rank point table to publish yet. It appears here once the sample has enough days behind it.",
       "finished": "Season {season} has ended, so these are its final readings. Ranked resets with every season, and the table switches over once the new one has enough days behind it.",
       "sample": "Measured from {accounts} accounts across {matches} ranked matches on {platform}, {from} to {to}.",
       "platform": "PC (Steam)",
