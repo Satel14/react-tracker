@@ -149,6 +149,35 @@ test("an interval that counted more rounds than we can see reports the group tot
   assert.deepEqual(result.summary.rankPoints, { kind: "group", value: 37, matches: 2, since: T0 });
 });
 
+test("rounds that surfaced late cannot blank the rows a later interval explains", () => {
+  // Measured on Satel14, season 43: four squad-fpp rounds played on 10 Sep only
+  // appeared in rankedGameModeStats on 13 Sep, three days later, when the mode
+  // key showed up at once with all seven of its rounds. That put seven rounds in
+  // a middle interval holding three visible matches -- too old for the
+  // unseen-older allowance, too old for the unseen-newer one -- so no layout was
+  // feasible and every row lost its delta, including the four later matches that
+  // fill their own interval exactly.
+  const result = run(
+    [snap(3000, 100, T0), snap(3040, 107, T0 + 8 * H), snap(3103, 111, T0 + 13 * H)],
+    [
+      match("late-1", T0 + 1 * H),
+      match("late-2", T0 + 2 * H),
+      match("late-3", T0 + 3 * H),
+      match("clean-1", T0 + 9 * H),
+      match("clean-2", T0 + 10 * H),
+      match("clean-3", T0 + 11 * H),
+      match("clean-4", T0 + 12 * H),
+    ]
+  );
+  ["clean-1", "clean-2", "clean-3", "clean-4"].forEach((id) =>
+    assert.deepEqual(deltaOf(result, id), { kind: "group", value: 63, matches: 4 })
+  );
+  ["late-1", "late-2", "late-3"].forEach((id) =>
+    assert.deepEqual(deltaOf(result, id), { kind: "group", value: 40, matches: 7 })
+  );
+  assert.deepEqual(result.summary.rankPoints, { kind: "group", value: 63, matches: 4, since: T0 + 8 * H });
+});
+
 test("more visible than counted matches with nothing to merge into is unattributed", () => {
   const result = run([snap(3000, 100, T0), snap(3023, 101, T0 + 3 * H)], [match("a", T0 + H), match("b", T0 + 2 * H)]);
   assert.deepEqual(deltaOf(result, "a"), { kind: "unattributed" });
