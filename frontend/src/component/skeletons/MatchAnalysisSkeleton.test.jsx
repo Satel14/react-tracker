@@ -48,7 +48,16 @@ describe("MatchAnalysisSkeleton", () => {
     expect(accRows[0]).toHaveClass("timeline__acc-row--head");
     // Four columns in the accuracy grid: weapon, shots, hits, percent.
     accRows.forEach((row) => expect(row.children).toHaveLength(4));
-    expect(container.querySelectorAll(".timeline__events .timeline__event")).toHaveLength(7);
+
+    // The two sit side by side in the real tab, so the placeholder has to as
+    // well -- a stacked skeleton would jump sideways on the swap.
+    expect(container.querySelector(".timeline__grid .timeline__accuracy")).not.toBeNull();
+    expect(container.querySelector(".timeline__grid .timeline__log")).not.toBeNull();
+
+    // The combat log is headed now, so 7 rows means a header plus 7.
+    const logRows = container.querySelectorAll(".timeline__events .timeline__event");
+    expect(logRows[0]).toHaveClass("timeline__event--head");
+    expect(logRows).toHaveLength(8);
   });
 
   it("hides every tile from assistive tech, leaving only the label", () => {

@@ -8,8 +8,7 @@ import MatchScoreboardSkeleton from "../component/skeletons/MatchScoreboardSkele
 import MatchAnalysisSkeleton from "../component/skeletons/MatchAnalysisSkeleton";
 import ReplayRoster from "../component/charts/ReplayRoster";
 import MatchScoreboard from "../component/match/MatchScoreboard";
-import KillFeed from "../component/match/KillFeed";
-import KillMap from "../component/match/KillMap";
+import KillsPane from "../component/match/KillsPane";
 import DamageBreakdown from "../component/match/DamageBreakdown";
 import LoadoutPanel from "../component/match/LoadoutPanel";
 import CombatTimeline from "../component/match/CombatTimeline";
@@ -410,10 +409,13 @@ const MatchReplayPage = ({ t }) => {
           children: renderAnalysisPane(
             <MatchAnalysisSkeleton tab="kills" label={t("pages.match.loading")} />,
             (a) => (
-              <>
-                <KillMap kills={a.killFeed} rawMapName={a.rawMapName} duration={a.duration} t={t} />
-                <KillFeed kills={a.killFeed} platform={platform} t={t} />
-              </>
+              <KillsPane
+                kills={a.killFeed}
+                rawMapName={a.rawMapName}
+                duration={a.duration}
+                platform={platform}
+                t={t}
+              />
             )
           ),
         },

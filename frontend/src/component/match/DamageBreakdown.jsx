@@ -31,6 +31,14 @@ const armourTally = (rows, t) =>
     .map((r) => (r.level == null ? `×${r.count}` : `${t("pages.match.armourLevel", { level: r.level })} ×${r.count}`))
     .join(" · ");
 
+// A weapon's bar as a percentage of the match's biggest one. The guard is the
+// all-zero case: parseDamage can hand back a weapon that dealt nothing at all,
+// and dividing by that maximum would write "NaN%" into the style attribute.
+const weaponShare = (weapon, all) => {
+  const max = Math.max(0, ...all.map((w) => w.damage || 0));
+  return max > 0 ? ((weapon.damage || 0) / max) * 100 : 0;
+};
+
 const envTotal = (e) =>
   (e.armourBroke?.length || 0) + (e.armourLost?.length || 0) +
   e.vehicleDamage + e.windows + e.fences + e.vaults + e.doorsOpened + e.vending;
@@ -46,13 +54,26 @@ const DamageBreakdown = ({ damage, meds, throws, environment, focalPresent, t })
         <RegionBars bucket={damage.dealt} title={t("pages.match.damageDealt")} t={t} />
         <RegionBars bucket={damage.taken} title={t("pages.match.damageTaken")} t={t} />
       </div>
+      {/* One grid rather than a stack. Each of these cards holds one or two
+          rows and used to run the full width of the column, so a tab with all
+          four of them was four screens of mostly empty card. */}
+      <div className="damage__grid">
       {damage.dealtByWeapon?.length ? (
         <div className="damage__weapons">
           <div className="damage__weapons-head">{t("pages.match.byWeapon")}</div>
           {damage.dealtByWeapon.map((w) => (
             <div key={w.weaponKey || w.weapon} className="damage__weapon">
-              <span>{w.weapon}</span>
-              <span>{w.damage}</span>
+              <span className="damage__weapon-name">{w.weapon}</span>
+              {/* Measured against the biggest weapon, the same way the body
+                  regions above are: against the total, a player who used two
+                  weapons gets two half bars and nothing reaches the end. */}
+              <span className="damage__weapon-track">
+                <span
+                  className="damage__weapon-fill"
+                  style={{ width: `${weaponShare(w, damage.dealtByWeapon)}%` }}
+                />
+              </span>
+              <span className="damage__weapon-val">{w.damage}</span>
             </div>
           ))}
         </div>
@@ -175,6 +196,7 @@ const DamageBreakdown = ({ damage, meds, throws, environment, focalPresent, t })
           </div>
         </div>
       ) : null}
+      </div>
     </div>
   );
 };

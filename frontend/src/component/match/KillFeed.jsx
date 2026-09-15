@@ -1,5 +1,4 @@
-import React, { useMemo, useState } from "react";
-import { Segmented } from "antd";
+import React from "react";
 import { Link } from "react-router-dom";
 import { formatClock as fmt } from "../../helpers/formatClock";
 import { profilePath } from "../../helpers/profileLink";
@@ -14,30 +13,30 @@ const Who = ({ name, accountId, platform, className }) => {
   return <span className={className}>{to ? <Link to={to}>{label}</Link> : label}</span>;
 };
 
-const KillFeed = ({ kills = [], platform, t }) => {
-  const [filter, setFilter] = useState("all");
-  const rows = useMemo(
-    () => (filter === "focal" ? kills.filter((k) => k.isFocalKill || k.isFocalDeath) : kills),
-    [kills, filter]
-  );
+// The list arrives already filtered, and `emptyLabel` says why it can be empty.
+// Both used to be this component's own business; KillsPane took them over so
+// the map beside the feed narrows with it.
+const KillFeed = ({ kills = [], platform, t, highlightId = null, onHighlight, emptyLabel }) => {
+  if (!kills.length) {
+    return <EmptyState className="kill-feed__empty">{emptyLabel || t("pages.match.noKills")}</EmptyState>;
+  }
 
-  if (!kills.length) return <EmptyState className="kill-feed__empty">{t("pages.match.noKills")}</EmptyState>;
+  // onFocus/onBlur alongside the mouse pair: React's focus events bubble, so a
+  // keyboard user tabbing onto either profile link in the row lights the same
+  // tracer the mouse would.
+  const point = (id) => () => onHighlight?.(id ?? null);
 
   return (
     <div className="kill-feed">
-      <Segmented
-        value={filter}
-        onChange={setFilter}
-        options={[
-          { value: "all", label: t("pages.match.filterAll") },
-          { value: "focal", label: t("pages.match.filterFocal") },
-        ]}
-      />
       <ul className="kill-feed__list">
-        {rows.map((k, i) => (
+        {kills.map((k, i) => (
           <li
-            key={`${k.t}-${i}`}
-            className={`kill-feed__row${k.isFocalKill ? " is-kill" : ""}${k.isFocalDeath ? " is-death" : ""}`}
+            key={k.id ?? `${k.t}-${i}`}
+            className={`kill-feed__row${k.isFocalKill ? " is-kill" : ""}${k.isFocalDeath ? " is-death" : ""}${k.id != null && k.id === highlightId ? " is-highlight" : ""}`}
+            onMouseEnter={point(k.id)}
+            onMouseLeave={point(null)}
+            onFocus={point(k.id)}
+            onBlur={point(null)}
           >
             <span className="kill-feed__time">{fmt(k.t)}</span>
             <Who className="kill-feed__killer" name={k.killerName} accountId={k.killerAccountId} platform={platform} />

@@ -378,7 +378,9 @@
             "loadoutAtDeath": "Що було при собі на момент смерті",
             "loadoutAtEnd": "Що було при собі в кінці",
             "loadoutEmpty": "Для цього матчу екіпіровку не записано.",
-            "loadoutCounts": "Піднято {picked} · викинуто {dropped} · {crate} з ящика",
+            "countPicked": "Піднято",
+            "countDropped": "Викинуто",
+            "countCrate": "З ящика",
             "lootedFrom": "Зібрано з:",
             "armourHeadgear": "Шолом",
             "armourVest": "Броня",
@@ -446,7 +448,15 @@
             "timeRange": "Проміжок часу",
             "weapon": "Зброя",
             "serverLabel": "Сервер",
-            "weatherLabel": "Погода"
+            "weatherLabel": "Погода",
+            "killsTotal": "Вбивств: {total}",
+            "killsShown": "Показано: {shown} з {total}",
+            "noKillsFiltered": "Під ці фільтри не підпадає жодне вбивство.",
+            "colTime": "Час",
+            "colOpponent": "Суперник",
+            "filterDealt": "Завдано",
+            "filterTaken": "Отримано",
+            "noEventsFiltered": "З цього боку нічого не зафіксовано."
         },
         "help": {
             "title": "Як подивитися статистику PUBG",
