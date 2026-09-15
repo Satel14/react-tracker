@@ -77,6 +77,27 @@ test("renders error state when player data is not available", async () => {
   });
 });
 
+test("omits unknown RP while preserving the reported rank", async () => {
+  getPlayerData.mockResolvedValue({ data: {
+    ...samplePlayerData.data,
+    season: { rankedInfo: { label: "Gold III", currentRankPoint: null } },
+  } });
+  renderPage();
+
+  expect(await screen.findByText("Gold III")).toBeInTheDocument();
+  expect(screen.queryByText(/0 RP/)).not.toBeInTheDocument();
+});
+
+test("displays a reported zero RP", async () => {
+  getPlayerData.mockResolvedValue({ data: {
+    ...samplePlayerData.data,
+    season: { rankedInfo: { label: "Bronze V", currentRankPoint: 0 } },
+  } });
+  renderPage();
+
+  expect(await screen.findByText("Bronze V - 0 RP")).toBeInTheDocument();
+});
+
 test("uses fallback values when stat displayValues are missing", async () => {
   const dataWithMissingStats = {
     data: {

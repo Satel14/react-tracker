@@ -182,11 +182,13 @@ const formatReportDate = (value, fallback = "") => {
 };
 
 const formatRankPoints = (value) => {
+  if (value == null || value === "") return "N/A";
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed.toLocaleString(getCurrentLocale()) : "N/A";
 };
 
 const formatTopPercentage = (value) => {
+  if (value == null || value === "") return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return null;
   const fixed = parsed.toFixed(4).replace(/\.?0+$/, "");
@@ -321,7 +323,8 @@ const RANK_PROGRESS_STEPS = [
 
 const getRankProgressMeta = (rankedInfo) => {
   const tier = String(rankedInfo?.tier || "").toLowerCase();
-  const points = Number(rankedInfo?.currentRankPoint);
+  const points = rankedInfo?.currentRankPoint == null || rankedInfo.currentRankPoint === ""
+    ? NaN : Number(rankedInfo.currentRankPoint);
   const step = RANK_PROGRESS_STEPS.find((item) => item.key === tier) || null;
 
   if (!step || !Number.isFinite(points)) {

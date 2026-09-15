@@ -61,7 +61,8 @@ const Overlay = ({ t }) => {
   const nickname = resolvePreferredPlayerName(platformInfo.platformUserHandle, gameId) || gameId;
   const rankBadge = rankedInfo?.iconUrl || rankedInfo?.iconFallbackUrl || "/images/ranks/opgg/unranked.webp";
   const rankLabel = rankedInfo?.label || "Unranked";
-  const rp = Number(rankedInfo?.currentRankPoint);
+  const rp = rankedInfo?.currentRankPoint == null || rankedInfo.currentRankPoint === ""
+    ? NaN : Number(rankedInfo.currentRankPoint);
   const matchItems = Array.isArray(data?.matches?.items) ? data.matches.items : [];
   const recentPlacements = matchItems
     .slice(0, 8)
