@@ -113,11 +113,12 @@ function buildLoadout(telemetry, { accountId = null, playerName = null } = {}) {
   let dropped = 0;
   let fromCarePackage = 0;
 
-  for (const ev of events) {
-    if (!ev || typeof ev !== "object") continue;
-    const t = timeOf(ev);
-    if (t === null || t > cutoffAt) continue;
-    if (!mine(ev.character)) continue;
+  const inventoryEvents = events
+    .map((ev) => ({ ev, t: timeOf(ev) }))
+    .filter(({ ev, t }) => t !== null && t <= cutoffAt && mine(ev?.character))
+    .sort((a, b) => a.t - b.t);
+
+  for (const { ev } of inventoryEvents) {
 
     switch (ev._T) {
       case "LogItemEquip": {
