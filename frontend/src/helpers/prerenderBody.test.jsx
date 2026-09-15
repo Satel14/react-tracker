@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { prerenderBody, PRERENDERED_ROUTES } from "./prerenderBody";
 import { ROUTE_META } from "./routeMeta.js";
+import { CENSUS_SNAPSHOT, lobbyMixRows, rpTable } from "./censusSnapshot";
+import { rpCuts } from "./rankPercentile";
 import en from "../Language/en.json";
+import ua from "../Language/ua.json";
 
 const ranks = () => prerenderBody("/ranks");
 
@@ -287,10 +290,36 @@ describe("the rank points pages", () => {
     }
   });
 
-  // The whole point of the page shipping before its numbers do: the prose has
-  // to stand on its own, including the constraint it states out loud.
-  it("states what it refuses to publish even with no table yet", () => {
+  // The whole point of the page shipping before its numbers did: the prose has
+  // to stand on its own, including the constraint it states out loud. It still
+  // does now that the table is here -- the refusal is not a placeholder.
+  it("states what it refuses to publish, table or no table", () => {
     expect(page("/rank-points")).toContain("We do not publish where each tier starts");
+  });
+
+  // The counterpart of the lobby-table test at the bottom of this file, and
+  // written the same day for the same reason: this page exists to put its
+  // percentile table where a crawler reads it. See that test for why the
+  // branch is derived from the snapshot and why rows are counted rather than
+  // digits matched.
+  it("carries the percentile table itself, not a promise of one", () => {
+    const table = rpTable(CENSUS_SNAPSHOT);
+
+    for (const path of ["/rank-points", "/ua/rank-points"]) {
+      const html = decode(page(path));
+      const dict = path.startsWith("/ua/") ? ua : en;
+      expect(html, path).not.toContain(en.pages.ranks.distribution.loading);
+
+      if (!table) {
+        expect(html, path).toContain(dict.pages.rankPoints.gathering);
+        continue;
+      }
+
+      expect(html, path).not.toContain(dict.pages.rankPoints.gathering);
+      expect(html.match(/<tr><th scope="row">/g)?.length, path).toBe(rpCuts(table).length);
+      expect(html, path).toMatch(/<td>[\d\s,.]+<\/td>/);
+      expect(html, path).toContain(CENSUS_SNAPSHOT.firstDate);
+    }
   });
 
   it("reads each language from its own dictionary", () => {
@@ -334,22 +363,39 @@ describe("the ranked lobbies pages", () => {
     }
   });
 
-  // The committed tierCensus.json snapshot carries neither `lobbyMix` nor
-  // `rpPercentiles` yet -- the nightly census job only adds a projection's key
-  // the first time it runs after the backend that produces it deploys. So at
-  // merge time this page is correctly in its "still collecting" state, and
-  // there are no percentages anywhere in the file to find. Asserting a "%"
-  // here would fail for a reason that has nothing to do with this page being
-  // broken. The follow-up -- asserting the real digits -- belongs to the day
-  // the projection lands in the committed snapshot, the same sequence
-  // /rank-points went through for `rpPercentiles` (see the "states what it
-  // refuses to publish" test above, which shipped before its own numbers did).
-  it("renders the gathering state, not a loading line, until the lobby mix ships", () => {
-    const html = decode(page("/ranked-lobbies"));
-    expect(html).toContain(en.pages.rankedLobbies.title);
-    expect(html).toContain(en.pages.rankedLobbies.intro.slice(0, 40));
-    expect(html).toContain(en.pages.rankedLobbies.gathering);
-    expect(html).not.toContain(en.pages.ranks.distribution.loading);
+  // The point of the page: its table has to be IN the file a crawler reads,
+  // not fetched into it afterwards. Written on 2026-09-15, the day the nightly
+  // census first put `lobbyMix` in the committed snapshot -- until then there
+  // were no percentages anywhere in the file to find, and this test could only
+  // pin the gathering state.
+  //
+  // Which of the two states is asserted is read off the snapshot rather than
+  // hardcoded, because gathering is a state this page legitimately returns to
+  // at every season rollover -- a fixed pin on the table would turn the next
+  // reset into a red build about nothing. What holds in both branches is that
+  // the static file carries the page's answer and never the loading line.
+  //
+  // Row counts rather than the digits themselves: the numbers move every night
+  // and their formatting is per-locale (uk-UA groups with a space and
+  // decimal-commas), so a literal "37%" would pin the day rather than the page.
+  it("carries the lobby table itself, not a promise of one", () => {
+    const rows = lobbyMixRows(CENSUS_SNAPSHOT);
+
+    for (const path of ["/ranked-lobbies", "/ua/ranked-lobbies"]) {
+      const html = decode(page(path));
+      const dict = path.startsWith("/ua/") ? ua : en;
+      expect(html, path).not.toContain(en.pages.ranks.distribution.loading);
+
+      if (!rows) {
+        expect(html, path).toContain(dict.pages.rankedLobbies.gathering);
+        continue;
+      }
+
+      expect(html, path).not.toContain(dict.pages.rankedLobbies.gathering);
+      expect(html.match(/<tr><th scope="row">/g)?.length, path).toBe(rows.length);
+      expect(html, path).toMatch(/<td>[\d\s,.]+%<\/td>/);
+      expect(html, path).toContain(CENSUS_SNAPSHOT.firstDate);
+    }
   });
 });
 
