@@ -1281,7 +1281,7 @@ const PlayerPage = ({ t }) => {
       <section className="player-card">
         <div className="player-card__head">
           <h3>Recent Matches</h3>
-          <span>Last {matchItems.length} API matches</span>
+          <span>Last {matchItems.length} matches</span>
         </div>
 
         <div className="player-card__meta">
