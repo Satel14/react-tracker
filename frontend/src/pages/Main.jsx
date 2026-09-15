@@ -25,7 +25,7 @@ const PLATFORM_OPTIONS = [
   {
     value: "steam",
     label: "Steam",
-    placeholder: "Enter PUBG nickname",
+    placeholder: "Enter PUBG nickname or Steam url",
     icon: <SteamIcon />,
   },
   {

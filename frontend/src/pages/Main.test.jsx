@@ -84,7 +84,7 @@ test("shows a notification and does not navigate when Steam resolution returns n
   getPlayerSteamName.mockResolvedValue({ status: 200, message: "not found" });
   renderPage();
 
-  const input = screen.getByPlaceholderText("Enter PUBG nickname");
+  const input = screen.getByPlaceholderText("Enter PUBG nickname or Steam url");
   fireEvent.change(input, {
     target: { value: "https://steamcommunity.com/id/ghost" },
   });
@@ -105,7 +105,7 @@ test("resets the exit animation state when the Steam resolver throws", async () 
   getPlayerSteamName.mockRejectedValue(new Error("network down"));
   const { container } = renderPage();
 
-  const input = screen.getByPlaceholderText("Enter PUBG nickname");
+  const input = screen.getByPlaceholderText("Enter PUBG nickname or Steam url");
   fireEvent.change(input, {
     target: { value: "https://steamcommunity.com/id/ghost" },
   });
