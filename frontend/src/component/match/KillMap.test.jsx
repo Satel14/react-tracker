@@ -9,11 +9,14 @@ const kills = [
 ];
 
 test("renders the map background image", () => {
-  render(<KillMap kills={kills} rawMapName="Baltic_Main" mapMax={8160} duration={120} t={t} />);
+  render(<KillMap kills={kills} rawMapName="Baltic_Main" mapMax={8160} t={t} />);
   expect(screen.getByRole("img", { name: /erangel/i })).toBeInTheDocument();
 });
 
-test("renders a time-range control", () => {
-  render(<KillMap kills={kills} rawMapName="Baltic_Main" mapMax={8160} duration={120} t={t} />);
-  expect(screen.getByText("pages.match.timeRange")).toBeInTheDocument();
+test("carries no time range of its own", () => {
+  // KillsPane owns it, because the feed beside this map has to narrow with it.
+  // A second slider here would be two controls for one window.
+  const { container } = render(<KillMap kills={kills} rawMapName="Baltic_Main" mapMax={8160} t={t} />);
+  expect(container.querySelector(".ant-slider")).toBeNull();
+  expect(screen.queryByText("pages.match.timeRange")).toBeNull();
 });

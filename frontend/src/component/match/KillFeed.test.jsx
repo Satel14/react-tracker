@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect } from "vitest";
 import KillFeed from "./KillFeed";
@@ -17,11 +17,17 @@ test("renders one row per kill", () => {
   expect(screen.getByText("Bob")).toBeInTheDocument();
 });
 
-test("the Mine filter shows only the focal player's kills/deaths", () => {
+test("carries no filter of its own", () => {
+  // All/Mine moved up to KillsPane: it used to narrow this list while the map
+  // above it went on painting every tracer.
   render(<KillFeed kills={kills} t={t} />);
-  fireEvent.click(screen.getByText("pages.match.filterFocal"));
-  expect(screen.getByText("Foe")).toBeInTheDocument(); // victim of focal kill
-  expect(screen.queryByText("Bob")).not.toBeInTheDocument();
+  expect(screen.queryByText("pages.match.filterFocal")).toBeNull();
+});
+
+test("prefers the caller's reason for an empty list", () => {
+  render(<KillFeed kills={[]} emptyLabel="nothing in this window" t={t} />);
+  expect(screen.getByText("nothing in this window")).toBeInTheDocument();
+  expect(screen.queryByText("pages.match.noKills")).toBeNull();
 });
 
 test("shows the empty state when there are no kills", () => {

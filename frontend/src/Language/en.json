@@ -446,7 +446,10 @@
       "timeRange": "Time range",
       "weapon": "Weapon",
       "serverLabel": "Server",
-      "weatherLabel": "Weather"
+      "weatherLabel": "Weather",
+      "killsTotal": "Kills: {total}",
+      "killsShown": "Shown: {shown} of {total}",
+      "noKillsFiltered": "No kills match these filters."
     },
     "help": {
       "title": "How to look up PUBG stats",

@@ -4,23 +4,36 @@ import { SkeletonFrame, SkeletonTile as Tile } from "../Skeleton";
 const Cells = ({ count }) =>
   Array.from({ length: count }, (_, index) => <Tile key={index} variant="cell" />);
 
+// Wears the pane's grid, not just the two cards inside it: a placeholder that
+// stacked the map above the feed would jump sideways the moment the real
+// two-column layout arrived.
 const KillsSkeleton = ({ label, rows }) => (
-  <SkeletonFrame label={label}>
-    <div className="kill-map">
-      <div className="map-stage kill-map__stage">
-        <span className="skeleton map-stage__bg" aria-hidden="true" />
-      </div>
+  <SkeletonFrame className="kills-pane" label={label}>
+    <div className="kills-pane__controls">
+      <Tile variant="chip" />
+      <Tile variant="label" />
     </div>
-    <div className="kill-feed">
-      <ul className="kill-feed__list">
-        {Array.from({ length: rows }, (_, index) => (
-          <li className="kill-feed__row" key={index}>
-            <Tile variant="label" />
-            <Tile variant="cell" />
-            <Tile variant="chip" />
-          </li>
-        ))}
-      </ul>
+    <div className="kills-pane__layout">
+      <div className="kills-pane__map">
+        <div className="kill-map">
+          <div className="map-stage kill-map__stage">
+            <span className="skeleton map-stage__bg" aria-hidden="true" />
+          </div>
+        </div>
+      </div>
+      <div className="kills-pane__feed">
+        <div className="kill-feed">
+          <ul className="kill-feed__list">
+            {Array.from({ length: rows }, (_, index) => (
+              <li className="kill-feed__row" key={index}>
+                <Tile variant="label" />
+                <Tile variant="cell" />
+                <Tile variant="chip" />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   </SkeletonFrame>
 );

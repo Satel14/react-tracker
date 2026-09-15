@@ -6401,8 +6401,68 @@ body {
   }
 }
 
+// The Kills tab. The map squares itself at 560px and the feed used to run the
+// full width of the column underneath it, so on a desktop the 600-odd pixels
+// beside the map were empty on every match. Side by side, the feed's rows sit
+// level with the tracers they name.
+.kills-pane {
+  &__controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    margin-bottom: 14px;
+  }
+  &__range {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 240px;
+  }
+  &__range-label,
+  &__count {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  &__count { font-variant-numeric: tabular-nums; }
+
+  &__layout {
+    display: grid;
+    grid-template-columns: 560px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  // A full lobby's feed runs past two thousand pixels; the map stays in view
+  // rather than scrolling away from the rows that point into it.
+  &__map { position: sticky; top: 12px; }
+  &__feed {
+    min-width: 0;
+
+    // The feed is half its old width here, so the two names have to be the
+    // things that give: the time, the weapon pill and the distance are all
+    // fixed-size and would otherwise push the row wider than its column.
+    .kill-feed__killer,
+    .kill-feed__victim {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // 560 map + 18 gap leaves the feed 460px at this width, which is the point
+  // below which its row starts clipping rather than ellipsizing.
+  @media (max-width: 1040px) {
+    &__layout { grid-template-columns: 1fr; }
+    &__map { position: static; }
+  }
+}
+
 .kill-feed {
-  .ant-segmented { margin-bottom: 10px; }
   &__list {
     list-style: none;
     margin: 0;
@@ -6431,6 +6491,14 @@ body {
     &.is-death {
       box-shadow: inset 3px 0 0 var(--danger);
       .kill-feed__victim { color: var(--danger); }
+    }
+    // The map fades every other tracer while this row is pointed at, so the row
+    // carries a mark of its own -- otherwise the pairing only reads in one
+    // direction. After :hover on purpose: the same state, reached by keyboard.
+    &.is-highlight {
+      background: rgba(255, 255, 255, 0.07);
+      outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      outline-offset: -1px;
     }
   }
   &__time { opacity: 0.55; min-width: 46px; font-variant-numeric: tabular-nums; }
@@ -7052,20 +7120,6 @@ body {
     margin: 6px 0 0;
     color: var(--text-faint);
     font-size: 11px;
-  }
-  &__range {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 12px 0 0;
-
-    > span {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: var(--text-muted);
-      white-space: nowrap;
-    }
   }
 }
 
