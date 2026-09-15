@@ -1,4 +1,4 @@
-import { API_TIMEOUT_MS } from './apiBase'
+import { API_TIMEOUT_MS, requestTimeoutError } from './apiBase'
 import { API_URL } from './config'
 import openNotification from './../component/Notification';
 const headers = {
@@ -18,12 +18,8 @@ const withTimeout = async (run, timeoutMs = TIMEOUT_MS) => {
   try {
     return await run(controller.signal);
   } catch (error) {
-    // Told apart from a network error on purpose: a caller that wants to say
-    // "the server is waking up, try again" needs to know which one it got.
     if (controller.signal.aborted) {
-      const timedOut = new Error(`Request timed out after ${timeoutMs}ms`);
-      timedOut.timeout = true;
-      throw timedOut;
+      throw requestTimeoutError(timeoutMs);
     }
     throw error;
   } finally {
@@ -63,7 +59,10 @@ const finishResponse = async (result, notificationErr) => {
 export const adoptResponse = (result, notificationErr = false) =>
   finishResponse(result, notificationErr);
 
-export const post = async (destination, body, notificationErr = false) => {
+// timeoutMs is for a caller that has already spent part of the budget -- the
+// rank preload can fail late, and the request that replaces it must finish
+// inside what is left rather than start the whole wait again.
+export const post = async (destination, body, notificationErr = false, { timeoutMs } = {}) => {
   return withTimeout(async (signal) => {
     const result = await fetch(`${API_URL}${destination}`, {
       method: "POST",
@@ -72,7 +71,7 @@ export const post = async (destination, body, notificationErr = false) => {
       signal,
     });
     return finishResponse(result, notificationErr);
-  });
+  }, timeoutMs);
 };
 
 export const get = async (destination, notificationErr = false) => {

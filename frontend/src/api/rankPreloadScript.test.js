@@ -7,16 +7,47 @@ import { RANK_PRELOAD_MARKER, injectRankPreload, rankPreloadScript } from "./ran
 
 const API = "https://api.example.test/api";
 
+// A Response whose body can be taken exactly once, and which dies the way an
+// aborted one does: the object stays, reading it stops working. Measured in
+// node with a real server -- once AbortSignal.timeout fires, an unread body
+// throws AbortError even when the whole response already arrived.
+const responseLike = (payload, { ok = true, status = 200 } = {}) => {
+  let taken = false;
+  const dead = () => {
+    const error = new Error("The operation was aborted.");
+    error.name = "AbortError";
+    return Promise.reject(error);
+  };
+  return {
+    ok,
+    status,
+    text: () => {
+      if (taken) return dead();
+      taken = true;
+      return Promise.resolve(JSON.stringify(payload));
+    },
+    json: () => (taken ? dead() : Promise.resolve(payload)),
+    kill: () => { taken = true; },
+  };
+};
+
+const rejectingWith = (name) => () => {
+  const error = new Error(`fetch failed: ${name}`);
+  error.name = name;
+  return Promise.reject(error);
+};
+
 // The source that ships inline in index.html, run here with the three browser
 // globals it names passed in as arguments. Wrapping it rather than rewriting it
 // is the point: what this exercises is byte for byte what the page executes.
-const run = (pathname, { fetchImpl, abortSignal } = {}) => {
+const run = (pathname, { fetchImpl, abortSignal, payload } = {}) => {
   const window = {};
   const location = { pathname };
   const calls = [];
+  const wire = responseLike(payload || { data: { ok: true } });
   const fetch = fetchImpl || ((url, init) => {
     calls.push({ url, init });
-    return Promise.resolve({ ok: true });
+    return Promise.resolve(wire);
   });
   const AbortSignal = abortSignal === undefined ? { timeout: (ms) => ({ ms }) } : abortSignal;
 
@@ -27,7 +58,7 @@ const run = (pathname, { fetchImpl, abortSignal } = {}) => {
     AbortSignal
   );
 
-  return { window, calls };
+  return { window, calls, wire };
 };
 
 describe("the inline rank preload", () => {
@@ -86,12 +117,97 @@ describe("the inline rank preload", () => {
     expect(run("/").window[RANK_PRELOAD_GLOBAL]).toBe(undefined);
   });
 
-  it("resolves to null on a failed request rather than rejecting into nobody's hands", async () => {
+  it("settles rather than rejecting into nobody's hands when the request fails", async () => {
     const { window } = run("/player/steam/PlayerA", {
       fetchImpl: () => Promise.reject(new Error("offline")),
     });
 
-    await expect(window[RANK_PRELOAD_GLOBAL].response).resolves.toBe(null);
+    await expect(window[RANK_PRELOAD_GLOBAL].response).resolves.toMatchObject({
+      preloadFailed: true,
+      timedOut: false,
+    });
+  });
+
+  // The defect this replaced: the script held an unread Response, and once the
+  // 45 s abort fired, reading it threw AbortError -- so a slow page turned an
+  // HTTP 200 that had already arrived into an error. Reproduced in node against
+  // a real server, both while the body was still streaming and after it had
+  // fully arrived.
+  it("reads the body while it can, so a page that mounts late still gets the answer", async () => {
+    const { window, wire } = run("/player/steam/PlayerA", { payload: { data: { handle: "PlayerA" } } });
+    const snapshot = await window[RANK_PRELOAD_GLOBAL].response;
+
+    wire.kill(); // the abort fires; the Response is no longer readable
+
+    expect(snapshot.ok).toBe(true);
+    expect(snapshot.status).toBe(200);
+    await expect(snapshot.json()).resolves.toEqual({ data: { handle: "PlayerA" } });
+  });
+
+  it("hands over a readable snapshot, not the Response itself", async () => {
+    const { window, wire } = run("/player/steam/PlayerA");
+    const snapshot = await window[RANK_PRELOAD_GLOBAL].response;
+
+    expect(snapshot).not.toBe(wire);
+  });
+
+  it("carries an error status through so the page reports the server's answer", async () => {
+    const { window } = run("/player/steam/PlayerA", {
+      fetchImpl: () => Promise.resolve(responseLike({ status: 422, message: "Player not found" }, { ok: false, status: 422 })),
+    });
+    const snapshot = await window[RANK_PRELOAD_GLOBAL].response;
+
+    expect(snapshot.ok).toBe(false);
+    expect(snapshot.status).toBe(422);
+    await expect(snapshot.json()).resolves.toMatchObject({ message: "Player not found" });
+  });
+
+  // Told apart because the answer differs: a timeout has already spent the whole
+  // budget and must not buy a second one, while a fast failure costs nothing to
+  // retry through the normal path.
+  it("marks a timeout as a timeout", async () => {
+    const { window } = run("/player/steam/PlayerA", { fetchImpl: rejectingWith("TimeoutError") });
+
+    await expect(window[RANK_PRELOAD_GLOBAL].response).resolves.toMatchObject({
+      preloadFailed: true,
+      timedOut: true,
+    });
+  });
+
+  it("does not mark an ordinary network failure as a timeout", async () => {
+    const { window } = run("/player/steam/PlayerA", { fetchImpl: rejectingWith("TypeError") });
+
+    await expect(window[RANK_PRELOAD_GLOBAL].response).resolves.toMatchObject({
+      preloadFailed: true,
+      timedOut: false,
+    });
+  });
+
+  // Carried on the failure itself so the fallback can be given the rest of the
+  // budget rather than a fresh one.
+  it("says when it started, so a late failure cannot buy a second full wait", async () => {
+    const before = Date.now();
+    const { window } = run("/player/steam/PlayerA", { fetchImpl: rejectingWith("TypeError") });
+    const result = await window[RANK_PRELOAD_GLOBAL].response;
+
+    expect(typeof result.startedAt).toBe("number");
+    expect(result.startedAt).toBeGreaterThanOrEqual(before);
+    expect(result.startedAt).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("treats a body that dies mid-read as the timeout it came from", async () => {
+    const { window } = run("/player/steam/PlayerA", {
+      fetchImpl: () => Promise.resolve({
+        ok: true,
+        status: 200,
+        text: rejectingWith("TimeoutError"),
+      }),
+    });
+
+    await expect(window[RANK_PRELOAD_GLOBAL].response).resolves.toMatchObject({
+      preloadFailed: true,
+      timedOut: true,
+    });
   });
 
   it("stands aside on a browser without AbortSignal.timeout instead of starting a request nothing can cancel", () => {

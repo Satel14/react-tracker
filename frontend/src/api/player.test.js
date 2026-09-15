@@ -11,6 +11,7 @@ vi.mock("./fetch", () => ({
 }));
 
 import { getMatchReplay, getPlayerData, prefetchMatchReplay } from "./player";
+import { API_TIMEOUT_MS } from "./apiBase";
 import { RANK_PRELOAD_GLOBAL } from "./rankPreload";
 
 beforeEach(() => {
@@ -72,16 +73,96 @@ describe("adopting the inline rank preload", () => {
     expect(adoptResponse).toHaveBeenCalledWith(wireResponse, true);
   });
 
-  it("asks normally when the preload could not reach the network", async () => {
-    // The inline script resolves to null rather than rejecting, so a dead
-    // preload costs nothing and the real request reports the failure.
-    stash("steam|PlayerA", Promise.resolve(null));
+  it("asks normally when the preload failed cheaply", async () => {
+    // The inline script settles rather than rejecting, so a dead preload costs
+    // nothing and the real request reports the failure.
+    const now = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    stash("steam|PlayerA", Promise.resolve({
+      preloadFailed: true,
+      timedOut: false,
+      startedAt: 1_000_000 - 200,
+    }));
     post.mockResolvedValue({ data: {} });
 
     await getPlayerData("steam", "PlayerA");
 
     expect(adoptResponse).not.toHaveBeenCalled();
-    expect(post).toHaveBeenCalledWith("/player/rank", { platform: "steam", gameId: "PlayerA", seasonId: null }, true);
+    expect(post).toHaveBeenCalledWith(
+      "/player/rank",
+      { platform: "steam", gameId: "PlayerA", seasonId: null },
+      true,
+      { timeoutMs: API_TIMEOUT_MS - 200 }
+    );
+    now.mockRestore();
+  });
+
+  // The preload already waited the full budget. Starting a fresh request on top
+  // of it made the visitor sit through it twice -- about 90 s before anything
+  // was said -- where the request had a single 45 s bound before the preload
+  // existed.
+  it("fails the lookup after a preload timeout instead of starting the wait over", async () => {
+    stash("steam|PlayerA", Promise.resolve({ preloadFailed: true, timedOut: true }));
+    post.mockResolvedValue({ data: {} });
+
+    await expect(getPlayerData("steam", "PlayerA")).rejects.toMatchObject({ timeout: true });
+
+    expect(post).not.toHaveBeenCalled();
+    expect(adoptResponse).not.toHaveBeenCalled();
+  });
+
+  it("reports a preload timeout in the words the normal request uses", async () => {
+    stash("steam|PlayerA", Promise.resolve({ preloadFailed: true, timedOut: true }));
+
+    await expect(getPlayerData("steam", "PlayerA")).rejects.toThrow(
+      `Request timed out after ${API_TIMEOUT_MS}ms`
+    );
+  });
+
+  // The bound the lookup had before the preload existed was 45 s in total, and
+  // it has to stay 45 s in total: a preload that failed late must hand the
+  // fallback what is left of the budget, not a fresh one.
+  it("gives the fallback only what is left of the wait after a late preload failure", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    stash("steam|PlayerA", Promise.resolve({
+      preloadFailed: true,
+      timedOut: false,
+      startedAt: 1_000_000 - 40_000,
+    }));
+    post.mockResolvedValue({ data: {} });
+
+    await getPlayerData("steam", "PlayerA");
+
+    expect(post).toHaveBeenCalledWith(
+      "/player/rank",
+      { platform: "steam", gameId: "PlayerA", seasonId: null },
+      true,
+      { timeoutMs: 5_000 }
+    );
+    now.mockRestore();
+  });
+
+  it("does not start a second wait when the preload already spent the budget failing", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    stash("steam|PlayerA", Promise.resolve({
+      preloadFailed: true,
+      timedOut: false,
+      startedAt: 1_000_000 - 50_000,
+    }));
+    post.mockResolvedValue({ data: {} });
+
+    await expect(getPlayerData("steam", "PlayerA")).rejects.toMatchObject({ timeout: true });
+
+    expect(post).not.toHaveBeenCalled();
+    now.mockRestore();
+  });
+
+  it("still asks normally if the preload left something unrecognisable behind", async () => {
+    stash("steam|PlayerA", Promise.resolve(null));
+    post.mockResolvedValue({ data: {} });
+
+    await getPlayerData("steam", "PlayerA");
+
+    expect(post).toHaveBeenCalledTimes(1);
   });
 
   it("asks normally for a player the preload was not started for", async () => {

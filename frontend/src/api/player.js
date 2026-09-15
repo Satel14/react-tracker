@@ -1,3 +1,4 @@
+import { API_TIMEOUT_MS, requestTimeoutError } from './apiBase'
 import { adoptResponse, get, post } from './fetch'
 import { rankPreloadKey, takeRankPreload } from './rankPreload'
 
@@ -60,23 +61,32 @@ export const getPlayerData = async (platform, gameId, seasonId = null) => {
   // long consumed.
   const preloaded = seasonId ? null : takeRankPreload(rankPreloadKey(platform, gameId));
 
+  const body = { platform, gameId, seasonId };
+
   if (preloaded) {
-    const response = await preloaded;
-    // null means the preload never reached the network. Falling through rather
-    // than failing here leaves the error to the normal request, which has the
-    // timeout and the notification.
-    if (response) return adoptResponse(response, true);
+    const result = await preloaded;
+
+    if (!result?.preloadFailed && result) {
+      return adoptResponse(result, true);
+    }
+
+    if (result?.preloadFailed) {
+      // The lookup was bounded once, in total, before the preload existed, and
+      // it stays bounded once: a preload that ran out of time reports that, and
+      // one that died earlier hands the replacement only what is left. Starting
+      // a fresh wait on top of a spent one made the visitor sit through both.
+      const remainingMs = result.timedOut
+        ? 0
+        : API_TIMEOUT_MS - Math.max(0, Date.now() - (result.startedAt ?? Date.now()));
+
+      if (remainingMs <= 0) throw requestTimeoutError();
+
+      return post("/player/rank", body, true, { timeoutMs: remainingMs });
+    }
+    // Anything unrecognisable: fall through to an ordinary request.
   }
 
-  return post(
-    "/player/rank",
-    {
-      platform,
-      gameId,
-      seasonId,
-    },
-    true
-  );
+  return post("/player/rank", body, true);
 };
 
 export const getPlayerReports = (accountId, playerName) =>

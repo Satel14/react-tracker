@@ -20,6 +20,7 @@ export const rankPreloadScript = (apiUrl) => `(function () {
 
     var platform = decodeURIComponent(parts[2]);
     var gameId = decodeURIComponent(parts[3]);
+    var startedAt = Date.now();
 
     window[${JSON.stringify(RANK_PRELOAD_GLOBAL)}] = {
       key: encodeURIComponent(platform) + "|" + encodeURIComponent(gameId),
@@ -28,7 +29,34 @@ export const rankPreloadScript = (apiUrl) => `(function () {
         headers: { Accept: "application/json", "Content-Type": "application/json" },
         body: JSON.stringify({ platform: platform, gameId: gameId, seasonId: null }),
         signal: AbortSignal.timeout(${API_TIMEOUT_MS})
-      }).catch(function () { return null; })
+      }).then(function (r) {
+        // Drained here and not when the page gets round to it. An aborted
+        // Response keeps its status and loses its body, so holding an unread
+        // one turns a 200 that already arrived into an AbortError the moment
+        // the timeout fires -- measured, both mid-stream and fully received.
+        return r.text().then(function (body) {
+          return {
+            ok: r.ok,
+            status: r.status,
+            json: function () {
+              try {
+                return Promise.resolve(JSON.parse(body));
+              } catch (parseError) {
+                return Promise.reject(parseError);
+              }
+            }
+          };
+        });
+      }).catch(function (e) {
+        // A timeout has already spent the whole budget, so the page must not
+        // start a second one on top of it; anything else is worth retrying
+        // through the normal request, but only for the time this one left.
+        return {
+          preloadFailed: true,
+          timedOut: !!e && e.name === "TimeoutError",
+          startedAt: startedAt
+        };
+      })
     };
   } catch (e) {
     // The page has to load whatever happens here: this is only a head start.

@@ -18,3 +18,13 @@ export const resolveApiUrl = ({ mode, override } = {}) => {
 // going to succeed. Lives here rather than in fetch.js because the inline
 // preload needs the same bound and cannot import a module that reaches antd.
 export const API_TIMEOUT_MS = 45_000;
+
+// One factory so a request that ran out of time reads the same whether it was
+// this module's AbortController or the inline preload's AbortSignal.timeout
+// that cut it off. Told apart from a network error on purpose: a caller that
+// wants to say "the server is waking up, try again" needs to know which it got.
+export const requestTimeoutError = (timeoutMs = API_TIMEOUT_MS) => {
+  const error = new Error(`Request timed out after ${timeoutMs}ms`);
+  error.timeout = true;
+  return error;
+};
