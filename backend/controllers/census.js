@@ -10,7 +10,7 @@ const { seasonForWindow, previousSeasonId, seasonStartDate } = require("../modul
 const { estimateIcc, PER_MATCH } = require("../modules/tierCensus/sampling");
 const { tierShare, rpThresholds } = require("../modules/tierCensus/stats");
 const { lobbyMix } = require("../modules/tierCensus/lobbyMix");
-const { isDbFailing } = require("../modules/db/health");
+const { isDbFailing, getDbErrorSequence } = require("../modules/db/health");
 
 const SHARD = "steam";
 
@@ -298,13 +298,14 @@ const createCensusController = ({
     // leave a rejected promise wedged in the map.
     const generation = cacheGeneration;
     const run = Promise.resolve().then(async () => {
+      const errorSequence = getDbErrorSequence("census");
       try {
         const body = await buildDistribution(days);
         // A payload assembled while Postgres was failing is not the published
         // result, it is the absence of one. Holding it for half an hour would
         // keep serving zeroes for half an hour after the database came back,
         // and telling a CDN to store it would outlive even that.
-        const failing = isDbFailing("census");
+        const failing = isDbFailing("census") || getDbErrorSequence("census") !== errorSequence;
         const entry = {
           body,
           timestamp: Date.now(),

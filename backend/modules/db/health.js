@@ -67,6 +67,10 @@ function isDbFailing(scope) {
   return [...stores.values()].some(failing);
 }
 
+function getDbErrorSequence(scope) {
+  return stores.get(scope || UNKNOWN_SCOPE)?.errorSeq ?? 0;
+}
+
 function getDbHealth() {
   if (!stores.size) return { status: "unknown" };
 
@@ -97,4 +101,4 @@ function __resetDbHealth() {
   stores.clear();
 }
 
-module.exports = { recordDbError, recordDbOk, isDbFailing, getDbHealth, __resetDbHealth };
+module.exports = { recordDbError, recordDbOk, isDbFailing, getDbErrorSequence, getDbHealth, __resetDbHealth };
