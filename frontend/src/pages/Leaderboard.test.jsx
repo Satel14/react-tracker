@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { Link, MemoryRouter } from "react-router-dom";
 import Leaderboard from "./Leaderboard";
 import { ROUTE_META } from "../helpers/routeMeta";
 import en from "../Language/en.json";
@@ -101,6 +101,27 @@ test("renders leaderboard rows from the API", async () => {
   renderPage();
   expect(await screen.findByText("Alpha")).toBeInTheDocument();
   expect(screen.getByText("Bravo")).toBeInTheDocument();
+});
+
+test("follows season changes in the URL and returns to the current season", async () => {
+  getLeaderboard.mockImplementation((_platform, _mode, requestedSeason) => Promise.resolve({
+    status: 200,
+    data: { entries: [{ ...sampleEntries[0], name: requestedSeason === "s-old" ? "Old season row" : "Current season row" }] },
+  }));
+  render(
+    <MemoryRouter initialEntries={["/leaderboards"]}>
+      <Link to="/leaderboards?season=s-old">Open old season</Link>
+      <Link to="/leaderboards">Open current season</Link>
+      <Leaderboard t={t} />
+    </MemoryRouter>,
+  );
+  await screen.findByText("Current season row");
+  fireEvent.click(screen.getByRole("link", { name: "Open old season" }));
+  await screen.findByText("Old season row");
+  expect(getLeaderboard).toHaveBeenLastCalledWith("pc-eu", "squad-fpp", "s-old");
+  fireEvent.click(screen.getByRole("link", { name: "Open current season" }));
+  await screen.findByText("Current season row");
+  expect(getLeaderboard).toHaveBeenLastCalledWith("pc-eu", "squad-fpp", "s-current");
 });
 
 test("filters rows by the debounced player search box", async () => {
