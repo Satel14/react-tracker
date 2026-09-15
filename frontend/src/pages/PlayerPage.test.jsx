@@ -137,7 +137,9 @@ test("never requests reports with the previous player's identity after navigatin
   expect(callsAfterNavigation.length).toBeGreaterThan(0);
   expect(callsAfterNavigation.map(([accountId]) => accountId)).not.toContain("account.PlayerA");
   expect(callsAfterNavigation.map(([, playerName]) => playerName)).not.toContain("PlayerA");
-  expect(callsAfterNavigation).toEqual([[null, "PlayerB"], ["account.PlayerB", "PlayerB"]]);
+  // Exactly one, and it carries the account id: the name-only call this used to
+  // make on mount was thrown away by the one that followed it.
+  expect(callsAfterNavigation).toEqual([["account.PlayerB", "PlayerB"]]);
 });
 
 test("ignores a late reports response for the previous player", async () => {
