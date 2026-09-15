@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Overlay from "./Overlay";
 
@@ -77,6 +77,27 @@ test("renders error state when player data is not available", async () => {
   });
 });
 
+test("omits unknown RP while preserving the reported rank", async () => {
+  getPlayerData.mockResolvedValue({ data: {
+    ...samplePlayerData.data,
+    season: { rankedInfo: { label: "Gold III", currentRankPoint: null } },
+  } });
+  renderPage();
+
+  expect(await screen.findByText("Gold III")).toBeInTheDocument();
+  expect(screen.queryByText(/0 RP/)).not.toBeInTheDocument();
+});
+
+test("displays a reported zero RP", async () => {
+  getPlayerData.mockResolvedValue({ data: {
+    ...samplePlayerData.data,
+    season: { rankedInfo: { label: "Bronze V", currentRankPoint: 0 } },
+  } });
+  renderPage();
+
+  expect(await screen.findByText("Bronze V - 0 RP")).toBeInTheDocument();
+});
+
 test("uses fallback values when stat displayValues are missing", async () => {
   const dataWithMissingStats = {
     data: {
@@ -93,4 +114,22 @@ test("uses fallback values when stat displayValues are missing", async () => {
     const zeros = screen.getAllByText("0");
     expect(zeros.length).toBeGreaterThan(0);
   });
+});
+
+
+test.each(["Infinity", "1e309", "2147484"])("invalid refresh=%s cannot trigger a rapid polling loop", async (refresh) => {
+  vi.useFakeTimers();
+  getPlayerData.mockResolvedValue(samplePlayerData);
+  let unmount;
+  try {
+    await act(async () => { ({ unmount } = renderPage([`/overlay/pc/game123?refresh=${refresh}`])); });
+    expect(getPlayerData).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(getPlayerData).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(59000); });
+    expect(getPlayerData).toHaveBeenCalledTimes(2);
+  } finally {
+    unmount?.();
+    vi.useRealTimers();
+  }
 });

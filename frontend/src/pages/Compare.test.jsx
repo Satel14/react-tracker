@@ -58,6 +58,14 @@ const flush = async () => {
   });
 };
 
+test("encodes a Steam URL used as a slot's profile identifier", async () => {
+  const id = "https://steamcommunity.com/id/Example";
+  getPlayerData.mockResolvedValue(payloadFor("Example", { wins: statCell(1) }));
+  renderCompare(`?p1=${encodeURIComponent(`steam:${id}`)}`);
+  const link = await screen.findByRole("link", { name: /Example/ });
+  expect(link.getAttribute("href")).toBe(`/player/steam/${encodeURIComponent(id)}`);
+});
+
 test("reports a rate-limited slot as a rate limit, not as a missing player", async () => {
   getPlayerData.mockResolvedValue({ status: 200, message: "Rate Limit Reached" });
 

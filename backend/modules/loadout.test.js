@@ -64,6 +64,48 @@ test("a survivor is cut at their last position sample", () => {
   assert.deepEqual(out.weapons.map((w) => w.name), ["M416"]);
 });
 
+test("applies shuffled weapon and armour changes in timestamp order", () => {
+  const events = Object.freeze([
+    unequip(20, "Item_Weapon_HK416_C", "Main"),
+    unequip(21, "Item_Head_F_01_Lv2_C", "Headgear", me, "Equipment"),
+    equip(10, "Item_Weapon_HK416_C", "Main"),
+    equip(11, "Item_Head_F_01_Lv2_C", "Headgear", me, "Equipment"),
+    position(30),
+  ]);
+  const out = buildLoadout(events, { accountId: me.accountId });
+
+  assert.deepEqual(out.weapons, []);
+  assert.deepEqual(out.armour, []);
+});
+
+test("keeps gear re-equipped later even when its removal arrives last", () => {
+  const out = buildLoadout([
+    equip(10, "Item_Weapon_HK416_C", "Main"),
+    equip(25, "Item_Weapon_HK416_C", "Main"),
+    unequip(20, "Item_Weapon_HK416_C", "Main"),
+    position(30),
+  ], { accountId: me.accountId });
+
+  assert.deepEqual(out.weapons.map((w) => w.name), ["M416"]);
+});
+
+test("applies shuffled attachment changes in timestamp order", () => {
+  const weapon = "Item_Weapon_HK416_C";
+  const scope = "Item_Attach_Weapon_Upper_Scope6x_C";
+  const muzzle = "Item_Attach_Weapon_Muzzle_AR_MuzzleBrake_C";
+  const out = buildLoadout([
+    equip(10, weapon, "Main"),
+    detach(20, weapon, scope),
+    attach(25, weapon, muzzle),
+    attach(11, weapon, scope),
+    attach(12, weapon, muzzle),
+    detach(21, weapon, muzzle),
+    died(30),
+  ], { accountId: me.accountId });
+
+  assert.deepEqual(out.weapons[0].attachments, [{ slot: "Muzzle", name: null }]);
+});
+
 test("the repair kit never occupies a weapon slot", () => {
   // PUBG files it under Weapon/Main. It was the sole cause of every
   // reconstruction breach -- 3 primaries where the game allows 2.

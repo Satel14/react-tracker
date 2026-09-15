@@ -15,6 +15,13 @@ const RECENT_STALE_DURATION = 10 * 60 * 1000;
 
 const recentCache = new Map();
 const inFlightRecentRequests = new Map();
+let cacheGeneration = 0;
+
+function invalidateRecentSearches() {
+  cacheGeneration += 1;
+  recentCache.clear();
+  inFlightRecentRequests.clear();
+}
 
 function getStore() {
   return pgStore.isConfigured() ? pgStore : fileStore;
@@ -55,10 +62,13 @@ async function getRecentSearches(limit = 10) {
   const inFlight = inFlightRecentRequests.get(limit);
   if (inFlight) return inFlight;
 
+  const generation = cacheGeneration;
   const run = (async () => {
     try {
       const data = await readWithFallback(limit);
-      recentCache.set(limit, { data, timestamp: Date.now() });
+      if (generation === cacheGeneration) {
+        recentCache.set(limit, { data, timestamp: Date.now() });
+      }
       return data;
     } catch (e) {
       const stale = recentCache.get(limit);
@@ -68,7 +78,9 @@ async function getRecentSearches(limit = 10) {
       }
       throw e;
     } finally {
-      inFlightRecentRequests.delete(limit);
+      if (inFlightRecentRequests.get(limit) === run) {
+        inFlightRecentRequests.delete(limit);
+      }
     }
   })();
 
@@ -82,7 +94,7 @@ async function addRecentSearch(entry, maxItems = MAX_RECENT_SEARCHES) {
   if (!normalized) return getRecentSearches(maxItems);
 
   const data = await store.addRecentSearch(normalized, maxItems);
-  recentCache.clear();
+  invalidateRecentSearches();
   recentCache.set(maxItems, { data, timestamp: Date.now() });
   return data;
 }
@@ -103,11 +115,11 @@ module.exports = {
   getRecentSearches,
   warmRecentSearches,
   __setRecentSearchesFile: (filePath) => {
-    recentCache.clear();
+    invalidateRecentSearches();
     return fileStore.__setRecentSearchesFile(filePath);
   },
   __setRecentSearchesPool: (nextPool) => {
-    recentCache.clear();
+    invalidateRecentSearches();
     return pgStore.__setRecentSearchesPool(nextPool);
   },
 };

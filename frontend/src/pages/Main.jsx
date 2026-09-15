@@ -103,9 +103,9 @@ const Main = ({ t }) => {
     let url;
 
     if (resolvedName) {
-      url = "/player/" + platform + "/" + resolvedName;
+      url = "/player/" + platform + "/" + encodeURIComponent(resolvedName);
     } else {
-      url = "/player/" + platform + "/" + text.trim();
+      url = "/player/" + platform + "/" + encodeURIComponent(text.trim());
     }
 
     setTimeout(() => {
@@ -140,7 +140,7 @@ const Main = ({ t }) => {
   const seasonLabel = liveStats?.season?.label || t("other.words.season");
   const endsInDays = liveStats?.season?.endsInDays;
   const playersOnlineValue = Number(liveStats?.playersOnline?.value);
-  const hasPlayersOnline = Number.isFinite(playersOnlineValue);
+  const hasPlayersOnline = liveStats?.playersOnline?.value != null && Number.isFinite(playersOnlineValue);
   const hasSeasonCountdown = endsInDays != null && Number.isFinite(Number(endsInDays));
   const isEstimatedSeasonCountdown = Boolean(liveStats?.season?.isEstimated);
 

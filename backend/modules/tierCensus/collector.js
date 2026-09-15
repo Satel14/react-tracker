@@ -27,6 +27,7 @@ const FLUSH_EVERY = 100;
 
 const header = (headers, name) => {
   const raw = typeof headers?.get === "function" ? headers.get(name) : undefined;
+  if (raw === null || raw === undefined || raw === "") return undefined;
   const value = Number(raw);
   return Number.isFinite(value) ? value : undefined;
 };

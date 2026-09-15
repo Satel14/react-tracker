@@ -149,7 +149,16 @@ function deriveStats(totals) {
 }
 
 function aggregateModeStats(gameModeStats = {}) {
-  const modes = Object.values(gameModeStats || {});
+  const modes = Object.values(gameModeStats || {}).map((mode) => ({
+    ...mode,
+    deaths: isReported(mode, "deaths")
+      ? mode.deaths
+      : resolveDeaths({
+        totalDeaths: null,
+        totalMatches: isReported(mode, "roundsPlayed") ? Number(mode.roundsPlayed) || 0 : null,
+        totalWins: isReported(mode, "wins") ? Number(mode.wins) || 0 : null,
+      }),
+  }));
   const totals = {};
 
   MODE_STAT_FIELDS.forEach(({ field, total, combine }) => {

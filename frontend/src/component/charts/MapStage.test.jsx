@@ -40,6 +40,7 @@ beforeEach(() => {
 afterEach(() => {
   HTMLCanvasElement.prototype.getContext = originalGetContext;
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 const mount = (props = {}) => {
@@ -154,4 +155,35 @@ describe("MapStage", () => {
     expect(() => render(<MapStage rawMapName="Baltic_Main" paint={paint} />)).not.toThrow();
     expect(paint).not.toHaveBeenCalled();
   });
+});
+
+
+test("preserves the camera when the kill-map paint callback changes", () => {
+  const { stage, cams, rerender } = mount();
+  fireEvent.wheel(stage, { deltaY: -120, clientX: 150, clientY: 200 });
+  const zoomed = { ...cams.at(-1) };
+  const paint = vi.fn();
+  rerender(<MapStage rawMapName="Baltic_Main" paint={paint} />);
+  expect(paint.mock.calls.at(-1)[1].cam).toEqual(zoomed);
+  rerender(<MapStage rawMapName="Desert_Main" paint={paint} />);
+  expect(paint.mock.calls.at(-1)[1].cam.zoom).toBe(MIN_ZOOM);
+});
+
+test.each(["base", "2048"])("keeps the sharp raster when %s finishes late", (lateTier) => {
+  const images = [];
+  vi.stubGlobal("Image", class {
+    constructor() { this.complete = true; this.width = 4096; this.height = 4096; images.push(this); }
+  });
+  const { stage, container } = mount();
+  for (let i = 0; i < 7; i += 1) fireEvent.wheel(stage, { deltaY: -120, clientX: 300, clientY: 300 });
+  const sharp = images.find((img) => img.src.includes("4096"));
+  const late = lateTier === "base" ? images[0] : images.find((img) => img.src.includes("2048"));
+  expect(sharp).toBeDefined();
+  expect(late).toBeDefined();
+  sharp.onload();
+  const ctx = container.querySelector(".map-stage__bg").getContext("2d");
+  expect(ctx.calls.at(-1).args[0]).toBe(sharp);
+  late.onload();
+  fireEvent.wheel(stage, { deltaY: 10, clientX: 300, clientY: 300 });
+  expect(ctx.calls.at(-1).args[0]).toBe(sharp);
 });

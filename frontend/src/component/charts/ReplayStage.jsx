@@ -138,6 +138,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     bgDirty: true,
     image: null,
     tier: 0,
+    loadedTier: 0,
     atlas: null,
     colors: { ...FALLBACK_COLORS },
     flashes: [],
@@ -175,6 +176,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     v.bgDirty = true;
     v.flashes.length = 0;
     v.tier = 0;
+    v.loadedTier = 0;
     v.image = null;
     // Also invalidates an in-flight high-res load on unmount, so a late
     // onload with no map change finds a stale generation and drops itself.
@@ -205,7 +207,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     let cancelled = false;
     const img = new Image();
     img.onload = () => {
-      if (cancelled) return;
+      if (cancelled || view.current.loadedTier > 0) return;
       view.current.image = img;
       view.current.bgDirty = true;
     };
@@ -223,19 +225,21 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     const size = RASTER_TIERS[Math.min(want, RASTER_TIERS.length) - 1];
     const url = highResUrl(data.rawMapName, size);
     if (!url) return;
-    const climbing = v.tier + 1;
+    const previousTier = v.tier;
+    const climbing = want;
     v.tier = climbing;
     const gen = v.mapGen;
     const img = new Image();
     img.onload = () => {
-      if (v.mapGen !== gen) return;
+      if (v.mapGen !== gen || climbing < v.loadedTier) return;
+      v.loadedTier = climbing;
       v.image = img;
       v.bgDirty = true;
     };
     img.onerror = () => {
       // The tier is not there; drop back so a later zoom can retry the one
       // below rather than the map being stuck on the base raster forever.
-      if (v.mapGen === gen && v.tier === climbing) v.tier = climbing - 1;
+      if (v.mapGen === gen && v.tier === climbing) v.tier = previousTier;
     };
     img.src = url;
   }, [data.rawMapName]);
@@ -531,6 +535,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     const rect = el.getBoundingClientRect();
     v.follow = false;
     v.cam = zoomAt(v.cam, v.vw, v.vh, v.cam.zoom * DOUBLE_CLICK_ZOOM, e.clientX - rect.left, e.clientY - rect.top);
+    requestTier();
     v.bgDirty = true;
   };
 

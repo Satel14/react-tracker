@@ -30,6 +30,30 @@ describe("fetch helpers", () => {
 // never fails left a skeleton on screen with no error and no retry -- the
 // failure mode a visitor reads as "the site is broken".
 describe("the request timeout", () => {
+  it.each(["get", "post"])("%s times out while an HTTP 200 JSON body is still streaming", async (method) => {
+    vi.useFakeTimers();
+    let stream;
+    try {
+      global.fetch = vi.fn(async (_url, { signal }) => new Response(new ReadableStream({
+        start(controller) {
+          stream = controller;
+          controller.enqueue(new TextEncoder().encode('{"data":'));
+          signal.addEventListener("abort", () => controller.error(signal.reason), { once: true });
+        },
+      }), { status: 200, headers: { "content-type": "application/json" } }));
+      let outcome;
+      const pending = (method === "get" ? get("/stream") : post("/stream", {}))
+        .then((value) => { outcome = value; }, (error) => { outcome = error; });
+      await vi.advanceTimersByTimeAsync(45_000);
+      expect(outcome).toMatchObject({ timeout: true });
+      await pending;
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      if (stream) { try { stream.close(); } catch { /* already aborted */ } }
+      vi.useRealTimers();
+    }
+  });
+
   it("passes an abort signal to fetch", async () => {
     global.fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({}) }));
     await get("/x");

@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Main from "./Main";
 
@@ -55,6 +55,16 @@ const renderPage = () =>
       <Main t={t} />
     </MemoryRouter>
   );
+
+test("shows unavailable rather than zero when Steam's live count is null", async () => {
+  getLiveSnapshot.mockResolvedValue({
+    data: { playersOnline: { value: null, source: "steam" }, season: null },
+  });
+  const { container } = renderPage();
+  await waitFor(() => expect(getLiveSnapshot).toHaveBeenCalled());
+  expect(container.querySelector(".mainpage_left__stats__playeronline"))
+    .toHaveTextContent("other.words.notAvailable");
+});
 
 // The static file and the interactive page share the heading, links and body.
 test("renders the same body component the static shell carries", () => {
@@ -127,4 +137,16 @@ test("counts the players online once the live snapshot arrives", async () => {
   await waitFor(() => {
     expect(screen.getByText(/533,310|533310|^0$/)).toBeInTheDocument();
   });
+});
+
+test("encodes reserved characters in a searched gamertag", async () => {
+  vi.useFakeTimers();
+  try {
+    renderPage();
+    fireEvent.click(screen.getByRole("radio", { name: "Xbox" }));
+    fireEvent.change(screen.getByPlaceholderText("Enter Xbox Gamertag"), { target: { value: "Player#1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "other.words.viewStats" }));
+    await act(async () => vi.advanceTimersByTimeAsync(600));
+    expect(navigate).toHaveBeenCalledWith("/player/xbox/Player%231234");
+  } finally { vi.useRealTimers(); }
 });

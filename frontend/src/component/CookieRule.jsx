@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { Button } from "antd";
 import { translate } from "react-switch-lang";
+import { readStoredItem, writeStoredItem } from "../helpers/browserStorage";
 
 const CookieRule = (props) => {
   const [show, setShow] = useState(true);
   const { t } = props;
   const toggle = () => {
     setShow(!show);
-    localStorage.setItem("cookierulebro", 1);
+    writeStoredItem("cookierulebro", 1);
   };
-  const cookiesogl = localStorage.getItem("cookierulebro");
+  const cookiesogl = readStoredItem("cookierulebro");
   return (
     <>
       {cookiesogl == null && show && (

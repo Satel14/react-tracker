@@ -344,6 +344,39 @@ const crystalRankedInfo = (overrides = {}) => ({
 
 const openSeasonTab = () => fireEvent.click(screen.getByRole("tab", { name: "Season" }));
 
+test("does not turn missing ranked points into zero", async () => {
+  getPlayerData.mockResolvedValue(seasonPayload(crystalRankedInfo({ currentRankPoint: null })));
+  getPlayerReports.mockResolvedValue(reportsPayload("Nobody"));
+  const { container } = renderAt();
+  await screen.findByText("PlayerA");
+
+  expect(container.querySelector(".player-rank-progress__details")).toHaveTextContent("No ranked RP data");
+  openSeasonTab();
+  expect(await screen.findByText("N/A RP")).toBeInTheDocument();
+});
+
+test("does not turn a missing percentile into Top 0%", async () => {
+  getPlayerData.mockResolvedValue(seasonPayload(crystalRankedInfo()));
+  getPlayerReports.mockResolvedValue(reportsPayload("Nobody"));
+  renderAt();
+  await screen.findByText("PlayerA");
+  expect(screen.queryByText("Top 0%")).not.toBeInTheDocument();
+  openSeasonTab();
+  expect(screen.queryByText("Top 0%")).not.toBeInTheDocument();
+});
+
+test("preserves a reported zero RP and a reported percentile", async () => {
+  getPlayerData.mockResolvedValue(seasonPayload(crystalRankedInfo({ currentRankPoint: 0, topPercentage: 0.25 })));
+  getPlayerReports.mockResolvedValue(reportsPayload("Nobody"));
+  const { container } = renderAt();
+  await screen.findByText("PlayerA");
+
+  expect(container.querySelector(".player-rank-progress__details strong")).toHaveTextContent("0 RP");
+  expect(screen.getByText("Top 0.25%")).toBeInTheDocument();
+  openSeasonTab();
+  expect(await screen.findAllByText("Top 0.25%")).toHaveLength(2);
+});
+
 test("shows the average ranked placement in the rank badge", async () => {
   getPlayerData.mockResolvedValue(seasonPayload(crystalRankedInfo()));
   getPlayerReports.mockResolvedValue(reportsPayload("Nobody"));

@@ -267,7 +267,7 @@ const Compare = ({ t }) => {
                     showIcon
                   />
                 ) : (
-                  <Link to={`/player/${slot.platform}/${slot.id}`} className="compare-column__profile">
+                  <Link to={`/player/${slot.platform}/${encodeURIComponent(slot.id)}`} className="compare-column__profile">
                     <img
                       src={avatar}
                       alt={displayName}

@@ -521,6 +521,18 @@ test("a played ranked mode reporting zero deaths falls back to matches minus win
   assert.equal(season.stats.kd.value, 0.95); // not 334, which dividing by nothing would give
 });
 
+test("mixed ranked modes include each mode's fallback deaths before calculating K/D", () => {
+  const season = mapSeason({}, {
+    squad: { roundsPlayed: 10, wins: 2, deaths: 0, kills: 10 },
+    "squad-fpp": { roundsPlayed: 5, wins: 1, deaths: 6, kills: 5 },
+  });
+
+  for (const stats of [season.stats, season.breakdown.ranked, season.modes.squad.stats]) {
+    assert.equal(stats.deaths.value, 14);
+    assert.equal(stats.kd.value, 1.07);
+  }
+});
+
 // gameModeStats has carried these six all along; the mapper simply dropped them.
 // Distances are metres (telemetry is the one that speaks centimetres).
 test("a season reports how far the player travelled, in metres or kilometres", () => {

@@ -7,6 +7,8 @@ const fs = require("node:fs");
 const { createCensusController } = require("../controllers/census");
 const { recordDbError, __resetDbHealth } = require("../modules/db/health");
 const { ROW_MIN_LOBBIES } = require("../modules/tierCensus/lobbyMix");
+const { __setPool } = require("../modules/db/pool");
+const { __resetTierCensusStore } = require("../modules/tierCensus/pgStore");
 
 const TOKEN = "a-census-token";
 
@@ -757,6 +759,49 @@ test("a failure in an unrelated store does not make the census uncacheable", asy
   await controller.getDistribution({ query: {} }, res);
 
   assert.match(res.headers["Cache-Control"], /^public, max-age=/);
+});
+
+test("a failed window read stays briefly cached despite a succeeding RP read, then recovers", async (t) => {
+  const originalNow = Date.now;
+  let at = 1_000_000;
+  Date.now = () => at;
+  __resetTierCensusStore();
+  t.after(() => {
+    Date.now = originalNow;
+    __setPool(null);
+    __resetTierCensusStore();
+  });
+  let reads = 0;
+  __setPool({ query: async (sql) => {
+    if (sql.includes("dense_rank()")) {
+      reads += 1;
+      if (reads === 1) throw new Error("query timeout");
+      return { rows: windowRows().map((row) => ({ match_cluster: row.matchId, tier: row.tier })) };
+    }
+    if (sql.includes("COUNT(DISTINCT match_id)")) {
+      return { rows: [{ windows: 7, matches: 30, accounts: 300, first_date: "2026-08-24", last_date: "2026-08-30" }] };
+    }
+    return { rows: [] };
+  } });
+  const controller = createCensusController({ currentSeason: async () => SEASON });
+  const first = makeRes();
+  await controller.getDistribution({ query: {} }, first);
+  assert.equal(first.body.data.accounts, 0);
+  assert.equal(first.headers["Cache-Control"], "no-store");
+
+  at += 59_000;
+  await controller.getDistribution({ query: {} }, makeRes());
+  assert.equal(reads, 1, "a degraded response still protects the database for one minute");
+  at += 2_000;
+  const recovered = makeRes();
+  await controller.getDistribution({ query: {} }, recovered);
+  assert.equal(reads, 2);
+  assert.equal(recovered.body.data.accounts, 300);
+  assert.ok(recovered.body.data.tiers.some((row) => row.tier === "gold" && row.publishable));
+  assert.match(recovered.headers["Cache-Control"], /^public, max-age=/);
+  at += 60_000;
+  await controller.getDistribution({ query: {} }, makeRes());
+  assert.equal(reads, 2, "a recovered result uses the normal longer cache");
 });
 
 test("a finished run drops the cached result rather than waiting out its TTL", async () => {

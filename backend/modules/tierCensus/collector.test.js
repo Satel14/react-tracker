@@ -211,6 +211,26 @@ test("an empty sample is a result, not a crash", async () => {
   assert.deepEqual(result.observations, []);
 });
 
+test("waits a full fallback window before retrying a 429 without a reset header", async () => {
+  let at = 1_000_000;
+  const attempts = [];
+  const slept = [];
+  const result = await collect({
+    shard: "steam",
+    seasonId: SEASON,
+    apiKey: "k",
+    now: () => at,
+    sleep: async (ms) => { slept.push(ms); at += ms; },
+    fetch: async () => {
+      attempts.push(at);
+      return { status: attempts.length === 1 ? 429 : 500, headers: new Headers() };
+    },
+  });
+  assert.equal(result.rateLimited, 1);
+  assert.deepEqual(slept, [60_000]);
+  assert.deepEqual(attempts, [1_000_000, 1_060_000]);
+});
+
 test("stops early rather than overrun the time it was given", async () => {
   const api = fakeApi({ matchTypes: Array(200).fill("competitive") });
   const result = await run(api, { deadlineMs: 1 });

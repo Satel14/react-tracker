@@ -33,7 +33,8 @@ const Leaderboard = ({ t }) => {
   const seasonParam = searchParams.get("season") || null;
 
   const [seasons, setSeasons] = useState([]);
-  const [season, setSeason] = useState(seasonParam);
+  const [currentSeasonId, setCurrentSeasonId] = useState(null);
+  const season = seasonParam || currentSeasonId;
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -70,7 +71,7 @@ const Leaderboard = ({ t }) => {
         if (cancelled) return;
         const catalog = res?.data || {};
         setSeasons(catalog.seasons || []);
-        setSeason((prev) => prev || seasonParam || catalog.currentSeasonId || null);
+        setCurrentSeasonId(catalog.currentSeasonId || null);
       })
       .catch(() => {
         if (!cancelled) setSeasons([]);
@@ -233,7 +234,7 @@ const Leaderboard = ({ t }) => {
           className="leaderboard-page__season"
           popupClassName="leaderboard-page__dropdown"
           value={season || undefined}
-          onChange={(value) => { setSeason(value); patchParams({ season: value }); }}
+          onChange={(value) => patchParams({ season: value })}
           options={seasons.map((s) => ({ value: s.id, label: s.label || s.id }))}
         />
         <Input
