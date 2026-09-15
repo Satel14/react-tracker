@@ -1,5 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 import DamageBreakdown from "./DamageBreakdown";
 
 const t = (key, vars) => (vars ? `${key}:${JSON.stringify(vars)}` : key);
@@ -21,6 +22,52 @@ test("renders dealt and taken totals", () => {
 test("renders the weapon breakdown", () => {
   render(<DamageBreakdown damage={damage} focalPresent t={t} />);
   expect(screen.getByText("M416")).toBeInTheDocument();
+});
+
+describe("weapon share bars", () => {
+  const fills = (container) =>
+    [...container.querySelectorAll(".damage__weapon-fill")].map((el) => el.style.width);
+
+  it("measures each weapon against the biggest one, not against the total", () => {
+    // Against the total, a player who did all their damage with two weapons
+    // gets two half-length bars and nothing reaches the end of the track --
+    // the shape you compare is the longest one.
+    const { container } = render(
+      <DamageBreakdown
+        damage={{ ...damage, dealtByWeapon: [
+          { weapon: "M416", damage: 200 },
+          { weapon: "AKM", damage: 50 },
+        ] }}
+        focalPresent
+        t={t}
+      />
+    );
+    expect(fills(container)).toEqual(["100%", "25%"]);
+  });
+
+  it("fills the track for a lone weapon", () => {
+    const { container } = render(<DamageBreakdown damage={damage} focalPresent t={t} />);
+    expect(fills(container)).toEqual(["100%"]);
+  });
+
+  it("draws no width at all rather than NaN when every weapon reads zero", () => {
+    // parseDamage can hand back a weapon with 0 after a match where every hit
+    // landed on a vehicle; dividing by that maximum would put "NaN%" in the
+    // style attribute.
+    const { container } = render(
+      <DamageBreakdown
+        damage={{ ...damage, dealtByWeapon: [{ weapon: "Pan", damage: 0 }] }}
+        focalPresent
+        t={t}
+      />
+    );
+    expect(fills(container)).toEqual(["0%"]);
+  });
+
+  it("still prints the number beside the bar", () => {
+    const { container } = render(<DamageBreakdown damage={damage} focalPresent t={t} />);
+    expect(container.querySelector(".damage__weapon-val").textContent).toBe("54");
+  });
 });
 
 test("shows the not-in-match note when focal is absent", () => {
@@ -130,14 +177,22 @@ test("survives a payload with no throws at all", () => {
   expect(container.querySelector(".damage__throws")).toBeNull();
 });
 
+// The detail cards moved into a grid of their own, so read the order from
+// there. Each of them held one or two rows across the full 1168px column, so
+// stacked they ran the tab to four screens of mostly empty card.
+const cardOrder = (container) =>
+  [...container.querySelector(".damage__grid").children].map((c) => c.className.split(" ")[0]);
+
 test("orders the blocks damage-done first, then what was spent", () => {
   const { container } = render(
     <DamageBreakdown damage={damage} meds={meds} throws={throws} focalPresent t={t} />
   );
-  const order = [...container.querySelector(".damage").children].map((c) => c.className.split(" ")[0]);
-  expect(order).toEqual([
+  expect([...container.querySelector(".damage").children].map((c) => c.className.split(" ")[0])).toEqual([
     "damage__headshot",
     "damage__cols",
+    "damage__grid",
+  ]);
+  expect(cardOrder(container)).toEqual([
     "damage__weapons",
     "damage__throws",
     "damage__meds",
@@ -157,10 +212,7 @@ const withEnv = (env) => render(
 
 test("renders the armour and property card between grenades and meds", () => {
   const { container } = withEnv(environment);
-  const order = [...container.querySelector(".damage").children].map((c) => c.className.split(" ")[0]);
-  expect(order).toEqual([
-    "damage__headshot",
-    "damage__cols",
+  expect(cardOrder(container)).toEqual([
     "damage__weapons",
     "damage__throws",
     "damage__broke",

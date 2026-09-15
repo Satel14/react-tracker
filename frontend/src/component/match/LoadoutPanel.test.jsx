@@ -1,5 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 import LoadoutPanel from "./LoadoutPanel";
 
 const t = (key, vars) => (vars ? `${key}:${JSON.stringify(vars)}` : key);
@@ -52,6 +53,57 @@ test("names who was looted and prints the counters", () => {
   const { container } = render(<LoadoutPanel loadout={loadout} focalPresent t={t} />);
   expect(screen.getByText(/Foe/)).toBeInTheDocument();
   expect(container.querySelector(".loadout__counts")).not.toBeNull();
+});
+
+describe("layout", () => {
+  const cols = (container) => [...container.querySelectorAll(".loadout__grid > .loadout__col")];
+
+  it("puts what was carried in one column and what was gathered in the other", () => {
+    // The whole tab measured 295px tall in a 1327px page: four cards stacked
+    // at the full width of the column, each two or three lines deep.
+    const { container } = render(<LoadoutPanel loadout={loadout} focalPresent t={t} />);
+    expect(cols(container)).toHaveLength(2);
+    expect(cols(container)[0].querySelector(".loadout__weapons")).not.toBeNull();
+    expect(cols(container)[0].querySelector(".loadout__armour")).not.toBeNull();
+    expect(cols(container)[1].querySelector(".loadout__looted")).not.toBeNull();
+    expect(cols(container)[1].querySelector(".loadout__counts")).not.toBeNull();
+  });
+
+  it("keeps both columns when nobody was looted", () => {
+    const { container } = render(
+      <LoadoutPanel loadout={{ ...loadout, lootedFrom: [] }} focalPresent t={t} />
+    );
+    expect(cols(container)).toHaveLength(2);
+    expect(cols(container)[1].querySelector(".loadout__looted")).toBeNull();
+    expect(cols(container)[1].querySelector(".loadout__counts")).not.toBeNull();
+  });
+});
+
+test("gives each counter its own figure and label instead of one sentence", () => {
+  // "Picked up 68 - dropped 10 - 0 from a care package" made the reader parse a
+  // sentence to find three numbers that are three separate facts.
+  const { container } = render(<LoadoutPanel loadout={loadout} focalPresent t={t} />);
+  const tiles = [...container.querySelectorAll(".loadout__count")];
+  expect(
+    tiles.map((tile) => [
+      tile.querySelector(".loadout__count-val").textContent,
+      tile.querySelector(".loadout__count-label").textContent,
+    ])
+  ).toEqual([
+    ["70", "pages.match.countPicked"],
+    ["16", "pages.match.countDropped"],
+    ["2", "pages.match.countCrate"],
+  ]);
+});
+
+test("keeps a zero counter rather than dropping it from the set", () => {
+  // Nothing from a care package is a reading, not a missing one, and a set of
+  // three that sometimes shows two reads as a rendering fault.
+  const { container } = render(
+    <LoadoutPanel loadout={{ ...loadout, fromCarePackage: 0 }} focalPresent t={t} />
+  );
+  const vals = [...container.querySelectorAll(".loadout__count-val")].map((el) => el.textContent);
+  expect(vals).toEqual(["70", "16", "0"]);
 });
 
 test("says which moment the loadout is from", () => {

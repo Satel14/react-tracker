@@ -66,18 +66,24 @@ const DamageSkeleton = ({ label }) => (
 
 const TimelineSkeleton = ({ label, rows }) => (
   <SkeletonFrame className="timeline" label={label}>
-    <div className="timeline__accuracy">
-      <div className="timeline__accuracy-head"><Tile variant="label" /></div>
-      <div className="timeline__acc-row timeline__acc-row--head"><Cells count={4} /></div>
-      {Array.from({ length: 4 }, (_, index) => (
-        <div className="timeline__acc-row" key={index}><Cells count={4} /></div>
-      ))}
+    <div className="timeline__grid">
+      <div className="timeline__accuracy">
+        <div className="timeline__accuracy-head"><Tile variant="label" /></div>
+        <div className="timeline__acc-row timeline__acc-row--head"><Cells count={4} /></div>
+        {Array.from({ length: 4 }, (_, index) => (
+          <div className="timeline__acc-row" key={index}><Cells count={4} /></div>
+        ))}
+      </div>
+      <div className="timeline__log">
+        <Tile variant="chip" />
+        <div className="timeline__events">
+          <div className="timeline__event timeline__event--head"><Cells count={4} /></div>
+          {Array.from({ length: rows }, (_, index) => (
+            <div className="timeline__event" key={index}><Cells count={4} /></div>
+          ))}
+        </div>
+      </div>
     </div>
-    <ul className="timeline__events">
-      {Array.from({ length: rows }, (_, index) => (
-        <li className="timeline__event" key={index}><Cells count={4} /></li>
-      ))}
-    </ul>
   </SkeletonFrame>
 );
 
@@ -86,22 +92,36 @@ const TimelineSkeleton = ({ label, rows }) => (
 const LoadoutSkeleton = ({ label }) => (
   <SkeletonFrame className="loadout" label={label}>
     <div className="loadout__cutoff"><Tile variant="label" /></div>
-    <div className="loadout__weapons">
-      {Array.from({ length: 2 }, (_, row) => (
-        <div className="loadout__weapon" key={row}>
-          <Tile variant="label" />
-          <span className="loadout__attachments">
-            <Tile variant="chip" />
-            <Tile variant="chip" />
-            <Tile variant="chip" />
-          </span>
+    <div className="loadout__grid">
+      <div className="loadout__col">
+        <div className="loadout__weapons">
+          {Array.from({ length: 2 }, (_, row) => (
+            <div className="loadout__weapon" key={row}>
+              <Tile variant="label" />
+              <span className="loadout__attachments">
+                <Tile variant="chip" />
+                <Tile variant="chip" />
+                <Tile variant="chip" />
+              </span>
+            </div>
+          ))}
         </div>
-      ))}
+        <div className="loadout__armour">
+          <Cells count={3} />
+        </div>
+      </div>
+      <div className="loadout__col">
+        {/* Three counters, as the real panel draws them. */}
+        <div className="loadout__counts">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div className="loadout__count" key={index}>
+              <Tile variant="heading" />
+              <Tile variant="label" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
-    <div className="loadout__armour">
-      <Cells count={3} />
-    </div>
-    <div className="loadout__counts"><Tile variant="label" /></div>
   </SkeletonFrame>
 );
 

@@ -378,7 +378,9 @@
       "loadoutAtDeath": "What you were carrying when you died",
       "loadoutAtEnd": "What you were carrying at the end",
       "loadoutEmpty": "No equipment recorded for this match.",
-      "loadoutCounts": "Picked up {picked} · dropped {dropped} · {crate} from a care package",
+      "countPicked": "Picked up",
+      "countDropped": "Dropped",
+      "countCrate": "From a care package",
       "lootedFrom": "Looted:",
       "armourHeadgear": "Helmet",
       "armourVest": "Vest",
@@ -449,7 +451,12 @@
       "weatherLabel": "Weather",
       "killsTotal": "Kills: {total}",
       "killsShown": "Shown: {shown} of {total}",
-      "noKillsFiltered": "No kills match these filters."
+      "noKillsFiltered": "No kills match these filters.",
+      "colTime": "Time",
+      "colOpponent": "Opponent",
+      "filterDealt": "Dealt",
+      "filterTaken": "Taken",
+      "noEventsFiltered": "Nothing recorded on this side."
     },
     "help": {
       "title": "How to look up PUBG stats",
