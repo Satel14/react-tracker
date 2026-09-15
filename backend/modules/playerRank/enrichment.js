@@ -125,7 +125,9 @@ function getParticipantStats(matchPayload, accountId, playerName) {
     const participantId = normalizeString(stats.playerId);
     const participantName = normalizeString(stats.name).toLowerCase();
 
-    return participantId === accountId || (normalizedName && participantName === normalizedName);
+    return accountId
+      ? participantId === accountId
+      : Boolean(normalizedName && participantName === normalizedName);
   });
 
   if (!participant) return { participant: null, roster: null, teammates: [] };

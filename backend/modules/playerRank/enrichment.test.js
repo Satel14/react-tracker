@@ -382,6 +382,38 @@ const matchWithLobby = (id, mine) => ({
   ],
 });
 
+function conflictingIdentityMatch(includeTarget = true) {
+  const payload = matchWithLobby("m0", { name: "FormerName", kills: 3 });
+  payload.included.unshift({ type: "participant", id: "impostor", attributes: { stats: {
+    playerId: "account." + "f".repeat(32), name: "enrichneo", kills: 19, winPlace: 1,
+  } } });
+  payload.included.push({ type: "roster", id: "wrong-roster", attributes: { stats: { rank: 1 } },
+    relationships: { participants: { data: [{ id: "impostor" }, { id: "p2" }] } } });
+  payload.included.find((item) => item.id === "r1").relationships.participants.data.push({ id: "p1" });
+  if (!includeTarget) payload.included = payload.included.filter((item) => item.id !== "p0");
+  return payload;
+}
+
+test("match enrichment selects the renamed account's stats and roster before a conflicting display name", async () => {
+  const service = createService(async () => conflictingIdentityMatch());
+  const extras = await service.getMatchExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo", playerRecord: profileWithMatches(1).data,
+  });
+  assert.equal(extras.matches.items.length, 1);
+  assert.equal(extras.matches.items[0].kills, 3);
+  assert.equal(extras.matches.items[0].placement, 13);
+  assert.deepEqual(extras.matches.items[0].teammates.map((mate) => mate.accountId), ["account.a"]);
+});
+
+test("match enrichment does not attribute a namesake's match when the requested account is absent", async () => {
+  const service = createService(async () => conflictingIdentityMatch(false));
+  const extras = await service.getMatchExtras({
+    shard: "steam", accountId: ENRICH_ACCOUNT, playerName: "EnrichNeo", playerRecord: profileWithMatches(1).data,
+  });
+  assert.deepEqual(extras.matches.items, []);
+  assert.equal(extras.matches.summary.total, 0);
+});
+
 test("a mapped match carries the kill rank and the size of the lobby behind it", async () => {
   const { doRequest } = createFakeDoRequest([
     [`/players/${ENRICH_ACCOUNT}`, { ok: true, json: async () => profileWithMatches(1) }],
