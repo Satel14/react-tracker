@@ -1,4 +1,5 @@
-import { get, post } from './fetch'
+import { adoptResponse, get, post } from './fetch'
+import { rankPreloadKey, takeRankPreload } from './rankPreload'
 
 const replayRequests = new Map();
 const REPLAY_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -53,8 +54,21 @@ export const getPlayerSteamName = (text) =>
     true
   );
 
-export const getPlayerData = (platform, gameId, seasonId = null) =>
-  post(
+export const getPlayerData = async (platform, gameId, seasonId = null) => {
+  // Only the page's first lookup can match: the inline script asks for the
+  // current season, and by the time anything requests a past one the preload is
+  // long consumed.
+  const preloaded = seasonId ? null : takeRankPreload(rankPreloadKey(platform, gameId));
+
+  if (preloaded) {
+    const response = await preloaded;
+    // null means the preload never reached the network. Falling through rather
+    // than failing here leaves the error to the normal request, which has the
+    // timeout and the notification.
+    if (response) return adoptResponse(response, true);
+  }
+
+  return post(
     "/player/rank",
     {
       platform,
@@ -63,6 +77,7 @@ export const getPlayerData = (platform, gameId, seasonId = null) =>
     },
     true
   );
+};
 
 export const getPlayerReports = (accountId, playerName) =>
   post(

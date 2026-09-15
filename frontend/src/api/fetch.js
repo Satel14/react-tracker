@@ -1,3 +1,4 @@
+import { API_TIMEOUT_MS } from './apiBase'
 import { API_URL } from './config'
 import openNotification from './../component/Notification';
 const headers = {
@@ -8,13 +9,8 @@ const headers = {
 // Nothing bounded the wait before this, and the failure it allowed was the
 // quiet kind: a connection that neither answers nor fails leaves a skeleton on
 // screen with no error state and no retry, which is indistinguishable from the
-// site being broken.
-//
-// Forty-five seconds and not five. The API sleeps after fifteen idle minutes on
-// the free plan and has been measured cold-starting in 22.9 s, so a tighter
-// bound would turn a slow first load into a visible error on a request that was
-// going to succeed. This only cuts off the case that was never going to answer.
-const TIMEOUT_MS = 45_000;
+// site being broken. This only cuts off the case that was never going to answer.
+const TIMEOUT_MS = API_TIMEOUT_MS;
 
 const withTimeout = async (run, timeoutMs = TIMEOUT_MS) => {
   const controller = new AbortController();
@@ -60,6 +56,12 @@ const finishResponse = async (result, notificationErr) => {
   error.payload = payload;
   throw error;
 };
+
+// For a response this module did not start: the inline preload in index.html
+// runs before any of this exists, and its answer still has to be read, failed
+// and reported exactly the way a request made here would be.
+export const adoptResponse = (result, notificationErr = false) =>
+  finishResponse(result, notificationErr);
 
 export const post = async (destination, body, notificationErr = false) => {
   return withTimeout(async (signal) => {

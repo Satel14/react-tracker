@@ -2,6 +2,13 @@
 <html lang="en">
 
 <head>
+  <!-- First thing in the document on purpose. On a player URL this starts the
+       rank request straight away instead of at the end of the HTML -> bundle ->
+       lazy-chunk chain, which was putting it on the wire at 394-563 ms. Filled
+       in at build time by the inject-rank-preload plugin in vite.config.js;
+       a no-op on every other page. -->
+  <!--rank-preload-->
+
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-45MK19MZZS"></script>
   <script>
