@@ -297,3 +297,22 @@ test.each(["base", "2048"])("keeps the replay sharp when %s finishes late", (lat
     vi.unstubAllGlobals();
   }
 });
+
+test("double-click zoom requests the raster needed at the new scale", () => {
+  let unmount;
+  try {
+    const setup = controlledRasterStage();
+    unmount = setup.unmount;
+    const { stage, images } = setup;
+    expect(images.some((img) => img.src.includes("/map-hi/"))).toBe(false);
+    fireEvent.doubleClick(stage, { clientX: 300, clientY: 300 });
+    fireEvent.doubleClick(stage, { clientX: 300, clientY: 300 });
+    expect(images.some((img) => img.src.includes("2048"))).toBe(true);
+    fireEvent.doubleClick(stage, { clientX: 300, clientY: 300 });
+    expect(images.some((img) => img.src.includes("4096"))).toBe(true);
+  } finally {
+    unmount?.();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});

@@ -535,6 +535,7 @@ const ReplayStage = forwardRef(({ data, clockRef, focusedAccountId, onSelect, ma
     const rect = el.getBoundingClientRect();
     v.follow = false;
     v.cam = zoomAt(v.cam, v.vw, v.vh, v.cam.zoom * DOUBLE_CLICK_ZOOM, e.clientX - rect.left, e.clientY - rect.top);
+    requestTier();
     v.bgDirty = true;
   };
 
