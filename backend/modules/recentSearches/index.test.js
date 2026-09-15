@@ -103,6 +103,75 @@ function createSelectPool(rows) {
   return createFakePool(async (text) => (text.includes("SELECT") ? { rows } : { rows: [] }));
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+test("a pre-write SELECT cannot repopulate an invalidated recent-search cache", async () => {
+  const started = deferred();
+  const oldSelect = deferred();
+  const updated = { ...SELECT_ROW, id: "steam:Trinity", game_id: "Trinity", nickname: "Trinity" };
+  let reads = 0;
+  const pool = createFakePool(async (text) => {
+    if (!text.trimStart().startsWith("SELECT")) return { rows: [] };
+    reads += 1;
+    if (reads === 1) {
+      started.resolve();
+      return oldSelect.promise;
+    }
+    return { rows: [updated] };
+  });
+  __setRecentSearchesPool(pool);
+  const beforeWrite = getRecentSearches(10);
+  await started.promise;
+  await addRecentSearch({ gameId: "Trinity", platform: "steam" }, 10);
+  oldSelect.resolve({ rows: [SELECT_ROW] });
+  await beforeWrite;
+  assert.equal((await getRecentSearches(10))[0].id, "steam:Trinity");
+  assert.equal(reads, 2, "the write already supplied a fresh cached result");
+});
+
+test("post-write readers coalesce on a new SELECT even while the old SELECT finishes", async () => {
+  const started = deferred();
+  const oldSelect = deferred();
+  const newSelect = deferred();
+  const updated = { ...SELECT_ROW, id: "steam:Trinity", game_id: "Trinity", nickname: "Trinity" };
+  let reads = 0;
+  const pool = createFakePool(async (text, params) => {
+    if (!text.trimStart().startsWith("SELECT")) return { rows: [] };
+    reads += 1;
+    if (params[0] === 20) return { rows: [updated] };
+    if (reads === 1) {
+      started.resolve();
+      return oldSelect.promise;
+    }
+    return newSelect.promise;
+  });
+  __setRecentSearchesPool(pool);
+  const beforeWrite = getRecentSearches(10);
+  await started.promise;
+  await addRecentSearch({ gameId: "Trinity", platform: "steam" }, 20);
+  const afterWrite = getRecentSearches(10);
+  try {
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(reads, 3, "a new reader must not join the obsolete SELECT");
+    oldSelect.resolve({ rows: [SELECT_ROW] });
+    await beforeWrite;
+    const concurrent = getRecentSearches(10);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(reads, 3, "the obsolete SELECT must not delete the newer flight");
+    newSelect.resolve({ rows: [updated] });
+    assert.equal((await concurrent)[0].id, "steam:Trinity");
+    assert.equal((await afterWrite)[0].id, "steam:Trinity");
+  } finally {
+    oldSelect.resolve({ rows: [SELECT_ROW] });
+    newSelect.resolve({ rows: [updated] });
+    await Promise.all([beforeWrite, afterWrite]);
+  }
+});
+
 test("serves a repeat read from cache instead of querying Postgres again", async () => {
   const pool = createSelectPool([SELECT_ROW]);
   __setRecentSearchesPool(pool);
