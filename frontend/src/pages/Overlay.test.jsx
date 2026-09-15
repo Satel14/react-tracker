@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Overlay from "./Overlay";
 
@@ -114,4 +114,22 @@ test("uses fallback values when stat displayValues are missing", async () => {
     const zeros = screen.getAllByText("0");
     expect(zeros.length).toBeGreaterThan(0);
   });
+});
+
+
+test.each(["Infinity", "1e309", "2147484"])("invalid refresh=%s cannot trigger a rapid polling loop", async (refresh) => {
+  vi.useFakeTimers();
+  getPlayerData.mockResolvedValue(samplePlayerData);
+  let unmount;
+  try {
+    await act(async () => { ({ unmount } = renderPage([`/overlay/pc/game123?refresh=${refresh}`])); });
+    expect(getPlayerData).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(getPlayerData).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(59000); });
+    expect(getPlayerData).toHaveBeenCalledTimes(2);
+  } finally {
+    unmount?.();
+    vi.useRealTimers();
+  }
 });

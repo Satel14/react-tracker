@@ -7,6 +7,7 @@ import { statDisplay } from "../helpers/playerStats";
 
 const REFRESH_DEFAULT_SEC = 60;
 const REFRESH_MIN_SEC = 30;
+const REFRESH_MAX_SEC = Math.floor(2147483647 / 1000);
 
 const getStat = (stats, key, fallback = "0") => statDisplay(stats, key, fallback);
 
@@ -23,9 +24,12 @@ const Overlay = ({ t }) => {
   const { platform, gameId } = useParams();
   const [searchParams] = useSearchParams();
 
+  const requestedRefresh = Number(searchParams.get("refresh"));
   const refreshSec = Math.max(
     REFRESH_MIN_SEC,
-    Number(searchParams.get("refresh")) || REFRESH_DEFAULT_SEC
+    Number.isFinite(requestedRefresh) && requestedRefresh <= REFRESH_MAX_SEC
+      ? requestedRefresh || REFRESH_DEFAULT_SEC
+      : REFRESH_DEFAULT_SEC
   );
   const bgMode = searchParams.get("bg") || "dark";
   const accent = searchParams.get("accent") || null;
