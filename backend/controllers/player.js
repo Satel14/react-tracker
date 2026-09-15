@@ -95,10 +95,9 @@ module.exports.getPlayerReports = async (req, res) => {
     }
 
     const { accountId = null, playerName = null } = req.body;
-    const hasAccountId = typeof accountId === "string" && accountId.trim().length > 0;
     const hasPlayerName = typeof playerName === "string" && playerName.trim().length > 0;
 
-    if (!hasAccountId && !hasPlayerName) {
+    if (!hasPlayerName) {
       return res
         .status(422)
         .json({ status: 422, message: MESSAGE.VALIDATOR.ERROR });

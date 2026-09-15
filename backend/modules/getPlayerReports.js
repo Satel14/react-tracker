@@ -154,6 +154,7 @@ function buildSummary(encounters) {
 
 module.exports.getPlayerReports = async ({ accountId, playerName }) => {
   const normalizedName = normalizeString(playerName);
+  if (!normalizedName) throw new Error("playerName is required to classify PUBG Report encounters");
   const normalizedAccountId = normalizeAccountId(accountId);
   const cacheKey = `${normalizedAccountId || ""}:${normalizedName.toLowerCase()}`;
   const cached = reportsCache.get(cacheKey);
