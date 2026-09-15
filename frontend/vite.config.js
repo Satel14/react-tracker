@@ -3,6 +3,8 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { resolveApiUrl } from './src/api/apiBase';
+import { injectRankPreload } from './src/api/rankPreloadScript';
 import { ROUTE_META, canonicalFor } from './src/helpers/routeMeta';
 import { renderHead } from './src/helpers/renderHead';
 import { prerenderBody } from './src/helpers/prerenderBody.jsx';
@@ -130,8 +132,33 @@ const prerenderHead = () => ({
   },
 });
 
+// index.html is the document Pages serves for every /player/:platform/:gameId,
+// so an inline script there is the earliest point at which the URL is known --
+// earlier than any module, which is the whole point of it.
+//
+// The API base is resolved here rather than inside the script because the script
+// is plain text in the HTML: it cannot read import.meta.env, and guessing from
+// the hostname would get the pages.dev twin wrong, where a production build is
+// served from somewhere that is not the production host.
+const injectRankPreloadPlugin = () => {
+  let apiUrl = null;
+
+  return {
+    name: 'inject-rank-preload',
+    configResolved(config) {
+      apiUrl = resolveApiUrl({ mode: config.mode, override: config.env?.VITE_API_URL });
+    },
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        return injectRankPreload(html, apiUrl);
+      },
+    },
+  };
+};
+
 export default defineConfig({
-  plugins: [react(), prerenderHead(), publishCensusData(), emitSitemap()],
+  plugins: [react(), injectRankPreloadPlugin(), prerenderHead(), publishCensusData(), emitSitemap()],
   server: {
     port: 3000,
     open: false,

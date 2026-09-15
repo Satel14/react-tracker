@@ -598,13 +598,22 @@ const PlayerPage = ({ t }) => {
     return () => document.removeEventListener("visibilitychange", onReturn);
   }, [error, fetchData]);
 
+  // A boolean, not `data` itself: this has to wait for the payload without
+  // firing again every time something merges into it, like the profile extras.
+  const playerResolved = Boolean(data);
+
+  // Running on mount as well cost a second round trip to a third-party host on
+  // every profile: the mount pass knows only the name in the URL, and the pass
+  // that follows it -- carrying the account id -- discards that answer anyway.
   useEffect(() => {
+    if (!playerResolved) return;
+
     const accountId = data?.platformInfo?.platformUserId || null;
     const playerName = data?.platformInfo?.platformUserHandle || gameId || null;
 
     if (!accountId && !playerName) return;
     fetchReports(accountId, playerName, `${routeKey}|${accountId || ""}`);
-  }, [data?.platformInfo?.platformUserId, data?.platformInfo?.platformUserHandle, gameId, routeKey, fetchReports]);
+  }, [playerResolved, data?.platformInfo?.platformUserId, data?.platformInfo?.platformUserHandle, gameId, routeKey, fetchReports]);
 
   useEffect(() => {
     if (data?.profile?.status !== "deferred") return undefined;

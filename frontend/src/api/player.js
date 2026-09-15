@@ -1,4 +1,6 @@
-import { get, post } from './fetch'
+import { API_TIMEOUT_MS, requestTimeoutError } from './apiBase'
+import { adoptResponse, get, post } from './fetch'
+import { rankPreloadKey, takeRankPreload } from './rankPreload'
 
 const replayRequests = new Map();
 const REPLAY_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -53,16 +55,39 @@ export const getPlayerSteamName = (text) =>
     true
   );
 
-export const getPlayerData = (platform, gameId, seasonId = null) =>
-  post(
-    "/player/rank",
-    {
-      platform,
-      gameId,
-      seasonId,
-    },
-    true
-  );
+export const getPlayerData = async (platform, gameId, seasonId = null) => {
+  // Only the page's first lookup can match: the inline script asks for the
+  // current season, and by the time anything requests a past one the preload is
+  // long consumed.
+  const preloaded = seasonId ? null : takeRankPreload(rankPreloadKey(platform, gameId));
+
+  const body = { platform, gameId, seasonId };
+
+  if (preloaded) {
+    const result = await preloaded;
+
+    if (!result?.preloadFailed && result) {
+      return adoptResponse(result, true);
+    }
+
+    if (result?.preloadFailed) {
+      // The lookup was bounded once, in total, before the preload existed, and
+      // it stays bounded once: a preload that ran out of time reports that, and
+      // one that died earlier hands the replacement only what is left. Starting
+      // a fresh wait on top of a spent one made the visitor sit through both.
+      const remainingMs = result.timedOut
+        ? 0
+        : API_TIMEOUT_MS - Math.max(0, Date.now() - (result.startedAt ?? Date.now()));
+
+      if (remainingMs <= 0) throw requestTimeoutError();
+
+      return post("/player/rank", body, true, { timeoutMs: remainingMs });
+    }
+    // Anything unrecognisable: fall through to an ordinary request.
+  }
+
+  return post("/player/rank", body, true);
+};
 
 export const getPlayerReports = (accountId, playerName) =>
   post(
