@@ -16,6 +16,7 @@
     "/og.png",
     "/manifest.json",
     "/robots.txt",
+    "/llms.txt",
     "/sitemap.xml"
   ]
 }

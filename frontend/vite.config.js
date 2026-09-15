@@ -10,6 +10,7 @@ import { renderHead } from './src/helpers/renderHead';
 import { prerenderBody } from './src/helpers/prerenderBody.jsx';
 import { CENSUS_DATA_FILES } from './src/helpers/censusDataFiles.js';
 import { renderSitemap, SITEMAP_FILE } from './src/helpers/sitemap.js';
+import { renderLlmsTxt, LLMS_TXT_FILE } from './src/helpers/llmsTxt.js';
 
 // Writes the sitemap from the route table instead of keeping a hand-written
 // copy in public/. The point is <lastmod>: a static file cannot carry a date,
@@ -37,6 +38,36 @@ const emitSitemap = () => ({
     const emitted = readFileSync(target, 'utf8');
     if (emitted !== xml) throw new Error('emit-sitemap: what landed on disk is not what was rendered');
     this.info(`wrote ${SITEMAP_FILE} with ${locs} urls`);
+  },
+});
+
+// Writes the llms.txt index from the same route table the sitemap comes from.
+//
+// A warning and not a thrown build, unlike the sitemap: losing this file costs
+// an experimental audit, where losing the sitemap costs Google the only list of
+// pages it reads. The link guard is still here, because an index with nothing in
+// it is a broken file rather than an absent one -- which is exactly the state
+// this replaced, when Pages answered /llms.txt with the SPA shell.
+const emitLlmsTxt = () => ({
+  name: 'emit-llms-txt',
+  apply: 'build',
+  closeBundle() {
+    const body = renderLlmsTxt();
+    const links = (body.match(/^- \[/gm) || []).length;
+    if (links < 5) {
+      this.warn(`emit-llms-txt: only ${links} links, refusing to write`);
+      return;
+    }
+
+    const target = fileURLToPath(new URL(`./build/${LLMS_TXT_FILE}`, import.meta.url));
+    writeFileSync(target, body);
+
+    // Read it back, for the same reason the sitemap does: this file is served
+    // straight off the asset edge, so a truncated write is invisible.
+    if (readFileSync(target, 'utf8') !== body) {
+      throw new Error('emit-llms-txt: what landed on disk is not what was rendered');
+    }
+    this.info(`wrote ${LLMS_TXT_FILE} with ${links} links`);
   },
 });
 
@@ -158,7 +189,7 @@ const injectRankPreloadPlugin = () => {
 };
 
 export default defineConfig({
-  plugins: [react(), injectRankPreloadPlugin(), prerenderHead(), publishCensusData(), emitSitemap()],
+  plugins: [react(), injectRankPreloadPlugin(), prerenderHead(), publishCensusData(), emitSitemap(), emitLlmsTxt()],
   server: {
     port: 3000,
     open: false,
