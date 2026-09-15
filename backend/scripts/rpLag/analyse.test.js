@@ -130,3 +130,18 @@ test("draws no conclusion about when PUBG counts until it has a firm reading", (
   assert.equal(measured.summary.firm, 1);
   assert.equal(measured.summary.countsAt, "matchEnd");
 });
+
+test("historical matches cannot absorb a round gained while watching", () => {
+  const result = analyseLag({
+    polls: [poll(60, 40, ["old"]), poll(92, 41, ["new", "old"])],
+    matches: [played("old", 0), played("new", 60)],
+  });
+  assert.equal(only(result, "old").countedAt, null);
+  assert.equal(only(result, "old").outOfRange, true);
+  assert.equal(only(result, "old").firstListedAt, T + 60 * MIN);
+  assert.equal(only(result, "new").countedAt, T + 92 * MIN);
+  assert.equal(only(result, "new").lagFromEndMs, 7 * MIN);
+  assert.equal(result.summary.outOfRange, 1);
+  assert.equal(result.summary.uncounted, 0);
+  assert.equal(result.summary.maxLagFromEndMs, 7 * MIN);
+});

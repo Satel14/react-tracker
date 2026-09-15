@@ -41,7 +41,7 @@ function prepare(matches) {
 // under way that no earlier poll has accounted for. A jump of more than one
 // leaves the order inside that gap unknown, so those matches carry only an
 // upper bound and are reported as such rather than averaged in.
-function assignCounts(polls, tracked) {
+function assignCounts(polls, tracked, watchedFrom) {
   let previous = null;
   for (const poll of polls) {
     const rounds = Number(poll.roundsPlayed);
@@ -54,7 +54,9 @@ function assignCounts(polls, tracked) {
 
     if (previous !== null && rounds > previous) {
       const gained = rounds - previous;
-      const candidates = tracked.filter((m) => m.countedAt === null && m.createdAt <= poll.at).slice(0, gained);
+      const candidates = tracked.filter((m) =>
+        m.countedAt === null && m.createdAt <= poll.at && m.endedAt >= watchedFrom
+      ).slice(0, gained);
       for (const match of candidates) {
         match.countedAt = poll.at;
         match.ambiguous = gained > 1;
@@ -115,8 +117,8 @@ function summarise(rows) {
 function analyseLag({ polls = [], matches = [] } = {}) {
   const ordered = [...polls].filter((p) => Number.isFinite(Number(p?.at))).sort((a, b) => a.at - b.at);
   const tracked = prepare(matches);
-  assignCounts(ordered, tracked);
   const watchedFrom = ordered.length ? ordered[0].at : null;
+  assignCounts(ordered, tracked, watchedFrom);
   const rows = tracked.map((match) => describe(match, watchedFrom));
   return { matches: rows, summary: summarise(rows), polls: ordered.length };
 }
