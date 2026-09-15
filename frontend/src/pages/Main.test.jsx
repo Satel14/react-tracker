@@ -56,6 +56,16 @@ const renderPage = () =>
     </MemoryRouter>
   );
 
+test("shows unavailable rather than zero when Steam's live count is null", async () => {
+  getLiveSnapshot.mockResolvedValue({
+    data: { playersOnline: { value: null, source: "steam" }, season: null },
+  });
+  const { container } = renderPage();
+  await waitFor(() => expect(getLiveSnapshot).toHaveBeenCalled());
+  expect(container.querySelector(".mainpage_left__stats__playeronline"))
+    .toHaveTextContent("other.words.notAvailable");
+});
+
 // The static file and the interactive page share the heading, links and body.
 test("renders the same body component the static shell carries", () => {
   const { container } = renderPage();
