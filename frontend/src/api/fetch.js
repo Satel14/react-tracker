@@ -62,23 +62,23 @@ const finishResponse = async (result, notificationErr) => {
 };
 
 export const post = async (destination, body, notificationErr = false) => {
-  const result = await withTimeout((signal) =>
-    fetch(`${API_URL}${destination}`, {
+  return withTimeout(async (signal) => {
+    const result = await fetch(`${API_URL}${destination}`, {
       method: "POST",
       body: JSON.stringify(body),
       headers,
       signal,
-    }),
-  );
-  return finishResponse(result, notificationErr);
+    });
+    return finishResponse(result, notificationErr);
+  });
 };
 
 export const get = async (destination, notificationErr = false) => {
-  const result = await withTimeout((signal) =>
-    fetch(`${API_URL}${destination}`, {
+  return withTimeout(async (signal) => {
+    const result = await fetch(`${API_URL}${destination}`, {
       method: "GET",
       signal,
-    }),
-  );
-  return finishResponse(result, notificationErr);
+    });
+    return finishResponse(result, notificationErr);
+  });
 };
