@@ -10,6 +10,7 @@ import Footer from "../component/Footer";
 import CookieRules from "../component/CookieRule";
 import RouteErrorBoundary from "../component/RouteErrorBoundary";
 import themes from "../component/config/themes";
+import { readStoredItem } from "../helpers/browserStorage";
 import "../style/style.scss";
 
 const DEFAULT_THEME = "green";
@@ -21,13 +22,8 @@ const RouteFallback = () => (
 );
 
 const getInitialTheme = () => {
-  if (typeof window === "undefined") return DEFAULT_THEME;
-  try {
-    const savedTheme = window.localStorage?.getItem("theme");
-    return savedTheme && themes[savedTheme] ? savedTheme : DEFAULT_THEME;
-  } catch (_e) {
-    return DEFAULT_THEME;
-  }
+  const savedTheme = readStoredItem("theme");
+  return savedTheme && themes[savedTheme] ? savedTheme : DEFAULT_THEME;
 };
 
 const RouterLayout = () => {

@@ -1,4 +1,5 @@
 import { isAccountIdentifier, normalizePlatform } from "../helpers/playerIdentity";
+import { readStoredItem, writeStoredItem, removeStoredItem } from "../helpers/browserStorage";
 
 const HISTORY_KEY = "history";
 const FAVORITES_KEY = "favorites";
@@ -10,11 +11,6 @@ const MAX_FAVORITES_ITEMS = 50;
 export const MAX_RECENT_ITEMS = 10;
 export const HISTORY_UPDATED_EVENT = "history:updated";
 export const FAVORITES_UPDATED_EVENT = "favorites:updated";
-
-function getLocalStorage() {
-  if (typeof window === "undefined") return null;
-  return window.localStorage || null;
-}
 
 function safeParseObject(raw) {
   if (typeof raw !== "string" || !raw.trim()) return {};
@@ -28,15 +24,11 @@ function safeParseObject(raw) {
 }
 
 function readObject(key) {
-  const storage = getLocalStorage();
-  if (!storage) return {};
-  return safeParseObject(storage.getItem(key));
+  return safeParseObject(readStoredItem(key));
 }
 
 function writeObject(key, value) {
-  const storage = getLocalStorage();
-  if (!storage) return null;
-  storage.setItem(key, JSON.stringify(value));
+  writeStoredItem(key, JSON.stringify(value));
   return value;
 }
 
@@ -279,8 +271,6 @@ export const toggleFavorite = async (payload) => {
 };
 
 export const clearFavorites = async () => {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.removeItem(FAVORITES_KEY);
+  removeStoredItem(FAVORITES_KEY);
   emitFavoritesUpdated({});
 };

@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import themes from './config/themes'
 import { Dropdown } from 'antd'
 import { FormatPainterOutlined } from "@ant-design/icons";
+import { readStoredItem, writeStoredItem } from "../helpers/browserStorage";
 
 const SetTheme = () => {
   const [currentTheme, setCurrentTheme] = useState('brown');
 
   useEffect(() => {
-    const localTheme = localStorage.getItem('theme');
+    const localTheme = readStoredItem('theme');
     if (localTheme && themes[localTheme]) {
       setCurrentTheme(localTheme);
       if (window.App) {
@@ -18,7 +19,7 @@ const SetTheme = () => {
 
   const handleSetTheme = (key) => () => {
     setCurrentTheme(key);
-    localStorage.setItem('theme', key);
+    writeStoredItem('theme', key);
     if (window.App) {
       window.App.changeTheme(key);
     }
