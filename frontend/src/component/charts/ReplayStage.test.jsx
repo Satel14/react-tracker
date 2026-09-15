@@ -252,3 +252,48 @@ test("double-clicking the map zooms in rather than throwing the view away", () =
   stage.getBoundingClientRect = () => ({ width: 800, height: 450, left: 0, top: 0, right: 800, bottom: 450 });
   expect(() => fireEvent.doubleClick(stage, { clientX: 400, clientY: 225 })).not.toThrow();
 });
+
+
+const controlledRasterStage = () => {
+  const images = [];
+  vi.stubGlobal("Image", class {
+    constructor() { this.complete = true; this.width = 4096; this.height = 4096; images.push(this); }
+  });
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+    width: 600, height: 600, top: 0, left: 0, right: 600, bottom: 600,
+  });
+  const ctx = recordingCtx();
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function () {
+    return this.classList.contains("replay-stage__layer--bg") ? ctx : null;
+  });
+  const raf = vi.spyOn(window, "requestAnimationFrame").mockReturnValue(1);
+  const utils = renderStage({ data: { ...data, players: [], zones: [] } });
+  return { ...utils, images, ctx, stage: utils.container.querySelector(".replay-stage"),
+    frame: () => raf.mock.calls.at(-1)[0](0) };
+};
+
+test.each(["base", "2048"])("keeps the replay sharp when %s finishes late", (lateTier) => {
+  let unmount;
+  try {
+    const setup = controlledRasterStage();
+    unmount = setup.unmount;
+    const { stage, images, ctx, frame } = setup;
+    for (let i = 0; i < 7; i += 1) fireEvent.wheel(stage, { deltaY: -120, clientX: 300, clientY: 300 });
+    const sharp = images.find((img) => img.src.includes("4096"));
+    const late = lateTier === "base" ? images.find((img) => img.src.includes("/img/maps/"))
+      : images.find((img) => img.src.includes("2048"));
+    expect(sharp).toBeDefined();
+    expect(late).toBeDefined();
+    sharp.onload();
+    frame();
+    expect(ctx.calls.filter((c) => c.name === "drawImage").at(-1).args[0]).toBe(sharp);
+    late.onload();
+    fireEvent.wheel(stage, { deltaY: 10, clientX: 300, clientY: 300 });
+    frame();
+    expect(ctx.calls.filter((c) => c.name === "drawImage").at(-1).args[0]).toBe(sharp);
+  } finally {
+    unmount?.();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});

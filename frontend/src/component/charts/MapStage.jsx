@@ -34,6 +34,7 @@ const MapStage = ({ rawMapName, paint, className = "", bandColor = "rgb(16,25,40
     dpr: 1,
     image: null,
     tier: 0,
+    loadedTier: 0,
     gen: 0,
     drag: null,
     moved: 0,
@@ -67,19 +68,21 @@ const MapStage = ({ rawMapName, paint, className = "", bandColor = "rgb(16,25,40
     if (!url) return;
     // Climb one at a time and never back down: a coarser raster arriving late
     // must not replace a sharper one already on screen.
-    const climbing = v.tier + 1;
+    const previousTier = v.tier;
+    const climbing = want;
     v.tier = climbing;
     const gen = v.gen;
     const img = new Image();
     img.onload = () => {
-      if (view.current.gen !== gen) return;
+      if (view.current.gen !== gen || climbing < view.current.loadedTier) return;
+      view.current.loadedTier = climbing;
       view.current.image = img;
       render();
     };
     img.onerror = () => {
       // Not there; step back so a later zoom retries this tier rather than the
       // map being stuck on the base raster forever.
-      if (view.current.gen === gen && view.current.tier === climbing) view.current.tier = climbing - 1;
+      if (view.current.gen === gen && view.current.tier === climbing) view.current.tier = previousTier;
     };
     img.src = url;
   }, [rawMapName, render]);
@@ -121,11 +124,12 @@ const MapStage = ({ rawMapName, paint, className = "", bandColor = "rgb(16,25,40
     v.cam = fitCamera(meta.mapMax);
     v.image = null;
     v.tier = 0;
+    v.loadedTier = 0;
     if (typeof Image !== "undefined" && meta.image) {
       const gen = v.gen;
       const img = new Image();
       img.onload = () => {
-        if (view.current.gen !== gen) return;
+        if (view.current.gen !== gen || view.current.loadedTier > 0) return;
         view.current.image = img;
         render();
       };
