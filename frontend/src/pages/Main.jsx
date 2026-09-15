@@ -103,9 +103,9 @@ const Main = ({ t }) => {
     let url;
 
     if (resolvedName) {
-      url = "/player/" + platform + "/" + resolvedName;
+      url = "/player/" + platform + "/" + encodeURIComponent(resolvedName);
     } else {
-      url = "/player/" + platform + "/" + text.trim();
+      url = "/player/" + platform + "/" + encodeURIComponent(text.trim());
     }
 
     setTimeout(() => {

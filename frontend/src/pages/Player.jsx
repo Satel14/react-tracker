@@ -12,7 +12,7 @@ const Player = () => {
   const handleSearch = (value) => {
     const searchValue = typeof value === 'string' ? value : query;
     if (searchValue && searchValue.trim()) {
-      navigate(`/player/${platform}/${searchValue.trim()}`);
+      navigate(`/player/${platform}/${encodeURIComponent(searchValue.trim())}`);
     }
   };
 

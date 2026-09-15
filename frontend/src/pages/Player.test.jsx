@@ -1,6 +1,6 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import Player from "./Player";
 
 beforeEach(() => {
@@ -27,4 +27,13 @@ test("does not render the fabricated 'Player Online' widget", () => {
 test("still renders the player search box", () => {
   renderPage();
   expect(screen.getByPlaceholderText("Enter name, id or url")).toBeInTheDocument();
+});
+
+test("keeps a pasted Steam URL inside a single player route segment", () => {
+  const Location = () => <output data-testid="location">{useLocation().pathname}</output>;
+  render(<MemoryRouter><Player /><Location /></MemoryRouter>);
+  const query = "https://steamcommunity.com/id/Example";
+  fireEvent.change(screen.getByPlaceholderText("Enter name, id or url"), { target: { value: query } });
+  fireEvent.keyDown(screen.getByPlaceholderText("Enter name, id or url"), { key: "Enter", code: "Enter", keyCode: 13 });
+  expect(screen.getByTestId("location").textContent).toBe(`/player/steam/${encodeURIComponent(query)}`);
 });
