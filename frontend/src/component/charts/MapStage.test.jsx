@@ -155,3 +155,15 @@ describe("MapStage", () => {
     expect(paint).not.toHaveBeenCalled();
   });
 });
+
+
+test("preserves the camera when the kill-map paint callback changes", () => {
+  const { stage, cams, rerender } = mount();
+  fireEvent.wheel(stage, { deltaY: -120, clientX: 150, clientY: 200 });
+  const zoomed = { ...cams.at(-1) };
+  const paint = vi.fn();
+  rerender(<MapStage rawMapName="Baltic_Main" paint={paint} />);
+  expect(paint.mock.calls.at(-1)[1].cam).toEqual(zoomed);
+  rerender(<MapStage rawMapName="Desert_Main" paint={paint} />);
+  expect(paint.mock.calls.at(-1)[1].cam.zoom).toBe(MIN_ZOOM);
+});

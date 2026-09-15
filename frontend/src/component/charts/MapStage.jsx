@@ -39,6 +39,8 @@ const MapStage = ({ rawMapName, paint, className = "", bandColor = "rgb(16,25,40
     moved: 0,
   });
 
+  const paintRef = useRef({ paint, bandColor });
+
   // Redrawn on demand rather than every animation frame: nothing here moves on
   // its own, so a frame loop would burn a core to show a still picture.
   const render = useCallback(() => {
@@ -48,12 +50,12 @@ const MapStage = ({ rawMapName, paint, className = "", bandColor = "rgb(16,25,40
     if (!bg || !fx || !v.vw || !v.vh) return;
     const bgCtx = bg.getContext("2d");
     const fxCtx = fx.getContext("2d");
-    if (bgCtx) drawBackground(bgCtx, { cam: v.cam, vw: v.vw, vh: v.vh, image: v.image, bandColor });
+    if (bgCtx) drawBackground(bgCtx, { cam: v.cam, vw: v.vw, vh: v.vh, image: v.image, bandColor: paintRef.current.bandColor });
     if (fxCtx) {
       fxCtx.clearRect(0, 0, v.vw, v.vh);
-      if (typeof paint === "function") paint(fxCtx, { cam: v.cam, vw: v.vw, vh: v.vh });
+      if (typeof paintRef.current.paint === "function") paintRef.current.paint(fxCtx, { cam: v.cam, vw: v.vw, vh: v.vh });
     }
-  }, [paint, bandColor]);
+  }, []);
 
   const requestTier = useCallback(() => {
     const v = view.current;
@@ -143,8 +145,9 @@ const MapStage = ({ rawMapName, paint, className = "", bandColor = "rgb(16,25,40
   // The caller's paint changes between renders -- a new time range, a new
   // filter -- and the picture has to follow it.
   useEffect(() => {
+    paintRef.current = { paint, bandColor };
     render();
-  }, [render]);
+  }, [paint, bandColor, render]);
 
   const onWheel = useCallback((e) => {
     e.preventDefault();
