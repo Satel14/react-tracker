@@ -3,14 +3,25 @@ import { globSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// react-router 6 has no patched release for GHSA-wrjc-x8rr-h8h6 ("open redirect
-// via backslash in <Link> and useNavigate"): the advisory covers 6.0.0 - 7.17.0
-// and the fix ships in 7.18.3, a major upgrade. We stay on 6 because the bug is
-// unreachable here -- it needs a navigation target whose FIRST characters come
-// from the user, so that "\\evil.com" survives to the router and is read as the
-// protocol-relative "//evil.com". Every target in this app is rooted in a
-// literal "/" written in the source, and an interpolated segment after that
-// root cannot move the string's start.
+// react-router 6 has no patched release for GHSA-wrjc-x8rr-h8h6 / CVE-2026-53669
+// ("open redirect via backslash in <Link> and useNavigate", itself a bypass of
+// CVE-2025-68470): the advisory covers >= 6.0.0 < 7.18.0 and the fix ships in
+// 7.18.0, a major upgrade. We stay on 6 because the bug is unreachable here --
+// it needs a navigation target whose FIRST characters come from the user, so
+// that "\\evil.com" survives to the router and is read as the protocol-relative
+// "//evil.com". Every target in this app is rooted in a literal "/" written in
+// the source, and an interpolated segment after that root cannot move the
+// string's start.
+//
+// The other open react-router advisory, GHSA-337j-9hxr-rhxg / CVE-2026-53666
+// ("arbitrary constructor injection via deserializeErrors() in SSR hydration",
+// >= 6.4.0 < 7.18.0), is unreachable for a different reason and is NOT what
+// this file guards. deserializeErrors runs only when a data router rehydrates
+// window.__staticRouterHydrationData. This app has no data router at all:
+// index.jsx mounts BrowserRouter, helpers/prerenderBody.jsx renders through
+// StaticRouter, and there is no createBrowserRouter, RouterProvider or
+// hydrateRoot anywhere in src/. Nothing here emits or reads hydration data, so
+// there is no seam for it to reach. Checked 2026-09-15.
 //
 // That is a property of our code, not of the library, so it is the thing worth
 // pinning. The day someone writes navigate(params.get("next")) this fails and
