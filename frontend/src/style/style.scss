@@ -4786,6 +4786,31 @@ body {
   }
 }
 
+.stats-by-rank__table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text);
+  margin: 1.5rem 0;
+
+  th,
+  td {
+    padding: 0.5rem 0.75rem;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  th[scope="row"],
+  thead th:first-child {
+    text-align: left;
+  }
+
+  thead th {
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+}
+
 .leaderboard-page__explainer {
   margin: 6px 0 0;
   font-size: 14px;
