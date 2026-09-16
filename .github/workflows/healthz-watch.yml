@@ -1,6 +1,13 @@
 name: Health watch
 
-# Watches the one thing that had no watcher.
+# Watches the two things that had no watcher: whether Postgres is answering, and
+# whether the tier census is still collecting. They are separate jobs because
+# either can be broken while the other is fine, and a single job would stop at
+# the first failure and leave the second question unanswered.
+#
+# ---
+#
+# Postgres.
 #
 # On 2026-09-10 the Neon project's monthly transfer allowance ran out and every
 # Postgres-backed feature -- recent searches, the tier census, RP history --
@@ -93,3 +100,69 @@ jobs:
               exit 1
               ;;
           esac
+
+  # The census fails the same way Postgres did: quietly. A collection that stops
+  # leaves /ranks rendering the last good reading with its own window printed
+  # beside it, which is honest but is not something anybody checks.
+  #
+  # Judged on lastDate -- the newest day of lobbies in the reading -- and not on
+  # capturedAt. The collector only commits when the projected reading actually
+  # changes, so an unchanged day legitimately leaves capturedAt where it was,
+  # and a check on it would cry stale about a healthy pipeline. lastDate answers
+  # the question that matters anyway: how old is the DATA, not how recently did
+  # a job run.
+  #
+  # No API call and no database read, so this costs nothing and cannot wake the
+  # instance or spend Neon transfer -- the two things that ruled out polling the
+  # distribution endpoint, whose six-hour cache every poll would miss and
+  # rebuild ~12k rows for.
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Judge how old the committed census reading is
+        env:
+          SNAPSHOT: frontend/src/data/tierCensus.json
+        run: |
+          set -u
+
+          if [ ! -f "$SNAPSHOT" ]; then
+            echo "::error::$SNAPSHOT is missing -- the census snapshot is what /ranks renders"
+            exit 1
+          fi
+
+          last=$(jq -r '.lastDate // ""' "$SNAPSHOT" 2>/dev/null || echo "")
+          if [ -z "$last" ] || [ "$last" = "null" ]; then
+            echo "::error::$SNAPSHOT carries no lastDate. Running an old shape, or the file is corrupt."
+            exit 1
+          fi
+
+          last_epoch=$(date -u -d "$last" +%s 2>/dev/null || echo "")
+          if [ -z "$last_epoch" ]; then
+            echo "::error::lastDate '$last' is not a date this can read"
+            exit 1
+          fi
+
+          age=$(( ( $(date -u +%s) - last_epoch ) / 86400 ))
+          echo "Newest window is $last, $age day(s) old (season $(jq -r '.seasonId // "?"' "$SNAPSHOT"), $(jq -r '.windows // 0' "$SNAPSHOT") windows)."
+
+          # The collector asks PUBG for a fixed calendar day two days back, so a
+          # healthy pipeline sits at 2 and never at 0. 3 absorbs a late fire --
+          # GitHub has delivered this schedule nearly five hours late.
+          if [ "$age" -le 3 ]; then
+            echo "Collecting normally."
+            exit 0
+          fi
+
+          # Between the two: one missed day is a blip, most of a week is not.
+          # A warning rather than a failure because the page is still showing a
+          # true reading, correctly dated -- there is nothing broken to fix yet.
+          if [ "$age" -le 6 ]; then
+            echo "::warning::the census has not collected a new day since $last ($age days). One miss is normal; check the Tier census workflow if this repeats."
+            exit 0
+          fi
+
+          echo "::error::the census has collected nothing since $last ($age days) -- /ranks is serving a reading over a week old. Check the Tier census workflow, then CENSUS_TOKEN, then /healthz for the database."
+          exit 1
