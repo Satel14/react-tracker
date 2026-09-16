@@ -1,4 +1,5 @@
 const { BoundedMap } = require("../boundedMap");
+const { recordRateLimit } = require("../runtimeStats");
 
 // Whole mapped payloads: the most expensive entries here by an order of
 // magnitude, and the ones worth the tightest ceiling.
@@ -55,10 +56,23 @@ let rateLimitedUntil = 0;
 
 function setRateLimited() {
   rateLimitedUntil = Date.now() + RATE_LIMIT_COOLDOWN_MS;
+  recordRateLimit();
 }
 
 function isRateLimited() {
   return Date.now() < rateLimitedUntil;
+}
+
+// How full each cache is, next to what it is allowed to hold. Read off this
+// module's own exports rather than a hand-kept list: a cache added below is
+// reported the moment it is exported, and the list could not be forgotten into
+// staleness the way a copy of it would be.
+function getCacheSizes() {
+  return Object.fromEntries(
+    Object.entries(module.exports)
+      .filter(([, value]) => value instanceof BoundedMap)
+      .map(([name, cache]) => [name, { size: cache.size, limit: cache.limit }]),
+  );
 }
 
 function getCachedAccountId(shard, requestedPlayerId) {
@@ -134,4 +148,5 @@ module.exports = {
   EXTRAS_RETRY_COOLDOWN_MS,
   rankPointReadingCache,
   RANK_POINT_READING_INTERVAL_MS,
+  getCacheSizes,
 };
