@@ -208,6 +208,7 @@ jobs:
             perMatch: .data.perMatch,
             rpPercentiles: .data.rpPercentiles,
             lobbyMix: .data.lobbyMix,
+            benchmarks: .data.benchmarks,
             tiers: [.data.tiers[] | {tier, count, share, low, high, n, effectiveN, designEffect, publishable}]
           }
           JQ
