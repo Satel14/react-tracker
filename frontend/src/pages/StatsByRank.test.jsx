@@ -174,13 +174,16 @@ test("renders the Ukrainian twin from the ua dictionary", () => {
 
 // The outro links back to /ranks and /ranked-lobbies shipped English-only
 // (commit 804244a): a reader on the Ukrainian twin who followed either one
-// landed back on the English article.
+// landed back on the English article. /rank-points was missing outright --
+// this page had no inbound link to it at all.
 test("points the outro links at the language-matched twins", () => {
   english(committed);
   expect(screen.getByRole("link", { name: en.pages.statsByRank.seeRanks }))
     .toHaveAttribute("href", "/ranks");
   expect(screen.getByRole("link", { name: en.pages.statsByRank.seeRankedLobbies }))
     .toHaveAttribute("href", "/ranked-lobbies");
+  expect(screen.getByRole("link", { name: en.pages.statsByRank.seeRankPoints }))
+    .toHaveAttribute("href", "/rank-points");
 
   setTranslations({ ua });
   setDefaultLanguage("ua");
@@ -189,6 +192,8 @@ test("points the outro links at the language-matched twins", () => {
     .toHaveAttribute("href", "/ua/ranks");
   expect(screen.getByRole("link", { name: ua.pages.statsByRank.seeRankedLobbies }))
     .toHaveAttribute("href", "/ua/ranked-lobbies");
+  expect(screen.getByRole("link", { name: ua.pages.statsByRank.seeRankPoints }))
+    .toHaveAttribute("href", "/ua/rank-points");
 });
 
 // The only path between the two versions a reader who landed on the wrong one

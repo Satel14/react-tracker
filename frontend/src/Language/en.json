@@ -813,7 +813,8 @@
         "p5": "Averages hide a skew: most matches end with no kills at all, and a few end with many. That is why the last column is there. Hover any cell to see the range the sample supports; intervals are 95% and adjusted for the fact that players sampled in one lobby are not independent draws."
       },
       "seeRanks": "How the ranked system works: tiers, rank points and Survivor",
-      "seeRankedLobbies": "Who actually shares your ranked lobby? The measured tier mix"
+      "seeRankedLobbies": "Who actually shares your ranked lobby? The measured tier mix",
+      "seeRankPoints": "Is your rank point total good? Find out where it stands"
     }
   },
   "footer": {

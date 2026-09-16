@@ -82,6 +82,7 @@ const StatsByRank = ({ t, load = getRankDistribution, days = 7, snapshot = CENSU
   const isUkrainian = pathname === "/ua/stats-by-rank";
   const ranksHref = isUkrainian ? "/ua/ranks" : "/ranks";
   const rankedLobbiesHref = isUkrainian ? "/ua/ranked-lobbies" : "/ranked-lobbies";
+  const rankPointsHref = isUkrainian ? "/ua/rank-points" : "/rank-points";
   const [data, setData] = useState(snapshot ?? null);
 
   useEffect(() => {
@@ -182,6 +183,9 @@ const StatsByRank = ({ t, load = getRankDistribution, days = 7, snapshot = CENSU
       </p>
       <p className="stats-by-rank__outro">
         <Link to={rankedLobbiesHref}>{t("pages.statsByRank.seeRankedLobbies")}</Link>
+      </p>
+      <p className="stats-by-rank__outro">
+        <Link to={rankPointsHref}>{t("pages.statsByRank.seeRankPoints")}</Link>
       </p>
     </div>
   );

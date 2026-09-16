@@ -36,7 +36,7 @@ const REQUIRED = [
   "gated", "gatedEntry", "gatedRule", "sample", "platform",
   "method.heading", "method.p1", "method.p2",
   "limits.heading", "limits.p1", "limits.p2", "limits.p3", "limits.p4", "limits.p5",
-  "seeRanks", "seeRankedLobbies",
+  "seeRanks", "seeRankedLobbies", "seeRankPoints",
 ];
 
 describe("the stats by rank page copy", () => {

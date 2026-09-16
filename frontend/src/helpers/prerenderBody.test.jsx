@@ -422,13 +422,15 @@ describe("the stats by rank pages", () => {
   });
 
   // Language-matched: a reader on the Ukrainian twin must not be sent back to
-  // the English /ranks or /ranked-lobbies. Both outro links shipped
-  // English-only in commit 804244a; this pins the fix.
-  it("links the article and the lobby table from both, in the page's own language", () => {
+  // the English /ranks, /ranked-lobbies or /rank-points. All three outro links
+  // shipped English-only in commit 804244a; this pins the fix.
+  it("links the article, the lobby table and the rank points page from both, in the page's own language", () => {
     expect(page("/stats-by-rank")).toContain('href="/ranks"');
     expect(page("/stats-by-rank")).toContain('href="/ranked-lobbies"');
+    expect(page("/stats-by-rank")).toContain('href="/rank-points"');
     expect(page("/ua/stats-by-rank")).toContain('href="/ua/ranks"');
     expect(page("/ua/stats-by-rank")).toContain('href="/ua/ranked-lobbies"');
+    expect(page("/ua/stats-by-rank")).toContain('href="/ua/rank-points"');
   });
 
   // The point of the page: its table has to be IN the file a crawler reads,

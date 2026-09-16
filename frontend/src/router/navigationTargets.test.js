@@ -114,6 +114,11 @@ const REVIEWED = [
     target: "rankedLobbiesHref",
     why: 'Ternary over "/ua/ranked-lobbies" and "/ranked-lobbies" keyed on pathname === "/ua/stats-by-rank", both literal-rooted; nothing user-supplied reaches it.',
   },
+  {
+    file: "pages/StatsByRank.jsx",
+    target: "rankPointsHref",
+    why: 'Ternary over "/ua/rank-points" and "/rank-points" keyed on pathname === "/ua/stats-by-rank", both literal-rooted; nothing user-supplied reaches it.',
+  },
 ];
 
 // Reads the balanced run that starts at `open` and returns its inside. Quotes
