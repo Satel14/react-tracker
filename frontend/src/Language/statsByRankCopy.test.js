@@ -33,7 +33,7 @@ const REQUIRED = [
   "table.tier", "table.damage", "table.kills", "table.minutesAlive",
   "table.placement", "table.noKillShare",
   "lookup.label", "lookup.at", "lookup.between", "lookup.above", "lookup.below", "lookup.note",
-  "gated", "gatedEntry", "gatedRule", "sample", "platform",
+  "gated", "gatedEntry", "gatedRule", "sample", "tableSample", "platform",
   "method.heading", "method.p1", "method.p2",
   "limits.heading", "limits.p1", "limits.p2", "limits.p3", "limits.p4", "limits.p5",
   "seeRanks", "seeRankedLobbies", "seeRankPoints",
@@ -108,6 +108,7 @@ describe("the stats by rank page copy", () => {
     for (const token of ["{tier}", "{accounts}"]) {
       expect(page.gatedEntry, `${locale} gatedEntry ${token}`).toContain(token);
     }
+    expect(page.tableSample, `${locale} tableSample {benchmarkAccounts}`).toContain("{benchmarkAccounts}");
   });
 
   // In the gathering state the snapshot on the page is by definition the

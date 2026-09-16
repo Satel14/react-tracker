@@ -19,6 +19,15 @@ const paragraphKeys = (count) => Array.from({ length: count }, (_, i) => `p${i +
 const groupDigits = (value) =>
   new Intl.NumberFormat(getLanguage() === "ua" ? "uk-UA" : "en-US").format(Number(value) || 0);
 
+// The whole window's account count, quoted in the sample line, is not what the
+// benchmark columns rest on -- only accounts whose rows carry the new columns
+// are, which in the days right after this ships is a fraction of the window.
+// Summed from `damage`, the column every published row is guaranteed to carry
+// (benchmarkRows already refused any row missing it), so this never needs a
+// row to be asked twice.
+const benchmarkSampleSize = (rows) =>
+  (rows ?? []).reduce((sum, row) => sum + (Number(row?.metrics?.damage?.n) || 0), 0);
+
 // Only the shard the census is drawn from has a label; the collector pins
 // shard = "steam", so anything else prints its own name rather than a
 // translation nobody wrote.
@@ -154,6 +163,9 @@ const StatsByRank = ({ t, load = getRankDistribution, days = 7, snapshot = CENSU
               platform: platformLabel(t, payload.shard),
               from: payload.firstDate,
               to: payload.lastDate,
+            })}{" "}
+            {t("pages.statsByRank.tableSample", {
+              benchmarkAccounts: groupDigits(benchmarkSampleSize(rows)),
             })}
           </p>
 

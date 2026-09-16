@@ -783,7 +783,7 @@
         "damage": "Damage",
         "kills": "Kills",
         "minutesAlive": "Minutes alive",
-        "placement": "Beats",
+        "placement": "Teams beaten",
         "noKillShare": "Matches with no kills"
       },
       "lookup": {
@@ -798,6 +798,7 @@
       "gatedEntry": "{tier} ({accounts} sampled)",
       "gatedRule": "A tier needs enough sampled accounts, drawn from enough separate lobbies, before its row can be published.",
       "sample": "Measured from {accounts} accounts across {matches} ranked matches on {platform}, {from} to {to}.",
+      "tableSample": "The table above rests on {benchmarkAccounts} of those accounts — the ones whose matches carried these figures.",
       "platform": "PC (Steam)",
       "method": {
         "heading": "How this is measured",
@@ -810,7 +811,7 @@
         "p2": "Finishing position is published as the share of teams a player finished above, not as an average place. A place number means different things in different modes — in squad it is the team's place out of about sixteen, in solo the player's place out of about sixty — so averaging the raw numbers would measure nothing.",
         "p3": "Ranked modes are pooled into one table. Squad, duo and their first-person variants are all ranked, and a separate table for each would rest on a third of the sample, so most of its rows could not be published at all. Normalising the finishing position is what makes pooling them honest.",
         "p4": "Pooling the modes leaves a real difference inside every column except the last two. Normalising the finishing position makes places comparable across modes, but it does nothing about damage and kills: a squad match lasts longer and offers more people to shoot than a solo one, so a tier whose players queue more squad will read higher on both counts than one that does not. Read the damage and kill columns as a comparison between tiers under the mix of modes people actually play, not as a per-mode figure.",
-        "p5": "Averages hide a skew: most matches end with no kills at all, and a few end with many. That is why the last column is there. Hover any cell to see the range the sample supports; intervals are 95% and adjusted for the fact that players sampled in one lobby are not independent draws."
+        "p5": "Averages hide a skew: most matches end with no kills at all, and a few end with many. That is why the last column is there. Every figure in the table carries a range the sample supports behind it, 95% and adjusted for the fact that players sampled in one lobby are not independent draws."
       },
       "seeRanks": "How the ranked system works: tiers, rank points and Survivor",
       "seeRankedLobbies": "Who actually shares your ranked lobby? The measured tier mix",

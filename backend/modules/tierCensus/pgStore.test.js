@@ -524,6 +524,21 @@ test("with the columns missing it falls back rather than losing the night", asyn
   assert.ok(!select.text.includes("damage_dealt"), "fell back to the narrow window read");
 });
 
+// information_schema.columns is instance-wide: without a schema filter, a
+// same-named table sitting in another schema could make the count come back
+// wrong and silently force the narrow statements on a database that actually
+// has the columns -- with one log line as the only clue the feature never
+// started collecting.
+test("the column probe is scoped to the current schema, not just the table name", async () => {
+  const pool = wholeSchema();
+  __setPool(pool);
+  await recordObservations([observation()]);
+
+  const probe = pool.calls.find((c) => c.text.includes("information_schema.columns"));
+  assert.ok(probe, "the catalog was queried");
+  assert.match(probe.text, /table_schema\s*=\s*current_schema\(\)/);
+});
+
 // windows counts days the census collected, which says nothing about whether
 // any of them carry a benchmark. Publishing a one-day reading is the defect
 // PR #88 fixed for the tier shares.

@@ -99,10 +99,18 @@ const ADD_MATCH_STATS_SQL = `
 // run leaves every wide INSERT and every wide SELECT failing against the real
 // database: the night's collection is lost and /ranks loses its tier bars,
 // which is far worse than shipping without a new page.
+// Scoped to the current schema as well as the table name: information_schema
+// is instance-wide, so a same-named table sitting in another schema (a stray
+// "public" vs "tier_census" mismatch, a leftover from a restore) would let the
+// count come back wrong -- too high if that other table happens to share some
+// column names, too low otherwise -- and either way this probe would silently
+// pick the wrong statements with nothing but a log line to say so.
 const COLUMNS_PRESENT_SQL = `
   SELECT COUNT(*)::int AS present
   FROM information_schema.columns
-  WHERE table_name = 'tier_census_observations' AND column_name = ANY($1::text[])
+  WHERE table_schema = current_schema()
+    AND table_name = 'tier_census_observations'
+    AND column_name = ANY($1::text[])
 `;
 
 // One statement for the whole batch. ON CONFLICT keeps the account's first

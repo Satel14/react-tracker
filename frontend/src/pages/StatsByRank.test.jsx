@@ -8,13 +8,13 @@ import StatsByRank from "./StatsByRank";
 // Distinct numbers per tier, for the reason BenchmarkTable.test.jsx gives: two
 // rows carrying the same figure make getByText throw on the duplicate, and a
 // fixture that cannot tell its rows apart cannot prove the right one was drawn.
-const published = (tier, damage) => ({
+const published = (tier, damage, damageN = 1200) => ({
   tier,
   accounts: 1200,
   lobbies: 400,
   publishable: true,
   metrics: {
-    damage: { mean: damage, low: damage - 21, high: damage + 21 },
+    damage: { mean: damage, low: damage - 21, high: damage + 21, n: damageN },
     kills: { mean: 1.42, low: 1.3, high: 1.54 },
     minutesAlive: { mean: 15.1, low: 14.6, high: 15.6 },
     placement: { mean: 0.552, low: 0.53, high: 0.57 },
@@ -127,6 +127,26 @@ test("says when and from what the numbers were measured", () => {
   english(committed);
   expect(screen.getByText(/9,243 accounts across 622 ranked matches/)).toBeInTheDocument();
   expect(screen.getByText(/2026-09-11/)).toBeInTheDocument();
+});
+
+// The window's account count (9,243) is not what the benchmark columns rest
+// on -- only accounts whose rows carried the new columns are, which is a
+// fraction of that window in the days right after this ships. Summed across
+// published rows only: a gated tier's thin sample must not inflate the
+// figure the page uses to describe its own table.
+test("says how many of the window's accounts the published table itself rests on", () => {
+  english(snapshotOf(SEASON, [
+    published("gold", 204.3, 1200),
+    published("diamond", 271.8, 600),
+    gated("master", 70),
+  ]));
+  expect(screen.getByText(/1,800 of those accounts/)).toBeInTheDocument();
+});
+
+// Nothing to count while the page is still gathering -- there is no table.
+test("says nothing about the benchmark sample size while gathering", () => {
+  english(gathering);
+  expect(screen.queryByText(/of those accounts/)).not.toBeInTheDocument();
 });
 
 // A component that stopped reading the dictionary would render the raw key,
