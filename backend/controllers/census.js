@@ -10,6 +10,7 @@ const { seasonForWindow, previousSeasonId, seasonStartDate } = require("../modul
 const { estimateIcc, PER_MATCH } = require("../modules/tierCensus/sampling");
 const { tierShare, rpThresholds } = require("../modules/tierCensus/stats");
 const { lobbyMix } = require("../modules/tierCensus/lobbyMix");
+const { benchmarks } = require("../modules/tierCensus/benchmarks");
 const { isDbFailing, getDbErrorSequence } = require("../modules/db/health");
 
 const SHARD = "steam";
@@ -87,6 +88,7 @@ const createCensusController = ({
   readCoverage: doReadCoverage = readCoverage,
   readLatestSeason: doReadLatestSeason = readLatestSeason,
   readRankPoints: doReadRankPoints = readRankPoints,
+  benchmarks: buildBenchmarks = benchmarks,
   windowCollected = isWindowCollected,
   currentSeason = () => getCurrentSeasonId(SHARD),
   // The same catalog the line above reads, and the same cached fetch: the
@@ -237,6 +239,25 @@ const createCensusController = ({
       console.log(`[census] could not build the lobby mix: ${error.message}`);
     }
 
+    // An extra, like the RP table and the lobby mix: built from `rows`, already
+    // in hand, so it costs no query -- and a throw here must not cost the page
+    // its tier bars.
+    //
+    // metricWindows, not windows. `windows` counts days the census collected,
+    // which will clear MIN_WINDOWS from the day this ships and says nothing
+    // about whether any of those days carries a benchmark. Publishing a
+    // one-day reading is the defect PR #88 fixed for the tier shares: by the
+    // second day of a reset people have placed again, so one busy day passes
+    // every per-tier test and still measures re-climbing rather than standing.
+    let marks = null;
+    if (Number(coverage.metricWindows) >= MIN_WINDOWS) {
+      try {
+        marks = buildBenchmarks(rows);
+      } catch (error) {
+        console.log(`[census] could not build the benchmarks: ${error.message}`);
+      }
+    }
+
     // Tiers come from what was measured, including the untiered bucket -- a
     // player who has not queued ranked this season is a real part of the
     // denominator, not a gap to be quietly dropped.
@@ -276,6 +297,9 @@ const createCensusController = ({
         // own. Null when the sample is too thin to cut.
         rpPercentiles,
         lobbyMix: mix,
+        // What a player of each tier does in one ranked match. Absent or null
+        // when the sample cannot carry it; the page has its own empty state.
+        benchmarks: marks,
         tiers,
       },
     };
