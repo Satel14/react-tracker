@@ -119,6 +119,38 @@ test("honours a caller-supplied draw size", () => {
   assert.equal(pickParticipants(ids, Math.random).length, PER_MATCH);
 });
 
+const { estimateIccNumeric } = require("./sampling");
+
+// Lobbies that differ from each other but not within themselves: all of the
+// variation is between clusters, which is an ICC of 1.
+test("identical values inside each lobby and different between them is total correlation", () => {
+  const rows = [
+    { matchId: 1, damage: 100 }, { matchId: 1, damage: 100 },
+    { matchId: 2, damage: 300 }, { matchId: 2, damage: 300 },
+  ];
+  assert.ok(estimateIccNumeric(rows, (r) => r.damage) > 0.99);
+});
+
+test("lobbies that look like each other carry no correlation", () => {
+  const rows = [
+    { matchId: 1, damage: 100 }, { matchId: 1, damage: 300 },
+    { matchId: 2, damage: 100 }, { matchId: 2, damage: 300 },
+  ];
+  assert.equal(estimateIccNumeric(rows, (r) => r.damage), 0);
+});
+
+test("a value the API did not report is skipped, not read as zero", () => {
+  const rows = [
+    { matchId: 1, damage: 100 }, { matchId: 1, damage: null },
+    { matchId: 2, damage: 100 },
+  ];
+  assert.equal(estimateIccNumeric(rows, (r) => r.damage), 0);
+});
+
+test("one lobby cannot estimate a between-lobby correlation", () => {
+  assert.equal(estimateIccNumeric([{ matchId: 1, damage: 100 }], (r) => r.damage), 0);
+});
+
 const { participantsFromMatch, rosterCount } = require("./sampling");
 
 const participantWithStats = (n, stats = {}) => ({

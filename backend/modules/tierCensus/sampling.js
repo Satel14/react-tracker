@@ -76,39 +76,44 @@ const pickParticipants = (ids, random = Math.random, limit = PER_MATCH) => {
   return pool.slice(0, wanted);
 };
 
-// One-way ANOVA estimate of the intra-cluster correlation for one tier: how
-// much of the variation in "is this player in tier T" sits between lobbies
-// rather than within them. Measured from the rows we collected -- never
-// assumed, because assuming it is exactly how a published interval ends up
-// several times narrower than the data supports.
-const estimateIcc = (rows, tier) => {
+// One-way ANOVA estimate of the intra-cluster correlation for a continuous
+// value: how much of its variation sits between lobbies rather than within
+// them. Same formula as estimateIcc below, which is the 0/1 special case --
+// for an indicator, the sum of squared deviations inside a cluster is exactly
+// n*p*(1-p).
+//
+// Rows whose value is null are skipped rather than read as zero: an unreported
+// field is not a performance of nothing.
+const estimateIccNumeric = (rows, valueOf) => {
   const byMatch = new Map();
   for (const row of rows ?? []) {
     if (!row?.matchId) continue;
-    const bucket = byMatch.get(row.matchId) ?? { n: 0, hits: 0 };
-    bucket.n += 1;
-    if (row.tier === tier) bucket.hits += 1;
+    const raw = valueOf(row);
+    if (raw === null || raw === undefined) continue;
+    const value = Number(raw);
+    if (!Number.isFinite(value)) continue;
+    const bucket = byMatch.get(row.matchId) ?? [];
+    bucket.push(value);
     byMatch.set(row.matchId, bucket);
   }
 
-  const clusters = [...byMatch.values()].filter((c) => c.n > 0);
+  const clusters = [...byMatch.values()];
   const k = clusters.length;
-  const n = clusters.reduce((sum, c) => sum + c.n, 0);
+  const n = clusters.reduce((sum, c) => sum + c.length, 0);
   if (k < 2 || n <= k) return 0;
 
-  const total = clusters.reduce((sum, c) => sum + c.hits, 0);
-  if (!total) return 0;
+  const mean = (c) => c.reduce((sum, v) => sum + v, 0) / c.length;
+  const grand = clusters.reduce((sum, c) => sum + c.reduce((s, v) => s + v, 0), 0) / n;
 
-  const grand = total / n;
-  const between = clusters.reduce((sum, c) => sum + c.n * (c.hits / c.n - grand) ** 2, 0) / (k - 1);
+  const between = clusters.reduce((sum, c) => sum + c.length * (mean(c) - grand) ** 2, 0) / (k - 1);
   const within =
     clusters.reduce((sum, c) => {
-      const p = c.hits / c.n;
-      return sum + c.n * p * (1 - p);
+      const m = mean(c);
+      return sum + c.reduce((s, v) => s + (v - m) ** 2, 0);
     }, 0) / (n - k);
 
   // Average cluster size, corrected for unequal sizes.
-  const sumSquares = clusters.reduce((sum, c) => sum + c.n * c.n, 0);
+  const sumSquares = clusters.reduce((sum, c) => sum + c.length * c.length, 0);
   const m0 = (n - sumSquares / n) / (k - 1);
   if (!(m0 > 0)) return 0;
 
@@ -117,10 +122,18 @@ const estimateIcc = (rows, tier) => {
   return Math.min(1, Math.max(0, icc));
 };
 
+// One-way ANOVA estimate of the intra-cluster correlation for one tier: how
+// much of the variation in "is this player in tier T" sits between lobbies
+// rather than within them. Measured from the rows we collected -- never
+// assumed, because assuming it is exactly how a published interval ends up
+// several times narrower than the data supports.
+const estimateIcc = (rows, tier) => estimateIccNumeric(rows, (row) => (row.tier === tier ? 1 : 0));
+
 module.exports = {
   PER_MATCH,
   accountsFromMatch,
   estimateIcc,
+  estimateIccNumeric,
   participantsFromMatch,
   pickParticipants,
   rosterCount,

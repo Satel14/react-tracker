@@ -127,7 +127,30 @@ const rpThresholds = (values) => {
   return table;
 };
 
+// One tier's published average: the point estimate from every observation, the
+// interval from the effective one. Same division of labour as tierShare.
+//
+// No `publishable` here on purpose. Whether a row is shown is a question about
+// the sample behind it, not about one column, and benchmarks.js answers it once
+// for the whole row -- a per-column gate is a row of dashes under another name.
+const tierMean = ({ values, clusterSize, icc }) => {
+  const sample = (values ?? []).filter((v) => typeof v === "number" && Number.isFinite(v));
+  const n = sample.length;
+  const deff = designEffect({ clusterSize, icc });
+  if (!n) return { mean: null, low: null, high: null, n: 0, effectiveN: 0, designEffect: 1 };
+
+  const mean = sample.reduce((sum, v) => sum + v, 0) / n;
+  const nEff = effectiveN({ n, clusterSize, icc });
+  if (n < 2 || nEff < 1) return { mean, low: null, high: null, n, effectiveN: nEff, designEffect: deff };
+
+  // Sample standard deviation over the full sample; only the denominator of the
+  // standard error is discounted.
+  const variance = sample.reduce((sum, v) => sum + (v - mean) ** 2, 0) / (n - 1);
+  const margin = Z * Math.sqrt(variance / nEff);
+  return { mean, low: mean - margin, high: mean + margin, n, effectiveN: nEff, designEffect: deff };
+};
+
 module.exports = {
-  designEffect, effectiveN, wilson, tierShare, rpThresholds,
+  designEffect, effectiveN, wilson, tierShare, rpThresholds, tierMean,
   MIN_EFFECTIVE, MIN_SIGHTINGS, MIN_READINGS, PERCENTILE_STEPS, Z,
 };
