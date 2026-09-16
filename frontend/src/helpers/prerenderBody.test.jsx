@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { prerenderBody, PRERENDERED_ROUTES } from "./prerenderBody";
 import { ROUTE_META } from "./routeMeta.js";
-import { CENSUS_SNAPSHOT, lobbyMixRows, rpTable } from "./censusSnapshot";
+import { CENSUS_SNAPSHOT, benchmarkRows, lobbyMixRows, rpTable } from "./censusSnapshot";
 import { rpCuts } from "./rankPercentile";
 import en from "../Language/en.json";
 import ua from "../Language/ua.json";
@@ -16,7 +16,8 @@ describe("which routes ship their article", () => {
   it("renders the article, the homepage body, the FAQ and the leaderboard prose", () => {
     expect(PRERENDERED_ROUTES).toEqual([
       "/ranks", "/ua/ranks", "/rank-points", "/ua/rank-points",
-      "/ranked-lobbies", "/ua/ranked-lobbies", "/", "/help", "/leaderboards",
+      "/ranked-lobbies", "/ua/ranked-lobbies", "/stats-by-rank", "/ua/stats-by-rank",
+      "/", "/help", "/leaderboards",
     ]);
   });
 
@@ -395,6 +396,72 @@ describe("the ranked lobbies pages", () => {
       expect(html.match(/<tr><th scope="row">/g)?.length, path).toBe(rows.length);
       expect(html, path).toMatch(/<td>[\d\s,.]+%<\/td>/);
       expect(html, path).toContain(CENSUS_SNAPSHOT.firstDate);
+    }
+  });
+});
+
+describe("the stats by rank pages", () => {
+  const page = (path) => prerenderBody(path);
+
+  it("renders a body rather than a stub, in both languages", () => {
+    for (const path of ["/stats-by-rank", "/ua/stats-by-rank"]) {
+      const words = page(path).replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean);
+      expect(words.length, path).toBeGreaterThan(250);
+    }
+  });
+
+  it("carries exactly one h1 on each", () => {
+    for (const path of ["/stats-by-rank", "/ua/stats-by-rank"]) {
+      expect((page(path).match(/<h1[ >]/g) || []).length, path).toBe(1);
+    }
+  });
+
+  it("reads each language from its own dictionary", () => {
+    expect(decode(page("/stats-by-rank"))).toContain(en.pages.statsByRank.h1);
+    expect(decode(page("/ua/stats-by-rank"))).toContain(ua.pages.statsByRank.h1);
+  });
+
+  it("links the article and the lobby table from both", () => {
+    for (const path of ["/stats-by-rank", "/ua/stats-by-rank"]) {
+      expect(page(path), path).toContain('href="/ranks"');
+      expect(page(path), path).toContain('href="/ranked-lobbies"');
+    }
+  });
+
+  // The point of the page: its table has to be IN the file a crawler reads,
+  // not fetched into it afterwards. Which of the two states is asserted is read
+  // off the snapshot rather than hardcoded, for the reason the lobby table
+  // above gives -- gathering is a state this page legitimately returns to at
+  // every season rollover, and a fixed pin on the table would turn the next
+  // reset into a red build about nothing.
+  it("carries the benchmark table itself, not a promise of one", () => {
+    const rows = benchmarkRows(CENSUS_SNAPSHOT);
+
+    for (const path of ["/stats-by-rank", "/ua/stats-by-rank"]) {
+      const html = decode(page(path));
+      const dict = path.startsWith("/ua/") ? ua : en;
+      expect(html, path).not.toContain(en.pages.ranks.distribution.loading);
+
+      if (!rows) {
+        expect(html, path).toContain(dict.pages.statsByRank.gathering);
+        continue;
+      }
+
+      expect(html, path).not.toContain(dict.pages.statsByRank.gathering);
+      expect(html.match(/<tr><th scope="row">/g)?.length, path).toBe(rows.length);
+      expect(html, path).toContain(CENSUS_SNAPSHOT.firstDate);
+    }
+  });
+
+  // The gathering state's snapshot is by definition the ARCHIVED season, so a
+  // season number there is false twice over -- and this is the file that would
+  // carry it into a search result.
+  it("names no season while it is still gathering", () => {
+    if (benchmarkRows(CENSUS_SNAPSHOT)) return;
+    for (const path of ["/stats-by-rank", "/ua/stats-by-rank"]) {
+      const text = decode(page(path)).replace(/<[^>]+>/g, " ");
+      expect(text, path).not.toMatch(/season \d+/i);
+      expect(text, path).not.toMatch(/сезон \d+/i);
     }
   });
 });

@@ -26,6 +26,8 @@ export const CENSUS_PAGES = [
   "/ua/rank-points",
   "/ranked-lobbies",
   "/ua/ranked-lobbies",
+  "/stats-by-rank",
+  "/ua/stats-by-rank",
 ];
 
 // A date for a page we can date, and null for one we cannot.

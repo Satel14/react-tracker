@@ -760,6 +760,57 @@
       },
       "seeRanks": "How the ranked system works: tiers, RP and Survivor",
       "seeRankPoints": "Is your PUBG RP good? Find out where it stands"
+    },
+    "statsByRank": {
+      "h1": "What does a PUBG player of your rank actually do?",
+      "intro": "Damage, kills, minutes alive and finishing position for a typical player of each ranked tier — measured from a daily random sample of ranked lobbies, not estimated.",
+      "gathering": "These numbers are still being collected. The table appears once three daily samples stand behind it.",
+      "tier": {
+        "bronze": "Bronze",
+        "silver": "Silver",
+        "gold": "Gold",
+        "platinum": "Platinum",
+        "crystal": "Crystal",
+        "diamond": "Diamond",
+        "master": "Master",
+        "survivor": "Survivor"
+      },
+      "table": {
+        "tier": "Tier",
+        "damage": "Damage",
+        "kills": "Kills",
+        "minutesAlive": "Minutes alive",
+        "placement": "Beats",
+        "noKillShare": "Matches with no kills"
+      },
+      "lookup": {
+        "label": "Your average damage per ranked match",
+        "at": "That is exactly the measured average for",
+        "between": "That sits between the measured averages for",
+        "above": "That is above every tier average measured here, the highest being",
+        "below": "That is below every tier average measured here, the lowest being",
+        "note": "This compares your number against each tier's average. It does not tell you which tier you belong in: players inside one tier vary far more than the tier averages differ from each other."
+      },
+      "gated": "Not enough of a sample to publish yet:",
+      "gatedEntry": "{tier} ({accounts} sampled)",
+      "gatedRule": "A tier needs enough sampled accounts, drawn from enough separate lobbies, before its row can be published.",
+      "sample": "Measured from {accounts} accounts across {matches} ranked matches on {platform}, {from} to {to}.",
+      "platform": "PC (Steam)",
+      "method": {
+        "heading": "How this is measured",
+        "p1": "Every night we take PUBG's own random sample of matches, keep the ranked ones, and read the current tier of fifteen players drawn at random from each. Those players' own performance in that match comes from the same response, so this table and the tier shares on our ranks page are two readings of one sample and cannot contradict each other.",
+        "p2": "Each account appears once, at its most recent sighting, carrying the one match it was drawn from. Nobody is counted twice and no heavy player drags an average. But the account was drawn from a match, so a player who queues more often is likelier to be in the sample: read a row as what the player in a random ranked lobby seat did, not as the average of all PUBG players."
+      },
+      "limits": {
+        "heading": "What this cannot tell you",
+        "p1": "PC, Steam shard only. Console and Kakao are separate shards and are not measured here.",
+        "p2": "Finishing position is published as the share of teams a player finished above, not as an average place. A place number means different things in different modes — in squad it is the team's place out of about sixteen, in solo the player's place out of about sixty — so averaging the raw numbers would measure nothing.",
+        "p3": "Ranked modes are pooled into one table. Squad, duo and their first-person variants are all ranked, and a separate table for each would rest on a third of the sample, so most of its rows could not be published at all. Normalising the finishing position is what makes pooling them honest.",
+        "p4": "Pooling the modes leaves a real difference inside every column except the last two. Normalising the finishing position makes places comparable across modes, but it does nothing about damage and kills: a squad match lasts longer and offers more people to shoot than a solo one, so a tier whose players queue more squad will read higher on both counts than one that does not. Read the damage and kill columns as a comparison between tiers under the mix of modes people actually play, not as a per-mode figure.",
+        "p5": "Averages hide a skew: most matches end with no kills at all, and a few end with many. That is why the last column is there. Hover any cell to see the range the sample supports; intervals are 95% and adjusted for the fact that players sampled in one lobby are not independent draws."
+      },
+      "seeRanks": "How the ranked system works: tiers, rank points and Survivor",
+      "seeRankedLobbies": "Who actually shares your ranked lobby? The measured tier mix"
     }
   },
   "footer": {
