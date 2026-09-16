@@ -471,6 +471,25 @@ describe("the stats by rank pages", () => {
   });
 });
 
+// The footer did not exist in the shell and appeared at mount, which moved
+// everything measured below it. Prerendering the real component makes the two
+// renders agree by construction rather than by a reserved height.
+it.each(["/stats-by-rank", "/ua/stats-by-rank", "/ranks", "/"])(
+  "renders the footer into the %s shell",
+  (path) => {
+    const html = prerenderBody(path);
+    expect(html).toContain('class="footer"');
+    // Its real copy, not an empty placeholder element.
+    expect(html).toMatch(/Real-time PUBG stats|Статистика PUBG/);
+  },
+);
+
+it("renders the footer once, after the page body", () => {
+  const html = prerenderBody("/stats-by-rank");
+  expect(html.match(/class="footer"/g)).toHaveLength(1);
+  expect(html.indexOf('class="footer"')).toBeGreaterThan(html.indexOf("stats-by-rank__section"));
+});
+
 const decode = (html) =>
   html
     .replace(/&quot;/g, '"')
