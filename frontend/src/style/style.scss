@@ -4811,6 +4811,39 @@ body {
   }
 }
 
+.stats-by-rank__lookup {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+
+  &-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  &-input {
+    width: 8rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+  }
+
+  &-answer {
+    margin: 0.75rem 0 0;
+    color: var(--text);
+  }
+
+  &-note {
+    margin: 0.75rem 0 0;
+    color: var(--text-muted);
+  }
+}
+
 .leaderboard-page__explainer {
   margin: 6px 0 0;
   font-size: 14px;
