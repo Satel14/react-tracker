@@ -289,6 +289,15 @@ const createCensusController = ({
         accounts: rows.length,
         matches: coverage.matches,
         windows: coverage.windows,
+        // How many of those windows carry the match-performance columns, which
+        // is a different question and the only one answerable from outside the
+        // process. Those columns arrive by an ALTER that can fail on ownership
+        // against a live table; when it does, the store falls back to its
+        // narrow statements, logs one line, and the benchmarks never appear --
+        // indistinguishable from "not enough windows yet" unless this number is
+        // published. Deliberately NOT carried into the committed snapshot: the
+        // page never reads it, and that file ships in the frontend bundle.
+        metricWindows: Number(coverage.metricWindows) || 0,
         firstDate: coverage.firstDate,
         lastDate: coverage.lastDate,
         perMatch: PER_MATCH,
