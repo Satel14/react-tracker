@@ -1,6 +1,11 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { createRankPointHistoryService, createNoopRankPointHistoryService, READ_TIMEOUT_MS } = require("./index");
+const { getRuntimeStats, __resetRuntimeStats } = require("../runtimeStats");
+
+// The write is fire-and-forget, so the counter moves a tick after annotate
+// resolves rather than inside it.
+const settle = () => new Promise((resolve) => setImmediate(resolve));
 
 const H = 60 * 60 * 1000;
 const T0 = Date.parse("2026-08-26T18:00:00Z");
@@ -130,4 +135,33 @@ test("reports whether the store is configured", () => {
   assert.equal(createRankPointHistoryService({ store: fakeStore() }).isEnabled(), true);
   assert.equal(createRankPointHistoryService({ store: fakeStore({ configured: false }) }).isEnabled(), false);
   assert.equal(createNoopRankPointHistoryService().isEnabled(), false);
+});
+
+// Every RP delta on the Recent Matches card is diffed against these readings,
+// and they are written fire-and-forget: nothing in the response fails when the
+// write does. A process that has served lookups with this stuck at zero is the
+// only outward sign that the series feeding those deltas has stopped growing.
+test("a stored reading is counted where /healthz can see it", async () => {
+  __resetRuntimeStats();
+  const store = fakeStore();
+
+  await annotateWith(store);
+  await settle();
+
+  const { rankPointReadings } = getRuntimeStats();
+  assert.equal(rankPointReadings.count, 1);
+  assert.ok(Date.parse(rankPointReadings.lastAt));
+});
+
+// A rejected write is exactly the case this count exists to expose. Counting
+// the attempt rather than the outcome would report a healthy series while
+// Postgres refused every row -- the silent-failure shape /healthz is for.
+test("a write that is rejected is not counted as a reading", async () => {
+  __resetRuntimeStats();
+  const store = fakeStore({ recordError: new Error("data transfer quota exceeded") });
+
+  await annotateWith(store);
+  await settle();
+
+  assert.equal(getRuntimeStats().rankPointReadings.count, 0);
 });

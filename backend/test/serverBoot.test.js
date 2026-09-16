@@ -100,6 +100,29 @@ test("server.js comes up and serves /healthz", async (t) => {
   );
 });
 
+// Counters, not a metrics backend. This instance sleeps after 15 minutes idle
+// and the health watch wakes it with its own request, so an automated reader
+// only ever sees a process seconds old with everything at zero -- these are for
+// a person looking while real traffic is on it. uptime is what makes them
+// readable, and it is already here.
+test("/healthz reports what this process has done, not only that it is up", async (t) => {
+  const { port, answer, stderr } = await startServer(t);
+  assert.equal(answer?.code, 200, `server never came up on port ${port}. stderr:\n${stderr()}`);
+
+  const { runtime, caches, uptime } = JSON.parse(answer.body);
+
+  assert.equal(typeof uptime, "number", "a count without its window is not readable");
+  assert.equal(runtime.rankLookups.total, 0, "a freshly booted process has served nothing");
+  assert.equal(runtime.rankLookups.servedFromCachePct, null, "no lookups yet is not a cache rate of zero");
+  assert.equal(runtime.rateLimit.count, 0);
+  assert.equal(runtime.rankPointReadings.count, 0);
+  assert.deepEqual(
+    caches.statsCache,
+    { size: 0, limit: 500 },
+    "the ceiling is reported next to the size, or a cache pinned against it looks ordinary",
+  );
+});
+
 // Every route in this API answers with a { status, message } envelope, including
 // its own errors. body-parser is the one thing upstream of them all: a malformed
 // body rejects before any handler runs, and with no error handler registered

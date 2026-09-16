@@ -10,6 +10,7 @@ const { createSteamAvatarService } = require("./steamAvatar");
 const { createSeasonCatalogService } = require("./seasonCatalog");
 const { createEmptyMatches, createPlayerEnrichmentService } = require("./enrichment");
 const { createRankPointHistoryService } = require("../rankPointHistory");
+const { recordRankLookup } = require("../runtimeStats");
 const {
   CACHE_DURATION,
   CURRENT_SEASON_CACHE_DURATION,
@@ -347,12 +348,14 @@ function createParsePlayerRank({
 
     const inFlight = inFlightRankRequests.get(requestKey);
     if (inFlight) {
+      recordRankLookup("coalesced");
       return inFlight;
     }
 
     if (isRateLimited()) {
       if (staleByRequest) {
         console.log(`[PUBG] Rate-limit cooldown, serving stale cache for ${requestedPlayerId}`);
+        recordRankLookup("stale");
         return staleByRequest;
       }
       console.log(`[PUBG] Rate-limit cooldown, failing fast for ${requestedPlayerId}`);
@@ -449,6 +452,9 @@ function createParsePlayerRank({
         const statsCacheKey = `${shard}:${accountId}:${targetSeasonId || "no-season"}`;
         const cachedStats = statsCache.get(statsCacheKey);
         if (cachedStats && Date.now() - cachedStats.timestamp < CACHE_DURATION) {
+          // Here rather than at statsCache.get(): the entry above may be past
+          // its TTL, and that lookup goes upstream like any other.
+          recordRankLookup("cached");
           const normalized = repairCachedPayload({
             cachedPayload: cachedStats.data,
             requestedPlayerId,
@@ -629,6 +635,7 @@ function createParsePlayerRank({
           setStalePlayerData(`${shard}:${displayPlayerName}:${requestedSeasonId || "current"}`, mappedData);
         }
 
+        recordRankLookup("fresh");
         return mappedData;
       } catch (e) {
         if (String(e.message).includes("Rate Limit")) {
@@ -638,6 +645,7 @@ function createParsePlayerRank({
             getStalePlayerData(`${shard}:${requestedPlayerId}:current`);
           if (stale) {
             console.log(`[PUBG] Rate limited, serving stale cache for ${requestedPlayerId}`);
+            recordRankLookup("stale");
             return stale;
           }
         }

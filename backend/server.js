@@ -11,6 +11,8 @@ const routes = require("./routes");
 const { warmRecentSearches } = require("./modules/recentSearches");
 const { warmRankPointHistory } = require("./modules/rankPointHistory");
 const { getDbHealth } = require("./modules/db/health");
+const { getRuntimeStats } = require("./modules/runtimeStats");
+const { getCacheSizes } = require("./modules/playerRank/state");
 
 const app = express();
 
@@ -33,11 +35,19 @@ app.use(compression());
 // an empty list, so an outage is invisible from the outside: on 2026-09-10 the
 // Neon transfer allowance ran out and recent searches, the tier census and RP
 // history were blank for days, each looking like "nothing collected yet".
+// `runtime` and `caches` are counted in memory and reset with the process, which
+// on this instance is several times a day. They are here for a person reading
+// during real traffic or straight after an incident -- not for the six-hourly
+// health watch, which wakes the instance with its own request and would only
+// ever see a process seconds old with every count at zero. uptime is what makes
+// them mean anything, so it stays alongside.
 app.get("/healthz", (_req, res) =>
   res.status(200).json({
     status: 200,
     uptime: Math.round(process.uptime()),
     db: getDbHealth(),
+    runtime: getRuntimeStats(),
+    caches: getCacheSizes(),
   })
 );
 

@@ -1,6 +1,7 @@
 const store = require("./pgStore");
 const { readRankedSnapshot, applyReading } = require("./reading");
 const { attributeRankPoints } = require("./attribute");
+const { recordRankPointReading } = require("../runtimeStats");
 
 const READ_TIMEOUT_MS = 3000;
 
@@ -31,8 +32,11 @@ function createRankPointHistoryService({ store: historyStore = store, now = Date
     const capturedAt = now();
     const latest = series.length ? series[series.length - 1] : null;
     // Fire-and-forget: the response must not wait on, or fail with, the write.
+    // The count goes after it rather than before, so a Postgres that refuses
+    // every row reads as zero readings instead of a healthy series.
     Promise.resolve()
       .then(() => historyStore.recordReading(key, reading, { latest, now: capturedAt }))
+      .then(() => recordRankPointReading())
       .catch((e) => console.log(`[RP] snapshot write rejected for ${accountId}: ${e.message}`));
 
     try {
