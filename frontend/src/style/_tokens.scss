@@ -38,6 +38,21 @@
   --bg: #0d0918;
   --surface: #0c1422;
   --border: rgba(255, 255, 255, 0.08);
+
+  // The height the navbar occupies once React has mounted. The prerendered
+  // shell's placeholder nav is sized from the same token so the two cannot
+  // drift apart as the navbar changes -- a guard, not the fix for the mount
+  // shift: measured, this token change moved CLS almost not at all. See
+  // eagerRoutes.test.js and routes.js for what the shift actually was.
+  --nav-height: 106px;
+}
+
+// The navbar collapses into a drawer below this breakpoint (same switch as
+// style.scss's .navbar media query) and is shorter there.
+@media (max-width: 960px) {
+  :root {
+    --nav-height: 45px;
+  }
 }
 
 // The switcher writes these classes onto .app. Values must stay in step with

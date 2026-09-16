@@ -2079,6 +2079,7 @@ body {
   .navbar {
     // border-bottom: 1px solid var(--accent);
     display: flex;
+    min-height: var(--nav-height);
     align-items: center;
     position: relative;
     justify-content: space-between;
@@ -3625,6 +3626,8 @@ body {
 // run JS, and for anyone with JS off -- so it has to be legible, not pretty.
 .prerender__nav {
   display: flex;
+  min-height: var(--nav-height);
+  align-items: center;
   flex-wrap: wrap;
   gap: 16px;
   justify-content: center;

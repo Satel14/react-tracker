@@ -26,6 +26,7 @@ import HomeHeading from "../component/home/HomeHeading.jsx";
 import HomeGuideLinks from "../component/home/HomeGuideLinks.jsx";
 import Help from "../pages/Help.jsx";
 import LeaderboardStatic from "../component/leaderboard/LeaderboardIntro.jsx";
+import Footer from "../component/Footer.jsx";
 import en from "../Language/en.json";
 import ua from "../Language/ua.json";
 
@@ -86,9 +87,16 @@ export const prerenderBody = (path) => {
   // StaticRouter, not the memory one: it is react-router's own answer for a
   // render with no browser behind it, and it does not warn about layout
   // effects that cannot run here.
+  // The footer is rendered here too, not reserved as an empty box: it shares
+  // this StaticRouter and the language just set above, so the markup a
+  // crawler (and the first paint) gets is exactly what mounts on top of it,
+  // rather than something that appears only once the bundle runs.
   return renderToStaticMarkup(
     <StaticRouter location={path}>
-      <Page />
+      <>
+        <Page />
+        <Footer />
+      </>
     </StaticRouter>,
   );
 };

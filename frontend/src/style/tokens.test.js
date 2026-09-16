@@ -49,9 +49,9 @@ describe("colour tokens", () => {
   it("defines the expected token set", () => {
     expect(Object.keys(tokens).sort()).toEqual([
       "--accent", "--bg", "--border", "--brand", "--crate", "--danger",
-      "--flight", "--ok", "--rest", "--surface", "--text", "--text-faint",
-      "--text-muted", "--text-strong", "--tier-gold", "--warn", "--win",
-      "--zone-emp", "--zone-red", "--zone-storm",
+      "--flight", "--nav-height", "--ok", "--rest", "--surface", "--text",
+      "--text-faint", "--text-muted", "--text-strong", "--tier-gold", "--warn",
+      "--win", "--zone-emp", "--zone-red", "--zone-storm",
     ]);
   });
 
