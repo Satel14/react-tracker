@@ -197,3 +197,44 @@ export const gatedMixRows = (data) => {
   const rows = lobbyMixRows(data);
   return rows ? rows.gated ?? [] : [];
 };
+
+// The committed benchmark table, or null when there is not one worth drawing.
+//
+// Deliberately NOT folded into usableSnapshot, for the reason rpTable and
+// lobbyMixRows are not: a benchmark set too thin to publish must not blank the
+// tier distribution on /ranks, which is a different measurement with its own
+// empty state.
+//
+// Only PUBLISHED rows are validated. A gated row is never drawn, so holding it
+// to the same bar would throw away a good table because of a tier we already
+// decided not to show.
+const MEAN_KEYS = ["damage", "kills", "minutesAlive", "placement"];
+
+const finite = (value) => typeof value === "number" && Number.isFinite(value);
+
+export const benchmarkRows = (data) => {
+  const rows = data?.benchmarks;
+  if (!Array.isArray(rows) || !rows.length) return null;
+
+  const published = rows.filter((row) => row?.publishable);
+  if (!published.length) return null;
+
+  for (const row of published) {
+    if (!row?.metrics || typeof row.metrics !== "object") return null;
+    if (!MEAN_KEYS.every((key) => finite(row.metrics[key]?.mean))) return null;
+    if (!finite(row.metrics.noKillShare?.share)) return null;
+    // Both of these are shares by construction. One outside its range is an
+    // aggregation that drifted, and drawing it would put a bar on the page
+    // whose length means nothing.
+    const { mean: place } = row.metrics.placement;
+    const { share: noKills } = row.metrics.noKillShare;
+    if (place < 0 || place > 1 || noKills < 0 || noKills > 1) return null;
+  }
+
+  return published;
+};
+
+// The tiers this reading gated out. A separate read rather than a property on
+// the array above, so it survives a spread, a slice or a useMemo copy.
+export const gatedBenchmarkRows = (data) =>
+  benchmarkRows(data) ? (data?.benchmarks ?? []).filter((row) => !row?.publishable) : [];
