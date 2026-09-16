@@ -118,3 +118,44 @@ test("honours a caller-supplied draw size", () => {
   assert.equal(pickParticipants(ids, Math.random, 4).length, 4);
   assert.equal(pickParticipants(ids, Math.random).length, PER_MATCH);
 });
+
+const { participantsFromMatch, rosterCount } = require("./sampling");
+
+const participantWithStats = (n, stats = {}) => ({
+  type: "participant",
+  attributes: { stats: { playerId: `account.${String(n).padStart(32, "0")}`, ...stats } },
+});
+
+test("a participant's performance rides along with the account id", () => {
+  const payload = {
+    included: [participantWithStats(1, { damageDealt: 217.4, kills: 3, timeSurvived: 1145.6, winPlace: 4 })],
+  };
+  const [player] = participantsFromMatch(payload);
+  assert.equal(player.accountId, `account.${String(1).padStart(32, "0")}`);
+  assert.equal(player.damageDealt, 217);
+  assert.equal(player.kills, 3);
+  assert.equal(player.timeSurvived, 1146);
+  assert.equal(player.winPlace, 4);
+});
+
+// Absence is not zero. A zero here would drag every mean the field enters,
+// and PUBG does leave fields out.
+test("a field PUBG did not report is null, never zero", () => {
+  const [player] = participantsFromMatch({ included: [participantWithStats(1, { kills: null })] });
+  assert.equal(player.kills, null);
+  assert.equal(player.damageDealt, null);
+  assert.equal(player.winPlace, null);
+});
+
+test("rosterCount counts teams, not players", () => {
+  const payload = {
+    included: [participantWithStats(1), participantWithStats(2), { type: "roster" }, { type: "roster" }],
+  };
+  assert.equal(rosterCount(payload), 2);
+  assert.equal(rosterCount({}), 0);
+});
+
+test("a participant whose id is not an account is dropped, stats and all", () => {
+  const payload = { included: [{ type: "participant", attributes: { stats: { playerId: "bot", kills: 9 } } }] };
+  assert.deepEqual(participantsFromMatch(payload), []);
+});

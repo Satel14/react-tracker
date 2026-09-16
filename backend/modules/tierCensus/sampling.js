@@ -13,11 +13,55 @@ const PER_MATCH = 15;
 
 const ACCOUNT = /^account\.[0-9a-f]{32}$/i;
 
-const accountsFromMatch = (payload) =>
+// A value PUBG actually reported, or null. Number(null) and Number("") are both
+// 0 and both finite, so the empties have to be refused before the coercion --
+// otherwise an unreported field enters a mean as a real zero.
+const number = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+const whole = (value) => {
+  const n = number(value);
+  return n === null ? null : Math.round(n);
+};
+
+// Everything the match payload already carries about one drawn player.
+//
+// The collector downloads this payload for every match in PUBG's daily sample
+// and /matches is not rate limited, so these fields cost nothing -- they were
+// simply thrown away until now. Five of them are published; the rest are stored
+// because a column not collected today can never be backfilled (/samples only
+// serves recent days) and disk is not what Neon meters.
+const participantsFromMatch = (payload) =>
   (payload?.included ?? [])
     .filter((item) => item?.type === "participant")
-    .map((item) => item?.attributes?.stats?.playerId)
-    .filter((id) => typeof id === "string" && ACCOUNT.test(id));
+    .map((item) => item?.attributes?.stats ?? {})
+    .filter((stats) => typeof stats.playerId === "string" && ACCOUNT.test(stats.playerId))
+    .map((stats) => ({
+      accountId: stats.playerId,
+      damageDealt: whole(stats.damageDealt),
+      kills: number(stats.kills),
+      headshotKills: number(stats.headshotKills),
+      assists: number(stats.assists),
+      dbnos: number(stats.DBNOs),
+      revives: number(stats.revives),
+      timeSurvived: whole(stats.timeSurvived),
+      winPlace: number(stats.winPlace),
+      walkDistance: whole(stats.walkDistance),
+      rideDistance: whole(stats.rideDistance),
+    }));
+
+// How many TEAMS were in the lobby. The denominator that makes a placement
+// comparable across modes: winPlace is a team's place out of ~16 in squad and a
+// player's out of ~64 in solo, so the raw number means different things.
+const rosterCount = (payload) =>
+  (payload?.included ?? []).filter((item) => item?.type === "roster").length;
+
+// One parser, so the ids and the performance can never disagree about which
+// participants count.
+const accountsFromMatch = (payload) => participantsFromMatch(payload).map((p) => p.accountId);
 
 // Partial Fisher-Yates: unbiased, and it stops after PER_MATCH swaps instead of
 // shuffling the whole lobby. Taking the head of the list would sample by
@@ -73,4 +117,11 @@ const estimateIcc = (rows, tier) => {
   return Math.min(1, Math.max(0, icc));
 };
 
-module.exports = { PER_MATCH, accountsFromMatch, pickParticipants, estimateIcc };
+module.exports = {
+  PER_MATCH,
+  accountsFromMatch,
+  estimateIcc,
+  participantsFromMatch,
+  pickParticipants,
+  rosterCount,
+};
