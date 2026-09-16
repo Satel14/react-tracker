@@ -164,6 +164,19 @@ const prerenderHead = () => ({
   },
 });
 
+// The four adjusted fallback families the font-fix landed. Named individually
+// rather than checked as a single "some rule mentions Inter Fallback" test:
+// that weaker check would pass if a future change dropped three of the four
+// and left one, and the build would succeed silently -- only the test suite
+// would catch it, later.
+const FALLBACK_FONT_FAMILIES = ['-apple-system', 'Segoe UI', 'Roboto', 'Arial'];
+
+// Matches a family name whether the minifier left it quoted
+// ("Inter Fallback: Arial") or, as it actually does in the built asset,
+// unquoted with the colon escaped (Inter Fallback\: Arial).
+const fallbackFamilyPattern = (name) =>
+  new RegExp(`Inter Fallback\\\\?:\\s*${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+
 // Resolves the hashed stylesheet's path relative to `buildUrl` by reading it
 // out of the shell rather than hard-coding a hash that changes every build.
 const cssAssetPath = (buildUrl) => {
@@ -202,8 +215,13 @@ const inlineCriticalCss = () => ({
     // deferred stylesheet arrives, and the swap reflows the text again.
     const stylesheet = readFileSync(fileURLToPath(new URL(cssAssetPath(buildUrl), buildUrl)), 'utf8');
     const fontFaces = (stylesheet.match(/@font-face\s*{[^}]*}/g) ?? []).join('');
-    if (!fontFaces.includes('Inter Fallback')) {
-      throw new Error('inline-critical-css: no adjusted @font-face rules found to inline');
+    const missingFamilies = FALLBACK_FONT_FAMILIES.filter((name) => !fallbackFamilyPattern(name).test(fontFaces));
+    if (missingFamilies.length > 0) {
+      const foundFamilies = FALLBACK_FONT_FAMILIES.filter((name) => !missingFamilies.includes(name));
+      throw new Error(
+        `inline-critical-css: missing adjusted @font-face rule(s) for ${missingFamilies.join(', ')}` +
+          ` (found: ${foundFamilies.length > 0 ? foundFamilies.join(', ') : 'none'})`,
+      );
     }
 
     for (const file of routes) {
