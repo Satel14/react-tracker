@@ -33,10 +33,11 @@ describe("nav height parity", () => {
     expect(tokens).toMatch(/--nav-height:\s*\d+px/);
   });
 
-  // Both navs must be sized from the same token. The prerendered nav is what a
-  // visitor sees for the first few hundred milliseconds and the real navbar is
-  // what replaces it; a difference between them is a layout shift on every
-  // page that paints before React mounts.
+  // Both navs must be sized from the same token so they cannot drift apart as
+  // the navbar changes. This is a guard against a future regression, not the
+  // fix for the mount shift itself -- measured, tying the two navs to one
+  // token moved CLS almost not at all; the real cause was React.lazy
+  // discarding the prerendered article (see eagerRoutes.test.js).
   it.each([".navbar {", ".prerender__nav {"])("sizes %s from the token", (selector) => {
     const body = block(selector);
     expect(body, `${selector} does not use var(--nav-height)`).toMatch(

@@ -40,9 +40,10 @@
   --border: rgba(255, 255, 255, 0.08);
 
   // The height the navbar occupies once React has mounted. The prerendered
-  // shell's placeholder nav is sized from the same token so the swap moves
-  // nothing -- measured, because .navbar has no explicit height of its own and
-  // the two navs never exist at the same moment to be compared by eye.
+  // shell's placeholder nav is sized from the same token so the two cannot
+  // drift apart as the navbar changes -- a guard, not the fix for the mount
+  // shift: measured, this token change moved CLS almost not at all. See
+  // eagerRoutes.test.js and routes.js for what the shift actually was.
   --nav-height: 106px;
 }
 

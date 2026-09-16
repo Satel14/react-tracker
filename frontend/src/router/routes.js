@@ -1,9 +1,17 @@
 import { lazy } from "react";
 import ErrorPage from "../pages/ErrorPage";
 import Main from "../pages/Main";
+// Prerendered routes are imported statically on purpose. Their article is
+// already in the static HTML; loading the component lazily makes React render
+// a spinner for one frame and throw that article away, which moved CLS from
+// 0.001 to 0.164 on /ranks. See eagerRoutes.test.js.
+import Help from "../pages/Help";
+import Ranks from "../pages/Ranks";
+import RankPoints from "../pages/RankPoints";
+import RankedLobbies from "../pages/RankedLobbies";
+import StatsByRank from "../pages/StatsByRank";
 
 const PlayerPage = lazy(() => import("../pages/PlayerPage"));
-const Help = lazy(() => import("../pages/Help"));
 const Player = lazy(() => import("../pages/Player"));
 const FavoritesPage = lazy(() => import("../pages/Favorites"));
 const BugReportPage = lazy(() => import("../pages/BugReportPage"));
@@ -11,10 +19,6 @@ const Compare = lazy(() => import("../pages/Compare"));
 const Overlay = lazy(() => import("../pages/Overlay"));
 const MatchReplayPage = lazy(() => import("../pages/MatchReplayPage"));
 const Leaderboard = lazy(() => import("../pages/Leaderboard"));
-const Ranks = lazy(() => import("../pages/Ranks"));
-const RankPoints = lazy(() => import("../pages/RankPoints"));
-const RankedLobbies = lazy(() => import("../pages/RankedLobbies"));
-const StatsByRank = lazy(() => import("../pages/StatsByRank"));
 
 const routes = [
   {
