@@ -1,6 +1,58 @@
 @import "tokens.scss";
 @import "mixins.scss";
 
+// Fallback fonts adjusted to occupy exactly the space Inter will.
+//
+// Inter is served with `font-display: swap`, so a page that paints before the
+// font arrives draws in a fallback and then swaps. Inter is about 7% wider per
+// character than every fallback in the stack below (xWidthAvg 978 against
+// 908-913 at the same unitsPerEm), so that swap re-wrapped paragraphs, changed
+// how many lines they took, and pushed everything after them down the page.
+//
+// Measured on /stats-by-rank at 412px: CLS 0.193, 0.182, 0.193 over three runs,
+// with the trace naming the Inter woff2 as the cause and the footer alone
+// carrying 0.142 of it. Its sibling article pages scored 0.000 only because
+// they paint at ~1,300ms, by which time the font has already arrived -- this
+// page paints at ~215ms and loses the race. That makes it a sitewide latent
+// defect rather than a defect of one page: ANY page that gets faster starts
+// shifting, which would have made the critical-CSS work punish itself.
+//
+// The percentages are derived, not copied: computed with @capsizecss/core from
+// the real metrics of Inter, Segoe UI, Roboto and Arial. Recompute rather than
+// hand-edit if the brand font ever changes.
+@font-face {
+  font-family: "Inter Fallback: -apple-system";
+  src: local("System Font"), local(".SFNS-Regular");
+  ascent-override: 84.4932%;
+  descent-override: 21.0381%;
+  size-adjust: 114.6542%;
+}
+
+@font-face {
+  font-family: "Inter Fallback: Segoe UI";
+  src: local("Segoe UI"), local("SegoeUI");
+  ascent-override: 89.9412%;
+  descent-override: 22.3946%;
+  size-adjust: 107.7093%;
+}
+
+@font-face {
+  font-family: "Inter Fallback: Roboto";
+  src: local("Roboto Regular"), local("Roboto-Regular");
+  ascent-override: 90.2384%;
+  descent-override: 22.4686%;
+  size-adjust: 107.3546%;
+}
+
+@font-face {
+  font-family: "Inter Fallback: Arial";
+  src: local("Arial"), local("ArialMT");
+  ascent-override: 90.4365%;
+  descent-override: 22.518%;
+  line-gap-override: 0%;
+  size-adjust: 107.1194%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -14,7 +66,7 @@
 
 body {
   background-color: var(--bg);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Inter", "Inter Fallback: -apple-system", "Inter Fallback: Segoe UI", "Inter Fallback: Roboto", "Inter Fallback: Arial", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -3156,7 +3208,7 @@ body {
   align-items: flex-start;
   justify-content: flex-start;
   padding: 16px;
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Inter", "Inter Fallback: -apple-system", "Inter Fallback: Segoe UI", "Inter Fallback: Roboto", "Inter Fallback: Arial", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 
   &--transparent {
     background: transparent;
