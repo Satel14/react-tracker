@@ -969,3 +969,36 @@ test("a benchmark failure leaves the tier shares standing", async () => {
   assert.equal(body.data.benchmarks, null);
   assert.ok(body.data.tiers.length > 0);
 });
+
+// How many of the pooled windows actually carry the match-performance columns.
+//
+// Published because the alternative is waiting three days to find out. The
+// columns are added by an ALTER that can fail on ownership against a live
+// table, and when it does the store falls back to its narrow statements and
+// says so in one log line nobody is watching -- the benchmarks simply never
+// appear, which looks exactly like "not enough windows yet". This number
+// separates the two from outside the process, the morning after a deploy.
+test("the payload reports how many windows carry the benchmark columns", async () => {
+  const controller = build({
+    readCoverage: async () => coverage({ matches: 120, accounts: 9000, windows: 7, metricWindows: 2,
+      firstDate: "2026-09-08", lastDate: "2026-09-14" }),
+  });
+
+  const body = await bodyOf(controller);
+  assert.equal(body.data.metricWindows, 2);
+  // Beside `windows`, and deliberately not the same number: `windows` counts
+  // days collected, this counts days that can carry a benchmark.
+  assert.equal(body.data.windows, 7);
+});
+
+// Absence is unknown, and unknown reads as zero here rather than as undefined:
+// a diagnostic that answers `undefined` cannot be told from a missing key.
+test("a coverage read with no metric window count reports zero, not undefined", async () => {
+  const controller = build({
+    readCoverage: async () => ({ matches: 1, accounts: 1, windows: 7,
+      firstDate: "2026-09-08", lastDate: "2026-09-14" }),
+  });
+
+  const body = await bodyOf(controller);
+  assert.equal(body.data.metricWindows, 0);
+});
