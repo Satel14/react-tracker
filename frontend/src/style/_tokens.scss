@@ -38,6 +38,20 @@
   --bg: #0d0918;
   --surface: #0c1422;
   --border: rgba(255, 255, 255, 0.08);
+
+  // The height the navbar occupies once React has mounted. The prerendered
+  // shell's placeholder nav is sized from the same token so the swap moves
+  // nothing -- measured, because .navbar has no explicit height of its own and
+  // the two navs never exist at the same moment to be compared by eye.
+  --nav-height: 106px;
+}
+
+// The navbar collapses into a drawer below this breakpoint (same switch as
+// style.scss's .navbar media query) and is shorter there.
+@media (max-width: 960px) {
+  :root {
+    --nav-height: 45px;
+  }
 }
 
 // The switcher writes these classes onto .app. Values must stay in step with
