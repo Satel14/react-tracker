@@ -74,6 +74,14 @@ const OtherLanguage = () => {
 // that: a build-time render, which is all a crawler ever sees, and a visitor
 // who arrives while the free API instance is still cold-starting.
 const StatsByRank = ({ t, load = getRankDistribution, days = 7, snapshot = CENSUS_SNAPSHOT }) => {
+  // The same signal OtherLanguage uses to pick its own target, reused here
+  // rather than a second mechanism: the outro links shipped English-only
+  // (commit 804244a) and sent a reader on the Ukrainian twin back to the
+  // English /ranks and /ranked-lobbies regardless of which one they were on.
+  const { pathname } = useLocation();
+  const isUkrainian = pathname === "/ua/stats-by-rank";
+  const ranksHref = isUkrainian ? "/ua/ranks" : "/ranks";
+  const rankedLobbiesHref = isUkrainian ? "/ua/ranked-lobbies" : "/ranked-lobbies";
   const [data, setData] = useState(snapshot ?? null);
 
   useEffect(() => {
@@ -170,10 +178,10 @@ const StatsByRank = ({ t, load = getRankDistribution, days = 7, snapshot = CENSU
       ))}
 
       <p className="stats-by-rank__outro">
-        <Link to="/ranks">{t("pages.statsByRank.seeRanks")}</Link>
+        <Link to={ranksHref}>{t("pages.statsByRank.seeRanks")}</Link>
       </p>
       <p className="stats-by-rank__outro">
-        <Link to="/ranked-lobbies">{t("pages.statsByRank.seeRankedLobbies")}</Link>
+        <Link to={rankedLobbiesHref}>{t("pages.statsByRank.seeRankedLobbies")}</Link>
       </p>
     </div>
   );

@@ -172,6 +172,25 @@ test("renders the Ukrainian twin from the ua dictionary", () => {
   expect(screen.queryByText(en.pages.statsByRank.h1)).not.toBeInTheDocument();
 });
 
+// The outro links back to /ranks and /ranked-lobbies shipped English-only
+// (commit 804244a): a reader on the Ukrainian twin who followed either one
+// landed back on the English article.
+test("points the outro links at the language-matched twins", () => {
+  english(committed);
+  expect(screen.getByRole("link", { name: en.pages.statsByRank.seeRanks }))
+    .toHaveAttribute("href", "/ranks");
+  expect(screen.getByRole("link", { name: en.pages.statsByRank.seeRankedLobbies }))
+    .toHaveAttribute("href", "/ranked-lobbies");
+
+  setTranslations({ ua });
+  setDefaultLanguage("ua");
+  draw(() => new Promise(() => {}), committed, "/ua/stats-by-rank");
+  expect(screen.getByRole("link", { name: ua.pages.statsByRank.seeRanks }))
+    .toHaveAttribute("href", "/ua/ranks");
+  expect(screen.getByRole("link", { name: ua.pages.statsByRank.seeRankedLobbies }))
+    .toHaveAttribute("href", "/ua/ranked-lobbies");
+});
+
 // The only path between the two versions a reader who landed on the wrong one
 // has, and the only one a crawler that runs no JavaScript has.
 test("links each language at the other", () => {

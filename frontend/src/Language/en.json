@@ -676,7 +676,8 @@
         "p4": "No decay floor for the current ladder, for the reason above.",
         "p5": "Everything on this page is sourced to KRAFTON patch notes and official posts, and where a claim rests on anything weaker we say so on the spot. It was checked on 9 September 2026, against the Update 43.1 notes; when the rules change, this page changes."
       },
-      "seeLeaderboards": "See who is at the top of each region right now"
+      "seeLeaderboards": "See who is at the top of each region right now",
+      "seeStatsByRank": "What a player of each rank actually does in a match — damage, kills, minutes alive and finishing position"
     },
     "rankPoints": {
       "title": "Is your PUBG RP good?",
@@ -714,7 +715,8 @@
         "p5": "We do not publish where each tier starts in rank points. The only figures we have for that are our own, and a number invented here would be repeated elsewhere as though KRAFTON had said it."
       },
       "seeRanks": "How the ranked system works: tiers, RP and Survivor",
-      "seeLeaderboards": "See who is at the top of each region right now"
+      "seeLeaderboards": "See who is at the top of each region right now",
+      "seeStatsByRank": "What a player at each rank point level actually does in a match, not just where the RP falls"
     },
     "rankedLobbies": {
       "title": "Who's really in your PUBG ranked lobby?",
@@ -759,7 +761,8 @@
         "gatedRule": "A tier needs enough distinct lobbies of its own, and at least one other sampled player among them, before it publishes a row."
       },
       "seeRanks": "How the ranked system works: tiers, RP and Survivor",
-      "seeRankPoints": "Is your PUBG RP good? Find out where it stands"
+      "seeRankPoints": "Is your PUBG RP good? Find out where it stands",
+      "seeStatsByRank": "What the players sharing your lobby actually do in a match, tier by tier"
     },
     "statsByRank": {
       "h1": "What does a PUBG player of your rank actually do?",

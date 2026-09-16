@@ -421,11 +421,14 @@ describe("the stats by rank pages", () => {
     expect(decode(page("/ua/stats-by-rank"))).toContain(ua.pages.statsByRank.h1);
   });
 
-  it("links the article and the lobby table from both", () => {
-    for (const path of ["/stats-by-rank", "/ua/stats-by-rank"]) {
-      expect(page(path), path).toContain('href="/ranks"');
-      expect(page(path), path).toContain('href="/ranked-lobbies"');
-    }
+  // Language-matched: a reader on the Ukrainian twin must not be sent back to
+  // the English /ranks or /ranked-lobbies. Both outro links shipped
+  // English-only in commit 804244a; this pins the fix.
+  it("links the article and the lobby table from both, in the page's own language", () => {
+    expect(page("/stats-by-rank")).toContain('href="/ranks"');
+    expect(page("/stats-by-rank")).toContain('href="/ranked-lobbies"');
+    expect(page("/ua/stats-by-rank")).toContain('href="/ua/ranks"');
+    expect(page("/ua/stats-by-rank")).toContain('href="/ua/ranked-lobbies"');
   });
 
   // The point of the page: its table has to be IN the file a crawler reads,

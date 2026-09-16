@@ -89,6 +89,31 @@ const REVIEWED = [
     target: "backTo",
     why: 'Ternary over `/player/${platform}/${encodeURIComponent(...)}` and "/", so both branches are literal-rooted.',
   },
+  {
+    file: "pages/Ranks.jsx",
+    target: "statsByRankHref",
+    why: 'Ternary over "/ua/stats-by-rank" and "/stats-by-rank" keyed on pathname === "/ua/ranks", both literal-rooted; nothing user-supplied reaches it.',
+  },
+  {
+    file: "pages/RankPoints.jsx",
+    target: "statsByRankHref",
+    why: 'Ternary over "/ua/stats-by-rank" and "/stats-by-rank" keyed on pathname === "/ua/rank-points", both literal-rooted; nothing user-supplied reaches it.',
+  },
+  {
+    file: "pages/RankedLobbies.jsx",
+    target: "statsByRankHref",
+    why: 'Ternary over "/ua/stats-by-rank" and "/stats-by-rank" keyed on pathname === "/ua/ranked-lobbies", both literal-rooted; nothing user-supplied reaches it.',
+  },
+  {
+    file: "pages/StatsByRank.jsx",
+    target: "ranksHref",
+    why: 'Ternary over "/ua/ranks" and "/ranks" keyed on pathname === "/ua/stats-by-rank", both literal-rooted; nothing user-supplied reaches it.',
+  },
+  {
+    file: "pages/StatsByRank.jsx",
+    target: "rankedLobbiesHref",
+    why: 'Ternary over "/ua/ranked-lobbies" and "/ranked-lobbies" keyed on pathname === "/ua/stats-by-rank", both literal-rooted; nothing user-supplied reaches it.',
+  },
 ];
 
 // Reads the balanced run that starts at `open` and returns its inside. Quotes

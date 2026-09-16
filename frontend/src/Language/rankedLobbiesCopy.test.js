@@ -34,7 +34,7 @@ const REQUIRED = [
   "method.heading", "method.p1", "method.p2",
   "limits.heading", "limits.p1", "limits.p2", "limits.p3", "limits.p4", "limits.p5",
   "limits.gatedLabel", "limits.gatedEntry", "limits.gatedUnitOne", "limits.gatedUnitOther", "limits.gatedRule",
-  "seeRanks", "seeRankPoints",
+  "seeRanks", "seeRankPoints", "seeStatsByRank",
 ];
 
 describe("the ranked lobbies page copy", () => {

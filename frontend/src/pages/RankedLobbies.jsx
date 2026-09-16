@@ -38,6 +38,8 @@ const OtherLanguage = () => {
 // build-time render, which is all a crawler ever sees, and a visitor who
 // arrives while the free API instance is still cold-starting.
 const RankedLobbies = ({ t, load = getRankDistribution, days = 7, snapshot = CENSUS_SNAPSHOT }) => {
+  const { pathname } = useLocation();
+  const statsByRankHref = pathname === "/ua/ranked-lobbies" ? "/ua/stats-by-rank" : "/stats-by-rank";
   const [data, setData] = useState(snapshot ?? null);
 
   useEffect(() => {
@@ -102,6 +104,9 @@ const RankedLobbies = ({ t, load = getRankDistribution, days = 7, snapshot = CEN
       </p>
       <p className="ranked-lobbies__outro">
         <Link to="/rank-points">{t("pages.rankedLobbies.seeRankPoints")}</Link>
+      </p>
+      <p className="ranked-lobbies__outro">
+        <Link to={statsByRankHref}>{t("pages.rankedLobbies.seeStatsByRank")}</Link>
       </p>
     </div>
   );

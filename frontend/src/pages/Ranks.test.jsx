@@ -231,6 +231,25 @@ it("sends a reader from the tier shares to the ranked lobby mix", () => {
     .toHaveAttribute("href", "/ranked-lobbies");
 });
 
+it("links to the tier benchmarks page", () => {
+  renderPage();
+  expect(screen.getByRole("link", { name: en.pages.ranks.seeStatsByRank }))
+    .toHaveAttribute("href", "/stats-by-rank");
+});
+
+it("links to the Ukrainian tier benchmarks page from the Ukrainian route", () => {
+  setTranslations({ en, ua });
+  setDefaultLanguage("en");
+  setLanguage("ua");
+  render(
+    <MemoryRouter initialEntries={["/ua/ranks"]}>
+      <Ranks />
+    </MemoryRouter>
+  );
+  expect(screen.getByRole("link", { name: ua.pages.ranks.seeStatsByRank }))
+    .toHaveAttribute("href", "/ua/stats-by-rank");
+});
+
 test("renders the committed census reading rather than a loading line", () => {
   const { container } = renderPage();
   const section = container.querySelector("#distribution");
