@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import Beasties from 'beasties';
 import { resolveApiUrl } from './src/api/apiBase';
 import { injectRankPreload } from './src/api/rankPreloadScript';
 import { ROUTE_META, canonicalFor } from './src/helpers/routeMeta';
@@ -163,6 +164,66 @@ const prerenderHead = () => ({
   },
 });
 
+// Resolves the hashed stylesheet's path relative to `buildUrl` by reading it
+// out of the shell rather than hard-coding a hash that changes every build.
+const cssAssetPath = (buildUrl) => {
+  const shell = readFileSync(fileURLToPath(new URL('index.html', buildUrl)), 'utf8');
+  const match = shell.match(/href="([^"]*assets\/index-[^"]*\.css)"/);
+  if (!match) throw new Error('cssAssetPath: could not find the built stylesheet link in index.html');
+  return match[1].replace(/^\//, '');
+};
+
+// Inlines the CSS each prerendered shell actually uses and defers the rest.
+//
+// A separate plugin from prerender-head, and registered after it, because
+// Rollup runs closeBundle hooks in plugin order: the route files have to exist
+// on disk before they can be rewritten.
+//
+// Deferring the full stylesheet is safe here for a measured reason rather than
+// a hopeful one: the built JS is ~2.06 MB against 166 KB of CSS, so the
+// stylesheet always lands before React executes. There is no window in which
+// React renders the app unstyled.
+const inlineCriticalCss = () => ({
+  name: 'inline-critical-css',
+  apply: 'build',
+  enforce: 'post',
+  async closeBundle() {
+    // A URL, like prerender-head's, so route files one directory down
+    // (build/ua/ranks.html) resolve the same way they are written. `join` is
+    // deliberately not used: this file imports only `dirname` from node:path.
+    const buildUrl = new URL('./build/', import.meta.url);
+    const buildDir = fileURLToPath(buildUrl);
+    const routes = ['index.html', ...ROUTE_META.filter((r) => r.body).map((r) => r.file)];
+
+    // The extractor inlines the rules the markup matches, but it does NOT carry
+    // @font-face across -- verified. The shell's font stack names
+    // "Inter Fallback: …" families, so without their declarations the browser
+    // falls back to the unadjusted font for exactly the window before the
+    // deferred stylesheet arrives, and the swap reflows the text again.
+    const stylesheet = readFileSync(fileURLToPath(new URL(cssAssetPath(buildUrl), buildUrl)), 'utf8');
+    const fontFaces = (stylesheet.match(/@font-face\s*{[^}]*}/g) ?? []).join('');
+    if (!fontFaces.includes('Inter Fallback')) {
+      throw new Error('inline-critical-css: no adjusted @font-face rules found to inline');
+    }
+
+    for (const file of routes) {
+      const target = fileURLToPath(new URL(file, buildUrl));
+      if (!existsSync(target)) continue;
+      const beasties = new Beasties({
+        path: buildDir,
+        publicPath: '/',
+        preload: 'swap',
+        pruneSource: false,
+        logLevel: 'silent',
+      });
+      const html = await beasties.process(readFileSync(target, 'utf8'));
+      writeFileSync(target, html.replace('</style>', `${fontFaces}</style>`));
+    }
+
+    this.info(`inlined critical CSS into ${routes.filter((f) => existsSync(fileURLToPath(new URL(f, buildUrl)))).length} route shells`);
+  },
+});
+
 // index.html is the document Pages serves for every /player/:platform/:gameId,
 // so an inline script there is the earliest point at which the URL is known --
 // earlier than any module, which is the whole point of it.
@@ -189,7 +250,15 @@ const injectRankPreloadPlugin = () => {
 };
 
 export default defineConfig({
-  plugins: [react(), injectRankPreloadPlugin(), prerenderHead(), publishCensusData(), emitSitemap(), emitLlmsTxt()],
+  plugins: [
+    react(),
+    injectRankPreloadPlugin(),
+    prerenderHead(),
+    publishCensusData(),
+    emitSitemap(),
+    emitLlmsTxt(),
+    inlineCriticalCss(),
+  ],
   server: {
     port: 3000,
     open: false,
@@ -234,6 +303,11 @@ export default defineConfig({
             "src/style/**/*.test.js",
             "src/router/navigationTargets.test.js",
             "src/router/eagerRoutes.test.js",
+            // Reads build/ output with plain node:fs and node:url -- no DOM
+            // needed, and jsdom's global URL mis-resolves a relative file://
+            // URL against a Windows drive-letter base (E:\build\... instead of
+            // E:\...\frontend\build\...), which would silently skip every case.
+            "vite.criticalCss.test.js",
           ],
         },
       },
@@ -258,6 +332,7 @@ export default defineConfig({
             "src/style/**/*.test.js",
             "src/router/navigationTargets.test.js",
             "src/router/eagerRoutes.test.js",
+            "vite.criticalCss.test.js",
           ],
         },
       },
