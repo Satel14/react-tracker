@@ -23,11 +23,11 @@ const snapshotOf = (seasonId, lobbyMix) => ({
 
 const committed = snapshotOf("division.bro.official.pc-2018-43", [published("gold")]);
 
-const draw = (load, snapshot = committed) => {
+const draw = (load, snapshot = committed, path = "/ranked-lobbies") => {
   setTranslations({ en });
   setDefaultLanguage("en");
   return render(
-    <MemoryRouter initialEntries={["/ranked-lobbies"]}>
+    <MemoryRouter initialEntries={[path]}>
       <RankedLobbies load={load} snapshot={snapshot} />
     </MemoryRouter>,
   );
@@ -60,6 +60,18 @@ test("the sample line carries the real numbers, not the translation key", () => 
   expect(screen.getByText(/Measured from 5,040 accounts across 338 ranked matches/))
     .toBeInTheDocument();
   expect(screen.queryByText(/pages\.rankedLobbies/)).not.toBeInTheDocument();
+});
+
+test("links to the tier benchmarks page", () => {
+  draw(() => new Promise(() => {}));
+  expect(screen.getByRole("link", { name: en.pages.rankedLobbies.seeStatsByRank }))
+    .toHaveAttribute("href", "/stats-by-rank");
+});
+
+test("links to the Ukrainian tier benchmarks page from the Ukrainian route", () => {
+  draw(() => new Promise(() => {}), committed, "/ua/ranked-lobbies");
+  expect(screen.getByRole("link", { name: en.pages.rankedLobbies.seeStatsByRank }))
+    .toHaveAttribute("href", "/ua/stats-by-rank");
 });
 
 test("a live read with no mix does not replace the committed one", async () => {

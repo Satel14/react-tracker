@@ -9,6 +9,8 @@ import {
   MIN_POOLED_WINDOWS,
   lobbyMixRows,
   gatedMixRows,
+  benchmarkRows,
+  gatedBenchmarkRows,
 } from "./censusSnapshot";
 import committed from "../data/tierCensus.json";
 
@@ -401,5 +403,51 @@ describe("gatedMixRows", () => {
     expect(gatedMixRows({})).toEqual([]);
     expect(gatedMixRows(null)).toEqual([]);
     expect(gatedMixRows({ lobbyMix: [row("master", false)] })).toEqual([]);
+  });
+});
+
+describe("benchmarkRows", () => {
+  const metric = (mean) => ({ mean, low: mean - 10, high: mean + 10, n: 120, effectiveN: 90, designEffect: 1.3 });
+  const benchmark = (tierName, over = {}) => ({
+    tier: tierName, accounts: 120, lobbies: 90, publishable: true,
+    metrics: {
+      damage: metric(200), kills: metric(1.2), minutesAlive: metric(14),
+      placement: { mean: 0.55, low: 0.5, high: 0.6, n: 120, effectiveN: 90, designEffect: 1.3 },
+      noKillShare: { share: 0.4, low: 0.35, high: 0.45, n: 120, effectiveN: 90, designEffect: 1.3, publishable: true },
+    },
+    ...over,
+  });
+
+  it("returns only the publishable rows and remembers the rest", () => {
+    const data = { benchmarks: [benchmark("gold"), benchmark("master", { publishable: false, accounts: 70 })] };
+    expect(benchmarkRows(data).map((r) => r.tier)).toEqual(["gold"]);
+    expect(gatedBenchmarkRows(data).map((r) => r.tier)).toEqual(["master"]);
+  });
+
+  it("refuses a payload with no publishable row", () => {
+    expect(benchmarkRows({ benchmarks: [benchmark("master", { publishable: false })] })).toBe(null);
+    expect(benchmarkRows({ benchmarks: [] })).toBe(null);
+    expect(benchmarkRows({})).toBe(null);
+  });
+
+  // A coercible value like null or "" is not a number. A published row whose mean
+  // is missing would render an empty cell in a table that claims to be measured.
+  it("refuses the whole payload when a published row is malformed", () => {
+    const broken = benchmark("gold");
+    broken.metrics.damage = { ...broken.metrics.damage, mean: null };
+    expect(benchmarkRows({ benchmarks: [broken] })).toBe(null);
+  });
+
+  it("refuses a placement outside the share it claims to be", () => {
+    const broken = benchmark("gold");
+    broken.metrics.placement = { ...broken.metrics.placement, mean: 1.4 };
+    expect(benchmarkRows({ benchmarks: [broken] })).toBe(null);
+  });
+
+  // A gated row is allowed to be thin -- it is never drawn.
+  it("does not judge a gated row's metrics", () => {
+    const thin = benchmark("master", { publishable: false });
+    thin.metrics.damage = { ...thin.metrics.damage, mean: null };
+    expect(benchmarkRows({ benchmarks: [benchmark("gold"), thin] }).map((r) => r.tier)).toEqual(["gold"]);
   });
 });

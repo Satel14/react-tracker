@@ -114,6 +114,18 @@ describe("RankPoints", () => {
       .toHaveAttribute("href", "/leaderboards");
   });
 
+  it("links to the tier benchmarks page", () => {
+    at("/rank-points", <RankPoints snapshot={payload()} load={() => new Promise(() => {})} />);
+    expect(screen.getByRole("link", { name: en.pages.rankPoints.seeStatsByRank }))
+      .toHaveAttribute("href", "/stats-by-rank");
+  });
+
+  it("links to the Ukrainian tier benchmarks page from the Ukrainian route", () => {
+    at("/ua/rank-points", <RankPoints snapshot={payload()} load={() => new Promise(() => {})} />);
+    expect(screen.getByRole("link", { name: en.pages.rankPoints.seeStatsByRank }))
+      .toHaveAttribute("href", "/ua/stats-by-rank");
+  });
+
   it("offers the other language, picked from the path", () => {
     at("/rank-points", <RankPoints snapshot={null} load={() => new Promise(() => {})} />);
     expect(screen.getByRole("link", { name: "Читати українською" }))

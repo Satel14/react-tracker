@@ -8,7 +8,10 @@ const account = (i) => `account.${String(i).padStart(32, "0")}`;
 // A fake PUBG that answers from a script, records what was asked, and never
 // sleeps -- the pacer's delays are handed to an injected sleep.
 const fakeApi = (options = {}) => {
-  const { matchTypes = [], ranked = () => "gold", fail = () => null, rankedStats } = options;
+  const {
+    matchTypes = [], ranked = () => "gold", fail = () => null, rankedStats,
+    stats = () => ({}), rosters = 16, mapName = "Baltic_Main", duration = 1834,
+  } = options;
   // A destructuring default fires on `undefined` whether or not the key was
   // passed at all, so `gameMode: undefined` (used to simulate a match payload
   // with no game mode) would otherwise be silently coerced back to "squad".
@@ -42,18 +45,21 @@ const fakeApi = (options = {}) => {
           status: 200,
           headers: new Map(),
           json: async () => ({
-            data: { id: ids[index], attributes: { matchType: matchTypes[index], gameMode } },
-            included: Array.from({ length: 60 }, (_, p) => ({
-              type: "participant",
-              attributes: { stats: { playerId: account(index * 100 + p) } },
-            })),
+            data: { id: ids[index], attributes: { matchType: matchTypes[index], gameMode, mapName, duration } },
+            included: [
+              ...Array.from({ length: 60 }, (_, p) => ({
+                type: "participant",
+                attributes: { stats: { playerId: account(index * 100 + p), ...stats(index, p) } },
+              })),
+              ...Array.from({ length: rosters }, () => ({ type: "roster" })),
+            ],
           }),
         };
       }
 
       // ranked lookup
       const tier = ranked(url);
-      const stats = rankedStats
+      const rankedGameModeStats = rankedStats
         ? rankedStats(url)
         : tier
         ? { squad: { roundsPlayed: 20, currentTier: { tier, subTier: "2" }, currentRankPoint: 2400 } }
@@ -61,7 +67,7 @@ const fakeApi = (options = {}) => {
       return {
         status: 200,
         headers: new Map([["x-ratelimit-remaining", "90"], ["x-ratelimit-reset", "9999999999"]]),
-        json: async () => ({ data: { attributes: { rankedGameModeStats: stats } } }),
+        json: async () => ({ data: { attributes: { rankedGameModeStats } } }),
       };
     },
   };
@@ -517,6 +523,84 @@ test("a player whose every mode is an empty shell keeps a null tier", async () =
 
   assert.equal(result.observations[0].tier, null);
   assert.equal(result.observations.length, 15);
+});
+
+test("the drawn player's performance reaches the observation", async () => {
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    stats: () => ({
+      damageDealt: 217.4, kills: 3, timeSurvived: 1145.6, winPlace: 4,
+      headshotKills: 1, assists: 2, DBNOs: 3, revives: 0,
+      walkDistance: 1820.2, rideDistance: 640.9,
+    }),
+  });
+  const result = await run(api, { perMatch: 1 });
+
+  const [observation] = result.observations;
+  assert.equal(observation.damageDealt, 217);
+  assert.equal(observation.kills, 3);
+  assert.equal(observation.timeSurvived, 1146);
+  assert.equal(observation.winPlace, 4);
+  assert.equal(observation.rosterCount, 16);
+  assert.equal(observation.mapName, "Baltic_Main");
+  assert.equal(observation.matchDuration, 1834);
+  assert.equal(observation.tier, "gold");
+});
+
+// Absence is not zero, all the way down the pipe.
+test("a participant PUBG reported nothing for stores nulls", async () => {
+  const api = fakeApi({ matchTypes: ["competitive"], stats: () => ({}) });
+  const [observation] = (await run(api, { perMatch: 1 })).observations;
+  assert.equal(observation.damageDealt, null);
+  assert.equal(observation.kills, null);
+  assert.equal(observation.winPlace, null);
+  // The match-level fields are still known.
+  assert.equal(observation.rosterCount, 16);
+});
+
+test("the mode the tier was read from is recorded, even when the match is another mode", async () => {
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    gameMode: "squad",
+    // The player has only ever queued ranked squad-fpp.
+    rankedStats: () => ({
+      "squad-fpp": { roundsPlayed: 40, currentTier: { tier: "Gold", subTier: "2" }, currentRankPoint: 1960 },
+    }),
+  });
+  const [observation] = (await run(api, { perMatch: 1 })).observations;
+  assert.equal(observation.gameMode, "squad");
+  assert.equal(observation.tierMode, "squad-fpp");
+  // Still Gold -- keying the tier to the match's mode is what would file this
+  // player as unranked.
+  assert.equal(observation.tier, "gold");
+  // One played mode has nothing to disagree with.
+  assert.equal(observation.tierModeConflict, null);
+});
+
+test("two played modes that agree are recorded as no conflict", async () => {
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    rankedStats: () => ({
+      "duo-fpp": { roundsPlayed: 28, currentTier: { tier: "Platinum", subTier: "4" }, currentRankPoint: 2276 },
+      "squad-fpp": { roundsPlayed: 14, currentTier: { tier: "Platinum", subTier: "4" }, currentRankPoint: 2276 },
+    }),
+  });
+  const [observation] = (await run(api, { perMatch: 1 })).observations;
+  assert.equal(observation.tierModeConflict, false);
+});
+
+// The shape this column exists to catch. If it ever appears in the live data,
+// the unified-RP assumption above has stopped holding.
+test("two played modes that disagree are recorded as a conflict", async () => {
+  const api = fakeApi({
+    matchTypes: ["competitive"],
+    rankedStats: () => ({
+      squad: { roundsPlayed: 30, currentTier: { tier: "Gold", subTier: "2" }, currentRankPoint: 1960 },
+      "squad-fpp": { roundsPlayed: 12, currentTier: { tier: "Platinum", subTier: "4" }, currentRankPoint: 2276 },
+    }),
+  });
+  const [observation] = (await run(api, { perMatch: 1 })).observations;
+  assert.equal(observation.tierModeConflict, true);
 });
 
 // Node's fetch REJECTS on a socket or DNS error rather than answering non-200,

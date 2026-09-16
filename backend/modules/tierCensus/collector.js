@@ -16,7 +16,7 @@
 // fifteen players per ranked lobby get measured.
 
 const { createPacer } = require("./pacer");
-const { accountsFromMatch, pickParticipants } = require("./sampling");
+const { participantsFromMatch, rosterCount, pickParticipants } = require("./sampling");
 
 const BASE = "https://api.pubg.com/shards";
 const RANKED_MATCH_TYPE = "competitive";
@@ -38,14 +38,42 @@ const header = (headers, name) => {
 // recent days, so the mistake cannot be repaired afterwards. Same rule as
 // rankPointHistory/reading.js: a played mode first, and only fall back when
 // there is nothing better -- older payloads may carry no roundsPlayed at all.
-const readMode = (modes) => {
-  const values = Object.values(modes ?? {});
+const readModeEntry = (modes) => {
+  const entries = Object.entries(modes ?? {});
   return (
-    values.find((m) => Number(m?.roundsPlayed) > 0 && m?.currentTier?.tier) ??
-    values.find((m) => m?.currentTier?.tier) ??
-    values[0]
+    entries.find(([, m]) => Number(m?.roundsPlayed) > 0 && m?.currentTier?.tier) ??
+    entries.find(([, m]) => m?.currentTier?.tier) ??
+    entries[0]
   );
 };
+
+// Whether any two PLAYED modes disagree about where this player stands.
+//
+// Free: the whole rankedGameModeStats object is already in the response the
+// tier was read from, and this is a pass over it rather than a request. Null
+// rather than false when there is nothing to compare -- one played mode cannot
+// agree or disagree with anything, and recording that as "no conflict" would
+// make the column read as evidence it is not.
+const modesDisagree = (modes) => {
+  const played = Object.values(modes ?? {}).filter(
+    (m) => Number(m?.roundsPlayed) > 0 && m?.currentTier?.tier,
+  );
+  if (played.length < 2) return null;
+  const standing = (m) =>
+    `${String(m.currentTier.tier).toLowerCase()}/${m.currentTier.subTier}/${m.currentRankPoint}`;
+  return new Set(played.map(standing)).size > 1;
+};
+
+// Note on why `tier` below is never keyed to the match's `gameMode`, though it
+// looks like it should be: PUBG unified RP across modes since Season 36 (patch
+// 36.1 notes), so a tier is the same in every mode a player has played --
+// measured 2026-09-16 against live accounts. Keying it to the match's mode
+// instead would reintroduce the bug the 2026-09-14 audit fixed: a player drawn
+// from a squad lobby who has only ever queued ranked squad-fpp would have no
+// tier for "squad" and would be filed unranked -- unrepairable afterwards,
+// because /samples only serves recent days. So the tier stays the player's
+// tier, `tierMode` records which reading was taken, and `tierModeConflict`
+// records whether some other played mode disagreed.
 
 // Node's fetch REJECTS on a DNS, socket or TLS error rather than answering a
 // non-200, and a truncated body rejects in json(). Unguarded, one blip out of
@@ -203,14 +231,26 @@ const collect = async ({
     ranked.push({
       id,
       gameMode: payload?.data?.attributes?.gameMode ?? null,
-      accounts: pickParticipants(accountsFromMatch(payload), Math.random, perMatch),
+      mapName: payload?.data?.attributes?.mapName ?? null,
+      matchDuration: Number(payload?.data?.attributes?.duration) || null,
+      rosterCount: rosterCount(payload),
+      // The performance travels with the draw: picking ids and then looking the
+      // stats up again would mean holding every match's payload in memory.
+      players: pickParticipants(participantsFromMatch(payload), Math.random, perMatch),
     });
     report();
   }
 
   // 3. Read a tier for each drawn player. Metered, one call each.
   const queue = ranked.flatMap((match) =>
-    match.accounts.map((accountId) => ({ matchId: match.id, gameMode: match.gameMode, accountId })),
+    match.players.map((player) => ({
+      matchId: match.id,
+      gameMode: match.gameMode,
+      mapName: match.mapName,
+      matchDuration: match.matchDuration,
+      rosterCount: match.rosterCount,
+      player,
+    })),
   );
   for (let i = 0; i < queue.length; i += 1) {
     if (pacer.shouldAbort({ remainingCalls: queue.length - i, msLeft: msLeft() })) {
@@ -218,9 +258,9 @@ const collect = async ({
       break;
     }
 
-    const { matchId, gameMode, accountId } = queue[i];
+    const { matchId, gameMode, mapName, matchDuration, rosterCount: teams, player } = queue[i];
     const response = await metered(
-      `${BASE}/${shard}/players/${accountId}/seasons/${season}/ranked`,
+      `${BASE}/${shard}/players/${player.accountId}/seasons/${season}/ranked`,
     );
     if (!response || response.status !== 200) {
       playersFailed += 1;
@@ -232,7 +272,9 @@ const collect = async ({
       playersFailed += 1;
       continue;
     }
-    const first = readMode(payload?.data?.attributes?.rankedGameModeStats);
+    const modes = payload?.data?.attributes?.rankedGameModeStats;
+    const [tierMode = null, first] = readModeEntry(modes) ?? [];
+    const tierModeConflict = modesDisagree(modes);
     // A player who has not queued ranked this season answers 200 with nothing.
     // Kept, with a null tier: dropping them would make an unranked bucket
     // impossible and quietly bias the denominator.
@@ -242,11 +284,30 @@ const collect = async ({
       windowDate,
       matchId,
       gameMode,
-      accountId,
+      accountId: player.accountId,
       tier: first?.currentTier?.tier ? String(first.currentTier.tier).toLowerCase() : null,
       subTier: Number(first?.currentTier?.subTier) || null,
       rankPoint: Number(first?.currentRankPoint) || null,
       observedAt: now(),
+      // What the player did in the lobby they were drawn from. Already in the
+      // payload the free /matches call returned, so none of this costs quota.
+      damageDealt: player.damageDealt,
+      kills: player.kills,
+      timeSurvived: player.timeSurvived,
+      winPlace: player.winPlace,
+      rosterCount: teams,
+      headshotKills: player.headshotKills,
+      assists: player.assists,
+      dbnos: player.dbnos,
+      revives: player.revives,
+      walkDistance: player.walkDistance,
+      rideDistance: player.rideDistance,
+      mapName,
+      matchDuration,
+      // Which ranked mode the tier above was read from, and whether any other
+      // mode this player has played disagrees with it. See the note below.
+      tierMode,
+      tierModeConflict,
     });
     pending.push(observations[observations.length - 1]);
     if (pending.length >= FLUSH_EVERY) await flush();

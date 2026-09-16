@@ -111,6 +111,21 @@ export const ROUTE_META = [
     sitemap: true,
     body: true,
   },
+  // No season number and no `nav` key either, for the two reasons above: the
+  // page dates itself from the snapshot, and the header has no room for a third
+  // item (see NAV_ORDER's comment below).
+  {
+    path: "/stats-by-rank",
+    file: "stats-by-rank.html",
+    title: "PUBG Stats by Rank: What Each Tier Actually Does in a Match",
+    description:
+      "Average damage, kills, minutes alive and finishing position for each PUBG ranked tier, measured from a daily sample of ranked lobbies.",
+    h1: "What does a PUBG player of your rank actually do?",
+    intro:
+      "Damage, kills, minutes alive and finishing position for a typical player of each ranked tier — measured from a daily random sample of ranked lobbies, not estimated.",
+    sitemap: true,
+    body: true,
+  },
   // The same article, rendered from the ua dictionary. `translationOf` is what
   // pairs the two: it drives the hreflang set, the language switch and the
   // sitemap entry, so a twin cannot exist half-wired.
@@ -160,6 +175,21 @@ export const ROUTE_META = [
     h1: "Хто насправді сидить у твоєму рейтинговому лобі PUBG?",
     intro:
       "PUBG розподіляє рейтингових гравців по лобі за рейтингом, але ніде не каже, наскільки широко закинуто цю сітку. Ця сторінка читає це з виміряної вибірки: для гравця з певного тіру — тіри інших гравців, які опинилися з ним в одному лобі.",
+    sitemap: true,
+    body: true,
+  },
+  {
+    path: "/ua/stats-by-rank",
+    file: "ua/stats-by-rank.html",
+    lang: "uk",
+    translations: "ua",
+    translationOf: "/stats-by-rank",
+    title: "Статистика PUBG за рангами: що робить кожен тір у матчі",
+    description:
+      "Середня шкода, вбивства, хвилини життя і місце у фініші для кожного рейтингового тіру PUBG, виміряно з добової вибірки рейтингових лобі.",
+    h1: "Що насправді робить у матчі гравець твого рангу?",
+    intro:
+      "Шкода, вбивства, хвилини життя і місце у фініші для типового гравця кожного рейтингового тіру — виміряно з добової випадкової вибірки рейтингових лобі, а не оцінено.",
     sitemap: true,
     body: true,
   },

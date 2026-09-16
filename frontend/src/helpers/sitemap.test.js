@@ -12,7 +12,7 @@ describe("what the sitemap lists", () => {
   // a route's `sitemap` flag would change both sides and pass. This list is the
   // independent statement of what we submit, so changing that set has to be
   // deliberate enough to edit a test.
-  it("is exactly these nine URLs", () => {
+  it("is exactly these eleven URLs", () => {
     expect(locsIn(xml())).toEqual([
       "https://www.pubgtracker.top/",
       "https://www.pubgtracker.top/leaderboards",
@@ -20,9 +20,11 @@ describe("what the sitemap lists", () => {
       "https://www.pubgtracker.top/ranks",
       "https://www.pubgtracker.top/rank-points",
       "https://www.pubgtracker.top/ranked-lobbies",
+      "https://www.pubgtracker.top/stats-by-rank",
       "https://www.pubgtracker.top/ua/ranks",
       "https://www.pubgtracker.top/ua/rank-points",
       "https://www.pubgtracker.top/ua/ranked-lobbies",
+      "https://www.pubgtracker.top/ua/stats-by-rank",
     ]);
   });
 
@@ -67,6 +69,8 @@ describe("lastmod", () => {
       "/ua/rank-points",
       "/ranked-lobbies",
       "/ua/ranked-lobbies",
+      "/stats-by-rank",
+      "/ua/stats-by-rank",
     ]);
     for (const path of CENSUS_PAGES) {
       expect(lastmodFor(path)).toBe(CENSUS_SNAPSHOT.capturedAt);

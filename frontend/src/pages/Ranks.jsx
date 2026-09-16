@@ -143,69 +143,77 @@ const OtherLanguage = () => {
   );
 };
 
-const Ranks = ({ t }) => (
-  <div className="content ranks-page">
-    <div className="ranks-page__hero">
-      {/* Matches the heading the prerendered shell puts in #root, so the text a
-          crawler reads and the text React renders are the same sentence. */}
-      <h1>{t("pages.ranks.title")}</h1>
-      <p>{t("pages.ranks.intro")}</p>
-      <OtherLanguage />
-      <KeyFacts t={t} />
-    </div>
+const Ranks = ({ t }) => {
+  const { pathname } = useLocation();
+  const statsByRankHref = pathname === "/ua/ranks" ? "/ua/stats-by-rank" : "/stats-by-rank";
 
-    <div className="ranks-page__body">
-      <TableOfContents t={t} />
+  return (
+    <div className="content ranks-page">
+      <div className="ranks-page__hero">
+        {/* Matches the heading the prerendered shell puts in #root, so the text a
+            crawler reads and the text React renders are the same sentence. */}
+        <h1>{t("pages.ranks.title")}</h1>
+        <p>{t("pages.ranks.intro")}</p>
+        <OtherLanguage />
+        <KeyFacts t={t} />
+      </div>
 
-      <div className="ranks-page__sections">
-        {SECTIONS.map((section, index) => (
-          <section
-            className={`ranks-page__section${
-              section.tone ? ` ranks-page__section--${section.tone}` : ""
-            }`}
-            id={section.key}
-            key={section.key}
-          >
-            <div className="ranks-page__section-head">
-              <span className="ranks-page__section-index" aria-hidden="true">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <h2>{t(`pages.ranks.${section.key}.heading`)}</h2>
-            </div>
-            {section.ladder && <LadderTable t={t} />}
-            {/* Before the prose, like the ladder table above it: the heading
-                asks where players sit and the bars are the answer. The four
-                paragraphs under them are the caveats, which nobody reads
-                first. */}
-            {section.distribution && <TierDistribution t={t} />}
-            {paragraphKeys(section.paragraphs).map((paragraph) => (
-              <p key={paragraph}>{t(`pages.ranks.${section.key}.${paragraph}`)}</p>
-            ))}
-            {/* After the prose rather than beside the table: the paragraphs are
-                what explain that these shares are lobby seats, and the page
-                being linked carries the same caveats. */}
-            {section.distribution && (
-              <p className="ranks-page__outro">
-                <Link to="/rank-points">{t("pages.ranks.distribution.seeRankPoints")}</Link>
-              </p>
-            )}
-            {section.distribution && (
-              <p className="ranks-page__outro">
-                <Link to="/ranked-lobbies">{t("pages.ranks.distribution.seeRankedLobbies")}</Link>
-              </p>
-            )}
-            {/* After the prose, not before it: p4 is the sentence that hands
-                over the numbers the table then draws. */}
-            {section.slots && <SurvivorSlots t={t} />}
-          </section>
-        ))}
+      <div className="ranks-page__body">
+        <TableOfContents t={t} />
 
-        <p className="ranks-page__outro">
-          <Link to="/leaderboards">{t("pages.ranks.seeLeaderboards")}</Link>
-        </p>
+        <div className="ranks-page__sections">
+          {SECTIONS.map((section, index) => (
+            <section
+              className={`ranks-page__section${
+                section.tone ? ` ranks-page__section--${section.tone}` : ""
+              }`}
+              id={section.key}
+              key={section.key}
+            >
+              <div className="ranks-page__section-head">
+                <span className="ranks-page__section-index" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h2>{t(`pages.ranks.${section.key}.heading`)}</h2>
+              </div>
+              {section.ladder && <LadderTable t={t} />}
+              {/* Before the prose, like the ladder table above it: the heading
+                  asks where players sit and the bars are the answer. The four
+                  paragraphs under them are the caveats, which nobody reads
+                  first. */}
+              {section.distribution && <TierDistribution t={t} />}
+              {paragraphKeys(section.paragraphs).map((paragraph) => (
+                <p key={paragraph}>{t(`pages.ranks.${section.key}.${paragraph}`)}</p>
+              ))}
+              {/* After the prose rather than beside the table: the paragraphs are
+                  what explain that these shares are lobby seats, and the page
+                  being linked carries the same caveats. */}
+              {section.distribution && (
+                <p className="ranks-page__outro">
+                  <Link to="/rank-points">{t("pages.ranks.distribution.seeRankPoints")}</Link>
+                </p>
+              )}
+              {section.distribution && (
+                <p className="ranks-page__outro">
+                  <Link to="/ranked-lobbies">{t("pages.ranks.distribution.seeRankedLobbies")}</Link>
+                </p>
+              )}
+              {/* After the prose, not before it: p4 is the sentence that hands
+                  over the numbers the table then draws. */}
+              {section.slots && <SurvivorSlots t={t} />}
+            </section>
+          ))}
+
+          <p className="ranks-page__outro">
+            <Link to={statsByRankHref}>{t("pages.ranks.seeStatsByRank")}</Link>
+          </p>
+          <p className="ranks-page__outro">
+            <Link to="/leaderboards">{t("pages.ranks.seeLeaderboards")}</Link>
+          </p>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default translate(Ranks);

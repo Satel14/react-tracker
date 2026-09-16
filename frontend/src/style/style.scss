@@ -4786,6 +4786,153 @@ body {
   }
 }
 
+// Tokens only, no literals: same reasoning as .ranked-lobbies above. The page
+// block comes first in the file on purpose -- linkColours.test.js resolves a
+// block by its first textual occurrence, and ".stats-by-rank__table" below
+// would otherwise be what a lookup for ".stats-by-rank" found.
+//
+// Every rule states its own colour. The body is black and nothing here
+// inherits a readable one, so an omitted `color` renders invisible text that
+// no test can see.
+.stats-by-rank {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 0 8px;
+  color: var(--text);
+
+  &__hero {
+    margin-bottom: 28px;
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 34px;
+      color: var(--text-strong);
+    }
+
+    p {
+      margin: 0 0 10px;
+      color: var(--text-muted);
+    }
+  }
+
+  &__lang {
+    color: var(--accent);
+
+    &:hover {
+      color: var(--text-strong);
+    }
+  }
+
+  // Six columns do not fit a phone viewport. Scroll the table inside its own
+  // box rather than letting it drag the whole document sideways -- this page
+  // exists for organic search, under mobile-first indexing.
+  &__table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  // The sample line, and the whole answer in the gathering state. Its own
+  // bottom margin is what separates it from the next section's h2 either way.
+  &__note {
+    margin: 10px 0 28px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  // Sits between the table and the sample line rather than last, so it takes
+  // the tighter spacing.
+  &__gated-note {
+    margin: 10px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  &__section {
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 24px;
+      color: var(--text-strong);
+    }
+
+    p {
+      margin: 0 0 10px;
+      color: var(--text);
+    }
+  }
+
+  &__outro {
+    margin: 0 0 8px;
+
+    a {
+      color: var(--accent);
+
+      &:hover {
+        color: var(--text-strong);
+      }
+    }
+  }
+}
+
+.stats-by-rank__table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text);
+  margin: 1.5rem 0;
+
+  th,
+  td {
+    padding: 0.5rem 0.75rem;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  th[scope="row"],
+  thead th:first-child {
+    text-align: left;
+  }
+
+  thead th {
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+}
+
+.stats-by-rank__lookup {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+
+  &-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  &-input {
+    width: 8rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+  }
+
+  &-answer {
+    margin: 0.75rem 0 0;
+    color: var(--text);
+  }
+
+  &-note {
+    margin: 0.75rem 0 0;
+    color: var(--text-muted);
+  }
+}
+
 .leaderboard-page__explainer {
   margin: 6px 0 0;
   font-size: 14px;

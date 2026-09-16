@@ -161,3 +161,33 @@ test("refuses a sample too thin to cut into percentiles", () => {
   assert.equal(rpThresholds(Array.from({ length: 29 }, () => 2500)), null);
   assert.ok(rpThresholds(Array.from({ length: 30 }, (_, i) => 2000 + i)));
 });
+
+const { tierMean } = require("./stats");
+
+test("the mean uses every observation", () => {
+  const result = tierMean({ values: [100, 200, 300], clusterSize: 1, icc: 0 });
+  assert.equal(result.mean, 200);
+  assert.equal(result.n, 3);
+});
+
+// The same division of labour as tierShare: the point estimate is the full
+// sample, only the interval is discounted for clustering.
+test("clustering widens the interval and leaves the mean alone", () => {
+  const values = Array.from({ length: 300 }, (_, i) => (i % 2 ? 100 : 300));
+  const independent = tierMean({ values, clusterSize: 5, icc: 0 });
+  const clustered = tierMean({ values, clusterSize: 5, icc: 0.5 });
+  assert.equal(independent.mean, clustered.mean);
+  assert.ok(clustered.high - clustered.low > independent.high - independent.low);
+});
+
+test("a single reading has a mean but no interval", () => {
+  const result = tierMean({ values: [200], clusterSize: 1, icc: 0 });
+  assert.equal(result.mean, 200);
+  assert.equal(result.low, null);
+  assert.equal(result.high, null);
+});
+
+test("no readings at all is null, not zero", () => {
+  assert.deepEqual(tierMean({ values: [], clusterSize: 1, icc: 0 }),
+    { mean: null, low: null, high: null, n: 0, effectiveN: 0, designEffect: 1 });
+});

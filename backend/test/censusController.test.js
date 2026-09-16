@@ -38,7 +38,7 @@ const collected = (over = {}) => ({
 const SEASON = "division.bro.official.pc-2018-42";
 
 const coverage = (over = {}) => ({
-  matches: 0, accounts: 0, windows: 0, firstDate: null, lastDate: null, ...over,
+  matches: 0, accounts: 0, windows: 0, metricWindows: 0, firstDate: null, lastDate: null, ...over,
 });
 
 const build = (over = {}) => createCensusController({
@@ -85,6 +85,12 @@ const poisonedTier = {
   valueOf() { throw new Error("malformed tier"); },
 };
 const brokenRows = [{ matchId: "broken-1", tier: poisonedTier }];
+
+const bodyOf = async (controller) => {
+  const res = makeRes();
+  await controller.getDistribution({ query: {} }, res);
+  return res.body;
+};
 
 const distributionFor = async (rows) => {
   const controller = build({
@@ -898,4 +904,68 @@ test("the pooled mix tracks the published tier shares", async () => {
       `${tier.tier}: mix says ${mine}, tier shares say ${tier.share}`,
     );
   }
+});
+
+// --- the per-tier benchmarks ---
+
+const benchmarkRows120 = Array.from({ length: 120 }, (_, i) => ({
+  matchId: i + 1, tier: "gold", damage: 200, kills: 1,
+  timeSurvived: 900, winPlace: 8, rosterCount: 16,
+}));
+
+test("the payload carries the per-tier benchmarks", async () => {
+  const controller = build({
+    readWindow: async () => benchmarkRows120,
+    readCoverage: async () => coverage({ matches: 120, accounts: 120, windows: 7, metricWindows: 7,
+      firstDate: "2026-09-08", lastDate: "2026-09-14" }),
+  });
+
+  const body = await bodyOf(controller);
+  const gold = body.data.benchmarks.find((row) => row.tier === "gold");
+  assert.equal(gold.publishable, true);
+  assert.equal(gold.metrics.damage.mean, 200);
+});
+
+// The census having collected for a week says nothing about whether any of
+// those days carries a benchmark -- the columns only start filling on deploy
+// day. One busy day is enough to pass every per-tier test and still be a
+// measurement of the wrong thing.
+test("a single day of the new columns publishes no benchmarks", async () => {
+  const controller = build({
+    readWindow: async () => benchmarkRows120,
+    readCoverage: async () => coverage({ matches: 120, accounts: 120, windows: 7, metricWindows: 1,
+      firstDate: "2026-09-08", lastDate: "2026-09-14" }),
+  });
+
+  const body = await bodyOf(controller);
+  assert.equal(body.data.benchmarks, null);
+  // And the rest of the payload is untouched.
+  assert.ok(body.data.tiers.length > 0);
+});
+
+// A payload from a deploy that predates the field reports no count at all.
+// That is "unknown", and unknown must not satisfy a floor.
+test("a coverage read with no metric window count publishes no benchmarks", async () => {
+  const controller = build({
+    readWindow: async () => [{ matchId: 1, tier: "gold", damage: 200 }],
+    // No metricWindows key at all -- the shape an older deploy answers with.
+    readCoverage: async () => ({ matches: 1, accounts: 1, windows: 7,
+      firstDate: "2026-09-08", lastDate: "2026-09-14" }),
+  });
+  assert.equal((await bodyOf(controller)).data.benchmarks, null);
+});
+
+// The benchmarks are an extra. A throw building them must not cost /ranks its
+// tier bars -- the same posture the RP table and the lobby mix already take.
+test("a benchmark failure leaves the tier shares standing", async () => {
+  const controller = build({
+    readWindow: async () => [{ matchId: 1, tier: "gold" }],
+    readCoverage: async () => coverage({ matches: 1, accounts: 1, windows: 7, metricWindows: 7,
+      firstDate: "2026-09-08", lastDate: "2026-09-14" }),
+    benchmarks: () => { throw new Error("boom"); },
+  });
+
+  const body = await bodyOf(controller);
+  assert.equal(body.data.benchmarks, null);
+  assert.ok(body.data.tiers.length > 0);
 });

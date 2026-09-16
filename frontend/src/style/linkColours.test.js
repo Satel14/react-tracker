@@ -88,6 +88,7 @@ const NESTED_ANCHOR_LINKS = [
   [".ranks-page", "&__outro"],
   [".rank-points", "&__outro"],
   [".ranked-lobbies", "&__outro"],
+  [".stats-by-rank", "&__outro"],
 ];
 
 // Links that carry their own class, so the colour sits on the block's own
@@ -98,6 +99,7 @@ const OWN_COLOUR_LINKS = [
   [".ranks-page", "&__lang"],
   [".rank-points", "&__lang"],
   [".ranked-lobbies", "&__lang"],
+  [".stats-by-rank", "&__lang"],
 ];
 
 describe("prose links state their own colour", () => {

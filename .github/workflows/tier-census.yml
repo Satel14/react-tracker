@@ -194,6 +194,20 @@ jobs:
           # In a file rather than a shell variable so no layer has to quote a
           # multi-line jq program correctly. This is also exactly what was run
           # against a live payload before shipping it.
+          # benchmarks is field-projected the same way tiers is, below: the
+          # collector fields a metric object carries (n, effectiveN,
+          # designEffect, clusterSize, lobbies) are needed to COMPUTE the
+          # numbers, but nothing the frontend reads asks for them again once
+          # they have been -- censusSnapshot.js's benchmarkRows() validates
+          # only tier/accounts/publishable and each metric's mean (or share),
+          # low and high, and StatsByRank.jsx additionally reads
+          # metrics.damage.n to report how many of the window's accounts the
+          # published table itself rests on. Shipping the rest would be bytes
+          # nobody reads on every page load -- roughly 4-6 KB here, five
+          # metrics deep across every published tier. `if == null` rather than
+          # letting `[]` run on it: benchmarks is `null`, not `[]`, before the
+          # window has three days carrying the new columns, and that is the
+          # value usableSnapshot-style callers are written to check for.
           cat > "$RUNNER_TEMP/reading.jq" <<'JQ'
           {
             seasonId: .data.seasonId,
@@ -208,6 +222,18 @@ jobs:
             perMatch: .data.perMatch,
             rpPercentiles: .data.rpPercentiles,
             lobbyMix: .data.lobbyMix,
+            benchmarks: (if .data.benchmarks == null then null else
+              [.data.benchmarks[] | {
+                tier, accounts, publishable,
+                metrics: {
+                  damage: {mean: .metrics.damage.mean, low: .metrics.damage.low, high: .metrics.damage.high, n: .metrics.damage.n},
+                  kills: {mean: .metrics.kills.mean, low: .metrics.kills.low, high: .metrics.kills.high},
+                  minutesAlive: {mean: .metrics.minutesAlive.mean, low: .metrics.minutesAlive.low, high: .metrics.minutesAlive.high},
+                  placement: {mean: .metrics.placement.mean, low: .metrics.placement.low, high: .metrics.placement.high},
+                  noKillShare: {share: .metrics.noKillShare.share, low: .metrics.noKillShare.low, high: .metrics.noKillShare.high}
+                }
+              }]
+            end),
             tiers: [.data.tiers[] | {tier, count, share, low, high, n, effectiveN, designEffect, publishable}]
           }
           JQ
