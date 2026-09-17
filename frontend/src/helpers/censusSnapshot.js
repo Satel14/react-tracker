@@ -208,7 +208,11 @@ export const gatedMixRows = (data) => {
 // Only PUBLISHED rows are validated. A gated row is never drawn, so holding it
 // to the same bar would throw away a good table because of a tier we already
 // decided not to show.
-const MEAN_KEYS = ["damage", "kills", "minutesAlive", "placement"];
+// Named for what they are rather than for the mean alone: each carries an
+// average with its interval AND the quartiles that say how wide the tier is.
+// Exported because censusProjection.test.js holds the nightly jq program to
+// this same list.
+export const METRIC_KEYS = ["damage", "kills", "minutesAlive", "placement"];
 
 const finite = (value) => typeof value === "number" && Number.isFinite(value);
 
@@ -221,8 +225,19 @@ export const benchmarkRows = (data) => {
 
   for (const row of published) {
     if (!row?.metrics || typeof row.metrics !== "object") return null;
-    if (!MEAN_KEYS.every((key) => finite(row.metrics[key]?.mean))) return null;
+    if (!METRIC_KEYS.every((key) => finite(row.metrics[key]?.mean))) return null;
     if (!finite(row.metrics.noKillShare?.share)) return null;
+    // All or nothing, the same discipline the means get. A row whose quartiles
+    // arrived half-projected would draw a median with no range under it on some
+    // columns and not others, which reads as a gap in the data rather than as
+    // the deployment mismatch it would be.
+    for (const key of METRIC_KEYS) {
+      const { p25, p50, p75 } = row.metrics[key] ?? {};
+      if (!finite(p25) || !finite(p50) || !finite(p75)) return null;
+      // Out of order means an aggregation drifted, and a range drawn from it
+      // would be a lie about the tier's spread.
+      if (!(p25 <= p50 && p50 <= p75)) return null;
+    }
     // Both of these are shares by construction. One outside its range is an
     // aggregation that drifted, and drawing it would put a bar on the page
     // whose length means nothing.
