@@ -3,6 +3,7 @@ import { prerenderBody, PRERENDERED_ROUTES } from "./prerenderBody";
 import { ROUTE_META } from "./routeMeta.js";
 import { CENSUS_SNAPSHOT, benchmarkRows, lobbyMixRows, rpTable } from "./censusSnapshot";
 import { rpCuts } from "./rankPercentile";
+import { PAGE_SIZE } from "../component/leaderboard/leaderboardLayout.js";
 import en from "../Language/en.json";
 import ua from "../Language/ua.json";
 
@@ -239,6 +240,28 @@ describe("the leaderboard prose as a crawler receives it", () => {
 
   it("links the page that answers what a leaderboard cannot", () => {
     expect(board()).toContain('href="/ranks"');
+  });
+
+  // No standings, but their footprint. Without this the shell put the explainer
+  // where the table lands, React shoved it ~2,950px down at mount, and this was
+  // the worst page on the site for layout shift: 0.351 in production, 0.262
+  // measured locally against 500 entries, now 0.000.
+  //
+  // The row count rides in as a custom property so PAGE_SIZE stays the only
+  // place the number lives; the height itself is style.scss's business.
+  it("reserves the standings' footprint instead of leaving a gap", () => {
+    const html = board();
+    expect(html).toContain("leaderboard-page__table-reserve");
+    expect(html).toContain(`--lb-rows:${PAGE_SIZE}`);
+    expect(html).toContain("leaderboard-page__filters--reserved");
+    expect(html).toContain("leaderboard-page__meta--reserved");
+  });
+
+  // The shell is also what the route renders while its chunk loads, so it has
+  // to wear the page's own wrapper -- otherwise the heading sits at a different
+  // width in the file than on screen.
+  it("wraps the page in the same container the route renders", () => {
+    expect(board()).toContain('class="content leaderboard-page"');
   });
 });
 

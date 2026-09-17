@@ -10,6 +10,7 @@ import Ranks from "../pages/Ranks";
 import RankPoints from "../pages/RankPoints";
 import RankedLobbies from "../pages/RankedLobbies";
 import StatsByRank from "../pages/StatsByRank";
+import LeaderboardStatic from "../component/leaderboard/LeaderboardIntro";
 
 const PlayerPage = lazy(() => import("../pages/PlayerPage"));
 const Player = lazy(() => import("../pages/Player"));
@@ -54,6 +55,12 @@ const routes = [
   {
     path: "/leaderboards",
     component: Leaderboard,
+    // This page keeps its lazy import -- antd's Table is 266KB and no other
+    // route needs it -- so it needs a fallback that is not the bare spinner.
+    // The spinner wipes the prerendered shell for a frame, which cost 0.14 CLS
+    // on its own. This is the very component the build writes into
+    // leaderboards.html, so the frame is the file.
+    fallback: LeaderboardStatic,
     exact: true,
   },
   {

@@ -58,7 +58,10 @@ describe("brand alpha values", () => {
       ...stylesheet.matchAll(/color-mix\(in srgb, var\(--[a-z-]+\) ([0-9.]+)%/g),
     ].map((match) => Number(match[1]));
     expect([...new Set(percents)].sort((a, b) => a - b)).toEqual([
-      5, 7, 8, 10, 12, 14, 15, 16, 18, 20, 22, 25, 26, 28, 30, 32,
+      // 4 and 9 are the leaderboard's reserved table box: a fill barely off the
+      // background and the row rules drawn over it. Both sit under the lightest
+      // value here on purpose -- it is a placeholder, not a surface.
+      4, 5, 7, 8, 9, 10, 12, 14, 15, 16, 18, 20, 22, 25, 26, 28, 30, 32,
       35, 40, 45, 50, 55, 70, 75, 80, 85, 85.098, 92, 95,
     ]);
   });
