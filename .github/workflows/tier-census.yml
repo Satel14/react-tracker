@@ -200,7 +200,7 @@ jobs:
           # numbers, but nothing the frontend reads asks for them again once
           # they have been -- censusSnapshot.js's benchmarkRows() validates
           # only tier/accounts/publishable and each metric's mean (or share),
-          # low and high, and StatsByRank.jsx additionally reads
+          # low, high and quartiles, and StatsByRank.jsx additionally reads
           # metrics.damage.n to report how many of the window's accounts the
           # published table itself rests on. Shipping the rest would be bytes
           # nobody reads on every page load -- roughly 4-6 KB here, five
@@ -226,10 +226,10 @@ jobs:
               [.data.benchmarks[] | {
                 tier, accounts, publishable,
                 metrics: {
-                  damage: {mean: .metrics.damage.mean, low: .metrics.damage.low, high: .metrics.damage.high, n: .metrics.damage.n},
-                  kills: {mean: .metrics.kills.mean, low: .metrics.kills.low, high: .metrics.kills.high},
-                  minutesAlive: {mean: .metrics.minutesAlive.mean, low: .metrics.minutesAlive.low, high: .metrics.minutesAlive.high},
-                  placement: {mean: .metrics.placement.mean, low: .metrics.placement.low, high: .metrics.placement.high},
+                  damage: {mean: .metrics.damage.mean, low: .metrics.damage.low, high: .metrics.damage.high, n: .metrics.damage.n, p25: .metrics.damage.p25, p50: .metrics.damage.p50, p75: .metrics.damage.p75},
+                  kills: {mean: .metrics.kills.mean, low: .metrics.kills.low, high: .metrics.kills.high, p25: .metrics.kills.p25, p50: .metrics.kills.p50, p75: .metrics.kills.p75},
+                  minutesAlive: {mean: .metrics.minutesAlive.mean, low: .metrics.minutesAlive.low, high: .metrics.minutesAlive.high, p25: .metrics.minutesAlive.p25, p50: .metrics.minutesAlive.p50, p75: .metrics.minutesAlive.p75},
+                  placement: {mean: .metrics.placement.mean, low: .metrics.placement.low, high: .metrics.placement.high, p25: .metrics.placement.p25, p50: .metrics.placement.p50, p75: .metrics.placement.p75},
                   noKillShare: {share: .metrics.noKillShare.share, low: .metrics.noKillShare.low, high: .metrics.noKillShare.high}
                 }
               }]

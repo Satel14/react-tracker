@@ -407,12 +407,18 @@ describe("gatedMixRows", () => {
 });
 
 describe("benchmarkRows", () => {
-  const metric = (mean) => ({ mean, low: mean - 10, high: mean + 10, n: 120, effectiveN: 90, designEffect: 1.3 });
+  // The quartiles sit wider than the interval on purpose: low/high are the
+  // uncertainty of this mean, p25/p75 are how far apart two players of the tier
+  // are. A fixture where they matched would hide a validator that confused them.
+  const metric = (mean) => ({
+    mean, low: mean - 10, high: mean + 10, n: 120, effectiveN: 90, designEffect: 1.3,
+    p25: mean - 60, p50: mean - 5, p75: mean + 70,
+  });
   const benchmark = (tierName, over = {}) => ({
     tier: tierName, accounts: 120, lobbies: 90, publishable: true,
     metrics: {
       damage: metric(200), kills: metric(1.2), minutesAlive: metric(14),
-      placement: { mean: 0.55, low: 0.5, high: 0.6, n: 120, effectiveN: 90, designEffect: 1.3 },
+      placement: { mean: 0.55, low: 0.5, high: 0.6, n: 120, effectiveN: 90, designEffect: 1.3, p25: 0.3, p50: 0.56, p75: 0.8 },
       noKillShare: { share: 0.4, low: 0.35, high: 0.45, n: 120, effectiveN: 90, designEffect: 1.3, publishable: true },
     },
     ...over,
@@ -422,6 +428,23 @@ describe("benchmarkRows", () => {
     const data = { benchmarks: [benchmark("gold"), benchmark("master", { publishable: false, accounts: 70 })] };
     expect(benchmarkRows(data).map((r) => r.tier)).toEqual(["gold"]);
     expect(gatedBenchmarkRows(data).map((r) => r.tier)).toEqual(["master"]);
+  });
+
+  // Half a projection is the deployment mismatch this guards: the API grew the
+  // quartiles and the nightly jq program did not, so a median would draw with no
+  // range under it on the columns that made it through and not on the others.
+  it("refuses a published row whose quartiles did not arrive", () => {
+    const thin = benchmark("gold");
+    thin.metrics.kills = { ...thin.metrics.kills, p50: null };
+    expect(benchmarkRows({ benchmarks: [thin] })).toBe(null);
+  });
+
+  // Out of order means an aggregation drifted, and the range drawn from it would
+  // misstate the tier's spread rather than merely look odd.
+  it("refuses quartiles that are not in order", () => {
+    const crossed = benchmark("gold");
+    crossed.metrics.damage = { ...crossed.metrics.damage, p25: 400, p50: 200, p75: 300 };
+    expect(benchmarkRows({ benchmarks: [crossed] })).toBe(null);
   });
 
   it("refuses a payload with no publishable row", () => {

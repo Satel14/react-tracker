@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { benchmarks, placementAbove, MIN_ACCOUNTS, MIN_LOBBIES } = require("./benchmarks");
+const { benchmarks, placementAbove, quantiles, MIN_ACCOUNTS, MIN_LOBBIES } = require("./benchmarks");
 
 // One sampled player, in a named lobby, with a performance.
 const seat = (matchId, tier, over = {}) => ({
@@ -130,4 +130,80 @@ test("rows come back in ladder order and unranked never gets one", () => {
   const rows = [...published("diamond"), ...published("bronze"), ...published("gold"),
     ...Array.from({ length: MIN_ACCOUNTS }, (_, i) => seat(i + 1, null))];
   assert.deepEqual(benchmarks(rows).map((r) => r.tier), ["bronze", "gold", "diamond"]);
+});
+
+// --- spread within a tier -------------------------------------------------
+//
+// The published interval is the uncertainty of a tier's MEAN: it narrows as the
+// sample grows and says nothing about how much players inside the tier differ.
+// "Is 400 damage good for Platinum" is a question about the spread, and these
+// quartiles are what answers it.
+
+// The interpolation rule, pinned on a vector whose answers can be read off by
+// hand. Linear between the two neighbouring values (the R-7 / PERCENTILE.INC
+// rule): for n values the p-th quantile sits at index (n-1)*p. Every other
+// convention -- nearest rank, midpoint, R-6 -- gives different numbers on the
+// same data, so the choice has to be visible and fixed.
+test("quantiles interpolate linearly between neighbours", () => {
+  const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  assert.deepEqual(quantiles(values), { p25: 3.25, p50: 5.5, p75: 7.75 });
+});
+
+test("quantiles of one value are that value, and of nothing are null", () => {
+  assert.deepEqual(quantiles([7]), { p25: 7, p50: 7, p75: 7 });
+  assert.deepEqual(quantiles([]), { p25: null, p50: null, p75: null });
+});
+
+// Order is not assumed: sampleOf collects values in row order, which is the
+// order the database returned them in.
+test("quantiles do not depend on the order values arrive in", () => {
+  assert.deepEqual(quantiles([10, 1, 5, 3, 8]), quantiles([1, 3, 5, 8, 10]));
+});
+
+test("a tier's quartiles are computed over its own rows", () => {
+  const spread = (tier) =>
+    Array.from({ length: MIN_ACCOUNTS }, (_, i) => seat(i + 1, tier, { damage: i + 1 }));
+  const gold = benchmarks(spread("gold")).find((r) => r.tier === "gold");
+  assert.deepEqual(
+    [gold.metrics.damage.p25, gold.metrics.damage.p50, gold.metrics.damage.p75],
+    [25.75, 50.5, 75.25],
+  );
+  // The mean is still there: the lookup reads it and the hover prints it.
+  assert.equal(gold.metrics.damage.mean, 50.5);
+});
+
+// The defect this guards: a legacy row reports no damage at all, and counting
+// it as a zero would drag every quartile down.
+test("rows that report no value do not drift that metric's quartiles", () => {
+  const rows = [
+    ...Array.from({ length: MIN_ACCOUNTS }, (_, i) => seat(i + 1, "gold", { damage: i + 1 })),
+    ...Array.from({ length: 40 }, (_, i) => seat(500 + i, "gold", { damage: null })),
+  ];
+  const gold = benchmarks(rows).find((r) => r.tier === "gold");
+  assert.deepEqual(
+    [gold.metrics.damage.p25, gold.metrics.damage.p50, gold.metrics.damage.p75],
+    [25.75, 50.5, 75.25],
+  );
+});
+
+// Each account contributes one match, so its no-kill value is 0 or 1 and the
+// quartiles would read 0 / 0 / 1 on every tier on the ladder. A share is the
+// only honest summary of it, which is what this metric already publishes.
+test("the no-kill share carries no quartiles", () => {
+  const gold = benchmarks(published("gold")).find((r) => r.tier === "gold");
+  for (const key of ["p25", "p50", "p75"]) {
+    assert.equal(gold.metrics.noKillShare[key], undefined, key);
+  }
+  assert.ok(Number.isFinite(gold.metrics.noKillShare.share));
+});
+
+test("every numeric metric carries ordered quartiles", () => {
+  const rows = Array.from({ length: MIN_ACCOUNTS }, (_, i) =>
+    seat(i + 1, "gold", { damage: i * 3, kills: i % 5, timeSurvived: 60 * i, winPlace: (i % 15) + 1 }));
+  const gold = benchmarks(rows).find((r) => r.tier === "gold");
+  for (const key of ["damage", "kills", "minutesAlive", "placement"]) {
+    const { p25, p50, p75 } = gold.metrics[key];
+    assert.ok(Number.isFinite(p50), `${key} p50`);
+    assert.ok(p25 <= p50 && p50 <= p75, `${key}: ${p25} / ${p50} / ${p75}`);
+  }
 });

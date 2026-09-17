@@ -4955,6 +4955,45 @@ body {
   }
 }
 
+// The table is six columns of numbers and it does not fit a phone. It never
+// did -- this wrapper existed with no rule at all, so the table simply ran off
+// the page and took the document's horizontal scroll with it. Adding the range
+// under every median made it wider, so it is fixed here rather than left worse
+// than it was found: the overflow belongs to the table's own box.
+.stats-by-rank__table-wrap {
+  overflow-x: auto;
+  // Room for the scrollbar so it never sits on top of the last row.
+  padding-bottom: 4px;
+}
+
+// The two numbers in every metric cell: the tier's median, and the middle 50%
+// under it. Both state their own colour -- the body is black and an omitted
+// one renders invisible text that no test can see.
+.stats-by-rank__median {
+  display: block;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-by-rank__spread {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  // The range is one quantity; breaking it across lines on a narrow screen
+  // would read as two.
+  white-space: nowrap;
+}
+
+// The sentence that makes the pair above readable. Not a tooltip: a phone
+// cannot hover, and this page has shipped that mistake once already.
+.stats-by-rank__spread-note {
+  margin: 0.5rem 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
 .stats-by-rank__lookup {
   margin: 1.5rem 0;
   padding: 1rem;

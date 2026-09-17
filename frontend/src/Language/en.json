@@ -784,7 +784,9 @@
         "kills": "Kills",
         "minutesAlive": "Minutes alive",
         "placement": "Teams beaten",
-        "noKillShare": "Matches with no kills"
+        "noKillShare": "Matches with no kills",
+        "spread": "The large number is the typical player of that tier — half do more, half do less. The smaller range under it is the middle 50%, so it shows how much players of one tier differ. It is a description of the sample, not an estimate with a margin of error.",
+        "cellTitle": "Average {mean} ({low} – {high})"
       },
       "lookup": {
         "label": "Your average damage per ranked match",

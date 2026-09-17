@@ -14,10 +14,11 @@ const published = (tier, damage, damageN = 1200) => ({
   lobbies: 400,
   publishable: true,
   metrics: {
-    damage: { mean: damage, low: damage - 21, high: damage + 21, n: damageN },
-    kills: { mean: 1.42, low: 1.3, high: 1.54 },
-    minutesAlive: { mean: 15.1, low: 14.6, high: 15.6 },
-    placement: { mean: 0.552, low: 0.53, high: 0.57 },
+    // The quartiles are the visible pair now; the mean rides in the cell title.
+    damage: { mean: damage, low: damage - 21, high: damage + 21, n: damageN, p25: damage - 110, p50: damage - 36, p75: damage + 67 },
+    kills: { mean: 1.42, low: 1.3, high: 1.54, p25: 0, p50: 1, p75: 2 },
+    minutesAlive: { mean: 15.1, low: 14.6, high: 15.6, p25: 8.2, p50: 14.3, p75: 21.7 },
+    placement: { mean: 0.552, low: 0.53, high: 0.57, p25: 0.27, p50: 0.58, p75: 0.86 },
     noKillShare: { share: 0.38, low: 0.35, high: 0.41 },
   },
 });
@@ -83,7 +84,8 @@ const rowNames = () => screen.getAllByRole("row").map((row) => row.textContent);
 
 test("renders the table from the committed snapshot without waiting for a fetch", () => {
   english(committed);
-  expect(screen.getByText("204")).toBeInTheDocument();
+  // The tier's median (204.3 - 36), which is what the cell prints.
+  expect(screen.getByText("168")).toBeInTheDocument();
 });
 
 // A control that cannot answer is not rendered disabled, it is not rendered.

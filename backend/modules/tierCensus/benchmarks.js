@@ -82,6 +82,38 @@ const sampleOf = (rows, valueOf) => {
   return { values, valid, lobbies: byLobby.size, clusterSize };
 };
 
+// The spread inside a tier, which the published interval does not describe.
+// low/high are the uncertainty of the MEAN: they narrow as the sample grows and
+// would keep narrowing if every player in the tier were wildly different. These
+// say how far apart two players of the same tier actually are, which is what
+// "is 400 damage good for Platinum" asks.
+//
+// Linear interpolation between neighbours -- R-7, the rule Excel's
+// PERCENTILE.INC and numpy's default use: the p-th quantile of n sorted values
+// sits at index (n-1)*p. Written out rather than taken from a dependency
+// because nearest-rank, midpoint and R-6 all give different numbers on the same
+// data, so the choice has to be visible. benchmarks.test.js pins it on a vector
+// whose answers can be read by hand.
+const quantileAt = (sorted, p) => {
+  const h = (sorted.length - 1) * p;
+  const lower = Math.floor(h);
+  const upper = Math.ceil(h);
+  if (lower === upper) return sorted[lower];
+  return sorted[lower] + (h - lower) * (sorted[upper] - sorted[lower]);
+};
+
+const quantiles = (values) => {
+  if (!values || !values.length) return { p25: null, p50: null, p75: null };
+  // Copied before sorting: `values` is the array sampleOf collected and the
+  // mean beside it was computed from the same one.
+  const sorted = [...values].sort((a, b) => a - b);
+  return {
+    p25: quantileAt(sorted, 0.25),
+    p50: quantileAt(sorted, 0.5),
+    p75: quantileAt(sorted, 0.75),
+  };
+};
+
 const benchmarks = (rows) => {
   const byTier = new Map();
   for (const row of rows ?? []) {
@@ -106,6 +138,10 @@ const benchmarks = (rows) => {
       const { values, valid, lobbies, clusterSize } = sampleOf(tierRows, valueOf);
       metrics[key] = {
         ...tierMean({ values, clusterSize, icc: estimateIccNumeric(valid, valueOf) }),
+        // Deliberately without an interval of their own. A quartile is a
+        // statement about the sample in hand, not an estimate carrying error
+        // bars, and drawing one round it would be precision we have not earned.
+        ...quantiles(values),
         lobbies,
         clusterSize,
       };
@@ -146,4 +182,4 @@ const benchmarks = (rows) => {
   });
 };
 
-module.exports = { benchmarks, placementAbove, sampleOf, MIN_ACCOUNTS, MIN_LOBBIES };
+module.exports = { benchmarks, placementAbove, sampleOf, quantiles, MIN_ACCOUNTS, MIN_LOBBIES };

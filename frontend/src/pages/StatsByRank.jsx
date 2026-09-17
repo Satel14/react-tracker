@@ -150,6 +150,13 @@ const StatsByRank = ({ t, load = getRankDistribution, days = 7, snapshot = CENSU
             <BenchmarkTable t={t} rows={rows} />
           </div>
 
+          {/* Under the table, not in a tooltip: the pair of numbers in every
+              cell needs one sentence to be read correctly, and a phone cannot
+              hover for it. */}
+          <p className="stats-by-rank__spread-note">
+            {t("pages.statsByRank.table.spread")}
+          </p>
+
           {gated && (
             <p className="stats-by-rank__gated-note" data-testid="gated-tiers">
               {gated}

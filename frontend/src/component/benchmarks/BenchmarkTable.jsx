@@ -1,29 +1,66 @@
 import React from "react";
 
-// One row per published tier, in ladder order. The intervals ride in the cell
-// titles rather than in the cells: five columns of "204 ±21" is a wall of
-// arithmetic, and the number people came for is the point estimate.
+// One row per published tier, in ladder order. Each numeric cell is the tier's
+// MEDIAN with its middle 50% under it, and the average keeps its old place in
+// the cell title.
 //
-// One formatter per column, applied to the bounds as well as to the estimate.
-// Formatting the interval separately is how a cell reading "55%" ends up with a
-// tooltip reading "0.5 - 0.6".
+// Median rather than average because the question the page is read with is "is
+// this normal for Gold", and an average of per-match damage is dragged up by
+// the few enormous games. The quartile range answers the other half of it: the
+// published interval is the uncertainty of the average and narrows as the
+// sample grows, so it never said how far apart two players of one tier are.
+//
+// Nothing essential lives in the title. A phone cannot hover, and this page has
+// already shipped copy that told a phone user to -- so the average is the
+// secondary reading and the sentence under the table explains the visible pair.
+//
+// One formatter per column, applied to every number in it. Formatting the range
+// separately is how a cell reading "55%" ends up with "0.5 - 0.6" beneath it.
 const whole = (value) => Math.round(value).toLocaleString();
 const oneDecimal = (value) => value.toFixed(1);
 const percent = (value) => `${Math.round(value * 100)}%`;
 
 const COLUMNS = [
-  { key: "damage", read: (m) => m.mean, format: whole },
-  { key: "kills", read: (m) => m.mean, format: oneDecimal },
-  { key: "minutesAlive", read: (m) => m.mean, format: oneDecimal },
-  { key: "placement", read: (m) => m.mean, format: percent },
+  { key: "damage", format: whole },
+  { key: "kills", format: oneDecimal },
+  { key: "minutesAlive", format: oneDecimal },
+  { key: "placement", format: percent },
 ];
 
 const NO_KILLS = { key: "noKillShare", read: (m) => m.share, format: percent };
 
+const finite = (value) => typeof value === "number" && Number.isFinite(value);
+
 const interval = (cell, format) =>
-  cell && typeof cell.low === "number" && typeof cell.high === "number"
+  cell && finite(cell.low) && finite(cell.high)
     ? `${format(cell.low)} – ${format(cell.high)}`
     : undefined;
+
+// The average and its interval, which the cell no longer prints.
+const averageTitle = (cell, format, t) =>
+  cell && finite(cell.mean) && finite(cell.low) && finite(cell.high)
+    ? t("pages.statsByRank.table.cellTitle", {
+      mean: format(cell.mean),
+      low: format(cell.low),
+      high: format(cell.high),
+    })
+    : undefined;
+
+// A share has no quartiles: each sampled account contributes one match, so its
+// value is 0 or 1 and the cuts would read the same on every tier. It keeps the
+// single number and the interval it always had.
+const ShareCell = ({ cell, format }) => (
+  <td title={interval(cell, format)}>{format(cell.share)}</td>
+);
+
+const MetricCell = ({ cell, format, t }) => (
+  <td title={averageTitle(cell, format, t)}>
+    <span className="stats-by-rank__median">{format(cell.p50)}</span>
+    <span className="stats-by-rank__spread">
+      {`${format(cell.p25)} – ${format(cell.p75)}`}
+    </span>
+  </td>
+);
 
 const BenchmarkTable = ({ rows, t }) => {
   if (!rows?.length) return null;
@@ -42,11 +79,10 @@ const BenchmarkTable = ({ rows, t }) => {
         {rows.map((row) => (
           <tr key={row.tier}>
             <th scope="row">{t(`pages.statsByRank.tier.${row.tier}`)}</th>
-            {[...COLUMNS, NO_KILLS].map(({ key, read, format }) => (
-              <td key={key} title={interval(row.metrics[key], format)}>
-                {format(read(row.metrics[key]))}
-              </td>
+            {COLUMNS.map(({ key, format }) => (
+              <MetricCell key={key} cell={row.metrics[key]} format={format} t={t} />
             ))}
+            <ShareCell cell={row.metrics[NO_KILLS.key]} format={NO_KILLS.format} />
           </tr>
         ))}
       </tbody>
