@@ -7,6 +7,7 @@ import { getLeaderboard, getSeasons } from "../api/leaderboard";
 import { shardForRegion } from "../helpers/leaderboardShard";
 import { LeaderboardHeading, LeaderboardIntro } from "../component/leaderboard/LeaderboardIntro";
 import LeaderboardSkeleton from "../component/skeletons/LeaderboardSkeleton";
+import { PAGE_SIZE } from "../component/leaderboard/leaderboardLayout";
 
 const REGIONS = [
   { value: "pc-na", label: "PC · NA" },
@@ -20,6 +21,11 @@ const GAME_MODES = ["solo", "solo-fpp", "duo", "duo-fpp", "squad", "squad-fpp"];
 const DEFAULT_PLATFORM = "pc-eu";
 const DEFAULT_MODE = "squad-fpp";
 const MAX_COMPARE = 3;
+// Re-exported, not defined here: the reserved box and the Suspense fallback
+// need the same number and cannot import this file, which carries antd's Table.
+// Leaderboard.test.jsx pins the table's page size and the skeleton's row count
+// to it from this side.
+export { PAGE_SIZE };
 
 const pct = (ratio) => `${(Number(ratio || 0) * 100).toFixed(1)}%`;
 const round = (n) => Math.round(Number(n || 0));
@@ -36,7 +42,12 @@ const Leaderboard = ({ t }) => {
   const [currentSeasonId, setCurrentSeasonId] = useState(null);
   const season = seasonParam || currentSeasonId;
   const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // True from the first render, not from the effect that follows it. The page
+  // always fetches on mount, so starting at false meant one painted frame of an
+  // empty table -- about 100px where 2,950px of standings belong -- and the
+  // explainer below it jumped from 602px to 3,500px. That single frame was the
+  // whole of this page's remaining 0.23 CLS.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updatedAt, setUpdatedAt] = useState(null);
   const [searchInput, setSearchInput] = useState("");
@@ -280,7 +291,7 @@ const Leaderboard = ({ t }) => {
       {error ? <Alert type="error" message={error} showIcon /> : null}
 
       {loading ? (
-        <LeaderboardSkeleton label={t("pages.leaderboards.loading")} columns={columns} />
+        <LeaderboardSkeleton label={t("pages.leaderboards.loading")} columns={columns} rows={PAGE_SIZE} />
       ) : (
         <Table
           className="leaderboard-page__table"
@@ -288,7 +299,7 @@ const Leaderboard = ({ t }) => {
           rowSelection={rowSelection}
           columns={columns}
           dataSource={filtered}
-          pagination={{ pageSize: 50, showSizeChanger: false }}
+          pagination={{ pageSize: PAGE_SIZE, showSizeChanger: false }}
           locale={{ emptyText: t("pages.leaderboards.empty") }}
           scroll={{ x: 720 }}
           size="middle"

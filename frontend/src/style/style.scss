@@ -7607,3 +7607,61 @@ body {
   &__event-weapon { color: var(--text-muted); }
   &__event-amount { text-align: right; font-weight: 600; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 }
+
+// The standings' reserved footprint, and the geometry both it and the real
+// table obey. Measured on the built page at 500 entries: header 45px, row 57px
+// (the tier icon sets that), pagination 24px, filters 32px, meta 15px.
+//
+// Pinned rather than left to antd because the reserved box is plain DOM -- antd
+// is not in the main bundle and pulling its Table in to draw an empty
+// placeholder costs +266KB on every route. Fixing the numbers here is what lets
+// a div stand in for a table without either one moving. They are the values
+// antd already produced, so nothing changes on screen.
+.leaderboard-page {
+  --lb-head-h: 45px;
+  // 47px narrow, 57px wide. The difference is the tier column: it carries an
+  // icon and antd hides it below `md`, so a row is exactly 10px shorter on a
+  // phone. Pinning one value made phone rows 10px taller than antd draws them
+  // and the page 500px longer, which is a redesign, not a fix. Matching the
+  // breakpoint keeps the table looking exactly as it did and still gives the
+  // reserved box above a number it can compute from.
+  --lb-row-h: 47px;
+
+  @media (min-width: 768px) {
+    --lb-row-h: 57px;
+  }
+  // The pager plus its margin, not the pager alone: the table measures
+  // 2953px at 50 rows and 45 + 50*57 accounts for only 2895 of it.
+  --lb-pagination-h: 58px;
+  --lb-filters-h: 32px;
+  --lb-meta-h: 15px;
+
+  &__filters--reserved { min-height: var(--lb-filters-h); }
+  &__meta--reserved { min-height: var(--lb-meta-h); }
+
+  // Striped rather than blank: a 2,950px hole reads as a broken page, and the
+  // stripes land on the same rhythm the rows will. --lb-rows comes from
+  // PAGE_SIZE as an inline custom property.
+  &__table-reserve {
+    height: calc(
+      var(--lb-head-h) + (var(--lb-rows, 50) * var(--lb-row-h)) + var(--lb-pagination-h)
+    );
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--accent) 4%, transparent);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--accent) 9%, transparent) 0,
+      color-mix(in srgb, var(--accent) 9%, transparent) 1px,
+      transparent 1px,
+      transparent var(--lb-row-h)
+    );
+    background-position: 0 var(--lb-head-h);
+  }
+
+  // The real table, held to the same rhythm so the swap from the box above to
+  // the skeleton, and from the skeleton to the standings, moves nothing.
+  &__table {
+    .ant-table-thead > tr > th { height: var(--lb-head-h); }
+    .ant-table-tbody > tr.ant-table-row > td { height: var(--lb-row-h); }
+  }
+}

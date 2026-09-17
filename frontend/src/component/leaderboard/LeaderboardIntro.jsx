@@ -1,6 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { translate } from "react-switch-lang";
+// Extension spelled out: the build renders this file into leaderboards.html
+// through prerenderBody, where extensionless relative specifiers do not resolve.
+import LeaderboardReserve from "./LeaderboardReserve.jsx";
 
 // The two halves of /leaderboards that are words rather than data.
 //
@@ -63,14 +66,21 @@ export const LeaderboardIntro = translate(({ t }) => (
   </section>
 ));
 
-// What the build writes into leaderboards.html: the heading, then the prose,
-// with nothing where the table will be. Both halves are the components the page
-// renders, so neither can drift from the file.
+// What the build writes into leaderboards.html -- and, since it carries no
+// antd, what the route also renders as its Suspense fallback. One component for
+// both, so the file a crawler reads and the frame a visitor sees while the
+// chunk loads cannot come apart.
+//
+// The wrapper and the reserved box are why this is not just the two halves of
+// prose any more: the shell used to have neither, so the heading sat at a
+// different width from the live page and the explainer sat where the table
+// would land. See LeaderboardReserve for the measurements.
 const LeaderboardStatic = () => (
-  <>
+  <div className="content leaderboard-page">
     <LeaderboardHeading />
+    <LeaderboardReserve />
     <LeaderboardIntro />
-  </>
+  </div>
 );
 
 export default LeaderboardStatic;

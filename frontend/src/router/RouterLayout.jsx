@@ -21,6 +21,17 @@ const RouteFallback = () => (
   </div>
 );
 
+// A route may bring its own fallback, and then it gets its own boundary: React
+// uses the nearest one, so the outer spinner never runs for it. /leaderboards
+// does this because the spinner throws away a prerendered page for a frame and
+// everything below the swap moves twice -- 0.14 of that page's CLS.
+const routeElement = (route) => {
+  const element = <route.component />;
+  if (!route.fallback) return element;
+  const Fallback = route.fallback;
+  return <Suspense fallback={<Fallback />}>{element}</Suspense>;
+};
+
 const getInitialTheme = () => {
   const savedTheme = readStoredItem("theme");
   return savedTheme && themes[savedTheme] ? savedTheme : DEFAULT_THEME;
@@ -53,7 +64,7 @@ const RouterLayout = () => {
                   <Route
                     key={route.path}
                     path={route.path}
-                    element={<route.component />}
+                    element={routeElement(route)}
                   />
                 ))}
                 <Route path="*" element={<ErrorPage />} />
@@ -72,7 +83,7 @@ const RouterLayout = () => {
                     <Route
                       key={route.path}
                       path={route.path}
-                      element={<route.component />}
+                      element={routeElement(route)}
                     />
                   ))}
                   <Route path="*" element={<ErrorPage />} />

@@ -1,7 +1,8 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { Link, MemoryRouter } from "react-router-dom";
-import Leaderboard from "./Leaderboard";
+import Leaderboard, { PAGE_SIZE } from "./Leaderboard";
 import { ROUTE_META } from "../helpers/routeMeta";
 import en from "../Language/en.json";
 import { setTranslations, setDefaultLanguage } from "react-switch-lang";
@@ -230,6 +231,25 @@ test("re-links rows when the region dropdown switches to KAKAO", async () => {
   });
 });
 
+// The render before any effect runs -- which is the frame the browser paints.
+// renderToStaticMarkup is the only way to see it: it runs no effects, so what
+// it returns is the component's initial state and nothing else.
+//
+// `loading` started as false, so that frame drew an empty table roughly 100px
+// tall where 2,950px of standings belong, and the explainer below it sat at
+// 602px before jumping to 3,500. One painted frame, and it was the whole of
+// this page's remaining 0.23 CLS.
+test("the first render already stands in for the standings, before any effect", () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter initialEntries={["/leaderboards"]}>
+      <Leaderboard t={t} />
+    </MemoryRouter>,
+  );
+  expect(html).toContain("skeleton--cell");
+  // antd's empty state. Its presence would mean a table with no rows rendered.
+  expect(html).not.toContain("ant-table-placeholder");
+});
+
 test("the loading state keeps the standings table's own header and rows", async () => {
   // Ten 120px dashes stood in for a ten-column table, so the page rearranged
   // itself the moment the standings arrived.
@@ -244,5 +264,29 @@ test("the loading state keeps the standings table's own header and rows", async 
   const headers = new Set([...container.querySelectorAll(".ant-table-thead th")].map((th) => th.textContent));
   expect(headers).toContain("pages.leaderboards.rank");
   expect(headers).toContain("pages.leaderboards.player");
-  expect(container.querySelectorAll(".ant-table-tbody tr.ant-table-row")).toHaveLength(10);
+  expect(container.querySelectorAll(".ant-table-tbody tr.ant-table-row")).toHaveLength(PAGE_SIZE);
+});
+
+// The two halves of the same number. The skeleton drew ten rows while the
+// table's first page is fifty, so everything below the standings -- the whole
+// explainer and the footer -- dropped by forty rows the moment the data
+// landed. That was 0.17 of this page's 0.35 CLS, measured with Lighthouse
+// against the built page.
+test("the skeleton reserves exactly the rows the first page will hold", async () => {
+  const many = Array.from({ length: PAGE_SIZE + 12 }, (_, index) => ({
+    rank: index + 1,
+    accountId: `account.${index}`,
+    name: `Player${index}`,
+    rankPoints: 6000 - index,
+    games: 10, wins: 1, winRatio: 0.1, kda: 1, avgRank: 5, avgKills: 1, avgDamage: 100, kills: 10,
+  }));
+  getLeaderboard.mockResolvedValue({
+    status: 200,
+    data: { platform: "pc-eu", gameMode: "squad-fpp", seasonId: "s-current", entries: many },
+  });
+
+  const { container } = renderPage();
+  await screen.findByRole("link", { name: "Player0" });
+
+  expect(container.querySelectorAll(".ant-table-tbody tr.ant-table-row")).toHaveLength(PAGE_SIZE);
 });
