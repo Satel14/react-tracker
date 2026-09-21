@@ -481,6 +481,29 @@ describe("the stats by rank pages", () => {
     }
   });
 
+  // The half of the test above that had to wait for data. It was written while
+  // `benchmarks` was still null in the snapshot, so it could only count rows --
+  // and a row whose cells are empty counts just the same. The nightly run of
+  // 2026-09-19 was the first to publish numbers, so the digits can be pinned now.
+  //
+  // Both halves of the cell, because PR #108 made it a pair: a crawler that
+  // reads the median without the quartiles under it has half the answer the
+  // page is read for. Patterns rather than literals for the reason the lobby
+  // table gives -- the numbers move every night.
+  it("carries the median and its quartile range as digits, not just the row", () => {
+    if (!benchmarkRows(CENSUS_SNAPSHOT)) return;
+
+    for (const path of ["/stats-by-rank", "/ua/stats-by-rank"]) {
+      const html = decode(page(path));
+      expect(html, path).toMatch(/<span class="stats-by-rank__median">[\d\s,.]+<\/span>/);
+      expect(html, path).toMatch(
+        /<span class="stats-by-rank__spread">[\d\s,.]+ – [\d\s,.]+<\/span>/,
+      );
+      // The no-kill column is a share, which by design carries no quartiles.
+      expect(html, path).toMatch(/<td[^>]*>[\d\s,.]+%<\/td>/);
+    }
+  });
+
   // The gathering state's snapshot is by definition the ARCHIVED season, so a
   // season number there is false twice over -- and this is the file that would
   // carry it into a search result.
