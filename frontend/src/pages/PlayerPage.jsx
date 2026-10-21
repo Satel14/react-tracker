@@ -23,11 +23,12 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { getPlayerData, getPlayerReports, getPlayerExtras, prefetchMatchReplay } from "../api/player";
 import { resolveAbsoluteApiUrl } from "../api/config";
 import { addHistory, FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from "../cookie/store";
-import { isAccountIdentifier, resolvePreferredPlayerName } from "../helpers/playerIdentity";
+import { isAccountIdentifier, normalizePlatform, resolvePreferredPlayerName } from "../helpers/playerIdentity";
 import { profilePath, profilePathByName } from "../helpers/profileLink";
 import { mergeProfileExtras } from "../helpers/playerExtras";
 import { getCurrentLocale } from "../helpers/locale";
 import { classifyPlayerError } from "../helpers/playerError";
+import { trackEvent } from "../helpers/analytics";
 import { resolveHistoryCandidate } from "../helpers/playerHistory";
 import { statNumber, statDisplay } from "../helpers/playerStats";
 import { pluralUa } from "../helpers/pluralUa";
@@ -480,12 +481,17 @@ const PlayerPage = ({ t }) => {
     sessionDispatch({ type: "reset" });
   }
 
-  const fetchData = useCallback(async (seasonId = null, { silent = false } = {}) => {
+  // `track` is set only by the route-load call: a season switch, a retry or a
+  // silent refresh is the same lookup again, not a new one.
+  const fetchData = useCallback(async (seasonId = null, { silent = false, track = false } = {}) => {
     const requestKey = `${platform}|${gameId}|${seasonId || ""}`;
     dataRequestKeyRef.current = requestKey;
     // Stamped before the request, not after, so a slow one cannot be joined by a
     // second return trip while it is still in the air.
     lastFetchRef.current = { seasonId, at: Date.now() };
+    const report = (result) => {
+      if (track) trackEvent("player_lookup", { platform: normalizePlatform(platform), result });
+    };
     if (!silent) {
       setLoading(true);
       setError(null);
@@ -497,11 +503,15 @@ const PlayerPage = ({ t }) => {
         const payload = response.data.data;
         setData(payload);
         sessionDispatch({ type: "setSeason", id: payload?.selectedSeasonId || payload?.season?.id || seasonId || null });
+        report("found");
       } else if (response && response.data) {
         setData(response.data);
         sessionDispatch({ type: "setSeason", id: response.data?.selectedSeasonId || response.data?.season?.id || seasonId || null });
+        report("found");
       } else if (!silent) {
-        setError(classifyPlayerError(response?.message));
+        const failure = classifyPlayerError(response?.message);
+        setError(failure);
+        report(failure.code);
       }
     } catch (err) {
       if (dataRequestKeyRef.current !== requestKey) return;
@@ -509,11 +519,11 @@ const PlayerPage = ({ t }) => {
       // the data on screen is still the data we had, and an error page in its
       // place would be a worse answer than a slightly older one.
       if (silent) return;
-      if (err?.status === 422) {
-        setError({ code: "not_found", message: err?.message || null });
-      } else {
-        setError(classifyPlayerError(err?.message));
-      }
+      const failure = err?.status === 422
+        ? { code: "not_found", message: err?.message || null }
+        : classifyPlayerError(err?.message);
+      setError(failure);
+      report(failure.code);
     } finally {
       if (dataRequestKeyRef.current === requestKey) setLoading(false);
     }
@@ -578,7 +588,7 @@ const PlayerPage = ({ t }) => {
 
   useEffect(() => {
     if (platform && gameId) {
-      fetchData(null);
+      fetchData(null, { track: true });
     }
   }, [platform, gameId, fetchData]);
 
