@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { getLanguage } from "react-switch-lang";
 import { getRankDistribution } from "../../api/census";
 import { rpPercentile } from "../../helpers/rankPercentile";
+import { normalizePlatform } from "../../helpers/playerIdentity";
 
 // Counted out of a hundred, and always upwards. "Top 6%" asks the reader to
 // invert it before they can tell whether it is good, and most do not -- so the
@@ -30,7 +31,7 @@ const BADGE_UP_TO = 50;
 const groupDigits = (value) =>
   new Intl.NumberFormat(getLanguage() === "ua" ? "uk-UA" : "en-US").format(Number(value) || 0);
 
-const RankPercentile = ({ t, rankPoint, seasonId, load = getRankDistribution, days = 7 }) => {
+const RankPercentile = ({ t, rankPoint, seasonId, platform, load = getRankDistribution, days = 7 }) => {
   const [data, setData] = useState(null);
 
   useEffect(() => {
@@ -54,6 +55,9 @@ const RankPercentile = ({ t, rankPoint, seasonId, load = getRankDistribution, da
   // reset the census serves the previous season for days, and the page can be
   // showing any season at all.
   if (!seasonId || data.seasonId !== seasonId) return null;
+  // And against the shard it was sampled on: Kakao shares the PC season id but
+  // runs its own ladder, which the Steam-only census does not measure.
+  if (!platform || normalizePlatform(platform) !== data.shard) return null;
 
   const at = rpPercentile(rankPoint, data.rpPercentiles);
   if (at === null) return null;

@@ -1743,6 +1743,7 @@ const PlayerPage = ({ t }) => {
               t={t}
               rankPoint={headerRankedInfo?.currentRankPoint}
               seasonId={activeSeasonId}
+              platform={data?.platformInfo?.platformSlug || platform}
             />
           </div>
         </div>

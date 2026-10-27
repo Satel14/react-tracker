@@ -34,6 +34,7 @@ const seasons = [
 const census = (seasonId = S43) => ({
   data: {
     seasonId,
+    shard: "steam",
     accounts: 9000,
     days: 7,
     rpPercentiles: Array.from({ length: 101 }, (_, i) => 2450 + (28 - i) * 10),
@@ -93,6 +94,13 @@ test("says so far while the season runs", () => {
 test("places the player against the census when the census measured that season", async () => {
   renderRecap();
   expect(await screen.findByText("Better than 72 out of 100 ranked players")).toBeInTheDocument();
+});
+
+test("says nothing about standing for a Kakao profile, whose ladder the census does not sample", async () => {
+  const { loadDistribution } = renderRecap({ props: { platform: "kakao" } });
+  await waitFor(() => expect(loadDistribution).toHaveBeenCalled());
+  await Promise.resolve();
+  expect(screen.queryByText(/Better than/)).toBeNull();
 });
 
 test("says nothing about standing when the census measured another season", async () => {

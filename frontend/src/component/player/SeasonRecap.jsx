@@ -3,6 +3,7 @@ import { getLanguage, translate } from "react-switch-lang";
 import { getRankDistribution } from "../../api/census";
 import { trackEvent } from "../../helpers/analytics";
 import { rpPercentile } from "../../helpers/rankPercentile";
+import { normalizePlatform } from "../../helpers/playerIdentity";
 import { previousSeason, seasonNumberOf, seasonRecap } from "../../helpers/seasonRecap";
 import { recapFigures } from "../../helpers/seasonRecapCard";
 
@@ -21,6 +22,7 @@ const SeasonRecap = ({ t, season, seasons, playerName, platform, onOpenSeason, l
 
   const seasonId = recap?.seasonId || null;
   const rankPoint = recap?.rankPoint ?? null;
+  const shard = platform ? normalizePlatform(platform) : null;
 
   // The same measurement the header's line makes, and with the same rule: a
   // standing only counts against a census of the season it belongs to.
@@ -33,6 +35,8 @@ const SeasonRecap = ({ t, season, seasons, playerName, platform, onOpenSeason, l
       .then((response) => {
         const data = response?.data;
         if (!alive || !data || data.seasonId !== seasonId) return;
+        // Kakao shares the PC season id but not the Steam-only census's ladder.
+        if (!shard || data.shard !== shard) return;
         const at = rpPercentile(rankPoint, data.rpPercentiles);
         setPercentile(at === null ? null : OUT_OF - at);
       })
@@ -40,7 +44,7 @@ const SeasonRecap = ({ t, season, seasons, playerName, platform, onOpenSeason, l
     return () => {
       alive = false;
     };
-  }, [seasonId, rankPoint, loadDistribution]);
+  }, [seasonId, rankPoint, shard, loadDistribution]);
 
   const finishedWithoutRanked = !recap && season && !season.isCurrentSeason;
   if (!recap && !previous && !finishedWithoutRanked) return null;
