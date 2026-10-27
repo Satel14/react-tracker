@@ -345,6 +345,65 @@ jobs:
           echo "Committed $(jq -r '"\(.accounts) accounts, \(.firstDate) to \(.lastDate)"' "$SNAPSHOT")."
           echo "committed=true" >> "$GITHUB_OUTPUT"
 
+      # Tells Bing (and the other IndexNow engines) which pages the reading just
+      # changed, instead of waiting for them to recrawl. Bing-backed search
+      # brings this site more visitors than Google does.
+      #
+      # Only once Pages serves the new reading: a ping that lands before the
+      # deploy sends the crawler to yesterday's numbers. The sitemap's
+      # <lastmod> on the census pages IS the snapshot's capturedAt
+      # (frontend/src/helpers/sitemap.js), so seeing that value live proves the
+      # deploy is out, and the same lines name the pages to send -- no second
+      # list to keep in step with CENSUS_PAGES.
+      #
+      # The key is public by design (IndexNow checks it against the file at
+      # keyLocation), so it is read off that file's name rather than a secret;
+      # indexNowKey.test.js keeps exactly one such file. A failure here warns
+      # and never fails the job: the reading is committed either way.
+      - name: Tell IndexNow which pages changed
+        if: steps.commit.outputs.committed == 'true'
+        continue-on-error: true
+        env:
+          SITE: https://www.pubgtracker.top
+          INDEXNOW: https://api.indexnow.org/indexnow
+        run: |
+          key_file=$(ls frontend/public | grep -E '^[0-9a-f]{32}\.txt$' | head -n 1)
+          if [ -z "$key_file" ]; then
+            echo "::warning::no IndexNow key file in frontend/public; not pinging"
+            exit 0
+          fi
+          key="${key_file%.txt}"
+          captured=$(jq -r '.capturedAt // ""' "$SNAPSHOT")
+
+          # Pages usually publishes in two or three minutes; fifteen is "gone
+          # wrong", and then the crawlers find the change on their own.
+          deadline=$(( $(date +%s) + 15 * 60 ))
+          urls=""
+          while :; do
+            urls=$(curl -sS -m 30 "$SITE/sitemap.xml" | tr -d ' \r\n' \
+              | grep -oE '<loc>[^<]+</loc><lastmod>[^<]+</lastmod>' \
+              | sed -E 's#<loc>([^<]+)</loc><lastmod>([^<]+)</lastmod>#\2 \1#' \
+              | awk -v at="$captured" '$1 == at { print $2 }' || true)
+            [ -n "$urls" ] && break
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::warning::the sitemap never showed $captured; not pinging IndexNow"
+              exit 0
+            fi
+            sleep 30
+          done
+
+          payload=$(printf '%s\n' $urls | jq -R . | jq -s \
+            --arg host "${SITE#https://}" --arg key "$key" --arg loc "$SITE/$key_file" \
+            '{host: $host, key: $key, keyLocation: $loc, urlList: .}')
+          code=$(curl -sS -m 30 -o "$RUNNER_TEMP/indexnow.out" -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json; charset=utf-8' --data "$payload" "$INDEXNOW" || echo 000)
+          # 200 is accepted, 202 is accepted with the key still being checked.
+          if [ "$code" = "200" ] || [ "$code" = "202" ]; then
+            echo "IndexNow took $(printf '%s\n' $urls | wc -l) URLs (HTTP $code)."
+          else
+            echo "::warning::IndexNow answered HTTP $code: $(head -c 300 "$RUNNER_TEMP/indexnow.out" 2>/dev/null)"
+          fi
+
       # The commit above is the one thing that reaches the branch without CI
       # ever seeing it: GitHub does not trigger workflows on a push made with
       # GITHUB_TOKEN. On 2026-09-15 the snapshot that first carried lobbyMix
