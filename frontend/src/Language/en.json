@@ -190,7 +190,13 @@
       "elsewhere": {
         "checking": "Checking the other platforms…",
         "found": "There is a player with this exact name on {platform}:",
-        "none": "Not on any other platform either, so check the spelling: capital letters matter."
+        "none": "Not on any other platform either, so check the spelling: capital letters matter.",
+        "suggested": "Did you mean:",
+        "recentMatches": "({count} {matches} in the last 2 weeks)",
+        "matchWords": "match|matches",
+        "noRecentMatches": "(no matches in the last 2 weeks)",
+        "steamId": "This is a Steam ID, not a PUBG name. Type the nickname exactly as it appears in the game.",
+        "mobileId": "This looks like a PUBG MOBILE ID. This site covers PUBG: BATTLEGROUNDS on PC and consoles; PUBG MOBILE has no public API."
       },
       "not_found": {
         "title": "Player not found",
