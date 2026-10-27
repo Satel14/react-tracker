@@ -12,6 +12,7 @@ const thresholds = Array.from({ length: 101 }, (_, i) => Math.round(3600 - (2600
 
 const payload = (over = {}) => ({
   seasonId: SEASON,
+  shard: "steam",
   accounts: 4430,
   rpPercentiles: thresholds,
   ...over,
@@ -23,6 +24,7 @@ const show = (props = {}, data = payload()) =>
       <RankPercentile
         t={t}
         seasonId={SEASON}
+        platform="steam"
         rankPoint={thresholds[16]}
         load={async () => ({ status: 200, data })}
         {...props}
@@ -122,6 +124,25 @@ test("links to the ranked lobby mix beside the standing", async () => {
 // season for days.
 test("says nothing when the census is about a different season", async () => {
   show({ seasonId: "division.bro.official.pc-2018-43" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(line()).toBeNull();
+});
+
+// The census samples Steam lobbies only. Kakao runs its own ladder under the
+// same PC season id, so the season check alone let a Kakao player be ranked
+// against Steam players -- "better than 99 out of 100" on a ladder /ranks says
+// it does not measure. Found live on 2026-10-27.
+test("says nothing for a profile on a shard the census did not sample", async () => {
+  for (const platform of ["kakao", "psn", "xbox", undefined]) {
+    document.body.innerHTML = "";
+    show({ platform });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(line()).toBeNull();
+  }
+});
+
+test("says nothing when the census does not name the shard it sampled", async () => {
+  show({}, payload({ shard: undefined }));
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(line()).toBeNull();
 });
