@@ -3,7 +3,7 @@ import { getLanguage, translate } from "react-switch-lang";
 import { getRankDistribution } from "../../api/census";
 import { trackEvent } from "../../helpers/analytics";
 import { rpPercentile } from "../../helpers/rankPercentile";
-import { previousSeason, seasonRecap } from "../../helpers/seasonRecap";
+import { previousSeason, seasonNumberOf, seasonRecap } from "../../helpers/seasonRecap";
 import { recapFigures } from "../../helpers/seasonRecapCard";
 
 const OUT_OF = 100;
@@ -11,6 +11,10 @@ const OUT_OF = 100;
 const SeasonRecap = ({ t, season, seasons, playerName, platform, onOpenSeason, loadDistribution = getRankDistribution }) => {
   const recap = seasonRecap(season);
   const previous = season?.isCurrentSeason ? previousSeason(season.id, seasons) : null;
+  // From any past season, one click back to the one being played.
+  const current = season && Array.isArray(seasons)
+    ? seasons.find((item) => item?.isCurrentSeason && item.id !== season.id) || null
+    : null;
   const [percentile, setPercentile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -38,10 +42,17 @@ const SeasonRecap = ({ t, season, seasons, playerName, platform, onOpenSeason, l
     };
   }, [seasonId, rankPoint, loadDistribution]);
 
-  if (!recap && !previous) return null;
+  const finishedWithoutRanked = !recap && season && !season.isCurrentSeason;
+  if (!recap && !previous && !finishedWithoutRanked) return null;
 
   const language = getLanguage();
   const label = (key, values) => t(`pages.player.recap.${key}`, values);
+
+  const backLink = current ? (
+    <button type="button" className="season-recap__previous" onClick={() => onOpenSeason(current.id)}>
+      {label("back", { season: current.seasonNumber ?? seasonNumberOf(current.id) })}
+    </button>
+  ) : null;
 
   const download = async () => {
     if (busy || !recap) return;
@@ -64,6 +75,19 @@ const SeasonRecap = ({ t, season, seasons, playerName, platform, onOpenSeason, l
     </button>
   ) : null;
 
+  // Reached by "Season N recap →", so it must answer rather than vanish.
+  if (finishedWithoutRanked) {
+    return (
+      <section className="player-card season-recap season-recap--empty">
+        <div className="player-card__head">
+          <h3>{label("titleFinal", { season: seasonNumberOf(season.id) })}</h3>
+          {backLink}
+        </div>
+        <p className="season-recap__empty">{label("noRanked")}</p>
+      </section>
+    );
+  }
+
   if (!recap) {
     return <div className="season-recap season-recap--link-only">{previousLink}</div>;
   }
@@ -75,7 +99,7 @@ const SeasonRecap = ({ t, season, seasons, playerName, platform, onOpenSeason, l
     <section className={`player-card season-recap season-recap--${recap.tier || "unranked"}`}>
       <div className="player-card__head">
         <h3>{title}</h3>
-        {previousLink}
+        {previousLink || backLink}
       </div>
 
       <div className="season-recap__rank">
