@@ -2841,6 +2841,34 @@ body {
   }
 }
 
+.player-elsewhere {
+  max-width: 460px;
+  margin: 0 auto 18px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+
+  &--checking {
+    color: var(--text-muted);
+  }
+
+  &__hit {
+    margin: 0 0 4px;
+    color: var(--text);
+
+    a {
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+
+      &:hover {
+        color: var(--text-strong);
+      }
+    }
+  }
+}
+
 .player-error {
   min-height: 60vh;
   display: flex;

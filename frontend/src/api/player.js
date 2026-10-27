@@ -105,6 +105,9 @@ export const getPlayerExtras = (platform, gameId) =>
 export const resolvePlayers = (platform, gameIds) =>
   post("/player/resolve", { platform, gameIds }, false);
 
+export const locatePlayer = (platform, gameId) =>
+  post("/player/locate", { platform, gameId }, false);
+
 export const getLiveSnapshot = () =>
   get("/player/live", true);
 

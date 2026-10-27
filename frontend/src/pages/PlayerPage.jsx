@@ -35,6 +35,7 @@ import { pluralUa } from "../helpers/pluralUa";
 import openNotification from "../component/Notification";
 import PlayerPageSkeleton from "../component/skeletons/PlayerPageSkeleton";
 import RankPercentile from "../component/ranks/RankPercentile";
+import PlayerElsewhere from "../component/player/PlayerElsewhere";
 import MapsTab from "./MapsTab";
 
 const MapPerformanceChart = lazy(() =>
@@ -710,6 +711,10 @@ const PlayerPage = ({ t }) => {
             <span>{t("pages.playerError.searched")}</span>
             <strong>{(platform || "steam").toUpperCase()} - {gameId}</strong>
           </div>
+
+          {code === "not_found" && !isAccountIdentifier(gameId) ? (
+            <PlayerElsewhere platform={platform} gameId={gameId} />
+          ) : null}
 
           {tipList.length ? (
             <ul className="player-error__tips">

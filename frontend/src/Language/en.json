@@ -187,6 +187,11 @@
       "retry": "Try again",
       "home": "Back to home",
       "help": "Open Help",
+      "elsewhere": {
+        "checking": "Checking the other platforms…",
+        "found": "There is a player with this exact name on {platform}:",
+        "none": "Not on any other platform either, so check the spelling: capital letters matter."
+      },
       "not_found": {
         "title": "Player not found",
         "description": "We could not find this profile on the selected platform. Double-check the spelling and platform.",
