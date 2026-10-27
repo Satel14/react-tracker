@@ -825,9 +825,12 @@
     "summary": "K/D, damage, win rate and ranked progression, match by match - save the players you follow and watch a season take shape.",
     "helpLine": "A wrong stat, a player we cannot find, a page that will not load - send it over and it gets fixed.",
     "bugReport": "Report a bug",
+    "support": "Support the project",
+    "supportNote": "Everything here is free and stays free.",
     "developed": "Built by Satel for the PUBG community",
     "contact": "Email the developer",
-    "disclaimer": "PUBG Tracker is not affiliated with KRAFTON, Inc. PUBG is a registered trademark of KRAFTON, Inc."
+    "disclaimer": "PUBG Tracker is not affiliated with KRAFTON, Inc. PUBG is a registered trademark of KRAFTON, Inc.",
+    "trademark": "PUBG, PLAYERUNKNOWN'S BATTLEGROUNDS and all related logos are trademarks of PUBG Corporation or its affiliates."
   },
   "other": {
     "words": {
