@@ -10,6 +10,8 @@ const season = (overrides = {}) => ({
     tier: "Platinum",
     subTier: "2",
     label: "Platinum II",
+    iconUrl: "/images/ranks/opgg/platinum-2.webp",
+    iconFallbackUrl: "/images/ranks/pubg/platinum.png",
     currentRankPoint: 2450,
     bestRankPoint: 2610,
     avgRank: 9.4,
@@ -36,11 +38,24 @@ describe("seasonRecap", () => {
       finished: true,
       tier: "platinum",
       tierLabel: "Platinum II",
+      iconUrl: "/images/ranks/opgg/platinum-2.webp",
       rankPoint: 2450,
       peakRankPoint: 2610,
       ranked: { matches: 138, wins: 9, top10Rate: 41.3, kd: 2.1, avgDamage: 312, avgPlace: 9.4 },
       records: { mostKills: 11, longestKill: 512.4 },
     });
+  });
+
+  // The image may only embed what this site serves; an absolute URL would be
+  // a request to someone else and a tainted canvas.
+  it("keeps only a same-origin icon path, falling back to the tier icon", () => {
+    const withFallback = season();
+    withFallback.rankedInfo = { ...withFallback.rankedInfo, iconUrl: null };
+    expect(seasonRecap(withFallback).iconUrl).toBe("/images/ranks/pubg/platinum.png");
+
+    const remote = season();
+    remote.rankedInfo = { ...remote.rankedInfo, iconUrl: "https://cdn.example/x.webp", iconFallbackUrl: "//cdn.example/y.png" };
+    expect(seasonRecap(remote).iconUrl).toBeNull();
   });
 
   it("is still running while the season is current", () => {

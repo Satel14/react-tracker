@@ -21,8 +21,10 @@ const recap = (overrides = {}) => ({
   ...overrides,
 });
 
-const draw = (data = recap(), { language = "en", playerName = "WhiteChaseSmoker", platform = "steam", percentile = 72 } = {}) =>
-  seasonRecapSvg(data, { language, playerName, platform, percentile, t: translate(language === "ua" ? ua : en) });
+const ICON = "data:image/webp;base64,UklGRhIAAABXRUJQVlA4TAYAAAAvAAAAAAA=";
+
+const draw = (data = recap(), { language = "en", playerName = "WhiteChaseSmoker", platform = "steam", percentile = 72, rankIcon = null } = {}) =>
+  seasonRecapSvg(data, { language, playerName, platform, percentile, rankIcon, t: translate(language === "ua" ? ua : en) });
 
 const text = (svg) => svg.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
@@ -38,6 +40,32 @@ describe("seasonRecapSvg", () => {
   it("is self-contained", () => {
     const svg = draw();
     expect(svg).not.toMatch(/<image|href=|url\(|@import|<script/i);
+  });
+
+  it("draws the rank icon from inline data, beside the tier", () => {
+    const svg = draw(recap(), { rankIcon: ICON });
+    expect(svg).toContain(`<image href="${ICON}" x="60" y="236" width="120" height="120"`);
+    expect(svg).toMatch(/<text x="200" y="282"[^>]*>Platinum II<\/text>/);
+    expect(svg.match(/href="[^"]*"/g)).toEqual([`href="${ICON}"`]);
+  });
+
+  it("keeps the tier at the left edge without an icon", () => {
+    expect(draw()).toMatch(/<text x="60" y="282"[^>]*>Platinum II<\/text>/);
+  });
+
+  // Anything but inline image data would make the file fetch something.
+  it("refuses an icon that is not inline image data", () => {
+    const refused = [
+      "https://cdn.example/x.webp",
+      "/images/ranks/opgg/gold-1.webp",
+      'data:image/webp;base64,AA" onload="x',
+      "data:text/html;base64,AAAA",
+    ];
+    for (const rankIcon of refused) {
+      const svg = draw(recap(), { rankIcon });
+      expect(svg).not.toContain("<image");
+      expect(svg).toMatch(/<text x="60" y="282"/);
+    }
   });
 
   it("carries the player, the season, the rank and the numbers", () => {
