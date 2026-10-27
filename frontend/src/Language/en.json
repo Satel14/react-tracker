@@ -63,6 +63,25 @@
         "detail": "Measured from {accounts} accounts sampled from ranked matches over the last {days} days",
         "lobbyLink": "See who actually shares a ranked lobby with this tier"
       },
+      "recap": {
+        "titleSoFar": "Season {season} so far",
+        "titleFinal": "Season {season} · final",
+        "peak": "Season high {rp} RP",
+        "matches": "Ranked matches",
+        "wins": "Wins",
+        "top10": "Top 10",
+        "kd": "K/D",
+        "damage": "Damage per match",
+        "place": "Average place",
+        "records": "Records in normal matches",
+        "mostKills": "Most kills in a match",
+        "longestKill": "Longest kill",
+        "source": "Stats from the official PUBG API",
+        "download": "Download image",
+        "downloading": "Making the image…",
+        "error": "The image could not be made. Try again.",
+        "previous": "Season {season} recap →"
+      },
       "seasonRewardLevel": "Season Reward Level",
       "mini": {
         "wins": "Wins",
