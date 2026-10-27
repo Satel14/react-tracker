@@ -11,6 +11,7 @@ import CookieRules from "../component/CookieRule";
 import RouteErrorBoundary from "../component/RouteErrorBoundary";
 import themes from "../component/config/themes";
 import { readStoredItem } from "../helpers/browserStorage";
+import { useDocumentTitle } from "./useDocumentTitle";
 import "../style/style.scss";
 
 const DEFAULT_THEME = "green";
@@ -40,6 +41,7 @@ const getInitialTheme = () => {
 const RouterLayout = () => {
   const location = useLocation();
   const [currentTheme, setCurrentTheme] = useState(getInitialTheme);
+  useDocumentTitle(location.pathname);
 
   useEffect(() => {
     // Expose theme setter for legacy SetTheme component
