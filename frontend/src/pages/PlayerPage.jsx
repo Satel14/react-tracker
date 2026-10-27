@@ -38,6 +38,7 @@ import RankPercentile from "../component/ranks/RankPercentile";
 import PlayerElsewhere from "../component/player/PlayerElsewhere";
 import SeasonRecap from "../component/player/SeasonRecap";
 import PcLauncherHint from "../component/player/PcLauncherHint";
+import SinceLastVisit from "../component/player/SinceLastVisit";
 import MapsTab from "./MapsTab";
 
 const MapPerformanceChart = lazy(() =>
@@ -1793,6 +1794,8 @@ const PlayerPage = ({ t }) => {
           </div>
         </div>
       </section>
+
+      <SinceLastVisit data={data} />
 
       <PcLauncherHint
         platform={data?.platformInfo?.platformSlug || platform}

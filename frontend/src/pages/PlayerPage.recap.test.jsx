@@ -130,3 +130,31 @@ test("a profile with recent matches does not ask where else it plays", async () 
   await screen.findByRole("heading", { name: "Season 44 so far" });
   expect(checkPcLauncher).not.toHaveBeenCalled();
 });
+
+// The profile carries the line; the comparison itself is SinceLastVisit's.
+test("a second visit to a profile says what changed since the first", async () => {
+  window.localStorage.clear();
+  getPlayerData.mockImplementation(() => {
+    const before = payload(S44);
+    before.data.data.season.stats = { matchesPlayed: stat(0), wins: stat(0), kills: stat(0) };
+    return Promise.resolve(before);
+  });
+  const first = renderAt("/player/steam/Someone");
+  await screen.findByRole("heading", { name: "Season 44 so far" });
+  first.unmount();
+
+  const later = Date.now() + 2 * 24 * 60 * 60 * 1000;
+  const realNow = Date.now;
+  Date.now = () => later;
+  try {
+    getPlayerData.mockImplementation(() => {
+      const next = payload(S44);
+      next.data.data.season.stats = { matchesPlayed: stat(12), wins: stat(1), kills: stat(9) };
+      return Promise.resolve(next);
+    });
+    renderAt("/player/steam/Someone");
+    expect(await screen.findByText(/Since you last looked/)).toHaveTextContent("12 matches · 1 win · 9 kills");
+  } finally {
+    Date.now = realNow;
+  }
+});

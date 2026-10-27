@@ -2841,6 +2841,16 @@ body {
   }
 }
 
+.since-last-visit {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  color: var(--text-strong);
+  font-size: 14px;
+}
+
 .pc-launcher-hint {
   margin: 0 0 14px;
   padding: 10px 14px;
