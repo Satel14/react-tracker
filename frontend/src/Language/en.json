@@ -84,6 +84,16 @@
         "back": "← Season {season}",
         "noRanked": "No ranked matches this season."
       },
+      "sinceLast": {
+        "lead": "Since you last looked {when}:",
+        "rpUp": "RP up by {n}",
+        "rpDown": "RP down by {n}",
+        "tier": "now {tier}",
+        "count": "{n} {word}",
+        "matchesWords": "match|matches",
+        "winsWords": "win|wins",
+        "killsWords": "kill|kills"
+      },
       "launcher": {
         "text": "This account plays through {platform}, so its matches are on that profile, not this one.",
         "link": "Open the {platform} profile →"
