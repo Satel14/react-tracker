@@ -82,3 +82,11 @@ test("the theme class matches a theme that defines an accent", () => {
   const applied = [...shell.classList].find((name) => name !== "app");
   expect(Object.keys(themes)).toContain(applied);
 });
+
+// Every page change lands here, so this is where the tab is retitled; a page
+// reached in the browser used to keep the title of the first one loaded.
+test("titles the tab for the route on screen", () => {
+  document.title = "Someone Else - PUBG stats, ranked RP and match history";
+  render(<RouterLayout />);
+  expect(document.title).toBe("PUBG Tracker - Player Stats & Leaderboards");
+});
