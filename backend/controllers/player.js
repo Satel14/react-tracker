@@ -14,6 +14,7 @@ const { getMapMeta } = require("../modules/mapMeta");
 const { aggregateKey, getAggregate } = require("../modules/heatmapAggregate");
 const { getPlayerCard } = require("../modules/getPlayerCard");
 const { ALLOWED_SHARDS } = require("../modules/pubgUrlSafety");
+const { locatePlayer } = require("../modules/locatePlayer");
 
 module.exports.getPlayerData = async (req, res) => {
   try {
@@ -170,6 +171,24 @@ module.exports.resolvePlayers = async (req, res) => {
   }
 };
 
+module.exports.locatePlayer = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res
+        .status(422)
+        .json({ status: 422, message: MESSAGE.VALIDATOR.ERROR });
+    }
+
+    const { platform, gameId } = req.body;
+    const data = await locatePlayer(platform, gameId);
+    return res.status(200).json({ status: 200, data });
+  } catch (e) {
+    return res.status(200).json({ status: 200, message: e.message });
+  }
+};
+
 module.exports.getPlayerCard = async (req, res) => {
   try {
     const error = validationResult(req);
@@ -298,6 +317,12 @@ module.exports.validate = (method) => {
       ];
     }
     case "getPlayerExtras": {
+      return [
+        body("platform").exists().isIn(ANY_CONFIG.PLATFORMS),
+        body("gameId").exists().isString().isLength({ min: 1, max: 64 }),
+      ];
+    }
+    case "locatePlayer": {
       return [
         body("platform").exists().isIn(ANY_CONFIG.PLATFORMS),
         body("gameId").exists().isString().isLength({ min: 1, max: 64 }),

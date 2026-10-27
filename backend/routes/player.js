@@ -1,6 +1,7 @@
 const PlayerController = require("../controllers/player");
 const { heatmapAggregateLimiter } = require("../modules/heatmapAggregateRateLimiter");
 const { playerCardLimiter } = require("../modules/playerCardRateLimiter");
+const { playerLocateLimiter } = require("../modules/playerLocateRateLimiter");
 
 module.exports = (router) => {
   router.post(
@@ -10,6 +11,12 @@ module.exports = (router) => {
   );
   router.post("/api/player/extras", PlayerController.validate("getPlayerExtras"), PlayerController.getPlayerExtras);
   router.post("/api/player/resolve", PlayerController.validate("resolvePlayers"), PlayerController.resolvePlayers);
+  router.post(
+    "/api/player/locate",
+    playerLocateLimiter,
+    PlayerController.validate("locatePlayer"),
+    PlayerController.locatePlayer
+  );
   router.post(
     "/api/player/steamid",
     PlayerController.validate("getPlayerSteamName"),
