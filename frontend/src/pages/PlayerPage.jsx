@@ -37,6 +37,7 @@ import PlayerPageSkeleton from "../component/skeletons/PlayerPageSkeleton";
 import RankPercentile from "../component/ranks/RankPercentile";
 import PlayerElsewhere from "../component/player/PlayerElsewhere";
 import SeasonRecap from "../component/player/SeasonRecap";
+import PcLauncherHint from "../component/player/PcLauncherHint";
 import MapsTab from "./MapsTab";
 
 const MapPerformanceChart = lazy(() =>
@@ -1791,6 +1792,13 @@ const PlayerPage = ({ t }) => {
           </div>
         </div>
       </section>
+
+      <PcLauncherHint
+        platform={data?.platformInfo?.platformSlug || platform}
+        accountId={data?.platformInfo?.platformUserId}
+        playerName={data?.platformInfo?.platformUserHandle || gameId}
+        hasRecentMatches={matchItems.length > 0}
+      />
 
       <Tabs className="player-tabs" activeKey={activeTabKey} onChange={(key) => sessionDispatch({ type: "setTab", key })} items={tabItems} />
     </div>

@@ -108,6 +108,9 @@ export const resolvePlayers = (platform, gameIds) =>
 export const locatePlayer = (platform, gameId) =>
   post("/player/locate", { platform, gameId }, false);
 
+export const checkPcLauncher = (platform, accountId) =>
+  post("/player/launcher", { platform, accountId }, false);
+
 export const getLiveSnapshot = () =>
   get("/player/live", true);
 

@@ -886,7 +886,7 @@ function createParsePlayerRank({
     return run;
   }
 
-  return { parsePlayerRank, getPlayerExtras, resolvePlayerBatch };
+  return { parsePlayerRank, getPlayerExtras, resolvePlayerBatch, getPlayerProfile };
 }
 
 module.exports = {
