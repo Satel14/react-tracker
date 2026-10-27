@@ -67,6 +67,40 @@ test("the mail link does not carry a browsing-context target", () => {
   expect(mail).not.toHaveAttribute("target");
 });
 
+const DONATE_URL = "https://send.monobank.ua/jar/6CkbEbsxW4";
+
+// Exact name for the same reason as the bug report icon above: a heart icon
+// that leaked its aria-label would make the name "heart Support the project".
+test("the support link opens the monobank jar in a new tab", () => {
+  renderFooter();
+  const link = screen.getByRole("link", { name: "Support the project" });
+
+  expect(link).toHaveAttribute("href", DONATE_URL);
+  expect(link).toHaveAttribute("target", "_blank");
+  expect(link.getAttribute("rel").split(" ")).toEqual(
+    expect.arrayContaining(["noopener", "noreferrer"])
+  );
+  expect(within(link).queryByRole("img")).toBeNull();
+});
+
+// The PUBG API terms allow donations only if nobody feels pressured and nothing
+// is unlocked by them, so the link travels with the promise that it stays free.
+test("the support link is accompanied by the stays-free note", () => {
+  renderFooter();
+  expect(screen.getByText("Everything here is free and stays free.")).toBeInTheDocument();
+});
+
+// Written out, not read from the dictionary: this is the attribution the PUBG
+// API terms require verbatim, so a translated or edited copy has to fail. Both
+// locales carry the English original for the same reason.
+const PUBG_TRADEMARK_NOTICE =
+  "PUBG, PLAYERUNKNOWN'S BATTLEGROUNDS and all related logos are trademarks of PUBG Corporation or its affiliates.";
+
+test.each(["en", "ua"])("the PUBG trademark notice renders verbatim in %s", (language) => {
+  renderFooter(language);
+  expect(screen.getByText(PUBG_TRADEMARK_NOTICE)).toBeInTheDocument();
+});
+
 test("the KRAFTON disclaimer renders verbatim", () => {
   renderFooter();
   expect(
@@ -91,6 +125,8 @@ test("renders Ukrainian copy, including the disclaimer, when the language is ua"
   );
   expect(screen.getByText(ua.footer.disclaimer)).toBeInTheDocument();
   expect(screen.queryByText(en.footer.disclaimer)).toBeNull();
+  expect(screen.getByRole("link", { name: ua.footer.support })).toHaveAttribute("href", DONATE_URL);
+  expect(screen.getByText(ua.footer.supportNote)).toBeInTheDocument();
 });
 
 // A half-translated footer has to fail the build, so the list of keys is

@@ -825,9 +825,12 @@
         "summary": "K/D, шкода, відсоток перемог і ранкед-прогрес, матч за матчем - зберігайте гравців, за якими стежите, і дивіться, як складається сезон.",
         "helpLine": "Неточна статистика, гравець, якого не вдалося знайти, чи сторінка, що не відкривається - напишіть, і ми це виправимо.",
         "bugReport": "Повідомити про баг",
+        "support": "Підтримати проєкт",
+        "supportNote": "Усе тут безкоштовне й таким лишиться.",
         "developed": "Створено Satel для спільноти PUBG",
         "contact": "Написати розробнику",
-        "disclaimer": "PUBG Tracker не пов'язаний з KRAFTON, Inc. PUBG - зареєстрована торгова марка KRAFTON, Inc."
+        "disclaimer": "PUBG Tracker не пов'язаний з KRAFTON, Inc. PUBG - зареєстрована торгова марка KRAFTON, Inc.",
+        "trademark": "PUBG, PLAYERUNKNOWN'S BATTLEGROUNDS and all related logos are trademarks of PUBG Corporation or its affiliates."
     },
     "other": {
         "words": {
