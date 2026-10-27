@@ -80,7 +80,9 @@
         "download": "Download image",
         "downloading": "Making the image…",
         "error": "The image could not be made. Try again.",
-        "previous": "Season {season} recap →"
+        "previous": "Season {season} recap →",
+        "back": "← Season {season}",
+        "noRanked": "No ranked matches this season."
       },
       "seasonRewardLevel": "Season Reward Level",
       "mini": {

@@ -103,4 +103,8 @@ test("the previous season's recap is one click away, through the season the page
 
   await waitFor(() => expect(getPlayerData).toHaveBeenLastCalledWith("steam", "Someone", S43));
   expect(await screen.findByRole("heading", { name: "Season 43 · final" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "← Season 44" }));
+  await waitFor(() => expect(getPlayerData).toHaveBeenLastCalledWith("steam", "Someone", S44));
+  expect(await screen.findByRole("heading", { name: "Season 44 so far" })).toBeInTheDocument();
 });

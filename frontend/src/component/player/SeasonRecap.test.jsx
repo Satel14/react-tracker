@@ -102,9 +102,40 @@ test("says nothing about standing when the census measured another season", asyn
   expect(screen.queryByText(/Better than/)).toBeNull();
 });
 
-test("renders nothing for a past season without ranked play", () => {
-  const { container } = renderRecap({ props: { season: season({ rankedInfo: null }) } });
-  expect(container).toBeEmptyDOMElement();
+// Reached by "Season N recap →", so an empty card is an answer, not a gap:
+// found live on 2026-10-27, where the click left the page with no block at all.
+test("a past season without ranked play says so and offers the way back", () => {
+  const { onOpenSeason } = renderRecap({ props: { season: season({ rankedInfo: null }) } });
+  expect(screen.getByRole("heading", { name: "Season 43 · final" })).toBeInTheDocument();
+  expect(screen.getByText("No ranked matches this season.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Download image" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "← Season 44" }));
+  expect(onOpenSeason).toHaveBeenCalledWith("division.bro.official.pc-2018-44");
+});
+
+test("a past season's recap offers the way back to the current one", () => {
+  const { onOpenSeason } = renderRecap();
+  fireEvent.click(screen.getByRole("button", { name: "← Season 44" }));
+  expect(onOpenSeason).toHaveBeenCalledWith("division.bro.official.pc-2018-44");
+});
+
+// Only season 44 in the list: with a previous season the "recap →" link takes
+// the head's place and would hide a wrong "← Season 44" from this test.
+test("the current season offers no way back to itself", () => {
+  renderRecap({
+    props: {
+      season: season({ id: "division.bro.official.pc-2018-44", isCurrentSeason: true }),
+      seasons: [seasons[0]],
+    },
+  });
+  expect(screen.getByRole("heading", { name: "Season 44 so far" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /^←/ })).toBeNull();
+});
+
+test("without a known current season there is no way back to offer", () => {
+  renderRecap({ props: { season: season({ rankedInfo: null }), seasons: [] } });
+  expect(screen.getByText("No ranked matches this season.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /^←/ })).toBeNull();
 });
 
 test("offers the previous season's recap from the current one", () => {
