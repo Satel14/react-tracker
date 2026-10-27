@@ -13,5 +13,8 @@ const createPlayerLocateLimiter = (options = {}) =>
   });
 
 const playerLocateLimiter = createPlayerLocateLimiter();
+// Its own budget: the launcher check is one lookup a call and runs on a
+// different page state, so the two must not starve each other.
+const playerLauncherLimiter = createPlayerLocateLimiter();
 
-module.exports = { createPlayerLocateLimiter, playerLocateLimiter };
+module.exports = { createPlayerLocateLimiter, playerLocateLimiter, playerLauncherLimiter };

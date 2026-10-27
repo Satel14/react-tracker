@@ -15,6 +15,7 @@ const { aggregateKey, getAggregate } = require("../modules/heatmapAggregate");
 const { getPlayerCard } = require("../modules/getPlayerCard");
 const { ALLOWED_SHARDS } = require("../modules/pubgUrlSafety");
 const { locatePlayer } = require("../modules/locatePlayer");
+const { checkPcLauncher } = require("../modules/pcLauncher");
 
 module.exports.getPlayerData = async (req, res) => {
   try {
@@ -189,6 +190,24 @@ module.exports.locatePlayer = async (req, res) => {
   }
 };
 
+module.exports.checkPcLauncher = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res
+        .status(422)
+        .json({ status: 422, message: MESSAGE.VALIDATOR.ERROR });
+    }
+
+    const { platform, accountId } = req.body;
+    const data = await checkPcLauncher(platform, accountId);
+    return res.status(200).json({ status: 200, data });
+  } catch (e) {
+    return res.status(200).json({ status: 200, message: e.message });
+  }
+};
+
 module.exports.getPlayerCard = async (req, res) => {
   try {
     const error = validationResult(req);
@@ -326,6 +345,12 @@ module.exports.validate = (method) => {
       return [
         body("platform").exists().isIn(ANY_CONFIG.PLATFORMS),
         body("gameId").exists().isString().isLength({ min: 1, max: 64 }),
+      ];
+    }
+    case "checkPcLauncher": {
+      return [
+        body("platform").exists().isIn(ANY_CONFIG.PLATFORMS),
+        body("accountId").exists().isString().matches(/^account\.[0-9a-f]{32}$/i),
       ];
     }
     case "resolvePlayers": {

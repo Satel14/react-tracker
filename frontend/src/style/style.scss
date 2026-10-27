@@ -2841,6 +2841,27 @@ body {
   }
 }
 
+.pc-launcher-hint {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--text-strong);
+  font-size: 14px;
+
+  a {
+    color: var(--accent);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: var(--text-strong);
+    }
+  }
+}
+
 .season-recap {
   color: var(--text);
 
