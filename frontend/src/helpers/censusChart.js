@@ -5,6 +5,7 @@ export const CENSUS_CHART_WIDTH = 1600;
 export const CENSUS_CHART_HEIGHT = 1080;
 const TIERS = [...RANK_LADDER.map(({ key }) => key), UNRANKED];
 const COLOURS = ["#cc936b", "#b9c7d8", "#f4ce72", "#70d7c5", "#acbcff", "#74c9ff", "#d39dff", "#ffac93", "#8995a9"];
+export const TIER_COLOURS = Object.fromEntries(TIERS.map((key, index) => [key, COLOURS[index]]));
 const escapeXml = (value) => String(value).replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;",
 })[char]);

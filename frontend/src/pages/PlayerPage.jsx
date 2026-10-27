@@ -36,6 +36,7 @@ import openNotification from "../component/Notification";
 import PlayerPageSkeleton from "../component/skeletons/PlayerPageSkeleton";
 import RankPercentile from "../component/ranks/RankPercentile";
 import PlayerElsewhere from "../component/player/PlayerElsewhere";
+import SeasonRecap from "../component/player/SeasonRecap";
 import MapsTab from "./MapsTab";
 
 const MapPerformanceChart = lazy(() =>
@@ -1577,7 +1578,21 @@ const PlayerPage = ({ t }) => {
     {
       key: "overview",
       label: "Overview",
-      children: renderStatCard("Lifetime Overview", stats),
+      children: (
+        <>
+          <SeasonRecap
+            season={season}
+            seasons={seasons}
+            playerName={data?.platformInfo?.platformUserHandle || gameId}
+            platform={data?.platformInfo?.platformSlug || platform}
+            onOpenSeason={(id) => {
+              sessionDispatch({ type: "setSeason", id });
+              fetchData(id);
+            }}
+          />
+          {renderStatCard("Lifetime Overview", stats)}
+        </>
+      ),
     },
     {
       key: "season",

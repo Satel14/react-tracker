@@ -2841,6 +2841,127 @@ body {
   }
 }
 
+.season-recap {
+  color: var(--text);
+
+  &--link-only {
+    margin: 0 0 12px;
+  }
+
+  &__previous {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--text-strong);
+    }
+  }
+
+  &__rank {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    margin: 4px 0 6px;
+    color: var(--text);
+  }
+
+  &__tier {
+    color: var(--text-strong);
+    font-size: 22px;
+  }
+
+  &__rp {
+    color: var(--text-strong);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  &__peak {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  &__percentile {
+    margin: 0 0 12px;
+    color: var(--accent);
+    font-size: 14px;
+  }
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+    color: var(--text);
+
+    li {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+  }
+
+  &__label {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  &__value {
+    color: var(--text-strong);
+    font-size: 20px;
+  }
+
+  &__records {
+    margin: 0 0 12px;
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__download {
+    padding: 8px 14px;
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    color: var(--text-strong);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--accent) 16%, transparent);
+    }
+
+    &:disabled {
+      cursor: progress;
+      opacity: 0.7;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--warn);
+    font-size: 13px;
+  }
+}
+
 .player-elsewhere {
   max-width: 460px;
   margin: 0 auto 18px;
