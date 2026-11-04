@@ -62,7 +62,7 @@ const DISTRIBUTION_ERROR_CACHE_MS = 60 * 1000;
 // is set: wrong for at most one run, and the next run is what corrects it.
 // Kept in step with json/season-dates.json, which a rollover updates anyway --
 // censusController.test.js fails when the two drift.
-const FALLBACK_SEASON = "division.bro.official.pc-2018-43";
+const FALLBACK_SEASON = "division.bro.official.pc-2018-44";
 
 // What a poll is allowed to see. The raw observations are a couple of thousand
 // rows and belong in Postgres, not in a status response.

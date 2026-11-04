@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-10",
+  "updatedAt": "2026-11-04",
   "seasons": {
     "division.bro.official.pc-2018-42": {
       "startDate": "2026-06-17T00:00:00Z",
@@ -13,7 +13,14 @@
       "endDate": "2026-11-04T00:00:00Z",
       "isEstimated": false,
       "source": "in-game-season-countdown",
-      "note": "Start is official: Update 43.1 becomes available when the maintenance completes. End is derived from the in-game season timer, read 2026-09-10 09:12 UTC as 54 d 14 h 48 m remaining, which lands exactly on 2026-11-04 00:00 UTC -- the same midnight-maintenance shape as Season 42's end, which is what makes the arithmetic trustworthy. That makes Season 43 55 days against Season 42's 85: PUBG season lengths are not a fixed cycle, which is why there is no cycleDays fallback here."
+      "note": "Start is official: Update 43.1 becomes available when the maintenance completes. End is derived from the in-game season timer, read 2026-09-10 09:12 UTC as 54 d 14 h 48 m remaining, which lands exactly on 2026-11-04 00:00 UTC -- the same midnight-maintenance shape as Season 42's end, which is what makes the arithmetic trustworthy. That makes Season 43 55 days against Season 42's 85: PUBG season lengths are not a fixed cycle, which is why there is no cycleDays fallback here. Confirmed by the Update 44.1 patch notes, which put the PC maintenance at 2026-11-04 00:00-08:30 UTC."
+    },
+    "division.bro.official.pc-2018-44": {
+      "startDate": "2026-11-04T08:30:00Z",
+      "endDate": "2027-01-06T00:00:00Z",
+      "isEstimated": false,
+      "source": "in-game-season-countdown",
+      "note": "Start is official: the Update 44.1 patch notes schedule the PC maintenance for 2026-11-04 00:00-08:30 UTC, and Season 44 opens when it completes. End is derived from the in-game season timer, read 2026-11-04 10:57 UTC as 62 d 13 h 3 m remaining, which lands on 2027-01-06 00:00 UTC -- the same midnight-maintenance shape as the ends of Seasons 42 and 43. About 63 days, between Season 43's 55 and Season 42's 85."
     }
   }
 }
