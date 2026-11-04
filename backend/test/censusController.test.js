@@ -53,6 +53,7 @@ const build = (over = {}) => createCensusController({
   // either. The tests about a rollover set them explicitly.
   previousSeason: async () => null,
   startDateOf: () => null,
+  endDateOf: () => null,
   token: () => TOKEN,
   ...over,
 });
@@ -435,6 +436,27 @@ test("leaves the day the season opened to neither season", async () => {
   await controller.__idle();
 
   assert.equal(options.seasonFor("2026-09-10"), null);
+});
+
+// 2026-11-04: the catalog had moved to 44 before the morning run, the dates file
+// had no 44 entry yet, and a day of Season 43 lobbies went in as Season 44. The
+// end of 43 was in the file all along.
+test("with no start date for the new season, attributes sample days by the old season's end", async () => {
+  let options = null;
+  const controller = build({
+    collect: async (o) => { options = o; return collected(); },
+    currentSeason: async () => "division.bro.official.pc-2018-44",
+    previousSeason: async () => "division.bro.official.pc-2018-43",
+    startDateOf: () => null,
+    endDateOf: (id) => (id === "division.bro.official.pc-2018-43" ? "2026-11-04T00:00:00Z" : null),
+  });
+
+  await controller.runCensus(authed, makeRes());
+  await controller.__idle();
+
+  assert.equal(options.seasonFor("2026-11-02"), "division.bro.official.pc-2018-43");
+  assert.equal(options.seasonFor("2026-11-04"), null);
+  assert.equal(options.seasonFor("2026-11-05"), "division.bro.official.pc-2018-44");
 });
 
 // The override means "collect for exactly this season", which is also how a

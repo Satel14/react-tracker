@@ -24,6 +24,14 @@ const dayOf = (value) => {
 // nothing to say about it.
 const seasonStartDate = (seasonId) => seasonDates?.seasons?.[seasonId]?.startDate ?? null;
 
+// The end of a season, but only one that was measured. An estimate that runs
+// late would file new-season lobbies under the old season's frozen ladder --
+// plausible numbers in a season whose final figures are already published.
+const seasonEndDate = (seasonId, dates = seasonDates) => {
+  const entry = dates?.seasons?.[seasonId];
+  return entry && !entry.isEstimated ? entry.endDate ?? null : null;
+};
+
 // The catalog arrives sorted, but sorted by the caller rather than by PUBG, so
 // this reads the numbers rather than trusting the order.
 const previousSeasonId = (catalog) => {
@@ -38,13 +46,23 @@ const previousSeasonId = (catalog) => {
   return below.reduce((best, season) => (season.seasonNumber > best.seasonNumber ? season : best)).id;
 };
 
-const seasonForWindow = ({ windowDate, currentSeasonId, previousSeasonId: previous = null, startDate }) => {
+const seasonForWindow = ({
+  windowDate,
+  currentSeasonId,
+  previousSeasonId: previous = null,
+  startDate,
+  previousEndDate = null,
+}) => {
   const day = dayOf(windowDate);
   if (!day) return null;
 
-  const startDay = dayOf(startDate);
+  // A new season's start is missing from the file on exactly the days that
+  // need it -- PUBG names the season current at the maintenance, before anyone
+  // has added the entry -- while the old season's end was usually recorded
+  // weeks earlier. Both mark the same maintenance.
+  const startDay = dayOf(startDate) ?? dayOf(previousEndDate);
   // Nothing to compare against. Carrying on as before is wrong for two days
-  // every three months; stopping would be wrong until somebody noticed.
+  // every rollover; stopping would be wrong until somebody noticed.
   if (!startDay) return currentSeasonId ?? null;
 
   if (day > startDay) return currentSeasonId ?? null;
@@ -54,4 +72,4 @@ const seasonForWindow = ({ windowDate, currentSeasonId, previousSeasonId: previo
   return previous ?? null;
 };
 
-module.exports = { seasonForWindow, previousSeasonId, seasonStartDate };
+module.exports = { seasonForWindow, previousSeasonId, seasonStartDate, seasonEndDate };

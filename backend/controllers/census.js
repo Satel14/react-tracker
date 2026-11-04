@@ -6,7 +6,9 @@ const {
   readRankPoints,
 } = require("../modules/tierCensus/pgStore");
 const { getCurrentSeasonId, getSeasonCatalog } = require("../modules/getSeasonCatalog");
-const { seasonForWindow, previousSeasonId, seasonStartDate } = require("../modules/tierCensus/seasonWindow");
+const {
+  seasonForWindow, previousSeasonId, seasonStartDate, seasonEndDate,
+} = require("../modules/tierCensus/seasonWindow");
 const { estimateIcc, PER_MATCH } = require("../modules/tierCensus/sampling");
 const { tierShare, rpThresholds } = require("../modules/tierCensus/stats");
 const { lobbyMix } = require("../modules/tierCensus/lobbyMix");
@@ -62,7 +64,7 @@ const DISTRIBUTION_ERROR_CACHE_MS = 60 * 1000;
 // is set: wrong for at most one run, and the next run is what corrects it.
 // Kept in step with json/season-dates.json, which a rollover updates anyway --
 // censusController.test.js fails when the two drift.
-const FALLBACK_SEASON = "division.bro.official.pc-2018-43";
+const FALLBACK_SEASON = "division.bro.official.pc-2018-44";
 
 // What a poll is allowed to see. The raw observations are a couple of thousand
 // rows and belong in Postgres, not in a status response.
@@ -96,6 +98,7 @@ const createCensusController = ({
   // day played before the reset.
   previousSeason = async () => previousSeasonId(await getSeasonCatalog(SHARD)),
   startDateOf = seasonStartDate,
+  endDateOf = seasonEndDate,
   token = () => process.env.CENSUS_TOKEN,
 } = {}) => {
   const runner = createRunner({ collect: doCollect });
@@ -129,8 +132,11 @@ const createCensusController = ({
     }
 
     const startDate = startDateOf(season);
+    const previousEndDate = previous ? endDateOf(previous) : null;
     return (windowDate) =>
-      seasonForWindow({ windowDate, currentSeasonId: season, previousSeasonId: previous, startDate });
+      seasonForWindow({
+        windowDate, currentSeasonId: season, previousSeasonId: previous, startDate, previousEndDate,
+      });
   };
 
   let inFlight = Promise.resolve();
