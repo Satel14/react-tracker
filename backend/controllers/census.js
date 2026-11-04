@@ -6,7 +6,9 @@ const {
   readRankPoints,
 } = require("../modules/tierCensus/pgStore");
 const { getCurrentSeasonId, getSeasonCatalog } = require("../modules/getSeasonCatalog");
-const { seasonForWindow, previousSeasonId, seasonStartDate } = require("../modules/tierCensus/seasonWindow");
+const {
+  seasonForWindow, previousSeasonId, seasonStartDate, seasonEndDate,
+} = require("../modules/tierCensus/seasonWindow");
 const { estimateIcc, PER_MATCH } = require("../modules/tierCensus/sampling");
 const { tierShare, rpThresholds } = require("../modules/tierCensus/stats");
 const { lobbyMix } = require("../modules/tierCensus/lobbyMix");
@@ -96,6 +98,7 @@ const createCensusController = ({
   // day played before the reset.
   previousSeason = async () => previousSeasonId(await getSeasonCatalog(SHARD)),
   startDateOf = seasonStartDate,
+  endDateOf = seasonEndDate,
   token = () => process.env.CENSUS_TOKEN,
 } = {}) => {
   const runner = createRunner({ collect: doCollect });
@@ -129,8 +132,11 @@ const createCensusController = ({
     }
 
     const startDate = startDateOf(season);
+    const previousEndDate = previous ? endDateOf(previous) : null;
     return (windowDate) =>
-      seasonForWindow({ windowDate, currentSeasonId: season, previousSeasonId: previous, startDate });
+      seasonForWindow({
+        windowDate, currentSeasonId: season, previousSeasonId: previous, startDate, previousEndDate,
+      });
   };
 
   let inFlight = Promise.resolve();
