@@ -14,7 +14,7 @@
 //
 // Dependency-free on purpose. routeMeta.js imports it, and vite.config.js
 // imports that under Node's resolver.
-export const ARTICLE_SEASON = "43";
+export const ARTICLE_SEASON = "44";
 
 // The copy that names the current season, as paths under `pages.ranks`. Listed
 // rather than discovered: the page quotes older seasons on purpose (Ranked
