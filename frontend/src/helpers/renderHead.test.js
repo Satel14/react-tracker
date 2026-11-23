@@ -277,7 +277,7 @@ describe("a route that ships its whole article", () => {
   it("still rewrites the head for the route", () => {
     const html = ranks();
     expect(html).toContain(`<link rel="canonical" href="${canonicalFor("/ranks")}" />`);
-    expect(/<title>([^<]*)<\/title>/.exec(html)[1]).toBe(route("/ranks").title);
+    expect(/<title>([^<]*)<\/title>/.exec(html)[1]).toBe(route("/ranks").title.replace(/&/g, "&amp;"));
   });
 
   // The article is markup we generated from our own components, not copy from

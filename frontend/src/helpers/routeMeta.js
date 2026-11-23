@@ -72,8 +72,8 @@ export const ROUTE_META = [
     // while the prose describes another. Nothing else here is season-specific:
     // an update number in the description would need rewriting every quarter
     // for no gain, and the distribution is now in the file rather than promised.
-    title: `PUBG Ranks Explained: Tiers, RP, Survivor (Season ${ARTICLE_SEASON})`,
-    description: `The PUBG ranked ladder as it stands in Season ${ARTICLE_SEASON}: all eight tiers, how RP is earned and lost, Survivor, RP decay, and a measured tier distribution.`,
+    title: `PUBG Ranks in Order: 8 Tiers, PC & Console (Season ${ARTICLE_SEASON})`,
+    description: `Bronze to Survivor: all eight PUBG: BATTLEGROUNDS ranks in order on PC and console in Season ${ARTICLE_SEASON}, and the share of Steam ranked players in each tier.`,
     h1: "PUBG ranks explained: tiers, RP and Survivor",
     intro: "Eight tiers, one RP number shared across party types and perspectives, and a top tier you can lose overnight \u2014 this is the ranked system as it stands on 4 November 2026, sourced to KRAFTON's patch notes and official posts, with every exception labelled.",
     sitemap: true,
