@@ -30,5 +30,5 @@ test("the tab follows client-side navigation", () => {
   expect(document.title).toBe("PlayerB - PUBG stats, ranked RP and match history");
 
   fireEvent.click(getByText("ranks"));
-  expect(document.title).toMatch(/^PUBG Ranks Explained/);
+  expect(document.title).toMatch(/^PUBG Ranks in Order/);
 });
